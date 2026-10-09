@@ -5,7 +5,10 @@ import android.app.Application;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import com.waenhancer.xposed.core.VersionGuard;
 import java.lang.ref.WeakReference;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Tracks current top-level Activity and Conversation Activity in WhatsApp.
@@ -55,7 +58,7 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
         void onActivityResumed(@NonNull Activity activity);
     }
 
-    private static final java.util.List<ActivityListener> sListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final List<ActivityListener> sListeners = new CopyOnWriteArrayList<>();
 
     public static void addListener(@NonNull ActivityListener listener) {
         if (!sListeners.contains(listener)) {
@@ -71,7 +74,7 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
     public void onActivityResumed(@NonNull Activity activity) {
         sCurrentActivity = new WeakReference<>(activity);
         try {
-            com.waenhancer.xposed.core.VersionGuard.onTargetActivityResumed(activity);
+            VersionGuard.onTargetActivityResumed(activity);
         } catch (Throwable ignored) {}
         for (ActivityListener listener : sListeners) {
             try {

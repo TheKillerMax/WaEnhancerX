@@ -1,6 +1,10 @@
 package com.waenhancer.ui.screens.settings
 
+import android.content.Intent
+import android.graphics.Color as AndroidColor
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +36,7 @@ import com.waenhancer.ui.navigation.LocalIsPro
 import com.waenhancer.ui.navigation.LocalOnActivatePro
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -107,11 +112,11 @@ fun FilterItemsScreen() {
         try {
             val authority = context.packageName + ".hookprovider"
             context.contentResolver.notifyChange(
-                android.net.Uri.parse("content://$authority/preferences"),
+                Uri.parse("content://$authority/preferences"),
                 null
             )
             for (pkg in arrayOf("com.whatsapp", "com.whatsapp.w4b")) {
-                val intent = android.content.Intent(context.packageName + ".PREFS_CHANGED")
+                val intent = Intent(context.packageName + ".PREFS_CHANGED")
                 intent.setPackage(pkg)
                 context.sendBroadcast(intent)
             }
@@ -172,7 +177,7 @@ fun FilterItemsScreen() {
                         Surface(
                             shape = radius.bentoCardShape,
                             color = colors.surfaceDim,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                            border = BorderStroke(1.dp, colors.outlineVariant),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -224,7 +229,7 @@ fun FilterItemsScreen() {
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = String.format(java.util.Locale.US, "%.1fx", item.scale),
+                                                text = String.format(Locale.US, "%.1fx", item.scale),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Bold,
                                                 color = colors.primary,
@@ -262,7 +267,7 @@ fun FilterItemsScreen() {
                                         fontWeight = FontWeight.SemiBold,
                                         color = colors.onSurface
                                     )
-                                    val scaleFormatted = String.format(java.util.Locale.US, "%.1fx", item.scale)
+                                    val scaleFormatted = String.format(Locale.US, "%.1fx", item.scale)
                                     val behaviorText = when (item.behavior) {
                                         FilterItem.BEHAVIOR_COLOR -> "Behavior: Change Color"
                                         FilterItem.BEHAVIOR_OPACITY -> "Behavior: Opacity (${item.opacity}%)"
@@ -442,7 +447,7 @@ private fun FilterEditBottomSheet(
                     Surface(
                         shape = radius.defaultShape,
                         color = if (isSelected) colors.primaryContainer else colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(
+                        border = BorderStroke(
                             1.dp,
                             if (isSelected) colors.primary else colors.outlineVariant
                         ),
@@ -493,7 +498,7 @@ private fun FilterEditBottomSheet(
                     Surface(
                         shape = radius.defaultShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showColorPicker = true }
@@ -534,7 +539,7 @@ private fun FilterEditBottomSheet(
                 FilterItem.BEHAVIOR_RESIZE -> {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Scale: ${String.format(java.util.Locale.US, "%.1fx", scaleValue)}",
+                            text = "Scale: ${String.format(Locale.US, "%.1fx", scaleValue)}",
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant
                         )
@@ -613,7 +618,7 @@ private fun FilterEditBottomSheet(
             initialColorHex = hexString,
             onColorSelected = { hex ->
                 try {
-                    selectedColor = android.graphics.Color.parseColor(hex)
+                    selectedColor = AndroidColor.parseColor(hex)
                 } catch (_: Exception) {}
                 showColorPicker = false
             },

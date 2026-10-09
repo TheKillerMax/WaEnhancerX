@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * High-performance, fallback-resilient Preference Bridge for injected processes.
@@ -40,6 +41,8 @@ public class PreferenceBridgeClient implements SharedPreferences {
         // 2. Register observer for real-time live preference updates without restart
         registerObserver();
     }
+
+    private final Set<OnSharedPreferenceChangeListener> changeListeners = new CopyOnWriteArraySet<>();
 
     public synchronized void syncPreferences() {
         // Provider IPC read (bypasses SELinux file restrictions on modern Android)
@@ -71,8 +74,23 @@ public class PreferenceBridgeClient implements SharedPreferences {
                 if (all != null) {
                     memoryCache.clear();
                     memoryCache.putAll(all);
+                    syncedFromProvider = true;
                 }
             } catch (Throwable ignored) {}
+        }
+
+        if (syncedFromProvider) {
+            notifyListeners(null);
+        }
+    }
+
+    private void notifyListeners(@Nullable String key) {
+        for (OnSharedPreferenceChangeListener listener : changeListeners) {
+            try {
+                listener.onSharedPreferenceChanged(this, key);
+            } catch (Throwable t) {
+                XposedBridge.log("[WAEX] Preference change listener error: " + t.getMessage());
+            }
         }
     }
 
@@ -161,10 +179,18 @@ public class PreferenceBridgeClient implements SharedPreferences {
     }
 
     @Override
-    public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
+        if (listener != null) {
+            changeListeners.add(listener);
+        }
+    }
 
     @Override
-    public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
+        if (listener != null) {
+            changeListeners.remove(listener);
+        }
+    }
 
     private class BridgeEditor implements Editor {
         private final Map<String, Object> values = new HashMap<>();

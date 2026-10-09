@@ -15,8 +15,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.HashSet;
+import com.waenhancer.licensing.LicenseManager;
 import com.waenhancer.licensing.ProFeatureGate;
 import com.waenhancer.licensing.features.BootloaderSpooferFeature;
+import com.waenhancer.xposed.core.db.PreservedMessageStore;
 
 /**
  * HookProvider provides preference IPC bridge between WaEnhancerX UI and target processes (WhatsApp / WA Business).
@@ -107,7 +109,7 @@ public class HookProvider extends ContentProvider {
             if ("get_all_preferences".equals(method)) {
                 var all = new HashMap<String, Object>(prefs.getAll());
                 all.put("waex_pro_active", "ACTIVE".equalsIgnoreCase(
-                        com.waenhancer.licensing.LicenseManager.getProStatus(context)));
+                        LicenseManager.getProStatus(context)));
                 // Keybox material is private at rest and is exposed only in this in-memory IPC
                 // response to the scoped hooked process when the free feature is enabled.
                 if (prefs.getBoolean(BootloaderSpooferFeature.ENABLED, true)) {
@@ -115,7 +117,7 @@ public class HookProvider extends ContentProvider {
                     boolean custom = prefs.getBoolean(BootloaderSpooferFeature.CUSTOM_ENABLED, false);
                     all.put(BootloaderSpooferFeature.CUSTOM_XML,
                             privatePrefs.getString(custom ? BootloaderSpooferFeature.CUSTOM_XML
-                                    : BootloaderSpooferFeature.DEFAULT_XML, ""));
+                                     : BootloaderSpooferFeature.DEFAULT_XML, ""));
                     all.put(BootloaderSpooferFeature.DEFAULT_XML,
                             privatePrefs.getString(BootloaderSpooferFeature.DEFAULT_XML, ""));
                 }
@@ -228,7 +230,7 @@ public class HookProvider extends ContentProvider {
                 boolean fromMe = extras.getBoolean("fromMe", false);
                 boolean isGroup = extras.getBoolean("isGroup", false);
 
-                com.waenhancer.xposed.core.db.PreservedMessageStore.getInstance(context)
+                PreservedMessageStore.getInstance(context)
                         .insertPreservedMessage(jid, contactName, senderName, msgId, text, timestamp, fromMe, isGroup);
                 return Bundle.EMPTY;
             }

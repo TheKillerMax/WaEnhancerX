@@ -3,17 +3,13 @@ package com.waenhancer.xposed.features.customization
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.res.ColorStateList
-import android.graphics.PorterDuff
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewParent
 import android.view.ViewTreeObserver
-import android.widget.ImageView
-import android.widget.TextView
+import com.waenhancer.licensing.features.FilterItemsProFeature
 import com.waenhancer.model.FilterItem
 import com.waenhancer.xposed.core.BaseFeature
 import com.waenhancer.xposed.utils.ActivityTracker
@@ -21,11 +17,10 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * Filter Items By ID Hook:
- * Enables removing or customizing WhatsApp UI elements matching specific resource IDs.
+ * Enables removing or customizing WhatsApp UI elements matching specific resource IDs in real time.
  * Supports behaviors: Gone (Remove), Change Color, Opacity, and Resize.
  */
 class FilterItemsHook(
@@ -37,26 +32,9 @@ class FilterItemsHook(
     override val name: String = "FilterItems"
 
     private val targetMap = HashMap<Int, FilterItem>()
+    private val visibilityMask = 0x0000000C
 
     override fun hook() {
-        val filterItemsRaw = prefs.getString("filter_items", null) ?: return
-        if (!isEnabled("custom_filters", true)) return
-
-        val itemsList = parseFilters(filterItemsRaw)
-        if (itemsList.isEmpty()) return
-
-        for (item in itemsList) {
-            val resourceName = normalizeResourceIdName(item.id)
-            val id = getResourceId(resourceName)
-            if (id > 0) {
-                targetMap[id] = item
-            }
-        }
-
-        if (targetMap.isEmpty()) return
-
-        val visibilityMask = 0x0000000C
-
         try {
             XposedHelpers.findAndHookMethod(
                 View::class.java,
@@ -142,14 +120,19 @@ class FilterItemsHook(
             XposedBridge.log("[WAEX] Failed to hook View methods for item filtering: " + t.message)
         }
 
-        // Apply immediately to current activity if any
-        Handler(Looper.getMainLooper()).post {
-            ActivityTracker.getCurrentActivity()?.let { activity ->
-                applyFiltersToActivity(activity)
+        // Initial filter load
+        reloadFilters()
+
+        // Listen for real-time preference updates from WAEX without restart
+        prefs.registerOnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == "filter_items" || key == "custom_filters"
+                || key.startsWith("pro_entitlement_") || key == "waex_pro_active"
+            ) {
+                reloadFilters()
             }
         }
 
-        // Listen for new activities resuming
+        // Apply to any newly resumed Activity
         ActivityTracker.addListener(object : ActivityTracker.ActivityListener {
             override fun onActivityResumed(activity: Activity) {
                 Handler(Looper.getMainLooper()).post {
@@ -157,6 +140,29 @@ class FilterItemsHook(
                 }
             }
         })
+    }
+
+    private fun reloadFilters() {
+        val filterItemsRaw = prefs.getString("filter_items", null) ?: ""
+        val isEnabled = isEnabled("custom_filters", true)
+
+        targetMap.clear()
+        if (isEnabled && filterItemsRaw.isNotBlank()) {
+            val itemsList = parseFilters(filterItemsRaw)
+            for (item in itemsList) {
+                val resourceName = normalizeResourceIdName(item.id)
+                val id = getResourceId(resourceName)
+                if (id > 0) {
+                    targetMap[id] = item
+                }
+            }
+        }
+
+        Handler(Looper.getMainLooper()).post {
+            ActivityTracker.getCurrentActivity()?.let { activity ->
+                applyFiltersToActivity(activity)
+            }
+        }
     }
 
     private fun parseFilters(raw: String): List<FilterItem> {
@@ -247,7 +253,7 @@ class FilterItemsHook(
         if (FilterItem.BEHAVIOR_GONE == item.behavior) {
             removeFilteredView(target)
         } else {
-            com.waenhancer.licensing.features.FilterItemsProFeature.applyProFilter(
+            FilterItemsProFeature.applyProFilter(
                 target,
                 item.behavior,
                 item.color,
