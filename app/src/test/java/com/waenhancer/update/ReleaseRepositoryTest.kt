@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReleaseRepositoryTest {
-    private fun release(tag: String) = WaexRelease(tag, tag, "", "", "", null, 0)
+    private fun release(tag: String) = WaexRelease(tag, tag, "", "", "")
 
     @Test
     fun newerVersionOutranksOlderVersion() {

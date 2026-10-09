@@ -24,16 +24,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.waenhancer.ui.components.WaexTopBar
+import com.waenhancer.ui.components.BuildTypeSelectionSheet
 import com.waenhancer.ui.components.UpdateDownloadSheet
+import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.update.ReleaseRepository
+import com.waenhancer.update.WaexAsset
 import com.waenhancer.update.WaexRelease
 
 @Composable
@@ -47,7 +48,8 @@ fun ReleaseDetailsScreen(tagName: String) {
     var release by remember(tagName) { mutableStateOf<WaexRelease?>(null) }
     var error by remember(tagName) { mutableStateOf<String?>(null) }
     var retry by remember { mutableStateOf(0) }
-    var downloadUrl by remember { mutableStateOf<String?>(null) }
+    var showBuildSelection by remember { mutableStateOf(false) }
+    var activeDownload by remember { mutableStateOf<Pair<WaexRelease, WaexAsset>?>(null) }
     val installedVersion = remember {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
@@ -71,7 +73,29 @@ fun ReleaseDetailsScreen(tagName: String) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         val isDowngrade = ReleaseRepository.versionCode(item.version) < ReleaseRepository.versionCode(installedVersion)
                         if (!isDowngrade || preferences.getBoolean("downgrades_enabled", false)) {
-                            item.downloadUrl?.let { url -> Button(onClick = { downloadUrl = url }, modifier = Modifier.weight(1f)) { Text("Install APK") } }
+                            if (item.assets.isNotEmpty() || item.downloadUrl != null) {
+                                Button(
+                                    onClick = {
+                                        if (item.assets.size > 1) {
+                                            showBuildSelection = true
+                                        } else {
+                                            val asset = item.assets.firstOrNull() ?: item.defaultAsset
+                                            if (asset != null) {
+                                                activeDownload = item to asset
+                                            } else if (item.downloadUrl != null) {
+                                                activeDownload = item to WaexAsset(
+                                                    name = "WaEnhancerX-${item.tagName}.apk",
+                                                    downloadUrl = item.downloadUrl!!,
+                                                    size = item.downloadSize
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Install APK")
+                                }
+                            }
                         }
                         if (item.htmlUrl.isNotBlank()) OutlinedButton(onClick = { openUrl(context, item.htmlUrl) }, modifier = Modifier.weight(1f)) { Text("Release page") }
                     }
@@ -85,13 +109,25 @@ fun ReleaseDetailsScreen(tagName: String) {
             else -> Box(Modifier.fillMaxSize().padding(insets), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = colors.primary) }
         }
     }
-    downloadUrl?.let { url ->
+
+    if (showBuildSelection && release != null) {
+        BuildTypeSelectionSheet(
+            release = release!!,
+            onSelectAsset = { asset ->
+                showBuildSelection = false
+                activeDownload = release!! to asset
+            },
+            onDismiss = { showBuildSelection = false }
+        )
+    }
+
+    activeDownload?.let { (rel, asset) ->
+        val isDowngrade = ReleaseRepository.versionCode(rel.version) < ReleaseRepository.versionCode(installedVersion)
         UpdateDownloadSheet(
-            url = url,
-            version = tagName,
-            useRoot = ReleaseRepository.versionCode(release?.version ?: tagName) < ReleaseRepository.versionCode(installedVersion) ||
-                preferences.getBoolean("root_auto_install", false),
-            onDismiss = { downloadUrl = null }
+            url = asset.downloadUrl,
+            version = "${rel.tagName} (${asset.buildTypeLabel})",
+            useRoot = isDowngrade || preferences.getBoolean("root_auto_install", false),
+            onDismiss = { activeDownload = null }
         )
     }
 }

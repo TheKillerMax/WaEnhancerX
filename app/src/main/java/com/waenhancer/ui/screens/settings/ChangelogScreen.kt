@@ -47,6 +47,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.util.LinkifyCompat
 import androidx.core.util.PatternsCompat
 import com.waenhancer.ui.components.WaexTopBar
+import com.waenhancer.ui.components.BuildTypeSelectionSheet
 import com.waenhancer.ui.components.UpdateDownloadSheet
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
@@ -54,6 +55,7 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.update.ReleaseRepository
+import com.waenhancer.update.WaexAsset
 import com.waenhancer.update.WaexRelease
 import io.noties.markwon.Markwon
 import io.noties.markwon.html.HtmlPlugin
@@ -73,7 +75,8 @@ fun ChangelogScreen() {
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableStateOf(0) }
-    var pendingInstall by remember { mutableStateOf<WaexRelease?>(null) }
+    var buildSelectionRelease by remember { mutableStateOf<WaexRelease?>(null) }
+    var activeDownload by remember { mutableStateOf<Pair<WaexRelease, WaexAsset>?>(null) }
     val installedVersion = remember {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
@@ -139,9 +142,27 @@ fun ChangelogScreen() {
                             }
                             Spacer(Modifier.height(12.dp))
                             ChangelogBodyView(release.body)
-                            if (release.downloadUrl != null && (comparison > 0 || comparison < 0 && allowDowngrade)) {
+                            if ((release.assets.isNotEmpty() || release.downloadUrl != null) && (comparison > 0 || (comparison < 0 && allowDowngrade))) {
                                 Spacer(Modifier.height(14.dp))
-                                Button(onClick = { pendingInstall = release }, modifier = Modifier.fillMaxWidth()) {
+                                Button(
+                                    onClick = {
+                                        if (release.assets.size > 1) {
+                                            buildSelectionRelease = release
+                                        } else {
+                                            val asset = release.assets.firstOrNull() ?: release.defaultAsset
+                                            if (asset != null) {
+                                                activeDownload = release to asset
+                                            } else if (release.downloadUrl != null) {
+                                                activeDownload = release to WaexAsset(
+                                                    name = "WaEnhancerX-${release.tagName}.apk",
+                                                    downloadUrl = release.downloadUrl!!,
+                                                    size = release.downloadSize
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Text(if (comparison > 0) "Upgrade" else "Downgrade")
                                 }
                             }
@@ -151,13 +172,25 @@ fun ChangelogScreen() {
             }
         }
     }
-    pendingInstall?.let { release ->
-        val isDowngrade = ReleaseRepository.versionCode(release.version) < ReleaseRepository.versionCode(installedVersion)
+
+    buildSelectionRelease?.let { rel ->
+        BuildTypeSelectionSheet(
+            release = rel,
+            onSelectAsset = { asset ->
+                buildSelectionRelease = null
+                activeDownload = rel to asset
+            },
+            onDismiss = { buildSelectionRelease = null }
+        )
+    }
+
+    activeDownload?.let { (rel, asset) ->
+        val isDowngrade = ReleaseRepository.versionCode(rel.version) < ReleaseRepository.versionCode(installedVersion)
         UpdateDownloadSheet(
-            url = release.downloadUrl!!,
-            version = release.tagName,
+            url = asset.downloadUrl,
+            version = "${rel.tagName} (${asset.buildTypeLabel})",
             useRoot = isDowngrade || preferences.getBoolean("root_auto_install", false),
-            onDismiss = { pendingInstall = null }
+            onDismiss = { activeDownload = null }
         )
     }
 }

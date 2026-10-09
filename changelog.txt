@@ -6,6 +6,4 @@
 - Fixed media preview
 
 [Improvements]
-- Improved Floating Bottom Menu
-- Improved double tab to react
-- Improved Bootloader spoofer for new protections and enabled by default for new users
+- Improved changelog upgrades / downgrades

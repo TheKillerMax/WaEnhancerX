@@ -7,16 +7,41 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
+data class WaexAsset(
+    val name: String,
+    val downloadUrl: String,
+    val size: Long,
+) {
+    val isDebug: Boolean
+        get() = name.contains("debug", ignoreCase = true)
+
+    val buildTypeLabel: String
+        get() = when {
+            isDebug -> "Debug Build"
+            name.contains("release", ignoreCase = true) -> "Release Build"
+            else -> "Standard Build"
+        }
+
+    val formattedSize: String
+        get() {
+            if (size <= 0) return ""
+            val mb = size / (1024.0 * 1024.0)
+            return String.format(java.util.Locale.US, "%.1f MB", mb)
+        }
+}
+
 data class WaexRelease(
     val tagName: String,
     val name: String,
     val body: String,
     val publishedAt: String,
     val htmlUrl: String,
-    val downloadUrl: String?,
-    val downloadSize: Long,
+    val assets: List<WaexAsset> = emptyList(),
 ) {
     val version: String get() = normalizeVersion(tagName.removePrefix("debug-"))
+    val defaultAsset: WaexAsset? get() = assets.firstOrNull { !it.isDebug } ?: assets.firstOrNull()
+    val downloadUrl: String? get() = defaultAsset?.downloadUrl
+    val downloadSize: Long get() = defaultAsset?.size ?: 0L
 }
 
 object ReleaseRepository {
@@ -39,18 +64,30 @@ object ReleaseRepository {
                     val tag = item.optString("tag_name").trim()
                     val version = normalizeVersion(tag.removePrefix("debug-"))
                     if (!versionPattern.matches(version)) continue
-                    val assets = item.optJSONArray("assets")
-                    var apkUrl: String? = null
-                    var apkSize = 0L
-                    if (assets != null) for (j in 0 until assets.length()) {
-                        val asset = assets.optJSONObject(j) ?: continue
-                        if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
-                            apkUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
-                            apkSize = asset.optLong("size")
-                            break
+                    val rawAssets = item.optJSONArray("assets")
+                    val parsedAssets = buildList {
+                        if (rawAssets != null) {
+                            for (j in 0 until rawAssets.length()) {
+                                val asset = rawAssets.optJSONObject(j) ?: continue
+                                val assetName = asset.optString("name")
+                                val apkUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
+                                val apkSize = asset.optLong("size")
+                                if (assetName.endsWith(".apk", ignoreCase = true) && apkUrl != null) {
+                                    add(WaexAsset(name = assetName, downloadUrl = apkUrl, size = apkSize))
+                                }
+                            }
                         }
                     }
-                    add(WaexRelease(tag, item.optString("name", tag), item.optString("body", "No changelog available."), item.optString("published_at"), item.optString("html_url"), apkUrl, apkSize))
+                    add(
+                        WaexRelease(
+                            tagName = tag,
+                            name = item.optString("name", tag),
+                            body = item.optString("body", "No changelog available."),
+                            publishedAt = item.optString("published_at"),
+                            htmlUrl = item.optString("html_url"),
+                            assets = parsedAssets
+                        )
+                    )
                 }
             }.sortedByDescending { versionCode(it.version) }
         }

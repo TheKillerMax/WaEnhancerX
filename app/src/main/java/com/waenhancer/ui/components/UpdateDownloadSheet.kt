@@ -30,12 +30,16 @@ import okhttp3.Call
 import java.io.File
 import java.util.Locale
 
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.layout.navigationBarsPadding
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var downloadProgress by remember(url) { mutableIntStateOf(0) }
     var downloadedBytes by remember(url) { mutableLongStateOf(0L) }
     var downloadTotalBytes by remember(url) { mutableLongStateOf(0L) }
@@ -67,8 +71,18 @@ fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismis
         onDispose { }
     }
 
-    ModalBottomSheet(onDismissRequest = {}, containerColor = colors.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    ModalBottomSheet(
+        onDismissRequest = {},
+        sheetState = sheetState,
+        containerColor = colors.surfaceContainer
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Text("Downloading update", style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
             LinearProgressIndicator(
                 progress = { downloadProgress / 100f },
