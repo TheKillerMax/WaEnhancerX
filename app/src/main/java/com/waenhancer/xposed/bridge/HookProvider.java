@@ -141,6 +141,9 @@ public class HookProvider extends ContentProvider {
                         context, ProFeatureGate.FILE_SIZE_SPOOFER);
                 all.put(ProFeatureGate.FILE_SIZE_SPOOFER_ENTITLEMENT, fileSizeSpooferEntitled);
                 if (!fileSizeSpooferEntitled) all.put(ProFeatureGate.FILE_SIZE_SPOOFER_PREF, false);
+                boolean filterItemsEntitled = ProFeatureGate.isEntitled(
+                        context, ProFeatureGate.FILTER_ITEMS);
+                all.put(ProFeatureGate.FILTER_ITEMS_ENTITLEMENT, filterItemsEntitled);
                 Bundle result = new Bundle();
                 result.putSerializable("prefs", all);
                 return result;

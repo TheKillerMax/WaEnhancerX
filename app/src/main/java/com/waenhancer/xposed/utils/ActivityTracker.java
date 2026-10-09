@@ -51,12 +51,33 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
         sCurrentActivity = new WeakReference<>(activity);
     }
 
+    public interface ActivityListener {
+        void onActivityResumed(@NonNull Activity activity);
+    }
+
+    private static final java.util.List<ActivityListener> sListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void addListener(@NonNull ActivityListener listener) {
+        if (!sListeners.contains(listener)) {
+            sListeners.add(listener);
+        }
+    }
+
+    public static void removeListener(@NonNull ActivityListener listener) {
+        sListeners.remove(listener);
+    }
+
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
         sCurrentActivity = new WeakReference<>(activity);
         try {
             com.waenhancer.xposed.core.VersionGuard.onTargetActivityResumed(activity);
         } catch (Throwable ignored) {}
+        for (ActivityListener listener : sListeners) {
+            try {
+                listener.onActivityResumed(activity);
+            } catch (Throwable ignored) {}
+        }
     }
 
     @Override

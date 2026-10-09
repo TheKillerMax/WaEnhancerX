@@ -104,6 +104,7 @@ public final class FeatureRegistry {
         features.add(new com.waenhancer.xposed.features.customization.OnlinePresenceIndicatorsHook(context, classLoader, prefs));
         features.add(new com.waenhancer.xposed.features.customization.SeparateGroupsHook(context, classLoader, prefs));
         features.add(new com.waenhancer.xposed.features.customization.FloatingBottomBarHook(context, classLoader, prefs));
+        features.add(new com.waenhancer.xposed.features.customization.FilterItemsHook(context, classLoader, prefs));
     }
 
     public void initializeAll() {

@@ -127,6 +127,8 @@ fun SearchScreen() {
             SearchablePreference("custom_view_dpi", "Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "Visual Styles", 4, "appearance", "Styles"),
             SearchablePreference("seen_tick_customization", "View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "Visual Styles", 4, "appearance", "Styles"),
             SearchablePreference("floating_bottom_bar", "Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "Visual Styles", 4, "appearance", "Styles"),
+            SearchablePreference("filter_items", "Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs (Gone, Change Color, Opacity, Resize)", "Visual Styles", 4, "appearance", "Styles"),
+            SearchablePreference("custom_filters", "Custom Appearance Filters", "Enable or disable custom view ID filter rules", "Visual Styles", 4, "appearance", "Styles"),
 
             // --- STYLES TAB (Tab 4), Sub-tab "layout" ---
             SearchablePreference("dotonline", "Show Online Dot in Conversation List", "Show a green online dot on home screen", "Conversation List Activity & Presence", 4, "layout", "Styles"),

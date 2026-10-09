@@ -118,6 +118,10 @@ class WaexNavController(initialScreen: Screen = Screen.MainDashboard) {
             navigateTo(Screen.LicenseActivation)
             return
         }
+        if (preferenceKey == "filter_items") {
+            navigateTo(Screen.FilterItems)
+            return
+        }
         val rootScreen = when (tabIndex) {
             0 -> Screen.MainDashboard
             1 -> Screen.GlobalPrivacySettings
@@ -1007,6 +1011,7 @@ fun WaexAppNavigation(
         Screen.TaskerHistory -> com.waenhancer.ui.screens.automation.TaskerHistoryScreen()
         Screen.ManageDevices -> ManageDevicesScreen()
         Screen.FloatingBottomBarCustomizer -> com.waenhancer.ui.screens.settings.FloatingBottomBarCustomizerScreen()
+        Screen.FilterItems -> com.waenhancer.ui.screens.settings.FilterItemsScreen()
     }
 }
 

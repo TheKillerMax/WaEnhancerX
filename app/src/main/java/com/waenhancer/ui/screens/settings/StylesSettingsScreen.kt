@@ -83,7 +83,7 @@ fun StylesSettingsScreen() {
     val stylesKeys = remember {
         listOf(
             "bubble_colors", "custom_theme", "custom_time_format", "custom_toolbar",
-            "custom_view_dpi", "seen_tick_customization", "floating_bottom_bar",
+            "custom_view_dpi", "seen_tick_customization", "floating_bottom_bar", "custom_filters",
             "dotonline", "showonlinetext", "typing_online_toasts",
             "channels_enhancements", "chat_filters", "hide_ui_tabs",
             "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
@@ -126,7 +126,8 @@ fun StylesSettingsScreen() {
                 StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
                 StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
                 StyleItem("View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "seen_tick_customization"),
-                StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar")
+                StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar"),
+                StyleItem("Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs", "custom_filters")
             )
         )
     )
@@ -345,6 +346,21 @@ fun StylesSettingsScreen() {
                                                 Icon(
                                                     imageVector = WaexIcons.Settings,
                                                     contentDescription = "Customize Floating Bottom Bar",
+                                                    tint = colors.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        if (item.key == "custom_filters") {
+                                            IconButton(
+                                                onClick = {
+                                                    navController.navigateTo(com.waenhancer.ui.navigation.Screen.FilterItems)
+                                                },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = WaexIcons.Settings,
+                                                    contentDescription = "Configure Filter Items",
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(20.dp)
                                                 )
