@@ -73,6 +73,7 @@ import com.waenhancer.ui.screens.audio.AudioTranscriptionScreen
 import com.waenhancer.ui.screens.automation.AutomationTaskerScreen
 import com.waenhancer.ui.screens.conversation.ConversationEnhancementsScreen
 import com.waenhancer.ui.screens.dashboard.MainDashboardScreen
+import com.waenhancer.ui.screens.dashboard.InjectedHooksScreen
 import com.waenhancer.ui.screens.license.LicenseActivationScreen
 import com.waenhancer.ui.screens.license.ManageDevicesScreen
 import com.waenhancer.ui.screens.media.MediaStatusHubScreen
@@ -1012,6 +1013,7 @@ fun WaexAppNavigation(
         Screen.ManageDevices -> ManageDevicesScreen()
         Screen.FloatingBottomBarCustomizer -> com.waenhancer.ui.screens.settings.FloatingBottomBarCustomizerScreen()
         Screen.FilterItems -> com.waenhancer.ui.screens.settings.FilterItemsScreen()
+        is Screen.InjectedHooks -> InjectedHooksScreen(packageName = currentScreen.packageName, appName = currentScreen.appName)
     }
 }
 

@@ -1,25 +1,37 @@
 package com.waenhancer.utils
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
+import android.net.Uri
+import android.os.Bundle
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.waenhancer.app.R
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.xposed.utils.ModuleStatus
+import org.json.JSONArray
+
+data class InjectedHookItem(
+    val name: String,
+    val className: String,
+    val category: String,
+    val status: String,
+    val error: String? = null
+)
 
 data class HookedAppInfo(
     val packageName: String,
     val appName: String,
     val versionName: String,
     val isInstalled: Boolean,
-    val isHooked: Boolean
+    val isHooked: Boolean,
+    val injectedHooks: List<InjectedHookItem> = emptyList(),
+    val lastActiveTime: Long = 0L
 )
 
 object WhatsAppPackageDetector {
@@ -100,8 +112,8 @@ object WhatsAppPackageDetector {
     fun registerHookedPackage(context: Context, packageName: String) {
         // 1. Cross-process IPC to WAEX HookProvider
         try {
-            val uri = android.net.Uri.parse("content://com.waenhancer.hookprovider")
-            val extras = android.os.Bundle().apply {
+            val uri = Uri.parse("content://com.waenhancer.hookprovider")
+            val extras = Bundle().apply {
                 putString("package", packageName)
                 putLong("timestamp", System.currentTimeMillis())
             }
@@ -110,7 +122,7 @@ object WhatsAppPackageDetector {
 
         // 2. Broadcast to WAEX process
         try {
-            val intent = android.content.Intent("com.waenhancer.ACTION_TARGET_APP_ACTIVE").apply {
+            val intent = Intent("com.waenhancer.ACTION_TARGET_APP_ACTIVE").apply {
                 setPackage("com.waenhancer")
                 putExtra("PACKAGE", packageName)
                 putExtra("TIMESTAMP", System.currentTimeMillis())
@@ -129,6 +141,32 @@ object WhatsAppPackageDetector {
                     .apply()
             }
         } catch (_: Throwable) {}
+    }
+
+    /**
+     * Retrieves the list of injected hooks parsed from cached JSON in HookProvider / SharedPreferences.
+     */
+    @JvmStatic
+    fun getInjectedHooks(context: Context, packageName: String): List<InjectedHookItem> {
+        val hooks = mutableListOf<InjectedHookItem>()
+        try {
+            val prefs = PreferenceStores.publicStore(context)
+            val jsonStr = prefs.getString("injected_hooks_$packageName", null) ?: return emptyList()
+            val array = JSONArray(jsonStr)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                hooks.add(
+                    InjectedHookItem(
+                        name = obj.optString("name", "Unknown Feature"),
+                        className = obj.optString("className", ""),
+                        category = obj.optString("category", "General"),
+                        status = obj.optString("status", "ACTIVE"),
+                        error = if (obj.has("error")) obj.optString("error") else null
+                    )
+                )
+            }
+        } catch (_: Throwable) {}
+        return hooks
     }
 
     /**
@@ -169,8 +207,8 @@ object WhatsAppPackageDetector {
 
         // 2. Read packages that have been hooked by Xposed runtime
         var hookedSet: Set<String>? = null
+        val prefs = PreferenceStores.publicStore(context)
         try {
-            val prefs = PreferenceStores.publicStore(context)
             hookedSet = prefs.getStringSet("hooked_whatsapp_packages", null)
             if (hookedSet != null) {
                 discoveredPackages.addAll(hookedSet)
@@ -213,6 +251,8 @@ object WhatsAppPackageDetector {
                 }
 
                 val isHooked = isGlobalModuleActive && (hookedSet?.contains(pkg) == true)
+                val injectedHooks = if (isHooked) getInjectedHooks(context, pkg) else emptyList()
+                val lastActiveTime = prefs.getLong("last_active_$pkg", 0L)
 
                 result.add(
                     HookedAppInfo(
@@ -220,7 +260,9 @@ object WhatsAppPackageDetector {
                         appName = friendlyName,
                         versionName = "v${pInfo.versionName ?: "Unknown"}",
                         isInstalled = true,
-                        isHooked = isHooked
+                        isHooked = isHooked,
+                        injectedHooks = injectedHooks,
+                        lastActiveTime = lastActiveTime
                     )
                 )
             } catch (e: PackageManager.NameNotFoundException) {
@@ -233,7 +275,9 @@ object WhatsAppPackageDetector {
                             appName = name,
                             versionName = "Not Installed",
                             isInstalled = false,
-                            isHooked = false
+                            isHooked = false,
+                            injectedHooks = emptyList(),
+                            lastActiveTime = 0L
                         )
                     )
                 }

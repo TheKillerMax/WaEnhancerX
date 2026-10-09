@@ -2,11 +2,9 @@ package com.waenhancer.xposed.core
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient
-import de.robv.android.xposed.XSharedPreferences
 
 /**
- * Base abstract class for all modular WAEX enhancements in Kotlin.
+ * Base abstract class for all modular WAEX enhancements.
  */
 abstract class BaseFeature(
     @JvmField protected val context: Context,
@@ -21,8 +19,10 @@ abstract class BaseFeature(
 
     abstract val name: String
 
+    open val category: String
+        get() = "General"
+
     protected fun isEnabled(key: String, def: Boolean = false): Boolean {
         return prefs.getBoolean(key, def)
     }
 }
-

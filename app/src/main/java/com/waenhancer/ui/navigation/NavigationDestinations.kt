@@ -26,6 +26,7 @@ sealed class Screen(val route: String) {
     object ManageDevices : Screen("manage_devices")
     object FloatingBottomBarCustomizer : Screen("floating_bottom_bar_customizer")
     object FilterItems : Screen("filter_items")
+    data class InjectedHooks(val packageName: String, val appName: String) : Screen("injected_hooks/$packageName")
 }
 
 

@@ -169,6 +169,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     if (isSupported) {
                                         FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
                                         registry.initializeAll();
+                                        registry.reportInjectedHooks(appContext, packageName);
                                     } else {
                                         XposedBridge.log("[WAEX] Feature initialization halted due to unverified WhatsApp version.");
                                     }

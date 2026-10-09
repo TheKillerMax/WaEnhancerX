@@ -106,6 +106,28 @@ public class HookProvider extends ContentProvider {
                 }
             }
 
+            if ("register_injected_hooks".equals(method) && extras != null) {
+                String pkg = extras.getString("package", arg);
+                String hooksJson = extras.getString("hooks_json");
+                long timestamp = extras.getLong("timestamp", System.currentTimeMillis());
+                if (pkg != null && !pkg.isEmpty() && hooksJson != null) {
+                    var currentSet = new HashSet<>(prefs.getStringSet("hooked_whatsapp_packages", new HashSet<>()));
+                    currentSet.add(pkg);
+                    var editor = prefs.edit();
+                    editor.putStringSet("hooked_whatsapp_packages", currentSet);
+                    editor.putString("injected_hooks_" + pkg, hooksJson);
+                    editor.putLong("injected_hooks_time_" + pkg, timestamp);
+                    editor.putLong("last_active_" + pkg, timestamp);
+                    editor.commit();
+                    fixPermissions();
+                    context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/injected_hooks"), null);
+                    context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
+                    Bundle result = new Bundle();
+                    result.putBoolean("success", true);
+                    return result;
+                }
+            }
+
             if ("get_all_preferences".equals(method)) {
                 var all = new HashMap<String, Object>(prefs.getAll());
                 all.put("waex_pro_active", "ACTIVE".equalsIgnoreCase(
