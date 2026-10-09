@@ -1,3 +1,6 @@
+[Added]
+- Filter items by id
+
 [Removed]
 - Removed Beta channel flow. Normalized the versioning and update flow
 
