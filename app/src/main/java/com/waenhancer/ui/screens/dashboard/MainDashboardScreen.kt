@@ -238,7 +238,7 @@ fun MainDashboardScreen(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = if (moduleVersion.contains("-beta-")) "Beta" else "Stable",
+                                text = "Changelog",
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 11.sp

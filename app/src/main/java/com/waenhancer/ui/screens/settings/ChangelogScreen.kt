@@ -54,7 +54,6 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.update.ReleaseRepository
-import com.waenhancer.update.ReleaseChannel
 import com.waenhancer.update.WaexRelease
 import io.noties.markwon.Markwon
 import io.noties.markwon.html.HtmlPlugin
@@ -70,9 +69,6 @@ fun ChangelogScreen() {
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    var selectedChannel by remember {
-        mutableStateOf(if (preferences.getString("release_channel", "stable") == "beta") "Beta" else "Stable")
-    }
     var releases by remember { mutableStateOf<List<WaexRelease>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -92,11 +88,9 @@ fun ChangelogScreen() {
         loading = false
     }
 
-    val filtered = releases.filter { (selectedChannel == "Beta") == it.isBeta }
     val availableUpdate = ReleaseRepository.findUpdate(
-        filtered,
-        installedVersion,
-        if (selectedChannel == "Beta") ReleaseChannel.BETA else ReleaseChannel.STABLE
+        releases,
+        installedVersion
     )
     Scaffold(
         topBar = {
@@ -124,23 +118,8 @@ fun ChangelogScreen() {
                 contentPadding = PaddingValues(horizontal = spacing.pageMargin, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Stable", "Beta").forEach { channel ->
-                            val active = selectedChannel == channel
-                            Box(Modifier.clip(CircleShape).background(if (active) colors.primary else colors.surfaceDim)
-                                .border(1.dp, if (active) colors.primary else colors.outlineVariant, CircleShape)
-                                .clickable {
-                                    selectedChannel = channel
-                                    preferences.putString("release_channel", channel.lowercase(Locale.US))
-                                }.padding(horizontal = 18.dp, vertical = 9.dp)) {
-                                Text(channel, style = typography.labelSm, fontWeight = FontWeight.Bold, color = if (active) colors.onPrimary else colors.onSurface)
-                            }
-                        }
-                    }
-                }
-                if (filtered.isEmpty()) item { Text("No $selectedChannel releases found.", color = colors.onSurfaceVariant) }
-                items(filtered, key = { it.tagName }) { release ->
+                if (releases.isEmpty()) item { Text("No releases found.", color = colors.onSurfaceVariant) }
+                items(releases, key = { it.tagName }) { release ->
                     val installed = release.version.equals(com.waenhancer.update.normalizeVersion(installedVersion), true)
                     val comparison = ReleaseRepository.versionCode(release.version).compareTo(ReleaseRepository.versionCode(installedVersion))
                     val allowDowngrade = preferences.getBoolean("downgrades_enabled", false)

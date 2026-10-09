@@ -64,7 +64,6 @@ fun UpdateSettingsScreen() {
     var allowDowngrades by remember { mutableStateOf(prefManager.getBoolean("downgrades_enabled", false)) }
     var rootAutoInstall by remember { mutableStateOf(prefManager.getBoolean("root_auto_install", false)) }
     var updateFrequency by remember { mutableStateOf(prefManager.getString("update_frequency", "daily")) }
-    var releaseChannel by remember { mutableStateOf(prefManager.getString("release_channel", "stable")) }
 
     Scaffold(
         topBar = {
@@ -83,58 +82,6 @@ fun UpdateSettingsScreen() {
                 .padding(horizontal = spacing.pageMargin, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Release Channel Selector Card
-            Surface(
-                shape = radius.bentoCardShape,
-                color = colors.surfaceDim,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "RELEASE CHANNEL",
-                        style = typography.labelSm,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.primary,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        listOf("stable" to "Stable Builds", "beta" to "Beta Preview").forEach { (channelId, label) ->
-                            val active = releaseChannel == channelId
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(radius.defaultShape)
-                                    .background(if (active) colors.primary.copy(alpha = 0.12f) else colors.surface)
-                                    .border(
-                                        1.dp,
-                                        if (active) colors.primary else colors.outlineVariant,
-                                        radius.defaultShape
-                                    )
-                                    .clickable {
-                                        releaseChannel = channelId
-                                        prefManager.putString("release_channel", channelId)
-                                    }
-                                    .padding(vertical = 14.dp, horizontal = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = typography.bodyMd,
-                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (active) colors.primary else colors.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             // General Update Behaviors Card
             Surface(
                 shape = radius.bentoCardShape,

@@ -61,11 +61,7 @@ object NoticeRepository {
             }
         }.getOrNull() ?: 1
 
-        val channel = if (appVersionName.uppercase(Locale.US).contains("DEV") || appVersionName.uppercase(Locale.US).contains("BETA")) {
-            "dev"
-        } else {
-            "release"
-        }
+        val channel = "release"
 
         val commitId = getCommitIdFromVersionName(appVersionName)
 

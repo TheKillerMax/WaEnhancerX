@@ -7,8 +7,6 @@ import okhttp3.Request
 import org.json.JSONArray
 import java.util.concurrent.TimeUnit
 
-enum class ReleaseChannel { STABLE, BETA, BOTH }
-
 data class WaexRelease(
     val tagName: String,
     val name: String,
@@ -19,12 +17,11 @@ data class WaexRelease(
     val downloadSize: Long,
 ) {
     val version: String get() = normalizeVersion(tagName.removePrefix("debug-"))
-    val isBeta: Boolean get() = version.contains("-beta-")
 }
 
 object ReleaseRepository {
     const val RELEASES_API = "https://waex.mubashar.dev/api/releases"
-    private val versionPattern = Regex("^\\d+\\.\\d+\\.\\d+(-beta-\\d+)?$")
+    private val versionPattern = Regex("^\\d+\\.\\d+(\\.\\d+)?(-[a-zA-Z0-9.-]+)?$")
     private val client = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).build()
 
     suspend fun fetchReleases(): List<WaexRelease> = withContext(Dispatchers.IO) {
@@ -63,26 +60,25 @@ object ReleaseRepository {
         it.tagName.equals(tagName, true) || it.name.equals(tagName, true) || it.tagName.endsWith(tagName, true)
     }
 
-    fun findUpdate(releases: List<WaexRelease>, installedVersion: String, channel: ReleaseChannel): WaexRelease? {
+    fun findUpdate(releases: List<WaexRelease>, installedVersion: String): WaexRelease? {
         val installed = versionCode(normalizeVersion(installedVersion))
         return releases.asSequence()
-            .filter { channel == ReleaseChannel.BOTH || (channel == ReleaseChannel.BETA) == it.isBeta }
             .filter { versionCode(it.version) > installed }
             .maxByOrNull { versionCode(it.version) }
     }
 
     fun versionCode(version: String): Long {
         val normalized = normalizeVersion(version)
-        val betaIndex = normalized.indexOf("-beta-")
-        val base = if (betaIndex > 0) normalized.substring(0, betaIndex) else normalized
+        val dashIndex = normalized.indexOf('-')
+        val base = if (dashIndex > 0) normalized.substring(0, dashIndex) else normalized
         val parts = base.split('.')
-        val major = parts.getOrNull(0)?.toLongOrNull() ?: return 0
-        val minor = parts.getOrNull(1)?.toLongOrNull() ?: 0
-        val patch = parts.getOrNull(2)?.toLongOrNull() ?: 0
+        val major = parts.getOrNull(0)?.toLongOrNull() ?: return 0L
+        val minor = parts.getOrNull(1)?.toLongOrNull() ?: 0L
+        val patch = parts.getOrNull(2)?.toLongOrNull() ?: 0L
         val baseCode = major * 1_000_000L + minor * 1_000L + patch
-        if (betaIndex < 0) return baseCode * 1_000L + 999L
-        val beta = normalized.substring(betaIndex + 6).toLongOrNull()?.coerceIn(1, 998) ?: 1
-        return baseCode * 1_000L + beta
+        if (dashIndex < 0) return baseCode * 1_000L + 999L
+        val suffixNum = Regex("\\d+").findAll(normalized.substring(dashIndex)).lastOrNull()?.value?.toLongOrNull()?.coerceIn(1L, 998L) ?: 1L
+        return baseCode * 1_000L + suffixNum
     }
 }
 

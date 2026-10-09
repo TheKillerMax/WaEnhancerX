@@ -295,7 +295,6 @@ public final class PreferenceSchema {
         add(entries, "preserve_delete_for_me", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "primary_color", Type.INT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "proximity_audios", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "release_channel", Type.STRING, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "remove_status_bottom_tile", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "remove_status_heart_button", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "remove_status_quick_reactions", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
