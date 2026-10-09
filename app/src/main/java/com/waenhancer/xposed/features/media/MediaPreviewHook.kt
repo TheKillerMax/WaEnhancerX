@@ -1,286 +1,1117 @@
 package com.waenhancer.xposed.features.media
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.Color
+import android.database.Cursor
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
-import android.graphics.RectF
+import android.graphics.Paint
+import android.graphics.PointF
+import android.graphics.PorterDuff
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.database.sqlite.SQLiteDatabase
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewStub
 import android.view.Window
+import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.MediaController
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RelativeLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.VideoView
+import androidx.core.graphics.drawable.DrawableCompat
 import com.waenhancer.xposed.core.BaseFeature
+import com.waenhancer.xposed.core.db.MessageStore
 import com.waenhancer.xposed.core.devkit.DexSearchEngine
+import com.waenhancer.xposed.utils.HKDFv3
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.luckypray.dexkit.query.FindClass
 import org.luckypray.dexkit.query.enums.StringMatchType
 import org.luckypray.dexkit.query.matchers.ClassMatcher
+import org.luckypray.dexkit.query.matchers.MethodMatcher
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
-import java.util.Collections
-import java.util.WeakHashMap
+import java.util.Locale
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.crypto.Cipher
-import javax.crypto.Mac
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
-/** Adds a preview affordance to WhatsApp media controls and opens available media fullscreen. */
+/**
+ * MediaPreviewHook provides inline media preview (images & videos) directly on WhatsApp chat bubbles,
+ * with full zoomable images, video playback controls, audio mute/unmute, playback speed, and remote decrypted download.
+ */
 class MediaPreviewHook(
     context: Context,
     classLoader: ClassLoader,
     prefs: SharedPreferences
 ) : BaseFeature(context, classLoader, prefs) {
+
     override val name: String get() = "Media Preview"
 
+    private var currentFilePath: File? = null
+    private var previewDialog: Dialog? = null
+    private var currentVideoView: VideoView? = null
+    private var currentMediaPlayer: MediaPlayer? = null
+    private var currentSpeed: Float = 1.0f
+    private var lastProgressPostAt: Long = 0L
+
     override fun hook() {
-        if (!isEnabled("media_preview", isEnabled("enable_media_preview", false))) return
-        val mediaRowClass = DexSearchEngine.getInstance().findClassWithCache(
-            context, classLoader, "wpp_media_bubble_layout_v1"
-        ) { bridge, loader ->
-            bridge.findClass(FindClass.create().matcher(ClassMatcher.create().addUsingString(
-                "BubbleRelativeLayout/ConversationRowText", StringMatchType.Contains
-            ))).firstOrNull()?.getInstance(loader)
-        }
-        if (mediaRowClass == null) {
-            XposedBridge.log("[WAEX][MediaPreview] Media bubble class not found")
-            return
-        }
-        XposedBridge.hookAllMethods(View::class.java, "onAttachedToWindow", object : XC_MethodHook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
-                val view = param.thisObject as? ViewGroup ?: return
-                if (!mediaRowClass.isInstance(view)) return
-                view.postDelayed({ installIfMediaRow(view) }, 200L)
+        if (!isEnabled("media_preview", isEnabled("enable_media_preview", true))) return
+
+        try {
+            val videoViewContainerClass = DexSearchEngine.getInstance().findClassWithCache(
+                context, classLoader, "wpp_video_view_container"
+            ) { bridge, loader ->
+                bridge.findClass(FindClass.create().matcher(ClassMatcher.create().addUsingString(
+                    "frame_visibility_serial_worker", StringMatchType.Contains
+                ))).firstOrNull()?.getInstance(loader)
             }
-        })
-        XposedBridge.log("[WAEX][MediaPreview] Attachment hook installed")
+
+            if (videoViewContainerClass != null) {
+                XposedBridge.hookAllConstructors(videoViewContainerClass, object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (param.args.size < 2) return
+                        val view = param.thisObject as? View ?: return
+
+                        val invisiblePressSurfaceId = getWppId(view.context, "invisible_press_surface")
+                        val videoControlFrameViewId = getWppId(view.context, "video_control_frame_view")
+                        var surface: ViewGroup? = if (invisiblePressSurfaceId > 0) view.findViewById(invisiblePressSurfaceId) else null
+                        if (surface == null && videoControlFrameViewId > 0) {
+                            surface = view.findViewById(videoControlFrameViewId)
+                        }
+
+                        if (surface != null && surface.childCount > 0) {
+                            handlePressSurface(view, surface)
+                        } else {
+                            val legacyStubId = getWppId(view.context, "video_control_frame_legacy_stub")
+                            if (legacyStubId > 0) {
+                                view.findViewById<ViewStub>(legacyStubId)?.setOnInflateListener { _, inflated ->
+                                    handlePressSurface(view, inflated)
+                                }
+                            }
+                            val viewStubId = getWppId(view.context, "video_control_frame_view_stub")
+                            if (viewStubId > 0) {
+                                view.findViewById<ViewStub>(viewStubId)?.setOnInflateListener { _, inflated ->
+                                    handlePressSurface(view, inflated)
+                                }
+                            }
+                        }
+                    }
+                })
+            }
+        } catch (t: Throwable) {
+            XposedBridge.log("[WAEX][MediaPreview] Error hooking videoViewContainer: ${t.message}")
+        }
+
+        try {
+            val imageViewContainerClass = DexSearchEngine.getInstance().findClassWithCache(
+                context, classLoader, "wpp_image_view_container"
+            ) { bridge, loader ->
+                val hdTouchId = getWppId(context, "hd_invisible_touch")
+                val controlBtnId = getWppId(context, "control_btn")
+                val classes = bridge.findClass(FindClass.create().matcher(
+                    ClassMatcher.create().addMethod(
+                        MethodMatcher.create()
+                            .addUsingNumber(hdTouchId)
+                            .addUsingNumber(controlBtnId)
+                    )
+                ))
+                for (c in classes) {
+                    val inst = c.getInstance(loader)
+                    if (ViewGroup::class.java.isAssignableFrom(inst)) return@findClassWithCache inst
+                }
+                null
+            }
+
+            if (imageViewContainerClass != null) {
+                XposedBridge.hookAllConstructors(imageViewContainerClass, object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (param.args.size < 2) return
+                        val view = param.thisObject as? View ?: return
+
+                        val controlFrameId = getWppId(view.context, "control_frame")
+                        val controlFrameNewId = getWppId(view.context, "control_frame_new")
+                        var controlFrame: View? = if (controlFrameId > 0) view.findViewById(controlFrameId) else null
+                        if (controlFrame == null && controlFrameNewId > 0) {
+                            controlFrame = view.findViewById(controlFrameNewId)
+                        }
+
+                        if (controlFrame != null) {
+                            handleMediaControlFrame(view, controlFrame)
+                        } else {
+                            val legacyStubId = getWppId(view.context, "control_frame_legacy_stub")
+                            if (legacyStubId > 0) {
+                                view.findViewById<ViewStub>(legacyStubId)?.setOnInflateListener { _, inflated ->
+                                    handleMediaControlFrame(view, inflated)
+                                }
+                            }
+                            val viewStubId = getWppId(view.context, "control_frame_view_stub")
+                            if (viewStubId > 0) {
+                                view.findViewById<ViewStub>(viewStubId)?.setOnInflateListener { _, inflated ->
+                                    handleMediaControlFrame(view, inflated)
+                                }
+                            }
+                        }
+                    }
+                })
+            }
+        } catch (t: Throwable) {
+            XposedBridge.log("[WAEX][MediaPreview] Error hooking imageViewContainer: ${t.message}")
+        }
+
+        // Secondary fallback: bubble row attachment hook
+        try {
+            val mediaRowClass = DexSearchEngine.getInstance().findClassWithCache(
+                context, classLoader, "wpp_media_bubble_layout_v1"
+            ) { bridge, loader ->
+                bridge.findClass(FindClass.create().matcher(ClassMatcher.create().addUsingString(
+                    "BubbleRelativeLayout/ConversationRowText", StringMatchType.Contains
+                ))).firstOrNull()?.getInstance(loader)
+            }
+            if (mediaRowClass != null) {
+                XposedBridge.hookAllMethods(View::class.java, "onAttachedToWindow", object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val view = param.thisObject as? ViewGroup ?: return
+                        if (!mediaRowClass.isInstance(view)) return
+                        view.postDelayed({ installAffordanceFallback(view) }, 200L)
+                    }
+                })
+            }
+        } catch (t: Throwable) {
+            XposedBridge.log("[WAEX][MediaPreview] Secondary bubble hook error: ${t.message}")
+        }
     }
 
-    private fun installIfMediaRow(root: ViewGroup) {
+    private fun handlePressSurface(mainContainer: View, surface: View) {
+        if (surface !is ViewGroup) return
+        val context = surface.context
+        val controlFrame = surface.getChildAt(0) ?: return
+        if (MEDIA_PREVIEW_WRAPPER_TAG == controlFrame.tag) return
+
+        surface.removeViewAt(0)
+        val linearLayout = LinearLayout(context).apply {
+            tag = MEDIA_PREVIEW_WRAPPER_TAG
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+
+        surface.addView(linearLayout, 0)
+        linearLayout.addView(controlFrame)
+
+        val prevBtn = createPreviewButton(context, dipToPixels(context, 8f))
+        prevBtn.setOnClickListener { startPreview(mainContainer, context) }
+        linearLayout.addView(prevBtn)
+    }
+
+    private fun handleMediaControlFrame(mainContainer: View, controlFrame: View) {
+        val context = mainContainer.context
+        val mediaContainerId = getWppId(context, "media_container")
+        val mediaContainer = if (mediaContainerId > 0) mainContainer.findViewById<ViewGroup>(mediaContainerId) else null
+        if (mediaContainer == null) return
+
+        val currentParent = controlFrame.parent as? ViewGroup
+        if (currentParent != null && MEDIA_PREVIEW_WRAPPER_TAG == currentParent.tag) return
+
+        val linearLayout = LinearLayout(context).apply {
+            tag = MEDIA_PREVIEW_WRAPPER_TAG
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+            orientation = LinearLayout.VERTICAL
+        }
+
+        currentParent?.removeView(controlFrame)
+        linearLayout.addView(controlFrame)
+        mediaContainer.addView(linearLayout)
+
+        val prevBtn = createPreviewButton(context, dipToPixels(context, 8f))
+        prevBtn.visibility = controlFrame.visibility
+        prevBtn.setOnClickListener { startPreview(mainContainer, context) }
+        linearLayout.addView(prevBtn)
+
+        controlFrame.viewTreeObserver.addOnGlobalLayoutListener {
+            if (prevBtn.visibility != controlFrame.visibility) {
+                prevBtn.visibility = controlFrame.visibility
+            }
+        }
+    }
+
+    private fun installAffordanceFallback(root: ViewGroup) {
         if (root.getTag(TAG_INSTALLED) == true) return
         val control = CONTROL_IDS.asSequence().mapNotNull { name ->
-            val id = root.resources.getIdentifier(name, "id", root.context.packageName)
+            val id = getWppId(root.context, name)
             if (id > 0) root.findViewById<View>(id) else null
         }.firstOrNull { it.visibility == View.VISIBLE } ?: return
+
         val host = control.parent as? ViewGroup ?: return
-        if (host.findViewWithTag<View>(BUTTON_TAG) != null) return
-        val button = TextView(root.context).apply {
+        if (host.findViewWithTag<View>(BUTTON_TAG) != null || host.tag == MEDIA_PREVIEW_WRAPPER_TAG) return
+
+        val prevBtn = createPreviewButton(root.context, dipToPixels(root.context, 8f)).apply {
             tag = BUTTON_TAG
-            text = "◉"
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            contentDescription = "Preview media"
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0x99000000.toInt())
-            }
-            setOnClickListener { preview(root) }
+            setOnClickListener { startPreview(root, root.context) }
         }
-        val size = dp(root.context, 40)
+
         when (host) {
-            is FrameLayout -> host.addView(button, FrameLayout.LayoutParams(size, size, Gravity.CENTER).apply {
-                topMargin = dp(root.context, 48)
+            is FrameLayout -> host.addView(prevBtn, FrameLayout.LayoutParams(
+                dipToPixels(root.context, 42f),
+                dipToPixels(root.context, 32f),
+                Gravity.CENTER
+            ).apply {
+                topMargin = dipToPixels(root.context, 48f)
             })
-            else -> host.addView(button, ViewGroup.LayoutParams(size, size))
+            else -> host.addView(prevBtn, ViewGroup.LayoutParams(
+                dipToPixels(root.context, 42f),
+                dipToPixels(root.context, 32f)
+            ))
         }
         root.setTag(TAG_INSTALLED, true)
     }
 
-    private fun preview(source: View) {
-        val message = resolveMessage(source)
-        val file = findMediaFile(message, 6, Collections.newSetFromMap(WeakHashMap()))
-        if (file == null || !file.exists()) {
-            downloadRemotePreview(source, message)
-            return
+    private fun createEyeDrawable(context: Context): Drawable {
+        val size = dipToPixels(context, 24f)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = dipToPixels(context, 2f).toFloat()
         }
-        showFile(source.context, file)
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
+        }
+
+        val cx = size / 2f
+        val cy = size / 2f
+        val rx = size * 0.42f
+        val ry = size * 0.26f
+
+        // Draw outer eye path
+        val path = android.graphics.Path().apply {
+            moveTo(cx - rx, cy)
+            quadTo(cx, cy - ry * 1.8f, cx + rx, cy)
+            quadTo(cx, cy + ry * 1.8f, cx - rx, cy)
+            close()
+        }
+        canvas.drawPath(path, paint)
+
+        // Draw pupil circle
+        canvas.drawCircle(cx, cy, size * 0.14f, fillPaint)
+
+        return BitmapDrawable(context.resources, bitmap)
     }
 
-    private fun resolveMessage(source: View): Any? {
-        var current: View? = source
-        repeat(10) {
-            val view = current ?: return@repeat
-            runCatching { XposedHelpers.callMethod(view, "getFMessage") }.getOrNull()?.let { return it }
-            val tag = view.tag
-            if (tag != null && tag !is String && extractRowId(tag) > 0L) return tag
-            current = view.parent as? View
+    private fun createPreviewButton(context: Context, topMargin: Int): ImageView {
+        val drawable = createEyeDrawable(context)
+        val padding = dipToPixels(context, 4f)
+        val prevBtn = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dipToPixels(context, 42f), dipToPixels(context, 32f)).apply {
+                gravity = Gravity.CENTER
+                this.topMargin = topMargin
+            }
+            setImageDrawable(drawable)
+            setPadding(padding, padding, padding, padding)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0x99000000.toInt())
+            }
+            scaleType = ImageView.ScaleType.FIT_CENTER
         }
-        return findMessageHolder(source)
+        return prevBtn
     }
 
-    private fun downloadRemotePreview(source: View, message: Any?) {
-        val rowId = extractRowId(message)
-        if (rowId <= 0L) {
-            Toast.makeText(source.context, "Unable to resolve this media message", Toast.LENGTH_SHORT).show()
-            return
+    private fun startPreview(messageSource: View, context: Context) {
+        try {
+            var objMessage: Any? = null
+            try {
+                objMessage = XposedHelpers.callMethod(messageSource, "getFMessage")
+            } catch (_: Throwable) {
+                if (messageSource.tag != null) {
+                    try {
+                        val keyTag = messageSource.tag
+                        objMessage = resolveFMessageFromKeyTag(keyTag)
+                    } catch (_: Throwable) {}
+                }
+            }
+
+            if (objMessage == null) {
+                objMessage = resolveMessageDeep(messageSource)
+            }
+
+            var rowId = extractRowId(objMessage)
+            if (rowId <= 0L) {
+                val keyId = extractKeyId(objMessage)
+                if (!keyId.isNullOrBlank()) {
+                    rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
+                }
+            }
+
+            if (rowId <= 0L && messageSource.tag != null && messageSource.tag !is String) {
+                val tagKeyId = extractKeyId(messageSource.tag)
+                if (!tagKeyId.isNullOrBlank()) {
+                    rowId = MessageStore.getInstance(context).getIdFromKey(tagKeyId)
+                }
+            }
+
+            if (rowId <= 0L) {
+                // If rowId could not be found, fallback to view bitmap directly
+                val rendered = extractBitmapFromView(messageSource)
+                if (rendered != null) {
+                    showBitmap(context, rendered)
+                    return
+                }
+                Toast.makeText(context, "Error finding message info", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val isNewsletter = isNewsletterSource(objMessage)
+            startPlayer(rowId, context, isNewsletter, messageSource)
+        } catch (t: Throwable) {
+            XposedBridge.log("[WAEX][MediaPreview] startPreview error: ${t.message}")
+            Toast.makeText(context, "Error launching preview: ${t.message}", Toast.LENGTH_SHORT).show()
         }
-        val loadingDialog = showLoadingDialog(source.context)
+    }
+
+    private fun startPlayer(id: Long, context: Context, isNewsletter: Boolean, sourceView: View?) {
+        val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
-                val dbFile = File(source.context.filesDir.parentFile, "databases/msgstore.db")
-                SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                    var cursor = db.rawQuery(
-                        "SELECT message_url,mime_type,media_key,direct_path FROM message_media WHERE message_row_id=?",
-                        arrayOf(rowId.toString())
-                    )
-                    if (!cursor.moveToFirst()) {
-                        cursor.close()
-                        val keyId = extractKeyId(message)
-                            ?: error("Media metadata was not found for row $rowId")
-                        cursor = db.rawQuery(
-                            "SELECT mm.message_url,mm.mime_type,mm.media_key,mm.direct_path " +
-                                "FROM message_media mm JOIN message m ON m._id=mm.message_row_id " +
-                                "WHERE m.key_id=? ORDER BY m._id DESC LIMIT 1",
-                            arrayOf(keyId)
-                        )
-                        if (!cursor.moveToFirst()) {
-                            cursor.close()
-                            error("Media metadata was not found")
+                val query = String.format(
+                    Locale.ENGLISH,
+                    "SELECT message_url, mime_type, hex(media_key), direct_path, file_length FROM message_media WHERE message_row_id=\"%d\"",
+                    id
+                )
+                val db = MessageStore.getInstance(context).database
+                val cursor = db?.rawQuery(query, null)
+
+                if (cursor != null && cursor.count > 0) {
+                    cursor.moveToFirst()
+                    var url = cursor.getString(0)
+                    val mimeType = cursor.getString(1) ?: "image/jpeg"
+                    val mediaKey = cursor.getString(2)
+                    val directPath = cursor.getString(3)
+                    val fileLength = cursor.getLong(4)
+                    cursor.close()
+
+                    if (isNewsletter && !directPath.isNullOrBlank()) {
+                        url = "https://mmg.whatsapp.net$directPath"
+                    } else if (url.isNullOrBlank() && !directPath.isNullOrBlank()) {
+                        url = if (directPath.startsWith("http")) directPath else "https://mmg.whatsapp.net$directPath"
+                    }
+
+                    val finalUrl = url
+                    mainHandler.post {
+                        val dialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+                            requestWindowFeature(Window.FEATURE_NO_TITLE)
+                            setCancelable(true)
+                            window?.let { w ->
+                                w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+                                w.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
+                        previewDialog = dialog
+
+                        val mainContainer = RelativeLayout(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            setBackgroundColor(Color.BLACK)
+                        }
+
+                        val header = createHeader(context, mimeType, dialog)
+                        mainContainer.addView(header)
+
+                        val contentContainer = FrameLayout(context).apply {
+                            this.id = View.generateViewId()
+                            layoutParams = RelativeLayout.LayoutParams(
+                                RelativeLayout.LayoutParams.MATCH_PARENT,
+                                RelativeLayout.LayoutParams.MATCH_PARENT
+                            ).apply {
+                                addRule(RelativeLayout.BELOW, header.id)
+                            }
+                        }
+                        mainContainer.addView(contentContainer)
+
+                        val loadingContainer = createLoadingView(context)
+                        contentContainer.addView(loadingContainer)
+
+                        val progressBar = loadingContainer.getChildAt(0) as ProgressBar
+                        val progressText = loadingContainer.getChildAt(1) as TextView
+
+                        dialog.setContentView(mainContainer)
+                        dialog.setOnDismissListener { cleanupResources(executor) }
+                        dialog.show()
+
+                        executor.execute {
+                            downloadAndDisplayMedia(
+                                finalUrl, mediaKey, mimeType, fileLength, isNewsletter, context,
+                                contentContainer, loadingContainer, progressBar, progressText, executor, sourceView
+                            )
                         }
                     }
-                    cursor.use {
-                        var url = cursor.getString(0)
-                        val mime = cursor.getString(1) ?: "application/octet-stream"
-                        val key = cursor.getBlob(2)
-                        val directPath = cursor.getString(3)
-                        if (url.isNullOrBlank() && !directPath.isNullOrBlank()) {
-                            url = if (directPath.startsWith("http")) directPath else "https://mmg.whatsapp.net$directPath"
-                        }
-                        if (url.isNullOrBlank()) error("Media download URL is unavailable")
-                        val request = Request.Builder().url(url).header("User-Agent", "WhatsApp").build()
-                        val body = http.newCall(request).execute().use { response ->
-                            if (!response.isSuccessful) error("Media server returned ${response.code}")
-                            response.body?.bytes() ?: error("Media server returned an empty response")
-                        }
-                        val clear = if (key != null && key.size == 32) decryptMedia(body, key, mime) else body
-                        val extension = when {
-                            mime.startsWith("image/") -> ".jpg"
-                            mime.startsWith("video/") -> ".mp4"
-                            mime.startsWith("audio/") -> ".opus"
-                            else -> ".bin"
-                        }
-                        val output = File.createTempFile("waex_preview_", extension, source.context.cacheDir)
-                        FileOutputStream(output).use { it.write(clear) }
-                        mainHandler.post {
-                            loadingDialog.dismiss()
-                            if (source.isAttachedToWindow) showFile(source.context, output)
-                            else output.delete()
+                } else {
+                    cursor?.close()
+                    mainHandler.post {
+                        val rendered = extractBitmapFromView(sourceView)
+                        if (rendered != null) {
+                            showBitmap(context, rendered)
+                        } else {
+                            Toast.makeText(context, "No media info found for row $id", Toast.LENGTH_SHORT).show()
                         }
                     }
+                    cleanupDialog(executor)
                 }
-            } catch (t: Throwable) {
-                XposedBridge.log("[WAEX][MediaPreview] Preview failed: $t")
-                mainHandler.post {
-                    loadingDialog.dismiss()
-                    Toast.makeText(source.context, t.message ?: "Media preview failed", Toast.LENGTH_LONG).show()
-                }
+            } catch (e: Exception) {
+                handleError(e, executor, context, sourceView)
             }
         }
     }
 
-    private fun showLoadingDialog(context: Context): Dialog {
-        val dialog = Dialog(context)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setCancelable(false)
-        dialog.setCanceledOnTouchOutside(false)
-        val content = LinearLayout(context).apply {
+    private fun createHeader(context: Context, mimeType: String?, dialog: Dialog): RelativeLayout {
+        val header = RelativeLayout(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                dipToPixels(context, 56f)
+            ).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_TOP)
+            }
+            setBackgroundColor(Color.parseColor("#CC000000"))
+            setPadding(dipToPixels(context, 16f), 0, dipToPixels(context, 16f), 0)
+        }
+
+        val closeBtn = ImageButton(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = RelativeLayout.LayoutParams(
+                dipToPixels(context, 40f),
+                dipToPixels(context, 40f)
+            ).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_START)
+                addRule(RelativeLayout.CENTER_VERTICAL)
+            }
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setColorFilter(Color.WHITE)
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setOnClickListener {
+                if (dialog.isShowing) dialog.dismiss()
+            }
+        }
+        header.addView(closeBtn)
+
+        val title = TextView(context).apply {
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                addRule(RelativeLayout.CENTER_IN_PARENT)
+            }
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            text = if (mimeType != null && mimeType.startsWith("image")) "Image Preview" else "Video Preview"
+        }
+        header.addView(title)
+
+        return header
+    }
+
+    private fun createLoadingView(context: Context): LinearLayout {
+        val loadingContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = false
+            max = 100
+            progress = 0
+            layoutParams = LinearLayout.LayoutParams(
+                dipToPixels(context, 200f),
+                dipToPixels(context, 8f)
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        }
+        loadingContainer.addView(progressBar)
+
+        val progressText = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dipToPixels(context, 16f)
+                gravity = Gravity.CENTER
+            }
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            text = "Downloading... 0%"
+        }
+        loadingContainer.addView(progressText)
+
+        return loadingContainer
+    }
+
+    private fun downloadAndDisplayMedia(
+        url: String?, mediaKey: String?, mimeType: String,
+        expectedSize: Long, isNewsletter: Boolean, context: Context,
+        contentContainer: FrameLayout, loadingContainer: LinearLayout,
+        progressBar: ProgressBar, progressText: TextView, executor: ExecutorService,
+        sourceView: View?
+    ) {
+        try {
+            if (url.isNullOrBlank()) {
+                throw Exception("Media URL is unavailable")
+            }
+
+            val fileExtension = if (mimeType.startsWith("image")) ".jpg" else ".mp4"
+            val file = File(context.cacheDir, "mediapreview_${System.currentTimeMillis()}$fileExtension")
+            if (file.exists()) file.delete()
+            currentFilePath = file
+            lastProgressPostAt = 0L
+
+            val client = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .addHeader("User-Agent", "Chrome/117.0.5938.150")
+                            .build()
+                    )
+                }
+                .build()
+
+            val request = Request.Builder().url(url).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful || response.body == null) {
+                    throw Exception("Failed to download media: HTTP ${response.code}")
+                }
+
+                var contentLength = response.body!!.contentLength()
+                if (contentLength <= 0L) contentLength = expectedSize
+
+                val inputStream = response.body!!.byteStream()
+
+                if (isNewsletter) {
+                    downloadWithProgress(inputStream, contentLength, progressBar, progressText, file)
+                } else {
+                    downloadAndDecryptWithProgress(inputStream, contentLength, mediaKey, mimeType, progressBar, progressText, file)
+                }
+
+                val bitmap = if (mimeType.startsWith("image")) {
+                    BitmapFactory.decodeFile(file.absolutePath)
+                } else null
+
+                mainHandler.post {
+                    loadingContainer.visibility = View.GONE
+                    if (mimeType.startsWith("image")) {
+                        if (bitmap != null) {
+                            displayImage(context, contentContainer, bitmap)
+                        } else {
+                            val fallbackBitmap = extractBitmapFromView(sourceView)
+                            if (fallbackBitmap != null) {
+                                displayImage(context, contentContainer, fallbackBitmap)
+                            } else {
+                                Toast.makeText(context, "The preview image could not be decoded", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        displayVideo(context, contentContainer, file)
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            handleError(e, executor, context, sourceView)
+        }
+    }
+
+    private fun downloadWithProgress(
+        inputStream: InputStream, contentLength: Long,
+        progressBar: ProgressBar, progressText: TextView, file: File
+    ) {
+        FileOutputStream(file).use { fos ->
+            val buffer = ByteArray(8192)
+            var totalBytesRead = 0L
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                fos.write(buffer, 0, bytesRead)
+                totalBytesRead += bytesRead
+                if (contentLength > 0) {
+                    val progress = ((totalBytesRead * 100) / contentLength).toInt()
+                    val sizeInfo = "${formatSize(totalBytesRead)} / ${formatSize(contentLength)}"
+                    postDownloadProgress(progressBar, progressText, progress, sizeInfo)
+                }
+            }
+        }
+        inputStream.close()
+    }
+
+    private fun downloadAndDecryptWithProgress(
+        inputStream: InputStream, contentLength: Long,
+        mediaKey: String?, mimeType: String,
+        progressBar: ProgressBar, progressText: TextView, file: File
+    ) {
+        val encryptedData = ByteArrayOutputStream().use { baos ->
+            val buffer = ByteArray(8192)
+            var totalBytesRead = 0L
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                baos.write(buffer, 0, bytesRead)
+                totalBytesRead += bytesRead
+                if (contentLength > 0) {
+                    val progress = ((totalBytesRead * 100) / contentLength).toInt()
+                    val sizeInfo = "${formatSize(totalBytesRead)} / ${formatSize(contentLength)}"
+                    postDownloadProgress(progressBar, progressText, progress, sizeInfo)
+                }
+            }
+            baos.toByteArray()
+        }
+        inputStream.close()
+
+        mainHandler.post { progressText.text = "Decrypting..." }
+
+        val decryptedData = decryptMedia(encryptedData, mediaKey, mimeType)
+            ?: throw Exception("Decryption failed")
+
+        FileOutputStream(file).use { fos ->
+            fos.write(decryptedData)
+        }
+    }
+
+    private fun postDownloadProgress(
+        progressBar: ProgressBar, progressText: TextView,
+        progress: Int, sizeInfo: String
+    ) {
+        val now = SystemClock.uptimeMillis()
+        if (progress < 100 && now - lastProgressPostAt < 100L) return
+        lastProgressPostAt = now
+        mainHandler.post {
+            progressBar.progress = progress
+            progressText.text = "Downloading... $progress%\n$sizeInfo"
+        }
+    }
+
+    private fun displayImage(context: Context, container: FrameLayout, bitmap: Bitmap) {
+        try {
+            val imageView = ZoomableImageView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setImageBitmap(bitmap)
+            }
+            container.addView(imageView)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error displaying image: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun displayVideo(context: Context, container: FrameLayout, file: File) {
+        try {
+            val videoContainer = RelativeLayout(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            }
+
+            val videoView = VideoView(context).apply {
+                this.id = View.generateViewId()
+                layoutParams = RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    addRule(RelativeLayout.CENTER_IN_PARENT)
+                }
+            }
+            currentVideoView = videoView
+
+            val controls = createVideoControls(context, videoView)
+            videoContainer.addView(videoView)
+            videoContainer.addView(controls)
+            container.addView(videoContainer)
+
+            videoView.setVideoURI(Uri.fromFile(file))
+            videoView.setOnPreparedListener { mp ->
+                currentMediaPlayer = mp
+                mp.isLooping = false
+                val isMuted = prefs.getBoolean("video_preview_muted", false)
+                mp.setVolume(if (isMuted) 0f else 1f, if (isMuted) 0f else 1f)
+                videoView.start()
+                updateVideoDuration(controls, mp.duration)
+            }
+
+            videoView.setOnCompletionListener {
+                videoView.seekTo(0)
+                updatePlayPauseButton(controls, false)
+            }
+
+            videoView.setOnErrorListener { _, _, _ ->
+                Toast.makeText(context, "Error playing video", Toast.LENGTH_SHORT).show()
+                true
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error displaying video: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun createVideoControls(context: Context, videoView: VideoView): LinearLayout {
+        currentSpeed = 1.0f
+        val controls = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            }
+            setBackgroundColor(Color.parseColor("#99000000"))
+            setPadding(
+                dipToPixels(context, 16f),
+                dipToPixels(context, 8f),
+                dipToPixels(context, 16f),
+                dipToPixels(context, 16f)
+            )
+        }
+
+        val seekBar = SeekBar(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            max = 100
+            progress = 0
+        }
+        controls.addView(seekBar)
+
+        val buttonsContainer = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(context, 24), dp(context, 20), dp(context, 24), dp(context, 20))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(context, 20).toFloat()
-                setColor(0xee202124.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dipToPixels(context, 8f)
             }
-            addView(ProgressBar(context), LinearLayout.LayoutParams(dp(context, 28), dp(context, 28)))
-            addView(TextView(context).apply {
-                text = "Loading preview…"
-                textSize = 16f
-                setTextColor(Color.WHITE)
-                setPadding(dp(context, 16), 0, 0, 0)
-            })
         }
-        dialog.setContentView(content)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.show()
-        return dialog
+
+        val playPauseBtn = ImageButton(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(dipToPixels(context, 48f), dipToPixels(context, 48f))
+            setBackgroundColor(Color.TRANSPARENT)
+            setColorFilter(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setImageResource(android.R.drawable.ic_media_pause)
+            tag = "playing"
+        }
+        buttonsContainer.addView(playPauseBtn)
+
+        val currentTime = TextView(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                leftMargin = dipToPixels(context, 8f)
+            }
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            text = "00:00"
+        }
+        buttonsContainer.addView(currentTime)
+
+        val separator = TextView(context).apply {
+            text = " / "
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        }
+        buttonsContainer.addView(separator)
+
+        val totalTime = TextView(context).apply {
+            this.id = View.generateViewId()
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            text = "00:00"
+        }
+        buttonsContainer.addView(totalTime)
+
+        val speedBtn = TextView(context).apply {
+            text = "1.0x"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            gravity = Gravity.CENTER
+            setPadding(dipToPixels(context, 8f), dipToPixels(context, 4f), dipToPixels(context, 8f), dipToPixels(context, 4f))
+            background = GradientDrawable().apply {
+                cornerRadius = dipToPixels(context, 12f).toFloat()
+                setColor(0x66000000)
+            }
+            layoutParams = LinearLayout.LayoutParams(dipToPixels(context, 44f), dipToPixels(context, 24f)).apply {
+                leftMargin = dipToPixels(context, 16f)
+            }
+        }
+
+        speedBtn.setOnClickListener {
+            currentSpeed = when (currentSpeed) {
+                1.0f -> 1.5f
+                1.5f -> 2.0f
+                2.0f -> 0.5f
+                else -> 1.0f
+            }
+            speedBtn.text = "${currentSpeed}x"
+            currentMediaPlayer?.let { mp ->
+                try {
+                    val wasPlaying = mp.isPlaying
+                    mp.playbackParams = mp.playbackParams.setSpeed(currentSpeed)
+                    if (!wasPlaying) {
+                        mp.pause()
+                        updatePlayPauseButton(controls, false)
+                    } else {
+                        updatePlayPauseButton(controls, true)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        buttonsContainer.addView(speedBtn)
+
+        val muteBtn = ImageButton(context).apply {
+            this.id = View.generateViewId()
+            layoutParams = LinearLayout.LayoutParams(dipToPixels(context, 40f), dipToPixels(context, 40f)).apply {
+                leftMargin = dipToPixels(context, 8f)
+            }
+            setBackgroundColor(Color.TRANSPARENT)
+            setColorFilter(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            val isMuted = prefs.getBoolean("video_preview_muted", false)
+            setImageResource(if (isMuted) android.R.drawable.ic_lock_silent_mode else android.R.drawable.ic_lock_silent_mode_off)
+            tag = if (isMuted) "muted" else "unmuted"
+        }
+
+        muteBtn.setOnClickListener {
+            val currentMuted = "muted" == muteBtn.tag
+            val newMuted = !currentMuted
+            muteBtn.setImageResource(if (newMuted) android.R.drawable.ic_lock_silent_mode else android.R.drawable.ic_lock_silent_mode_off)
+            muteBtn.tag = if (newMuted) "muted" else "unmuted"
+            prefs.edit().putBoolean("video_preview_muted", newMuted).apply()
+            currentMediaPlayer?.let { mp ->
+                try {
+                    mp.setVolume(if (newMuted) 0f else 1f, if (newMuted) 0f else 1f)
+                } catch (_: Exception) {}
+            }
+        }
+        buttonsContainer.addView(muteBtn)
+        controls.addView(buttonsContainer)
+
+        playPauseBtn.setOnClickListener {
+            if (videoView.isPlaying) {
+                videoView.pause()
+                playPauseBtn.setImageResource(android.R.drawable.ic_media_play)
+                playPauseBtn.tag = "paused"
+            } else {
+                videoView.start()
+                playPauseBtn.setImageResource(android.R.drawable.ic_media_pause)
+                playPauseBtn.tag = "playing"
+            }
+        }
+
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser && videoView.duration > 0) {
+                    val newPosition = (progress * videoView.duration) / 100
+                    videoView.seekTo(newPosition)
+                }
+            }
+
+            override fun onStartTrackingTouch(sb: SeekBar) {}
+            override fun onStopTrackingTouch(sb: SeekBar) {}
+        })
+
+        val updateHandler = Handler(Looper.getMainLooper())
+        val updateRunnable = object : Runnable {
+            override fun run() {
+                if (videoView.isPlaying && videoView.duration > 0) {
+                    val progress = (videoView.currentPosition * 100) / videoView.duration
+                    seekBar.progress = progress
+                    currentTime.text = formatTime(videoView.currentPosition)
+                }
+                if (previewDialog != null && previewDialog!!.isShowing) {
+                    updateHandler.postDelayed(this, 500)
+                }
+            }
+        }
+        updateHandler.post(updateRunnable)
+
+        return controls
     }
 
-    private fun decryptMedia(payload: ByteArray, mediaKey: ByteArray, mime: String): ByteArray {
-        if (payload.size <= 10) error("Downloaded media is incomplete")
-        val info = when {
-            mime.startsWith("image/") -> "WhatsApp Image Keys"
-            mime.startsWith("video/") -> "WhatsApp Video Keys"
-            mime.startsWith("audio/") -> "WhatsApp Audio Keys"
-            else -> "WhatsApp Document Keys"
-        }.toByteArray(Charsets.UTF_8)
-        val expanded = hkdfSha256(mediaKey, info, 112)
-        val iv = expanded.copyOfRange(0, 16)
-        val cipherKey = expanded.copyOfRange(16, 48)
-        val encrypted = payload.copyOfRange(0, payload.size - 10)
+    private fun updatePlayPauseButton(controls: LinearLayout, isPlaying: Boolean) {
+        val buttonsContainer = controls.getChildAt(1) as LinearLayout
+        val playPauseBtn = buttonsContainer.getChildAt(0) as ImageButton
+        playPauseBtn.setImageResource(if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
+        playPauseBtn.tag = if (isPlaying) "playing" else "paused"
+    }
+
+    private fun updateVideoDuration(controls: LinearLayout, duration: Int) {
+        val buttonsContainer = controls.getChildAt(1) as LinearLayout
+        val totalTime = buttonsContainer.getChildAt(3) as TextView
+        totalTime.text = formatTime(duration)
+    }
+
+    private fun formatTime(milliseconds: Int): String {
+        var seconds = milliseconds / 1000
+        val minutes = seconds / 60
+        seconds %= 60
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+    }
+
+    private fun formatSize(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        if (bytes < 1024 * 1024) {
+            return String.format(Locale.getDefault(), "%.1f KB", bytes / 1024.0)
+        }
+        return String.format(Locale.getDefault(), "%.1f MB", bytes / (1024.0 * 1024.0))
+    }
+
+    private fun handleError(e: Throwable, executor: ExecutorService, context: Context, fallbackView: View?) {
+        val message = if (e is InvocationTargetException) e.cause?.message else e.message
+        XposedBridge.log("[WAEX][MediaPreview] Error: $message")
+        mainHandler.post {
+            val rendered = extractBitmapFromView(fallbackView)
+            if (rendered != null) {
+                showBitmap(context, rendered)
+            } else {
+                Toast.makeText(context, message ?: "Unknown preview error", Toast.LENGTH_LONG).show()
+            }
+        }
+        cleanupDialog(executor)
+    }
+
+    private fun cleanupResources(executor: ExecutorService?) {
+        currentMediaPlayer?.let {
+            try {
+                it.release()
+            } catch (_: Exception) {}
+            currentMediaPlayer = null
+        }
+        currentVideoView = null
+
+        currentFilePath?.let {
+            if (it.exists()) it.delete()
+            currentFilePath = null
+        }
+
+        if (executor != null && !executor.isShutdown) {
+            executor.shutdownNow()
+        }
+    }
+
+    private fun cleanupDialog(executor: ExecutorService?) {
+        mainHandler.post {
+            previewDialog?.let {
+                if (it.isShowing) it.dismiss()
+            }
+        }
+        cleanupResources(executor)
+    }
+
+    private fun decryptMedia(encryptedData: ByteArray, mediaKey: String?, mimeType: String): ByteArray? {
+        if (mediaKey == null || mediaKey.length % 2 != 0 || mediaKey.length != 64) {
+            throw IllegalArgumentException("Invalid media key.")
+        }
+
+        val keyBytes = ByteArray(32)
+        for (i in 0 until 64 step 2) {
+            keyBytes[i / 2] = ((Character.digit(mediaKey[i], 16) shl 4) + Character.digit(mediaKey[i + 1], 16)).toByte()
+        }
+
+        val typeKey = MEDIA_KEYS[mimeType] ?: (MEDIA_KEYS[mimeType.substringBefore("/")] ?: MEDIA_KEYS["document"]!!)
+        val derivedKey = HKDFv3().deriveSecrets(keyBytes, ByteArray(32), typeKey, 112)
+        val iv = derivedKey.copyOfRange(0, 16)
+        val aesKey = derivedKey.copyOfRange(16, 48)
+
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(cipherKey, "AES"), IvParameterSpec(iv))
-        return cipher.doFinal(encrypted)
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(aesKey, "AES"), IvParameterSpec(iv))
+
+        val dataLength = encryptedData.size - 10
+        return cipher.doFinal(encryptedData, 0, dataLength)
     }
 
-    private fun hkdfSha256(input: ByteArray, info: ByteArray, length: Int): ByteArray {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(ByteArray(32), "HmacSHA256"))
-        val prk = mac.doFinal(input)
-        val output = ByteArray(length)
-        var previous = ByteArray(0)
-        var offset = 0
-        var counter = 1
-        while (offset < length) {
-            mac.init(SecretKeySpec(prk, "HmacSHA256"))
-            mac.update(previous)
-            mac.update(info)
-            mac.update(counter.toByte())
-            previous = mac.doFinal()
-            val count = minOf(previous.size, length - offset)
-            System.arraycopy(previous, 0, output, offset, count)
-            offset += count
-            counter++
+    private fun resolveFMessageFromKeyTag(tag: Any?): Any? {
+        if (tag == null) return null
+        return try {
+            val keyClass = tag.javaClass
+            val field = keyClass.declaredFields.firstOrNull { it.type.name.contains("FMessage") }
+            if (field != null) {
+                field.isAccessible = true
+                field.get(tag)
+            } else null
+        } catch (_: Throwable) {
+            null
         }
-        return output
+    }
+
+    private fun resolveMessageDeep(source: View): Any? {
+        var current: View? = source
+        repeat(8) {
+            val view = current ?: return@repeat
+            runCatching { XposedHelpers.callMethod(view, "getFMessage") }.getOrNull()?.let { return it }
+            runCatching { XposedHelpers.callMethod(view, "getMessage") }.getOrNull()?.let { return it }
+            val tag = view.tag
+            if (tag != null && tag !is String && (extractRowId(tag) > 0L || extractKeyId(tag) != null)) return tag
+            current = view.parent as? View
+        }
+        return null
     }
 
     private fun extractRowId(message: Any?): Long {
         if (message == null) return 0L
+        val preferred = listOf("rowId", "_id", "A0m", "A0n", "A0l", "A0k")
         var type: Class<*>? = message.javaClass
-        val preferred = listOf("rowId", "_id", "A0m", "A0n")
-        for (name in preferred) {
-            type = message.javaClass
-            while (type != null && type != Any::class.java) {
+        while (type != null && type != Any::class.java) {
+            for (name in preferred) {
                 try {
                     val field = type.getDeclaredField(name)
                     field.isAccessible = true
                     val value = field.get(message)
-                    if (value is Long && value > 1L) return value
+                    if (value is Long && value > 0L) return value
                 } catch (_: Throwable) {}
-                type = type.superclass
             }
+            type = type.superclass
         }
         return 0L
     }
@@ -317,28 +1148,39 @@ class MediaPreviewHook(
         return null
     }
 
-    private fun waitForDownload(source: View, message: Any?, attempt: Int) {
-        if (!source.isAttachedToWindow || attempt >= 60) {
-            if (attempt >= 60) Toast.makeText(source.context, "Preview download timed out", Toast.LENGTH_SHORT).show()
-            return
-        }
-        source.postDelayed({
-            val file = findMediaFile(message, 6, Collections.newSetFromMap(WeakHashMap()))
-            if (file != null && file.exists() && file.length() > 0L) showFile(source.context, file)
-            else waitForDownload(source, message, attempt + 1)
-        }, 500L)
+    private fun isNewsletterSource(message: Any?): Boolean {
+        if (message == null) return false
+        val str = message.toString()
+        return str.contains("newsletter", ignoreCase = true)
     }
 
-    private fun showFile(context: Context, file: File) {
-        val dialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setCancelable(true)
-        dialog.setCanceledOnTouchOutside(false)
+    private fun extractBitmapFromView(view: View?): Bitmap? {
+        if (view == null) return null
+        if (view is ImageView) {
+            val d = view.drawable
+            if (d is BitmapDrawable && d.bitmap != null && !d.bitmap.isRecycled) {
+                return d.bitmap
+            }
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = extractBitmapFromView(view.getChildAt(i))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private fun showBitmap(context: Context, sourceBitmap: Bitmap) {
+        val dialog = Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+            requestWindowFeature(Window.FEATURE_NO_TITLE)
+            setCancelable(true)
+            setCanceledOnTouchOutside(false)
+        }
         val container = FrameLayout(context).apply {
             setBackgroundColor(Color.BLACK)
             isClickable = true
             isFocusable = true
-            setOnClickListener { /* Media taps never dismiss the explicit-close dialog. */ }
         }
         val close = TextView(context).apply {
             text = "✕"
@@ -352,182 +1194,254 @@ class MediaPreviewHook(
             }
             setOnClickListener { dialog.dismiss() }
         }
-        var bitmap: android.graphics.Bitmap? = null
-        if (file.extension.lowercase() in setOf("mp4", "3gp", "mkv", "webm")) {
-            val video = VideoView(context).apply {
-                setVideoURI(android.net.Uri.fromFile(file))
-            }
-            val controls = MediaController(context, false).apply { setAnchorView(video) }
-            video.setMediaController(controls)
-            video.setOnPreparedListener {
-                it.isLooping = false
-                video.start()
-                controls.show(3_000)
-            }
-            video.setOnClickListener { controls.show(3_000) }
-            container.addView(video, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER
-            ))
-        } else {
-            bitmap = BitmapFactory.decodeFile(file.absolutePath)
-            if (bitmap == null) {
-                Toast.makeText(context, "The preview image could not be decoded", Toast.LENGTH_LONG).show()
-                if (file.name.startsWith("waex_preview_")) file.delete()
-                return
-            }
-            container.addView(ZoomableImageView(context).apply {
-                setImageBitmap(bitmap)
-                setBackgroundColor(Color.BLACK)
-            }, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER
-            ))
+        val imageView = ZoomableImageView(context).apply {
+            setImageBitmap(sourceBitmap)
+            setBackgroundColor(Color.BLACK)
         }
-        container.addView(close, FrameLayout.LayoutParams(dp(context, 44), dp(context, 44), Gravity.TOP or Gravity.END).apply {
-            topMargin = dp(context, 18)
-            marginEnd = dp(context, 16)
+        container.addView(imageView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER
+        ))
+        container.addView(close, FrameLayout.LayoutParams(
+            dipToPixels(context, 44f),
+            dipToPixels(context, 44f),
+            Gravity.TOP or Gravity.END
+        ).apply {
+            topMargin = dipToPixels(context, 18f)
+            marginEnd = dipToPixels(context, 16f)
         })
         dialog.setContentView(container)
-        val decodedBitmap = bitmap
-        dialog.setOnDismissListener {
-            decodedBitmap?.recycle()
-            if (file.name.startsWith("waex_preview_")) file.delete()
-        }
         dialog.show()
-        dialog.setCanceledOnTouchOutside(false)
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
-    private fun findMessageHolder(view: View): Any? {
-        var current: View? = view
-        repeat(6) {
-            current?.tag?.let { if (it !is String && extractRowId(it) > 0L) return it }
-            current = current?.parent as? View
-        }
-        return null
+    private fun getWppId(context: Context, name: String): Int {
+        return context.resources.getIdentifier(name, "id", context.packageName)
     }
 
-    private fun findMediaFile(value: Any?, depth: Int, seen: MutableSet<Any>): File? {
-        if (value == null || depth < 0 || !seen.add(value)) return null
-        if (value is File && value.isFile) return value
-        if (value is String && value.startsWith("/") && value.length < 1024) {
-            File(value).takeIf { it.isFile }?.let { return it }
-        }
-        var type: Class<*>? = value.javaClass
-        while (type != null && !type.name.startsWith("java.") && !type.name.startsWith("android.")) {
-            for (field in type.declaredFields) {
-                if (Modifier.isStatic(field.modifiers)) continue
-                try {
-                    field.isAccessible = true
-                    findMediaFile(field.get(value), depth - 1, seen)?.let { return it }
-                } catch (_: Throwable) {}
-            }
-            type = type.superclass
-        }
-        return null
+    private fun dipToPixels(context: Context, dip: Float): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, dip, context.resources.displayMetrics
+        ).toInt()
     }
-
-    private fun dp(ctx: Context, value: Int) = (value * ctx.resources.displayMetrics.density + .5f).toInt()
 
     companion object {
         private const val TAG_INSTALLED = 0x7f0f7b20
         private const val BUTTON_TAG = "waex_media_preview"
+        private const val MEDIA_PREVIEW_WRAPPER_TAG = "wpp_media_preview_wrapper"
+
         private val CONTROL_IDS = listOf(
             "invisible_press_surface", "video_control_frame_view", "control_frame_new",
             "control_frame", "control_frame_view", "mms_control_frame_new", "mms_control_frame"
         )
-        private val executor = Executors.newSingleThreadExecutor()
+
+        private val MEDIA_KEYS = hashMapOf(
+            "image" to "WhatsApp Image Keys".toByteArray(Charsets.UTF_8),
+            "video" to "WhatsApp Video Keys".toByteArray(Charsets.UTF_8),
+            "audio" to "WhatsApp Audio Keys".toByteArray(Charsets.UTF_8),
+            "document" to "WhatsApp Document Keys".toByteArray(Charsets.UTF_8),
+            "image/webp" to "WhatsApp Image Keys".toByteArray(Charsets.UTF_8),
+            "image/jpeg" to "WhatsApp Image Keys".toByteArray(Charsets.UTF_8),
+            "image/png" to "WhatsApp Image Keys".toByteArray(Charsets.UTF_8),
+            "video/mp4" to "WhatsApp Video Keys".toByteArray(Charsets.UTF_8),
+            "audio/aac" to "WhatsApp Audio Keys".toByteArray(Charsets.UTF_8),
+            "audio/ogg" to "WhatsApp Audio Keys".toByteArray(Charsets.UTF_8),
+            "audio/wav" to "WhatsApp Audio Keys".toByteArray(Charsets.UTF_8)
+        )
+
         private val mainHandler = Handler(Looper.getMainLooper())
-        private val http = OkHttpClient()
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private class ZoomableImageView(context: Context) : ImageView(context) {
-        private val imageMatrixState = Matrix()
-        private val scaleDetector = ScaleGestureDetector(context,
-            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    val next = (scale * detector.scaleFactor).coerceIn(1f, 5f)
-                    val factor = next / scale
-                    scale = next
-                    imageMatrixState.postScale(factor, factor, detector.focusX, detector.focusY)
-                    constrainAndApply()
-                    return true
-                }
-            })
-        private var scale = 1f
-        private var lastX = 0f
-        private var lastY = 0f
-        private var dragging = false
-        private var lastTapAt = 0L
+        private val matrixInstance = Matrix()
+        private val savedMatrix = Matrix()
+
+        private var mode = NONE
+        private val lastTouch = PointF()
+        private var oldDist = 1f
+        private val midPoint = PointF()
+        private var minScale = 0.5f
+        private var maxScale = 10f
+        private var baseScale = 1f
+        private var isDoubleTapZoomed = false
+        private var lastTapTime = 0L
 
         init {
             scaleType = ScaleType.MATRIX
-            isClickable = true
-        }
+            setOnTouchListener { _, event ->
+                val action = event.action and MotionEvent.ACTION_MASK
+                val pointerCount = event.pointerCount
 
-        override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-            super.onSizeChanged(w, h, oldw, oldh)
-            resetImage()
-        }
-
-        override fun setImageBitmap(bitmap: android.graphics.Bitmap?) {
-            super.setImageBitmap(bitmap)
-            if (width > 0 && height > 0) resetImage()
-        }
-
-        override fun onTouchEvent(event: MotionEvent): Boolean {
-            scaleDetector.onTouchEvent(event)
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    val now = android.os.SystemClock.uptimeMillis()
-                    if (now - lastTapAt < 300L) resetImage()
-                    lastTapAt = now
-                    lastX = event.x
-                    lastY = event.y
-                    dragging = true
+                if (pointerCount > 1 && parent != null) {
+                    parent.requestDisallowInterceptTouchEvent(true)
                 }
-                MotionEvent.ACTION_MOVE -> if (dragging && !scaleDetector.isInProgress && scale > 1f) {
-                    imageMatrixState.postTranslate(event.x - lastX, event.y - lastY)
-                    lastX = event.x
-                    lastY = event.y
-                    constrainAndApply()
+
+                when (action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        savedMatrix.set(matrixInstance)
+                        lastTouch.set(event.x, event.y)
+                        mode = DRAG
+
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastTapTime < DOUBLE_TAP_TIMEOUT) {
+                            handleDoubleTap(event.x, event.y)
+                            lastTapTime = 0
+                            return@setOnTouchListener true
+                        } else {
+                            lastTapTime = currentTime
+                        }
+                    }
+
+                    MotionEvent.ACTION_POINTER_DOWN -> {
+                        oldDist = spacing(event)
+                        if (oldDist > 10f) {
+                            savedMatrix.set(matrixInstance)
+                            midPoint(midPoint, event)
+                            mode = ZOOM
+                        }
+                    }
+
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                        mode = NONE
+                    }
+
+                    MotionEvent.ACTION_MOVE -> {
+                        if (mode == DRAG) {
+                            matrixInstance.set(savedMatrix)
+                            val dx = event.x - lastTouch.x
+                            val dy = event.y - lastTouch.y
+
+                            val currentScale = getCurrentScale()
+                            if (currentScale > baseScale) {
+                                matrixInstance.postTranslate(dx, dy)
+                                constrainTranslation()
+                            }
+                        } else if (mode == ZOOM && pointerCount > 1) {
+                            val newDist = spacing(event)
+                            if (newDist > 10f) {
+                                matrixInstance.set(savedMatrix)
+                                val scale = newDist / oldDist
+                                val currentScale = getCurrentScale()
+                                val targetScale = currentScale * scale
+
+                                if (targetScale in minScale..maxScale) {
+                                    matrixInstance.postScale(scale, scale, midPoint.x, midPoint.y)
+                                    constrainTranslation()
+                                }
+                            }
+                        }
+                    }
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> dragging = false
+
+                imageMatrix = matrixInstance
+                true
             }
-            return true
         }
 
-        private fun resetImage() {
-            val drawable = drawable ?: return
-            if (width == 0 || height == 0) return
-            val dw = drawable.intrinsicWidth.toFloat()
-            val dh = drawable.intrinsicHeight.toFloat()
-            if (dw <= 0f || dh <= 0f) return
-            val fit = minOf(width / dw, height / dh)
-            imageMatrixState.reset()
-            imageMatrixState.postScale(fit, fit)
-            imageMatrixState.postTranslate((width - dw * fit) / 2f, (height - dh * fit) / 2f)
-            scale = 1f
-            imageMatrix = imageMatrixState
+        private fun getCurrentScale(): Float {
+            val values = FloatArray(9)
+            matrixInstance.getValues(values)
+            return values[Matrix.MSCALE_X]
         }
 
-        private fun constrainAndApply() {
-            val drawable = drawable ?: return
-            val bounds = RectF(0f, 0f, drawable.intrinsicWidth.toFloat(), drawable.intrinsicHeight.toFloat())
-            imageMatrixState.mapRect(bounds)
-            val dx = when {
-                bounds.width() <= width -> width / 2f - bounds.centerX()
-                bounds.left > 0f -> -bounds.left
-                bounds.right < width -> width - bounds.right
-                else -> 0f
+        private fun handleDoubleTap(x: Float, y: Float) {
+            if (isDoubleTapZoomed) {
+                resetScale()
+                isDoubleTapZoomed = false
+            } else {
+                matrixInstance.postScale(2.5f, 2.5f, x, y)
+                constrainTranslation()
+                isDoubleTapZoomed = true
             }
-            val dy = when {
-                bounds.height() <= height -> height / 2f - bounds.centerY()
-                bounds.top > 0f -> -bounds.top
-                bounds.bottom < height -> height - bounds.bottom
-                else -> 0f
+        }
+
+        private fun resetScale() {
+            matrixInstance.reset()
+            val d = drawable ?: return
+            val viewWidth = width.toFloat()
+            val viewHeight = height.toFloat()
+            val drawableWidth = d.intrinsicWidth.toFloat()
+            val drawableHeight = d.intrinsicHeight.toFloat()
+
+            if (drawableWidth > 0 && drawableHeight > 0) {
+                val scaleX = viewWidth / drawableWidth
+                val scaleY = viewHeight / drawableHeight
+                baseScale = minOf(scaleX, scaleY)
+                minScale = baseScale * 0.5f
+
+                matrixInstance.postScale(baseScale, baseScale)
+                val reduxX = (viewWidth - drawableWidth * baseScale) / 2f
+                val reduxY = (viewHeight - drawableHeight * baseScale) / 2f
+                matrixInstance.postTranslate(reduxX, reduxY)
             }
-            imageMatrixState.postTranslate(dx, dy)
-            imageMatrix = imageMatrixState
+        }
+
+        private fun constrainTranslation() {
+            val d = drawable ?: return
+            val values = FloatArray(9)
+            matrixInstance.getValues(values)
+            val transX = values[Matrix.MTRANS_X]
+            val transY = values[Matrix.MTRANS_Y]
+            val scaleX = values[Matrix.MSCALE_X]
+            val scaleY = values[Matrix.MSCALE_Y]
+
+            val viewWidth = width.toFloat()
+            val viewHeight = height.toFloat()
+            val drawableWidth = d.intrinsicWidth * scaleX
+            val drawableHeight = d.intrinsicHeight * scaleY
+
+            val minTransX: Float
+            val maxTransX: Float
+            if (drawableWidth <= viewWidth) {
+                minTransX = (viewWidth - drawableWidth) / 2f
+                maxTransX = minTransX
+            } else {
+                minTransX = viewWidth - drawableWidth
+                maxTransX = 0f
+            }
+
+            val minTransY: Float
+            val maxTransY: Float
+            if (drawableHeight <= viewHeight) {
+                minTransY = (viewHeight - drawableHeight) / 2f
+                maxTransY = minTransY
+            } else {
+                minTransY = viewHeight - drawableHeight
+                maxTransY = 0f
+            }
+
+            val newTransX = transX.coerceIn(minTransX, maxTransX)
+            val newTransY = transY.coerceIn(minTransY, maxTransY)
+
+            values[Matrix.MTRANS_X] = newTransX
+            values[Matrix.MTRANS_Y] = newTransY
+            matrixInstance.setValues(values)
+        }
+
+        private fun spacing(event: MotionEvent): Float {
+            val x = event.getX(0) - event.getX(1)
+            val y = event.getY(0) - event.getY(1)
+            return Math.sqrt((x * x + y * y).toDouble()).toFloat()
+        }
+
+        private fun midPoint(point: PointF, event: MotionEvent) {
+            val x = event.getX(0) + event.getX(1)
+            val y = event.getY(0) + event.getY(1)
+            point.set(x / 2, y / 2)
+        }
+
+        override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+            super.onLayout(changed, left, top, right, bottom)
+            if (changed) {
+                resetScale()
+            }
+        }
+
+        companion object {
+            private const val DOUBLE_TAP_TIMEOUT = 300L
+            private const val NONE = 0
+            private const val DRAG = 1
+            private const val ZOOM = 2
         }
     }
 }

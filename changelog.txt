@@ -1,8 +1,7 @@
-[Updated]
-- Updated Minimum Xposed API to 102
+[Removed]
+- Removed Beta channel flow. Normalized the versioning and update flow
 
 [Fixed]
-- Fixed Seperate groups tab
 - Fixed media preview
 
 [Improvements]
