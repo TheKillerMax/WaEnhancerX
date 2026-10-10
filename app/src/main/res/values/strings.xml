@@ -14,6 +14,9 @@
     <string name="go_to_telegram">Telegram Channel</string>
     <string name="go_to_github">GitHub Issues</string>
     <string name="contributors">Contributors</string>
+    <string name="stargazers_title">Stargazers</string>
+    <string name="stargazers_thank_you">Thank you for supporting WaEnhancerX</string>
+    <string name="stargazers_message">Every star helps more people discover the project. This wall is for everyone who has shown their support.</string>
     <string name="support">Support</string>
     <string name="support_desc">If you encounter any issues or have questions about WaEnhancer X, please visit Telegram.</string>
     <string name="license">License</string>

@@ -77,10 +77,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.InputStream
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.text.NumberFormat
+import java.util.concurrent.ConcurrentHashMap
 
 data class GitHubContributor(
     val login: String,
@@ -109,13 +111,67 @@ data class RepoStats(
     val linesDeleted: Long
 )
 
-// In-memory Avatar Cache
 object AvatarCache {
-    private val memoryCache = androidx.collection.LruCache<String, Bitmap>(30)
+    private val memoryCache = androidx.collection.LruCache<String, Bitmap>(150)
+    private val loadLocks = ConcurrentHashMap<String, Any>()
 
     fun get(url: String): Bitmap? = memoryCache.get(url)
+
     fun put(url: String, bitmap: Bitmap) {
         memoryCache.put(url, bitmap)
+    }
+
+    fun load(context: Context, url: String): Bitmap? {
+        get(url)?.let { return it }
+
+        val lock = loadLocks.getOrPut(url) { Any() }
+        return synchronized(lock) {
+            get(url)?.let { return@synchronized it }
+
+            val cacheFile = avatarCacheFile(context, url)
+            if (cacheFile.isFile) {
+                BitmapFactory.decodeFile(cacheFile.absolutePath)?.let { cached ->
+                    put(url, cached)
+                    return@synchronized cached
+                }
+                cacheFile.delete()
+            }
+
+            downloadAvatar(url)?.also { (bytes, decoded) ->
+                runCatching {
+                    cacheFile.parentFile?.mkdirs()
+                    val temporaryFile = File(cacheFile.parentFile, "${cacheFile.name}.tmp")
+                    temporaryFile.writeBytes(bytes)
+                    if (!temporaryFile.renameTo(cacheFile)) temporaryFile.delete()
+                }
+                put(url, decoded)
+            }?.second
+        }
+    }
+
+    private fun avatarCacheFile(context: Context, url: String): File {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(url.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        return File(File(context.cacheDir, "github_avatars"), digest)
+    }
+
+    private fun downloadAvatar(url: String): Pair<ByteArray, Bitmap>? {
+        val connection = URL(url).openConnection() as HttpURLConnection
+        return try {
+            connection.setRequestProperty("User-Agent", "WaEnhancerX-App")
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+            connection.doInput = true
+            connection.connect()
+            if (connection.responseCode !in 200..299) return null
+
+            val bytes = connection.inputStream.use { it.readBytes() }
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+            bytes to decoded
+        } finally {
+            connection.disconnect()
+        }
     }
 }
 
@@ -125,28 +181,13 @@ fun AsyncAvatarImage(
     contentDescription: String?,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var bitmap by remember(url) { mutableStateOf(AvatarCache.get(url)) }
 
     LaunchedEffect(url) {
         if (bitmap == null && url.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val connection = URL(url).openConnection() as HttpURLConnection
-                    connection.setRequestProperty("User-Agent", "WaEnhancerX-App")
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    connection.doInput = true
-                    connection.connect()
-                    val input: InputStream = connection.inputStream
-                    val decoded = BitmapFactory.decodeStream(input)
-                    if (decoded != null) {
-                        AvatarCache.put(url, decoded)
-                        withContext(Dispatchers.Main) {
-                            bitmap = decoded
-                        }
-                    }
-                } catch (ignored: Exception) {
-                }
+            bitmap = withContext(Dispatchers.IO) {
+                runCatching { AvatarCache.load(context, url) }.getOrNull()
             }
         }
     }

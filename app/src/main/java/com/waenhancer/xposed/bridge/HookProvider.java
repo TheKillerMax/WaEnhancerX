@@ -145,8 +145,7 @@ public class HookProvider extends ContentProvider {
                 }
                 boolean audioToVoiceEntitled = ProFeatureGate.isEntitled(
                         context, ProFeatureGate.AUDIO_TO_VOICE_STATUS);
-                all.put(ProFeatureGate.AUDIO_TO_VOICE_STATUS_ENTITLEMENT,
-                        audioToVoiceEntitled);
+                all.put(ProFeatureGate.AUDIO_TO_VOICE_STATUS_ENTITLEMENT, audioToVoiceEntitled);
                 // The hooked process never sees this Pro switch enabled without entitlement.
                 if (!audioToVoiceEntitled) {
                     all.put(ProFeatureGate.AUDIO_TO_VOICE_STATUS_PREF, false);

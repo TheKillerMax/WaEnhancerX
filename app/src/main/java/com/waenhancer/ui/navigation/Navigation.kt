@@ -84,6 +84,7 @@ import com.waenhancer.ui.screens.settings.SystemHealthScreen
 import com.waenhancer.ui.screens.settings.ChangelogScreen
 import com.waenhancer.ui.screens.settings.ReleaseDetailsScreen
 import com.waenhancer.ui.screens.settings.AboutScreen
+import com.waenhancer.ui.screens.settings.StargazersScreen
 import com.waenhancer.ui.screens.settings.UpdateSettingsScreen
 import com.waenhancer.ui.screens.settings.SupportedVersionsScreen
 import com.waenhancer.ui.screens.settings.BootloaderSpooferScreen
@@ -524,6 +525,26 @@ fun MainContainerScreen() {
                                     onDismissRequest = { showMoreMenu = false },
                                     modifier = Modifier.background(colors.surface)
                                 ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = WaexIcons.Premium,
+                                                    contentDescription = null,
+                                                    tint = colors.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(text = "Stargazers", style = typography.bodyMd, color = colors.onSurface)
+                                            }
+                                        },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            navController.navigateTo(Screen.Stargazers)
+                                        }
+                                    )
                                     DropdownMenuItem(
                                         text = {
                                             Row(
@@ -1004,6 +1025,7 @@ fun WaexAppNavigation(
         Screen.Changelog -> ChangelogScreen()
         is Screen.ReleaseDetails -> ReleaseDetailsScreen(currentScreen.tagName)
         Screen.About -> AboutScreen()
+        Screen.Stargazers -> StargazersScreen()
         Screen.UpdateSettings -> UpdateSettingsScreen()
         Screen.SupportedVersions -> SupportedVersionsScreen()
         Screen.DeletedMessages -> com.waenhancer.ui.screens.privacy.DeletedMessagesVaultScreen()
