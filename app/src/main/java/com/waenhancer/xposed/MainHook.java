@@ -116,7 +116,6 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 return;
             }
 
-            XposedBridge.log("[WAEX] Injected into target: " + packageName + " (process: " + lpparam.processName + ")");
 
             // Initialize features on target Application creation
             try {
@@ -154,7 +153,6 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     }
                                 } catch (Throwable ignored) {}
 
-                                XposedBridge.log("[WAEX] Target Application created. Initializing features...");
                                 boolean showHookToast = true;
                                 try {
                                     PreferenceBridgeClient bridgeClient =

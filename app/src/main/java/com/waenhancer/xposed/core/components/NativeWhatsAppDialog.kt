@@ -207,7 +207,6 @@ class NativeWhatsAppDialog(private val context: Context) {
                         sNegativeButtonMethod = buttonMethods.firstOrNull()
                         sPositiveButtonMethod = if (buttonMethods.size > 2) buttonMethods[2] else buttonMethods.lastOrNull()
                     }
-                    XposedBridge.log("$TAG Native WhatsApp Material/WDS Dialog successfully resolved: ${dialogClass.name}")
                 }
             } catch (t: Throwable) {
                 XposedBridge.log("$TAG Could not initialize native dialog: ${t.message}")

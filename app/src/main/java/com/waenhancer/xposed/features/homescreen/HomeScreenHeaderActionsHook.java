@@ -117,7 +117,6 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                 }
             });
 
-            XposedBridge.log(TAG + " Hooked HomeActivity: " + homeActivityClass.getName());
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error attaching hooks: " + t.getMessage());
         }

@@ -226,7 +226,6 @@ public final class FeatureRegistry {
             extras.putLong("timestamp", System.currentTimeMillis());
 
             context.getContentResolver().call(uri, "register_injected_hooks", packageName, extras);
-            XposedBridge.log("[WAEX] Successfully reported " + features.size() + " injected hooks for " + packageName);
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] Failed to report injected hooks: " + t.getMessage());
         }

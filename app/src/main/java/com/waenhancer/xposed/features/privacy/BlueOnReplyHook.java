@@ -65,12 +65,10 @@ public class BlueOnReplyHook extends BaseFeature {
                             String remoteJid = extractRemoteJid(fMessage);
                             if (remoteJid != null) {
                                 repliedJids.add(remoteJid);
-                                XposedBridge.log(TAG + " Message sent to " + remoteJid + ", blue tick unlocked on reply.");
                             }
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked sendMessageMethod for Blue on Reply: " + sendMessageMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getMessage());

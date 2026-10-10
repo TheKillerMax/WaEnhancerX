@@ -339,7 +339,6 @@ public class DoubleTapReactionHook extends BaseFeature {
 
             boolean hasEmoji = emoji != null && !emoji.trim().isEmpty();
             reactionSenderMethod.invoke(actionUser, fMessage, emoji, hasEmoji);
-            XposedBridge.log(TAG + " Sent reaction '" + emoji + "' on message");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Failed to send reaction: " + t.getMessage());
         }

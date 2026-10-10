@@ -74,7 +74,6 @@ class OnlinePresenceIndicatorsHook(
                     ?: target?.getMethodInstance(loader)
             }
             subscriptionMethod?.let { method ->
-                XposedBridge.log("[WAEX][OnlinePresence] Subscription method: ${method.toGenericString()}")
                 XposedBridge.hookAllConstructors(method.declaringClass, object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         subscriptionReceiver = param.thisObject
@@ -88,7 +87,6 @@ class OnlinePresenceIndicatorsHook(
                         val summary = param.args?.mapIndexed { index, value ->
                             "$index:${value?.javaClass?.name}=${try { value?.toString()?.take(180) } catch (_: Throwable) { "?" }}"
                         }?.joinToString(" | ")
-                        XposedBridge.log("[WAEX][OnlinePresence] Bind signature ${bindMethod.toGenericString()} args: $summary")
                         param.args?.firstOrNull()?.let { contact ->
                             val fields = contact.javaClass.declaredFields.mapNotNull { field ->
                                 try {
@@ -97,7 +95,6 @@ class OnlinePresenceIndicatorsHook(
                                     "${field.name}:${field.type.name}=${value?.toString()?.take(100)}"
                                 } catch (_: Throwable) { null }
                             }.joinToString(" | ")
-                            XposedBridge.log("[WAEX][OnlinePresence] Contact fields: $fields")
                         }
                     }
                     val row = findConversationRow(param.thisObject)
@@ -108,7 +105,6 @@ class OnlinePresenceIndicatorsHook(
                     if (row == null || jid == null) return
                     if (jid.contains("@g.us")) return
                     if (bindDiagnostics.getAndIncrement() < 5) {
-                        XposedBridge.log("[WAEX][OnlinePresence] Bound ${PresenceStateStore.normalize(jid)} to ${row.javaClass.name}")
                     }
                     val contact = param.args?.firstOrNull()
                     subscriptionMethod?.let { method ->
@@ -130,7 +126,6 @@ class OnlinePresenceIndicatorsHook(
                     }
                 }
             }
-            XposedBridge.log("[WAEX][OnlinePresence] Hooked row binder: ${bindMethod.name}")
         } catch (t: Throwable) {
             XposedBridge.log("[WAEX][OnlinePresence] Setup failed: $t")
         }
@@ -178,7 +173,6 @@ class OnlinePresenceIndicatorsHook(
             method.isAccessible = true
             method.invoke(null, jidObject, null, token, receiver)
             if (subscriptionDiagnostics.getAndIncrement() < 5) {
-                XposedBridge.log("[WAEX][OnlinePresence] Requested presence for $key")
             }
         } catch (t: Throwable) {
             if (subscriptionDiagnostics.getAndIncrement() < 5) {

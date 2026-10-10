@@ -137,7 +137,6 @@ public class HideArchivedChatsHook extends BaseFeature {
                 }
             });
 
-            XposedBridge.log(TAG + " Hooked Archive banner class: " + archiveClass.getName());
         }
     }
 }

@@ -55,7 +55,6 @@ class PreserveDeleteForMeHook(
                             if (!isEnabled(PREF_KEY, false)) return
 
                             try {
-                                XposedBridge.log("$TAG Intercepted bytecode delete-for-me call, preserving message.")
                                 param.result = null
                             } catch (t: Throwable) {
                                 XposedBridge.log("$TAG Error in bytecode delete hook: ${t.message}")
@@ -63,7 +62,6 @@ class PreserveDeleteForMeHook(
                         }
                     }
                 )
-                XposedBridge.log("$TAG Hooked bytecode delete-for-me on ${deleteMethod.name}")
             } else {
                 XposedBridge.log("$TAG Warning: DeleteForMe method not found via dexkit.")
             }
@@ -136,7 +134,6 @@ class PreserveDeleteForMeHook(
                                                 isGroup = isGroup
                                             )
 
-                                            XposedBridge.log("$TAG Preserved Delete-For-Me: chat='$chatDisplayName', sender='$senderDisplayName', keyId=$keyId, text='$textData'")
                                         }
                                     } while (cursor.moveToNext())
 
@@ -150,7 +147,6 @@ class PreserveDeleteForMeHook(
                     }
                 }
             )
-            XposedBridge.log("$TAG Database Delete-For-Me hook installed successfully.")
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error installing DB Delete-For-Me hook: ${t.message}")
         }

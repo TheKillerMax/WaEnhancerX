@@ -62,7 +62,6 @@ public class ChatLimitsBypassHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked pinLimitMethod: " + pinLimitMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking pinned limit: " + t.getMessage());
@@ -94,7 +93,6 @@ public class ChatLimitsBypassHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked forwardLimitMethod: " + forwardLimitMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking forward limit: " + t.getMessage());
@@ -126,7 +124,6 @@ public class ChatLimitsBypassHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked revokeWindowMethod: " + revokeWindowMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking revoke time window: " + t.getMessage());

@@ -72,7 +72,6 @@ class JumpFirstMessageHook(
                     }
                 )
             }
-            XposedBridge.log("$TAG JumpFirstMessage hook installed successfully.")
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Installation error: ${t.message}")
         }

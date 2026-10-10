@@ -77,7 +77,6 @@ public final class SeparateGroupsHook extends BaseFeature {
         hookFragments(getTab, conversations);
         hookTabName(getTab);
         hookTabIcon(engine);
-        XposedBridge.log(TAG + " enabled");
     }
 
     private Method resolveTabList(DexSearchEngine engine) throws Throwable {

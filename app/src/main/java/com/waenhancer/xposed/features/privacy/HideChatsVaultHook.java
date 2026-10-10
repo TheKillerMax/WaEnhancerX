@@ -88,7 +88,6 @@ public class HideChatsVaultHook extends BaseFeature {
                     });
                 }
             }
-            XposedBridge.log(TAG + " Hooked ConversationsFragment for Hide Chats Vault.");
         }
     }
 }

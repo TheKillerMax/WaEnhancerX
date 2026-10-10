@@ -101,7 +101,6 @@ public class CallPrivacyHook extends BaseFeature {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
                             mVoipManagerInstance = param.thisObject;
-                            XposedBridge.log(TAG + " Captured VoipManager instance");
                         }
                     });
                 }
@@ -213,7 +212,6 @@ public class CallPrivacyHook extends BaseFeature {
                                         mRejectCallMethod.invoke(mVoipManagerInstance, args);
                                     }
                                     param.setResult(true);
-                                    XposedBridge.log(TAG + " Intercepted and rejected call (" + rejectType + ") from: " + callerJid);
                                     break;
                                 case "ended":
                                     if (mEndCallMethod != null && mVoipManagerInstance != null) {
@@ -223,12 +221,10 @@ public class CallPrivacyHook extends BaseFeature {
                                         mEndCallMethod.invoke(mVoipManagerInstance, args);
                                     }
                                     param.setResult(true);
-                                    XposedBridge.log(TAG + " Intercepted and ended call from: " + callerJid);
                                     break;
                                 case "no_internet":
                                 default:
                                     param.setResult(true);
-                                    XposedBridge.log(TAG + " Intercepted and suppressed call UI from: " + callerJid);
                                     break;
                             }
                         } catch (Throwable t) {
@@ -236,7 +232,6 @@ public class CallPrivacyHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked onCallReceivedMethod: " + onCallReceivedMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking Call Privacy: " + t.getMessage());
@@ -282,7 +277,6 @@ public class CallPrivacyHook extends BaseFeature {
                                             if (shouldBlockCall(rawJid)) {
                                                 showBlockedCallNotification(rawJid, getFriendlyBlockType("no_internet"));
                                                 param.setResult(1); // 1 = Drop/Reject at protocol offer level
-                                                XposedBridge.log(TAG + " Protocol offer dropped for: " + rawJid);
                                                 return;
                                             }
                                         }
@@ -294,7 +288,6 @@ public class CallPrivacyHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked nativeHandleIncomingXmppOffer on Voip class");
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking nativeHandleIncomingXmppOffer: " + t.getMessage());
@@ -374,7 +367,6 @@ public class CallPrivacyHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked VoiceServiceEventCallback.fieldstatsReady for Call Information");
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking Call Information: " + t.getMessage());
@@ -461,7 +453,6 @@ public class CallPrivacyHook extends BaseFeature {
 
         String callSummary = sb.toString().trim();
         if (!callSummary.isEmpty()) {
-            XposedBridge.log(TAG + " Call Info: " + callSummary.replace("\n", ", "));
             showNotification("Call Information", callSummary);
         }
     }

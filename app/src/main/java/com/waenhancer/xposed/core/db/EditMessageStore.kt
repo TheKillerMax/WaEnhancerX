@@ -75,7 +75,6 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_hist_rowid ON $TABLE_NAME ($COL_ROW_ID)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_hist_keyid ON $TABLE_NAME ($COL_KEY_ID)")
-        XposedBridge.log("$TAG Created SQLite table $TABLE_NAME")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -89,16 +88,13 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         val validKeyId = keyId ?: ""
 
         val existing = getMessages(rowId, validKeyId).toMutableList()
-        XposedBridge.log("$TAG recordEdit: rowId=$rowId, keyId=$validKeyId, new='$newMessage', existingCount=${existing.size}")
 
         // 1. If first edit, fetch original pre-edit text from WhatsApp's msgstore.db
         if (existing.isEmpty()) {
             val originalText = getOriginalMessageFromDb(rowId, validKeyId)
-            XposedBridge.log("$TAG getOriginalMessageFromDb: '$originalText'")
             if (originalText.isNotBlank() && originalText.trim() != newMessage.trim()) {
                 insertMessageDirect(rowId, validKeyId, originalText.trim(), ts - 1000, 1)
                 existing.add(MessageItem(rowId, validKeyId, originalText.trim(), ts - 1000, 1))
-                XposedBridge.log("$TAG Saved Version 1 (Original): '$originalText'")
             }
         }
 
@@ -108,7 +104,6 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             val nextVer = existing.size + 1
             insertMessageDirect(rowId, validKeyId, newMessage.trim(), ts, nextVer)
             existing.add(MessageItem(rowId, validKeyId, newMessage.trim(), ts, nextVer))
-            XposedBridge.log("$TAG Saved Version $nextVer: '${newMessage.trim()}'")
         }
 
         if (rowId > 0) messagesCache[rowId.toString()] = existing
@@ -126,7 +121,6 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                     put(COL_VERSION, version)
                 }
                 val row = db.insert(TABLE_NAME, null, cv)
-                XposedBridge.log("$TAG Inserted into DB: row=$row, version=$version, text='$text'")
             }
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Insert DB error: ${t.message}")

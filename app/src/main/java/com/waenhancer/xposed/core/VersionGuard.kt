@@ -43,7 +43,6 @@ object VersionGuard {
             val isSupported = UniversalVersionValidator.isSupported(appContext, currentVersion, prefs)
 
             if (isSupported) {
-                XposedBridge.log("$TAG Version verified and supported: $currentVersion (${appContext.packageName})")
                 return true
             }
 
@@ -99,12 +98,10 @@ object VersionGuard {
             return
         }
         val currentVersion = sCurrentVersion.ifEmpty {
-            XposedBridge.log("$TAG onTargetActivityResumed: sCurrentVersion is empty")
             return
         }
         if (activity.isFinishing || activity.isDestroyed) return
         val actName = activity.javaClass.name
-        XposedBridge.log("$TAG onTargetActivityResumed received: $actName")
         if (actName.contains("Permission") || actName.contains("Stub") || actName.contains("Splash")) return
         showUnsupportedBottomSheetOnce(activity, currentVersion, prefs)
     }
@@ -115,7 +112,6 @@ object VersionGuard {
         prefs: SharedPreferences
     ) {
         if (dialogShown.getAndSet(true)) {
-            XposedBridge.log("$TAG Bottom sheet already shown or pending.")
             return
         }
 
@@ -129,7 +125,6 @@ object VersionGuard {
                 }
 
                 val wildcard = UniversalVersionValidator.toWildcard(currentVersion)
-                XposedBridge.log("$TAG Displaying WaexBottomSheet with wildcard: $wildcard")
 
                 WaexBottomSheet(activity)
                     .setTitle("WAEX Compatibility Notice")
@@ -140,7 +135,6 @@ object VersionGuard {
                     )
                     .setPositiveButton("Open WAEX Settings") { dialog, _ ->
                         try {
-                            XposedBridge.log("$TAG Open WAEX Settings clicked!")
                             val pm = activity.packageManager
                             val intent = pm.getLaunchIntentForPackage("com.waenhancer") ?: Intent().apply {
                                 setClassName("com.waenhancer", "com.waenhancer.app.PermissionsActivity")

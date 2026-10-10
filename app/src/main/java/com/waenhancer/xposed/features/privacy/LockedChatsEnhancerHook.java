@@ -98,7 +98,6 @@ public class LockedChatsEnhancerHook extends BaseFeature {
                     suppressNotificationQuery.remove();
                 }
             });
-            XposedBridge.log(TAG + " Hooked notification method: " + notificationMethod.getName());
         }
 
         Method lockedChatsQueryMethod = engine.findMethodWithCache(
@@ -136,7 +135,6 @@ public class LockedChatsEnhancerHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log(TAG + " Hooked locked chats query method: " + lockedChatsQueryMethod.getName());
         }
     }
 
@@ -210,7 +208,6 @@ public class LockedChatsEnhancerHook extends BaseFeature {
                         } catch (Throwable ignored) {}
                     }
                 });
-                XposedBridge.log(TAG + " Hooked loaded contacts method: " + loadedContactsMethod.getName());
             }
         }
     }

@@ -54,7 +54,6 @@ public class ProximitySensorHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked proximity sensor event dispatcher.");
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking Proximity Sensor: " + t.getMessage());

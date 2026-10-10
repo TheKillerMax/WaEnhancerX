@@ -102,7 +102,6 @@ public class AntiRevokeHook extends BaseFeature {
         hookDatabaseRevocation();
         hookListViewAdapter();
         hookStatusPlaybackUI();
-        XposedBridge.log(TAG + " All hooks installed.");
     }
 
     // ─── Key class resolution ────────────────────────────────────────────
@@ -125,7 +124,6 @@ public class AntiRevokeHook extends BaseFeature {
                     });
 
             if (fMessageClass != null) {
-                XposedBridge.log(TAG + " FMessage class resolved: " + fMessageClass.getName());
             }
 
             // ── Resolve Key class ──
@@ -144,7 +142,6 @@ public class AntiRevokeHook extends BaseFeature {
                     });
 
             if (messageKeyClass != null) {
-                XposedBridge.log(TAG + " Key class resolved: " + messageKeyClass.getName());
             }
 
             statusToMessageMethod = DexSearchEngine.getInstance().findMethodWithCache(
@@ -166,9 +163,6 @@ public class AntiRevokeHook extends BaseFeature {
                                 statusToMessageMapper = param.thisObject;
                             }
                         });
-                XposedBridge.log(TAG + " Status model mapper resolved: "
-                        + statusModelClass.getName() + " -> "
-                        + (fMessageClass != null ? fMessageClass.getName() : "FMessage"));
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error initializing message key classes: " + t.getMessage());
@@ -215,7 +209,6 @@ public class AntiRevokeHook extends BaseFeature {
                             Object fMessage = (param.args != null && param.args.length > 0) ? param.args[0] : null;
                             if (fMessage != null) {
                                 if (Boolean.TRUE.equals(extractIsFromMe(fMessage))) {
-                                    XposedBridge.log(TAG + " Allowing own message/status revoke");
                                     return;
                                 }
                                 String keyId = extractKeyIdFromFMessage(fMessage);
@@ -225,7 +218,6 @@ public class AntiRevokeHook extends BaseFeature {
                                     DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                     dispatchRealtimeRevokeUI(keyId, now);
                                     com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
-                                    XposedBridge.log(TAG + " Bytecode revoke blocked, keyId=" + keyId);
                                 }
                             }
                         } catch (Throwable t) {
@@ -234,7 +226,6 @@ public class AntiRevokeHook extends BaseFeature {
                         param.setResult(true);
                     }
                 });
-                XposedBridge.log(TAG + " Hooked bytecode revoke: " + revokeMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking bytecode revoke: " + t.getMessage());
@@ -289,7 +280,6 @@ public class AntiRevokeHook extends BaseFeature {
                             Object statusKey = findArgumentOfType(param.args, statusKeyClass);
                             if (statusKey != null) {
                                 if (Boolean.TRUE.equals(extractIsFromMe(statusKey))) {
-                                    XposedBridge.log(TAG + " Allowing own status revoke");
                                     return;
                                 }
                                 String keyId = extractKeyIdFromFMessage(statusKey);
@@ -298,10 +288,8 @@ public class AntiRevokeHook extends BaseFeature {
                                     REVOKED_MESSAGES.put(keyId, now);
                                     DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                     com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
-                                    XposedBridge.log(TAG + " Status bytecode revoke blocked, keyId=" + keyId);
                                 }
                             } else {
-                                XposedBridge.log(TAG + " Status revoke invoked without resolved status key");
                             }
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getMessage());
@@ -316,7 +304,6 @@ public class AntiRevokeHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked status bytecode revoke: " + revokeStatusMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking status bytecode revoke: " + t.getMessage());
@@ -390,7 +377,6 @@ public class AntiRevokeHook extends BaseFeature {
                                             REVOKED_MESSAGES.put(keyId, now);
                                             DelMessageStore.getInstance(context).insertMessage(jid, keyId, now);
                                             com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
-                                            XposedBridge.log(TAG + " Status DB DELETE blocked & preserved: keyId=" + keyId + " jid=" + jid);
                                         }
                                     } while (cursor.moveToNext());
                                 }
@@ -433,7 +419,6 @@ public class AntiRevokeHook extends BaseFeature {
                                         dispatchRealtimeRevokeUI(keyId, now);
                                         com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
                                         param.setResult(0);
-                                        XposedBridge.log(TAG + " Message DB DELETE blocked & UI updated, keyId=" + keyId);
                                     }
                                 }
                             }
@@ -466,14 +451,12 @@ public class AntiRevokeHook extends BaseFeature {
                             DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                             dispatchRealtimeRevokeUI(keyId, now);
                             com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
-                            XposedBridge.log(TAG + " DB INSERT type=15 blocked & UI updated, keyId=" + keyId);
                         }
                         param.setResult(-1L);
                     }
                 }
             });
 
-            XposedBridge.log(TAG + " Database interceptors installed.");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getMessage());
         }
@@ -496,7 +479,6 @@ public class AntiRevokeHook extends BaseFeature {
                             if (targetKeyId.equals(childKey)) {
                                 decorateRevokedRow((ViewGroup) child, timestamp);
                                 child.invalidate();
-                                XposedBridge.log(TAG + " Live on-screen chat bubble updated for key: " + targetKeyId);
                                 break;
                             }
                         }
@@ -606,13 +588,11 @@ public class AntiRevokeHook extends BaseFeature {
                             }
                         });
 
-                        XposedBridge.log(TAG + " getView hook installed on adapter: " + boundAdapter.getClass().getName());
                     } catch (Throwable t) {
                         XposedBridge.log(TAG + " Error hooking getView on " + boundAdapter.getClass().getName() + ": " + t.getMessage());
                     }
                 }
             });
-            XposedBridge.log(TAG + " ListView.setAdapter hook installed.");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error setting up ListView adapter hook: " + t.getMessage());
         }
@@ -661,7 +641,6 @@ public class AntiRevokeHook extends BaseFeature {
             }
 
             if (playbackFragmentClass != null) {
-                XposedBridge.log(TAG + " Status playback fragment class resolved: " + playbackFragmentClass.getName());
             }
 
             // ── 2. Find status playback page-bind method via DexKit invokes & anchors ──
@@ -686,7 +665,6 @@ public class AntiRevokeHook extends BaseFeature {
                                                     && m.getParameterCount() > 1) {
                                                 for (Class<?> pType : m.getParameterTypes()) {
                                                     if (pType == targetFragmentClass) {
-                                                        XposedBridge.log(TAG + " Found exact status subtitle binder: " + m.getName());
                                                         return m;
                                                     }
                                                 }
@@ -738,7 +716,6 @@ public class AntiRevokeHook extends BaseFeature {
                     });
 
             if (statusPlaybackViewClass != null) {
-                XposedBridge.log(TAG + " Status playback view container class resolved: " + statusPlaybackViewClass.getName());
             }
 
             // ── 4. Hook the status playback subtitle / bind method ──
@@ -746,7 +723,6 @@ public class AntiRevokeHook extends BaseFeature {
                 final Method finalRefresh = refreshSubtitleMethod;
                 XposedBridge.hookMethod(finalRefresh,
                         buildStatusPageHook("refreshSubtitle", playbackFragmentClass, statusPlaybackViewClass));
-                XposedBridge.log(TAG + " Hooked status playback method: " + finalRefresh.getName());
             } else {
                 XposedBridge.log(TAG + " Status refresh method not found; using fallback hooks.");
             }
@@ -782,7 +758,6 @@ public class AntiRevokeHook extends BaseFeature {
                         Method m = curr.getDeclaredMethod(name);
                         if (excludeMethod == null || !m.equals(excludeMethod)) {
                             XposedBridge.hookMethod(m, buildStatusPageHook(name));
-                            XposedBridge.log(TAG + " Hooked status fragment." + name + " on " + curr.getSimpleName());
                         }
                         break;
                     } catch (NoSuchMethodException ignored) {
@@ -802,11 +777,9 @@ public class AntiRevokeHook extends BaseFeature {
                 try {
                     XposedBridge.hookMethod(m, buildStatusPageHookWithArg());
                     intArgCount++;
-                    XposedBridge.log(TAG + " Hooked status fragment int-arg: " + m.getName());
                 } catch (Throwable ignored) {}
             }
         }
-        XposedBridge.log(TAG + " Targeted status fragment hooks complete (" + intArgCount + " int-arg).");
     }
 
     /**
@@ -868,13 +841,11 @@ public class AntiRevokeHook extends BaseFeature {
                             String keyId = cursor.getString(keyIdCol);
                             if (isLikelyStatusKeyId(keyId)) {
                                 sStatusKeyByThread.put(Thread.currentThread().getId(), keyId);
-                                XposedBridge.log(TAG + " Tracked status keyId from DB read: " + keyId);
                             }
                         }
                     } catch (Throwable ignored) {}
                 }
             });
-            XposedBridge.log(TAG + " Status DB rawQuery tracker installed.");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error installing status DB read tracker: " + t.getMessage());
         }
@@ -934,7 +905,6 @@ public class AntiRevokeHook extends BaseFeature {
                                 TextView exactDate = findStatusDateTextView(targetObj, playbackViewClass);
                                 if (exactDate != null) {
                                     decorateRevokedStatusTextView(exactDate, finalTs);
-                                    XposedBridge.log(TAG + " Status playback decorated from exact binder: keyId=" + finalKey);
                                 } else {
                                     applyStatusDecorationFromContext(targetObj, finalArgs, finalKey, finalTs);
                                 }
@@ -1117,14 +1087,12 @@ public class AntiRevokeHook extends BaseFeature {
                     if (arg instanceof TextView) {
                         TextView tv = (TextView) arg;
                         decorateRevokedStatusTextView(tv, ts);
-                        XposedBridge.log(TAG + " Status playback decorated (from direct arg): keyId=" + keyId);
                         return;
                     }
                     if (arg instanceof View) {
                         TextView tv = findStatusTimestampTextViewInViewTree((View) arg);
                         if (tv != null) {
                             decorateRevokedStatusTextView(tv, ts);
-                            XposedBridge.log(TAG + " Status playback decorated (from view arg): keyId=" + keyId);
                             return;
                         }
                     }
@@ -1136,7 +1104,6 @@ public class AntiRevokeHook extends BaseFeature {
                 TextView tv = findDateTextViewFromObjectFields(fragmentOrController);
                 if (tv != null) {
                     decorateRevokedStatusTextView(tv, ts);
-                    XposedBridge.log(TAG + " Status playback decorated (from controller fields): keyId=" + keyId);
                     return;
                 }
                 applyStatusDecoration(fragmentOrController, keyId, ts);
@@ -1246,7 +1213,6 @@ public class AntiRevokeHook extends BaseFeature {
             return;
         }
         decorateRevokedStatusTextView(target, ts);
-        XposedBridge.log(TAG + " Status playback decorated: keyId=" + keyId);
     }
 
     /**

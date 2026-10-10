@@ -119,7 +119,6 @@ public class AntiViewOnceHook extends BaseFeature {
                             }
                         }
                     });
-                    XposedBridge.log(TAG + " Successfully hooked ViewOnce setter: " + target.getDeclaringClass().getName() + "->" + target.getName());
                 } catch (Throwable t) {
                     XposedBridge.log(TAG + " Error hooking method " + target.getName() + ": " + t.getMessage());
                 }

@@ -90,7 +90,6 @@ public class PresenceToastsHook extends BaseFeature {
                             return;
                         }
                         if (PRESENCE_DIAGNOSTICS.getAndIncrement() < 5) {
-                            XposedBridge.log(TAG + " Presence event jid=" + event.jid + ", online=" + event.online);
                         }
                         boolean transition = PresenceStateStore.update(event.jid, event.online);
                         if (transition && event.online && isOnlineToastEnabled()) {
@@ -101,7 +100,6 @@ public class PresenceToastsHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked presence incoming update: " + presenceMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking presence toasts: " + t.getMessage());
@@ -232,7 +230,6 @@ public class PresenceToastsHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked status viewed receipt: " + statusReceiptMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking status viewed receipt: " + t.getMessage());
@@ -279,7 +276,6 @@ public class PresenceToastsHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked onInsertReceiptMethod: " + onInsertReceiptMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking onInsertReceipt: " + t.getMessage());

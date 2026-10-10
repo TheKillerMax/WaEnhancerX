@@ -116,7 +116,6 @@ public class DownloadViewOnceHook extends BaseFeature {
                 }
             });
 
-            XposedBridge.log(TAG + " Hooked ViewOnceViewerActivity: " + viewOnceClass.getName());
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking ViewOnceViewerActivity: " + t.getMessage());
         }
@@ -203,7 +202,6 @@ public class DownloadViewOnceHook extends BaseFeature {
                         });
                     }
                 });
-                XposedBridge.log(TAG + " Hooked media viewer menu method: " + menuMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error finding media viewer menu method: " + t.getMessage());

@@ -205,7 +205,6 @@ class CustomPrivacyHook(
                 }
                 tile.tag = VIEW_TAG_CUSTOM_PRIVACY_TILE
                 targetContainer.addView(tile, 0)
-                XposedBridge.log("$TAG Injected Custom Privacy tile into info screen successfully")
             }
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Failed to inject tile: ${t.message}")
@@ -362,7 +361,6 @@ class CustomPrivacyHook(
                         .apply()
 
                     Toast.makeText(activity, "Custom privacy saved", Toast.LENGTH_SHORT).show()
-                    XposedBridge.log("$TAG Saved custom privacy for $cleanNumber: $jsonStr")
                 } catch (t: Throwable) {
                     XposedBridge.log("$TAG Failed to save custom privacy: ${t.message}")
                 }

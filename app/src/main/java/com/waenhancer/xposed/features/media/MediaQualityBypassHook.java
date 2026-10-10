@@ -60,7 +60,6 @@ public class MediaQualityBypassHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked image compression quality: " + imageQualityMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking image quality: " + t.getMessage());
@@ -92,7 +91,6 @@ public class MediaQualityBypassHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked video encoder FPS: " + videoFpsMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking video quality: " + t.getMessage());

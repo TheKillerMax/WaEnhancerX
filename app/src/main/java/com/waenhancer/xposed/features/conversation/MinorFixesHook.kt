@@ -53,7 +53,6 @@ class MinorFixesHook(
                     }
                 }
             )
-            XposedBridge.log("$TAG MinorFixes hook installed successfully.")
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error installing MinorFixes hook: ${t.message}")
         }
@@ -87,7 +86,6 @@ class MinorFixesHook(
 
                 provider.attachInfo(activity.applicationContext, providerInfo)
                 isMlKitInitialized = true
-                XposedBridge.log("$TAG Successfully initialized MlKitInitProvider before DocumentPickerActivity")
             } catch (error: Throwable) {
                 val alreadyInitialized = generateSequence(error) { it.cause }
                     .filterIsInstance<IllegalStateException>()

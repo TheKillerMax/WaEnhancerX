@@ -79,11 +79,9 @@ public class DndModeHook extends BaseFeature {
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (isDndActive()) {
                         param.setResult(null); // Block incoming message handler execution
-                        XposedBridge.log(TAG + " DND active: Suppressed MessageHandler intake.");
                     }
                 }
             });
-            XposedBridge.log(TAG + " Hooked DND MessageHandler method: " + dndMethod.getName());
         }
     }
 }

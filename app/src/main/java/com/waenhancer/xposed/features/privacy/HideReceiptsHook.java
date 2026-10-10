@@ -116,7 +116,6 @@ public class HideReceiptsHook extends BaseFeature {
                         break;
                     }
                 }
-                XposedBridge.log(TAG + " ProtocolTree & KeyValue reflection initialized.");
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error initializing ProtocolTree reflection: " + t.getMessage());
@@ -156,7 +155,6 @@ public class HideReceiptsHook extends BaseFeature {
                         if (isStatusTarget(jid, target)) {
                             if (shouldHideStatusView(target != null ? target : jid)) {
                                 param.setResult(null);
-                                XposedBridge.log(TAG + " EnforceHiding: Suppressed Incoming Status View Receipt for " + target);
                             }
                             return;
                         }
@@ -167,7 +165,6 @@ public class HideReceiptsHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked incoming read receipt dispatcher: " + readReceiptMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking enforce hiding: " + t.getMessage());
@@ -211,7 +208,6 @@ public class HideReceiptsHook extends BaseFeature {
                                 String target = (participant != null && !participant.contains("@broadcast")) ? participant : jid;
                                 if (shouldHideStatusView(target)) {
                                     XposedHelpers.setAdditionalInstanceField(job, "waex_hide_status_view", true);
-                                    XposedBridge.log(TAG + " Tagged SendReadReceiptJob as hidden status for " + target);
                                 }
                             } else if (shouldHideReadReceipt(jid)) {
                                 XposedHelpers.setAdditionalInstanceField(job, "waex_hide_read", true);
@@ -254,7 +250,6 @@ public class HideReceiptsHook extends BaseFeature {
                         }
                     });
                 }
-                XposedBridge.log(TAG + " Hooked SendReadReceiptJob: " + sendJobClass.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
@@ -322,7 +317,6 @@ public class HideReceiptsHook extends BaseFeature {
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked receipt generator method: " + receiptMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking receipt method: " + t.getMessage());
@@ -358,11 +352,9 @@ public class HideReceiptsHook extends BaseFeature {
                         protected void beforeHookedMethod(MethodHookParam param) {
                             if (isHideDeliveryReceiptsEnabled()) {
                                 param.setResult(null); // Drop delivery receipt dispatch
-                                XposedBridge.log(TAG + " Dropped delivery receipt dispatcher for: " + anchor);
                             }
                         }
                     });
-                    XposedBridge.log(TAG + " Hooked delivery dispatcher: " + anchor);
                 }
             }
         } catch (Throwable t) {
@@ -403,13 +395,11 @@ public class HideReceiptsHook extends BaseFeature {
                             if (isHideDeliveryReceiptsEnabled()) {
                                 if (msg.arg1 == 419 || msg.arg1 == 89) {
                                     msg.arg1 = -1; // Change/cancel type
-                                    XposedBridge.log(TAG + " Suppressed ConnectionWriter message type: " + msg.arg1);
                                 }
                             }
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked ConnectionWriter onDispatchMessage: " + dispatchMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking onDispatchMessage: " + t.getMessage());
@@ -454,7 +444,6 @@ public class HideReceiptsHook extends BaseFeature {
                 Array.set(newArray, i, newAttrList.get(i));
             }
             fieldAttributes.set(node, newArray);
-            XposedBridge.log(TAG + " Injected type=inactive (Second Tick prevented)");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error applying hide delivery: " + t.getMessage());
         }
@@ -493,7 +482,6 @@ public class HideReceiptsHook extends BaseFeature {
                     Array.set(newArray, i, newAttrList.get(i));
                 }
                 fieldAttributes.set(node, newArray);
-                XposedBridge.log(TAG + " Stripped type=read (Blue Tick prevented, Delivered tick allowed)");
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error applying hide read: " + t.getMessage());
@@ -643,11 +631,9 @@ public class HideReceiptsHook extends BaseFeature {
                                 Object msgObj = param.args[0];
                                 if (shouldSuppressPlayedReceipt(msgObj)) {
                                     param.setResult(null);
-                                    XposedBridge.log(TAG + " Suppressed Voice Note / View Once Played Receipt.");
                                 }
                             }
                         });
-                        XposedBridge.log(TAG + " Hooked single SenderPlayed method: " + m.getName());
                     }
                 } else if (m.getParameterCount() > 0 && java.util.Set.class.isAssignableFrom(m.getParameterTypes()[0])) {
                     // Hook batch/business set played sender method
@@ -660,13 +646,11 @@ public class HideReceiptsHook extends BaseFeature {
                                     Object first = set.iterator().next();
                                     if (shouldSuppressPlayedReceipt(first)) {
                                         param.setResult(null);
-                                        XposedBridge.log(TAG + " Suppressed Batch Voice Note / View Once Played Receipt.");
                                     }
                                 }
                             }
                         }
                     });
-                    XposedBridge.log(TAG + " Hooked batch SenderPlayed method: " + m.getName());
                 }
             }
         } catch (Throwable t) {

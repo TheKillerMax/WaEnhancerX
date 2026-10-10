@@ -96,7 +96,6 @@ public class AutoNextStatusHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log(TAG + " Successfully hooked nextStatusRunMethod");
         }
 
         // 3. Resolve onPlaybackFinished callback method to prevent auto-advancing when story/status ends
@@ -120,7 +119,6 @@ public class AutoNextStatusHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log(TAG + " Successfully hooked onPlaybackFinishedMethod");
         }
     }
 }

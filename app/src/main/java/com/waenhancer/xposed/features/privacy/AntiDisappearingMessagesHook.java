@@ -84,7 +84,6 @@ public class AntiDisappearingMessagesHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log(TAG + " Hooked ephemeralInsertDbMethod: " + ephemeralInsertDbMethod.getName());
         }
     }
 

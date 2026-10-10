@@ -53,7 +53,6 @@ public class AlwaysOnlineHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log(TAG + " Hooked PresenceStateManager transition method: " + stateChangeMethod.getName());
         }
     }
 

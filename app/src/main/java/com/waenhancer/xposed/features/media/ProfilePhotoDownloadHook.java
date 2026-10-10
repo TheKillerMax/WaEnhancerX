@@ -77,7 +77,6 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
                         installMenuAction((Activity) param.thisObject, (Menu) param.args[0]);
                     }
                 });
-        XposedBridge.log(TAG + " installed on " + viewer.getName() + ", hooks=" + hooks.size());
     }
 
     private Class<?> resolveViewerClass() {

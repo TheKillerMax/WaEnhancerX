@@ -89,8 +89,6 @@ public final class CallRecordingHook extends BaseFeature {
 
         hookActivityEnd("com.whatsapp.voipcalling.VoipActivityV2");
         hookActivityEnd("com.whatsapp.voipcalling.VoipActivity");
-        XposedBridge.log(TAG + " installed, connectHooks=" + connectionHooks.size()
-                + ", endHooks=" + endHooks.size());
     }
 
     private Class<?> resolveCallbackClass() {
@@ -163,7 +161,6 @@ public final class CallRecordingHook extends BaseFeature {
             for (int source : sources) {
                 try {
                     recorder = createRecorder(source, destination.getFileDescriptor(), format);
-                    XposedBridge.log(TAG + " started source=" + source + ", path=" + outputPath);
                     return;
                 } catch (Throwable failure) {
                     lastError = failure;
@@ -214,7 +211,6 @@ public final class CallRecordingHook extends BaseFeature {
             releaseRecorder(false);
         } finally {
             closeDestination(!valid);
-            XposedBridge.log(TAG + " stopped (" + reason + "), saved=" + valid);
         }
     }
 

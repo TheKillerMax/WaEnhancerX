@@ -80,7 +80,6 @@ class AntiEditMessagesHook(
         hookDatabaseEditInsert()
         hookListViewAdapter()
         hookViewAttachmentFallback()
-        XposedBridge.log("$TAG All AntiEdit hooks initialized.")
     }
 
     // ─── 1. Bytecode Edit Interception ──────────────────────────────────────────

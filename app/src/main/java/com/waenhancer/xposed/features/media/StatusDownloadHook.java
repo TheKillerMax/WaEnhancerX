@@ -133,7 +133,6 @@ public class StatusDownloadHook extends BaseFeature {
                     }
                 });
 
-                XposedBridge.log(TAG + " Hooked status playback menu method: " + menuStatusMethod.getName());
             } else if (statusContactFragClass != null) {
                 // Fallback Strategy 3: Hook fragment menu methods directly
                 for (Method m : statusContactFragClass.getDeclaredMethods()) {
@@ -150,7 +149,6 @@ public class StatusDownloadHook extends BaseFeature {
                                 } catch (Throwable ignored) {}
                             }
                         });
-                        XposedBridge.log(TAG + " Hooked status contact fragment menu method: " + m.getName());
                     }
                 }
             }

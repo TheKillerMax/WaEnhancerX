@@ -58,7 +58,6 @@ class StickerConfirmHook(
                     }
                 }
             )
-            XposedBridge.log("$TAG Hook installed successfully.")
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Failed to hook sticker attachment: ${t.message}")
         }

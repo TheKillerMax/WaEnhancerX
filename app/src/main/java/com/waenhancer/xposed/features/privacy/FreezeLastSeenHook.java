@@ -55,11 +55,9 @@ public class FreezeLastSeenHook extends BaseFeature {
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (isPresenceSuppressed()) {
                             param.setResult(null); // Suppress transition to available/online
-                            XposedBridge.log(TAG + " Suppressed transition to available (Hide Online / Freeze Last Seen)");
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked PresenceStateManager.setAvailable: " + setAvailableMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking PresenceStateManager.setAvailable: " + t.getMessage());
@@ -90,11 +88,9 @@ public class FreezeLastSeenHook extends BaseFeature {
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (isPresenceSuppressed()) {
                             param.setResult(null); // Prevent outgoing presence timestamp ping
-                            XposedBridge.log(TAG + " Suppressed SendPresenceJob");
                         }
                     }
                 });
-                XposedBridge.log(TAG + " Hooked SendPresenceJob: " + sendJobMethod.getName());
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendPresenceJob: " + t.getMessage());

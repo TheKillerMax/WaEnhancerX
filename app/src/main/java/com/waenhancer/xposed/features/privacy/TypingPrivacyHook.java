@@ -103,7 +103,6 @@ public class TypingPrivacyHook extends BaseFeature {
                     }
                 }
             });
-            XposedBridge.log("[WAEX] Hooked TypingPrivacy ('HandleMeComposing/sendComposing') successfully.");
         } else {
             XposedBridge.log("[WAEX] Could not locate 'HandleMeComposing/sendComposing' method via DexKit.");
         }

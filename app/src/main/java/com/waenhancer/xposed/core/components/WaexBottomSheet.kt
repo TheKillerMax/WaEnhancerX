@@ -427,7 +427,6 @@ class WaexBottomSheet(private val context: Context) {
             posBtn.isClickable = true
             posBtn.isFocusable = true
             posBtn.setOnClickListener {
-                XposedBridge.log("[WAEX] Positive button onClick triggered!")
                 try {
                     positiveListener?.onClick(dialog, DialogInterface.BUTTON_POSITIVE)
                 } catch (t: Throwable) {
