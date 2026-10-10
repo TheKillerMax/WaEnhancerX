@@ -15,6 +15,9 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -25,6 +28,7 @@ import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
 import com.waenhancer.xposed.utils.ActivityTracker;
 
 import java.io.File;
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -33,7 +37,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.IdentityHashMap;
@@ -53,6 +56,7 @@ import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodDataList;
+import org.luckypray.dexkit.result.UsingFieldData;
 
 /**
  * Status Downloader Hook:
@@ -65,6 +69,8 @@ public class StatusDownloadHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][StatusDownload]";
     private static final int MENU_ID_STATUS_DOWNLOAD = 0x7EAD0007;
+    private volatile Field statusListField;
+    private volatile Field currentStatusIndexField;
 
     public StatusDownloadHook(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
         super(context, classLoader, prefs);
@@ -115,6 +121,8 @@ public class StatusDownloadHook extends BaseFeature {
             // Strategy 2: Search via StatusPlaybackContactFragment menu handlers
             Class<?> statusContactFragClass = resolveStatusPlaybackContactFragmentClass();
             Class<?> statusBaseFragClass = resolveStatusPlaybackBaseFragmentClass();
+            statusListField = findStatusListField(statusContactFragClass);
+            currentStatusIndexField = findCurrentStatusIndexField(bridge, statusBaseFragClass);
 
             if (menuStatusMethod != null) {
                 final Class<?> contactClass = statusContactFragClass;
@@ -205,15 +213,31 @@ public class StatusDownloadHook extends BaseFeature {
     private void injectDownloadMenuItem(Menu menu, Object sourceObject) {
         if (menu.findItem(MENU_ID_STATUS_DOWNLOAD) != null) return;
 
-        MenuItem item = menu.add(Menu.NONE, MENU_ID_STATUS_DOWNLOAD, Menu.NONE, "Download");
+        String visibleTextStatus = findVisibleTextStatus(sourceObject);
+        boolean isTextStatus = visibleTextStatus != null;
+        MenuItem item = menu.add(
+                Menu.NONE,
+                MENU_ID_STATUS_DOWNLOAD,
+                Menu.NONE,
+                isTextStatus ? "Copy text" : "Download"
+        );
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
-        Drawable icon = MenuIconLoader.load(context, "ic_waex_download");
+        Drawable icon = MenuIconLoader.load(
+                context,
+                isTextStatus ? "ic_waex_copy" : "ic_waex_download"
+        );
         if (icon != null) {
             item.setIcon(icon);
         }
 
         item.setOnMenuItemClickListener(menuItem -> {
+            String currentTextStatus = findVisibleTextStatus(sourceObject);
+            if (currentTextStatus != null) {
+                copyToClipboard(context, currentTextStatus);
+                return true;
+            }
+
             CompletableFuture.runAsync(() -> {
                 try {
                     downloadCurrentStatus(sourceObject);
@@ -227,81 +251,100 @@ public class StatusDownloadHook extends BaseFeature {
     }
 
     private void downloadCurrentStatus(Object sourceObject) {
-        File mediaFile = null;
-        String textCaption = null;
+        Object currentStatusItem = resolveCurrentStatusItem(sourceObject);
+        File mediaFile = extractMediaFileDeep(currentStatusItem);
 
-        // Strategy 1: Deep traverse the provided sourceObject (Fragment / StatusData / MenuHolder)
-        if (sourceObject != null) {
-            Object currentStatusItem = resolveCurrentStatusItem(sourceObject);
-            if (currentStatusItem != null) {
-                mediaFile = extractMediaFileDeep(currentStatusItem);
-                textCaption = extractStatusText(currentStatusItem);
-            }
-            if (mediaFile == null) {
-                mediaFile = extractMediaFileDeep(sourceObject);
-            }
-        }
-
-        // Strategy 2: Deep traverse active fragments in foreground Activity
-        if (mediaFile == null) {
-            Activity currentAct = ActivityTracker.getCurrentActivity();
-            if (currentAct != null) {
-                try {
-                    mediaFile = extractMediaFromActivityFragments(currentAct);
-                    if (mediaFile == null) {
-                        mediaFile = extractMediaFileDeep(currentAct);
-                    }
-                } catch (Throwable ignored) {}
-            }
-        }
-
-        // Strategy 3: Check WhatsApp cached .Statuses directory for recently active status media
-        if (mediaFile == null) {
-            mediaFile = findRecentStatusFileFromDisk();
-        }
-
-        // Perform Save / Copy
-        if (mediaFile != null && mediaFile.exists() && mediaFile.length() > 0) {
+        if (isMediaFileReady(mediaFile)) {
             saveMediaFile(context, mediaFile);
-        } else if (textCaption != null && !textCaption.trim().isEmpty()) {
-            copyToClipboard(context, textCaption);
         } else {
-            showToast(context, "Status media is still loading or not cached yet");
+            showToast(
+                    context,
+                    "Please wait until the status finishes downloading, then try again",
+                    Toast.LENGTH_LONG
+            );
         }
     }
 
-    private Object resolveCurrentStatusItem(Object fragmentInstance) {
+    private boolean isMediaFileReady(File mediaFile) {
+        if (mediaFile == null || !mediaFile.isFile()) return false;
+
+        String name = mediaFile.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".tmp") || name.endsWith(".part") || name.endsWith(".download")) {
+            return false;
+        }
+
+        long initialLength = mediaFile.length();
+        long initialModified = mediaFile.lastModified();
+        if (initialLength <= 0) return false;
+
         try {
-            Class<?> cls = fragmentInstance.getClass();
-            List<?> statusList = null;
-            int currentIndex = 0;
+            Thread.sleep(350L);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
 
-            while (cls != null && cls != Object.class) {
-                for (Field f : cls.getDeclaredFields()) {
-                    f.setAccessible(true);
-                    try {
-                        Object val = f.get(fragmentInstance);
-                        if (val instanceof List && statusList == null) {
-                            List<?> list = (List<?>) val;
-                            if (!list.isEmpty()) {
-                                statusList = list;
-                            }
-                        } else if (f.getType() == int.class) {
-                            int idx = f.getInt(fragmentInstance);
-                            if (idx >= 0) {
-                                currentIndex = idx;
-                            }
-                        }
-                    } catch (Throwable ignored) {}
-                }
-                cls = cls.getSuperclass();
+        return mediaFile.isFile()
+                && mediaFile.length() == initialLength
+                && mediaFile.lastModified() == initialModified;
+    }
+
+    private String findVisibleTextStatus(Object sourceObject) {
+        View sourceView = resolveSourceView(sourceObject);
+        String text = findTextStatusInView(sourceView);
+        if (text != null) return text;
+
+        Activity activity = ActivityTracker.getCurrentActivity();
+        if (activity == null || activity.getWindow() == null) return null;
+        return findTextStatusInView(activity.getWindow().getDecorView());
+    }
+
+    private View resolveSourceView(Object sourceObject) {
+        if (sourceObject instanceof View) return (View) sourceObject;
+        if (sourceObject == null) return null;
+
+        try {
+            Method getView = sourceObject.getClass().getMethod("getView");
+            if (View.class.isAssignableFrom(getView.getReturnType())) {
+                Object view = getView.invoke(sourceObject);
+                if (view instanceof View) return (View) view;
             }
+        } catch (Throwable ignored) {}
+        return null;
+    }
 
-            if (statusList != null && !statusList.isEmpty()) {
-                if (currentIndex >= 0 && currentIndex < statusList.size()) {
-                    return statusList.get(currentIndex);
+    private String findTextStatusInView(View view) {
+        if (view == null || !view.isShown()) return null;
+
+        if (view instanceof TextView && view.getId() != View.NO_ID) {
+            try {
+                String resourceName = view.getResources().getResourceEntryName(view.getId());
+                if ("message_text".equals(resourceName) || "status_text".equals(resourceName)) {
+                    String text = ((TextView) view).getText().toString().trim();
+                    if (!text.isEmpty()) return text;
                 }
-                return statusList.get(0);
+            } catch (Throwable ignored) {}
+        }
+
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                String text = findTextStatusInView(group.getChildAt(i));
+                if (text != null) return text;
+            }
+        }
+        return null;
+    }
+
+    private Object resolveCurrentStatusItem(Object fragmentInstance) {
+        if (fragmentInstance == null) return null;
+        try {
+            List<?> statusList = readStatusList(fragmentInstance);
+            if (statusList == null || statusList.isEmpty()) return null;
+
+            int currentIndex = readCurrentStatusIndex(fragmentInstance, statusList.size());
+            if (currentIndex >= 0 && currentIndex < statusList.size()) {
+                return statusList.get(currentIndex);
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error resolving current status item: " + t.getMessage());
@@ -309,30 +352,92 @@ public class StatusDownloadHook extends BaseFeature {
         return null;
     }
 
-    private File extractMediaFromActivityFragments(Activity act) {
+    private List<?> readStatusList(Object fragmentInstance) {
         try {
-            Method getSupportFM = null;
-            try {
-                getSupportFM = act.getClass().getMethod("getSupportFragmentManager");
-            } catch (Throwable ignored) {}
-
-            if (getSupportFM != null) {
-                Object fm = getSupportFM.invoke(act);
-                if (fm != null) {
-                    Method getFragments = fm.getClass().getMethod("getFragments");
-                    List<?> fragments = (List<?>) getFragments.invoke(fm);
-                    if (fragments != null) {
-                        for (Object frag : fragments) {
-                            if (frag == null) continue;
-                            File f = extractMediaFileDeep(frag);
-                            if (f != null && f.exists() && f.length() > 0) {
-                                return f;
-                            }
-                        }
-                    }
+            Field field = statusListField;
+            if (field != null && field.getDeclaringClass().isInstance(fragmentInstance)) {
+                Object value = field.get(fragmentInstance);
+                if (value instanceof List && !((List<?>) value).isEmpty()) {
+                    return (List<?>) value;
                 }
             }
         } catch (Throwable ignored) {}
+
+        Class<?> type = fragmentInstance.getClass();
+        while (type != null && type != Object.class) {
+            for (Field field : type.getDeclaredFields()) {
+                if (!List.class.isAssignableFrom(field.getType())) continue;
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(fragmentInstance);
+                    if (value instanceof List && !((List<?>) value).isEmpty()) {
+                        return (List<?>) value;
+                    }
+                } catch (Throwable ignored) {}
+            }
+            type = type.getSuperclass();
+        }
+        return null;
+    }
+
+    private int readCurrentStatusIndex(Object fragmentInstance, int itemCount) {
+        Field field = currentStatusIndexField;
+        if (field != null && field.getDeclaringClass().isInstance(fragmentInstance)) {
+            try {
+                int index = field.getInt(fragmentInstance);
+                if (index >= 0 && index < itemCount) return index;
+            } catch (Throwable ignored) {}
+        }
+
+        for (String fieldName : new String[]{"A02", "A00"}) {
+            try {
+                Field fallback = XposedHelpers.findFieldIfExists(fragmentInstance.getClass(), fieldName);
+                if (fallback != null && fallback.getType() == int.class) {
+                    int index = fallback.getInt(fragmentInstance);
+                    if (index >= 0 && index < itemCount) return index;
+                }
+            } catch (Throwable ignored) {}
+        }
+        return itemCount == 1 ? 0 : -1;
+    }
+
+    private Field findStatusListField(Class<?> fragmentClass) {
+        for (Class<?> type = fragmentClass; type != null && type != Object.class; type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                if (List.class.isAssignableFrom(field.getType())) {
+                    field.setAccessible(true);
+                    return field;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Field findCurrentStatusIndexField(
+            org.luckypray.dexkit.DexKitBridge bridge,
+            Class<?> statusBaseFragmentClass
+    ) {
+        if (bridge == null) return null;
+        try {
+            MethodDataList methods = bridge.findMethod(FindMethod.create()
+                    .matcher(MethodMatcher.create()
+                            .usingStrings("playbackFragment/setPageActive no-messages ")));
+            for (org.luckypray.dexkit.result.MethodData method : methods) {
+                for (UsingFieldData use : method.getUsingFields()) {
+                    org.luckypray.dexkit.result.FieldData fieldData = use.getField();
+                    if (!"int".equals(fieldData.getTypeName())) continue;
+                    Field field = fieldData.getFieldInstance(classLoader);
+                    if (statusBaseFragmentClass == null
+                            || field.getDeclaringClass().isAssignableFrom(statusBaseFragmentClass)
+                            || statusBaseFragmentClass.isAssignableFrom(field.getDeclaringClass())) {
+                        field.setAccessible(true);
+                        return field;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Error resolving current status index: " + t.getMessage());
+        }
         return null;
     }
 
@@ -446,105 +551,33 @@ public class StatusDownloadHook extends BaseFeature {
         return null;
     }
 
-    /**
-     * Checks WhatsApp's .Statuses directories on disk for the most recently cached media file.
-     */
-    private File findRecentStatusFileFromDisk() {
-        try {
-            List<File> statusDirs = new ArrayList<>();
-            File ext = Environment.getExternalStorageDirectory();
-
-            statusDirs.add(new File(ext, "Android/media/com.whatsapp/WhatsApp/Media/.Statuses"));
-            statusDirs.add(new File(ext, "Android/media/com.whatsapp.w4b/WhatsApp Business/Media/.Statuses"));
-            statusDirs.add(new File(ext, "WhatsApp/Media/.Statuses"));
-            statusDirs.add(new File(context.getCacheDir(), "status"));
-
-            long now = System.currentTimeMillis();
-            File newest = null;
-            long newestTime = 0;
-
-            for (File dir : statusDirs) {
-                if (dir != null && dir.exists() && dir.isDirectory()) {
-                    File[] files = dir.listFiles();
-                    if (files != null) {
-                        for (File f : files) {
-                            if (f.isFile() && f.length() > 0 && !f.getName().endsWith(".nomedia")) {
-                                long mod = f.lastModified();
-                                // Checked within the last 15 minutes
-                                if (now - mod < 900_000 && mod > newestTime) {
-                                    newestTime = mod;
-                                    newest = f;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return newest;
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error searching .Statuses disk directory: " + t.getMessage());
-        }
-        return null;
-    }
-
-    private String extractStatusText(Object obj) {
-        if (obj == null) return null;
-        Class<?> current = obj.getClass();
-        while (current != null && current != Object.class) {
-            for (Field field : current.getDeclaredFields()) {
-                field.setAccessible(true);
-                try {
-                    Object val = field.get(obj);
-                    if (val instanceof String) {
-                        String s = (String) val;
-                        if (s.length() > 0 && !s.contains("http://") && !s.contains("https://") && !s.contains("@")) {
-                            return s;
-                        }
-                    }
-                } catch (Throwable ignored) {}
-            }
-            current = current.getSuperclass();
-        }
-        return null;
-    }
-
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
-            String name = srcFile.getName().toLowerCase(Locale.ROOT);
-            boolean isVideo = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".3gp") || name.endsWith(".mov");
-            boolean isAudio = name.endsWith(".opus") || name.endsWith(".ogg") || name.endsWith(".mp3") || name.endsWith(".m4a") || name.endsWith(".aac");
+            MediaFormat format = detectMediaFormat(srcFile);
 
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-            String ext;
-            String mimeType;
             String relativeDir;
 
-            if (isVideo) {
-                ext = ".mp4";
-                mimeType = "video/mp4";
+            if (format.kind == MediaKind.VIDEO) {
                 relativeDir = Environment.DIRECTORY_MOVIES + "/WAEX";
-            } else if (isAudio) {
-                ext = ".opus";
-                mimeType = "audio/ogg";
+            } else if (format.kind == MediaKind.AUDIO) {
                 relativeDir = Environment.DIRECTORY_MUSIC + "/WAEX";
             } else {
-                ext = ".jpg";
-                mimeType = "image/jpeg";
                 relativeDir = Environment.DIRECTORY_PICTURES + "/WAEX";
             }
 
-            String outName = "WAEX_STATUS_" + timestamp + ext;
+            String outName = "WAEX_STATUS_" + timestamp + format.extension;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, outName);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, format.mimeType);
                 values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativeDir);
 
                 Uri collection;
-                if (isVideo) {
+                if (format.kind == MediaKind.VIDEO) {
                     collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-                } else if (isAudio) {
+                } else if (format.kind == MediaKind.AUDIO) {
                     collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
                 } else {
                     collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
@@ -567,7 +600,9 @@ public class StatusDownloadHook extends BaseFeature {
                 }
             } else {
                 File baseDir = Environment.getExternalStoragePublicDirectory(
-                        isVideo ? Environment.DIRECTORY_MOVIES : (isAudio ? Environment.DIRECTORY_MUSIC : Environment.DIRECTORY_PICTURES)
+                        format.kind == MediaKind.VIDEO
+                                ? Environment.DIRECTORY_MOVIES
+                                : (format.kind == MediaKind.AUDIO ? Environment.DIRECTORY_MUSIC : Environment.DIRECTORY_PICTURES)
                 );
                 File dir = new File(baseDir, "WAEX");
                 if (!dir.exists()) dir.mkdirs();
@@ -590,6 +625,66 @@ public class StatusDownloadHook extends BaseFeature {
         }
     }
 
+    private MediaFormat detectMediaFormat(File file) throws Exception {
+        byte[] header = new byte[16];
+        int count;
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file))) {
+            count = input.read(header);
+        }
+
+        if (count >= 12 && header[4] == 'f' && header[5] == 't' && header[6] == 'y' && header[7] == 'p') {
+            return new MediaFormat(MediaKind.VIDEO, ".mp4", "video/mp4");
+        }
+        if (count >= 4 && header[0] == 0x1A && header[1] == 0x45 && header[2] == (byte) 0xDF && header[3] == (byte) 0xA3) {
+            return new MediaFormat(MediaKind.VIDEO, ".mkv", "video/x-matroska");
+        }
+        if (count >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+            return new MediaFormat(MediaKind.IMAGE, ".webp", "image/webp");
+        }
+        if (count >= 8 && header[0] == (byte) 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G') {
+            return new MediaFormat(MediaKind.IMAGE, ".png", "image/png");
+        }
+        if (count >= 3 && header[0] == (byte) 0xFF && header[1] == (byte) 0xD8 && header[2] == (byte) 0xFF) {
+            return new MediaFormat(MediaKind.IMAGE, ".jpg", "image/jpeg");
+        }
+        if (count >= 4 && header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S') {
+            return new MediaFormat(MediaKind.AUDIO, ".ogg", "audio/ogg");
+        }
+        if (count >= 3 && header[0] == 'I' && header[1] == 'D' && header[2] == '3') {
+            return new MediaFormat(MediaKind.AUDIO, ".mp3", "audio/mpeg");
+        }
+
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".mp4") || name.endsWith(".3gp") || name.endsWith(".mov")) {
+            return new MediaFormat(MediaKind.VIDEO, ".mp4", "video/mp4");
+        }
+        if (name.endsWith(".mkv")) {
+            return new MediaFormat(MediaKind.VIDEO, ".mkv", "video/x-matroska");
+        }
+        if (name.endsWith(".opus") || name.endsWith(".ogg")) {
+            return new MediaFormat(MediaKind.AUDIO, ".ogg", "audio/ogg");
+        }
+        if (name.endsWith(".mp3")) {
+            return new MediaFormat(MediaKind.AUDIO, ".mp3", "audio/mpeg");
+        }
+        throw new IllegalArgumentException("Unsupported or incomplete status media format");
+    }
+
+    private enum MediaKind { IMAGE, VIDEO, AUDIO }
+
+    private static final class MediaFormat {
+        final MediaKind kind;
+        final String extension;
+        final String mimeType;
+
+        MediaFormat(MediaKind kind, String extension, String mimeType) {
+            this.kind = kind;
+            this.extension = extension;
+            this.mimeType = mimeType;
+        }
+    }
+
     private void copyToClipboard(Context ctx, String text) {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
@@ -604,9 +699,13 @@ public class StatusDownloadHook extends BaseFeature {
     }
 
     private void showToast(Context ctx, String msg) {
+        showToast(ctx, msg, Toast.LENGTH_SHORT);
+    }
+
+    private void showToast(Context ctx, String msg, int duration) {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
-                Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
+                Toast.makeText(ctx, msg, duration).show();
             } catch (Throwable ignored) {}
         });
     }
