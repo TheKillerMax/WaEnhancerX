@@ -1,4 +1,5 @@
 [Added]
+- Added support for version 2.26.41.xx WA/WB
 - Filter items by id
 
 [Removed]
