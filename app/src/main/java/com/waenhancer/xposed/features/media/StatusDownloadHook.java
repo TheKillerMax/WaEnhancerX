@@ -37,6 +37,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.IdentityHashMap;
@@ -447,23 +448,40 @@ public class StatusDownloadHook extends BaseFeature {
     private File extractMediaFileDeep(Object root) {
         if (root == null) return null;
         Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        return findFileRecursive(root, visited, 0, 8);
+        List<File> candidates = new ArrayList<>();
+        collectFilesRecursive(root, visited, candidates, 0, 8);
+
+        File best = null;
+        for (File candidate : candidates) {
+            try {
+                detectMediaFormat(candidate);
+                if (best == null || candidate.length() > best.length()) {
+                    best = candidate;
+                }
+            } catch (Throwable ignored) {}
+        }
+        return best;
     }
 
-    private File findFileRecursive(Object obj, Set<Object> visited, int depth, int maxDepth) {
-        if (obj == null || depth > maxDepth) return null;
-        if (!visited.add(obj)) return null;
+    private void collectFilesRecursive(
+            Object obj,
+            Set<Object> visited,
+            List<File> candidates,
+            int depth,
+            int maxDepth
+    ) {
+        if (obj == null || depth > maxDepth || !visited.add(obj)) return;
 
         Class<?> clazz = obj.getClass();
         String className = clazz.getName();
 
-        if (className.startsWith("java.lang.") && !(obj instanceof String)) return null;
-        if (className.startsWith("android.graphics.") || className.startsWith("android.view.ViewGroup$LayoutParams")) return null;
+        if (className.startsWith("java.lang.") && !(obj instanceof String)) return;
+        if (className.startsWith("android.graphics.") || className.startsWith("android.view.ViewGroup$LayoutParams")) return;
 
         if (obj instanceof File) {
             File f = (File) obj;
-            if (f.exists() && f.length() > 0) return f;
-            return null;
+            if (f.isFile() && f.length() > 0) candidates.add(f);
+            return;
         }
 
         if (obj instanceof Uri) {
@@ -472,9 +490,10 @@ public class StatusDownloadHook extends BaseFeature {
                 String path = uri.getPath();
                 if (path != null) {
                     File f = new File(path);
-                    if (f.exists() && f.length() > 0) return f;
+                    if (f.isFile() && f.length() > 0) candidates.add(f);
                 }
             }
+            return;
         }
 
         if (obj instanceof String) {
@@ -482,33 +501,30 @@ public class StatusDownloadHook extends BaseFeature {
             if (str.startsWith("/") || str.startsWith("file://")) {
                 String path = str.startsWith("file://") ? str.substring(7) : str;
                 File f = new File(path);
-                if (f.exists() && f.length() > 0) return f;
+                if (f.isFile() && f.length() > 0) candidates.add(f);
             }
-            return null;
+            return;
         }
 
         if (obj instanceof Iterable) {
             for (Object item : (Iterable<?>) obj) {
-                File res = findFileRecursive(item, visited, depth + 1, maxDepth);
-                if (res != null) return res;
+                collectFilesRecursive(item, visited, candidates, depth + 1, maxDepth);
             }
-            return null;
+            return;
         }
 
         if (obj instanceof Object[]) {
             for (Object item : (Object[]) obj) {
-                File res = findFileRecursive(item, visited, depth + 1, maxDepth);
-                if (res != null) return res;
+                collectFilesRecursive(item, visited, candidates, depth + 1, maxDepth);
             }
-            return null;
+            return;
         }
 
         if (obj instanceof Map) {
             for (Object item : ((Map<?, ?>) obj).values()) {
-                File res = findFileRecursive(item, visited, depth + 1, maxDepth);
-                if (res != null) return res;
+                collectFilesRecursive(item, visited, candidates, depth + 1, maxDepth);
             }
-            return null;
+            return;
         }
 
         // Check 0-arg methods returning File
@@ -518,7 +534,7 @@ public class StatusDownloadHook extends BaseFeature {
                     m.setAccessible(true);
                     try {
                         File f = (File) m.invoke(obj);
-                        if (f != null && f.exists() && f.length() > 0) return f;
+                        if (f != null && f.isFile() && f.length() > 0) candidates.add(f);
                     } catch (Throwable ignored) {}
                 }
             }
@@ -540,15 +556,12 @@ public class StatusDownloadHook extends BaseFeature {
                 try {
                     Object val = f.get(obj);
                     if (val != null) {
-                        File res = findFileRecursive(val, visited, depth + 1, maxDepth);
-                        if (res != null) return res;
+                        collectFilesRecursive(val, visited, candidates, depth + 1, maxDepth);
                     }
                 } catch (Throwable ignored) {}
             }
             curr = curr.getSuperclass();
         }
-
-        return null;
     }
 
     private void saveMediaFile(Context ctx, File srcFile) {
@@ -632,7 +645,11 @@ public class StatusDownloadHook extends BaseFeature {
             count = input.read(header);
         }
 
+        String name = file.getName().toLowerCase(Locale.ROOT);
         if (count >= 12 && header[4] == 'f' && header[5] == 't' && header[6] == 'y' && header[7] == 'p') {
+            if (name.endsWith(".m4a") || name.endsWith(".aac")) {
+                return new MediaFormat(MediaKind.AUDIO, ".m4a", "audio/mp4");
+            }
             return new MediaFormat(MediaKind.VIDEO, ".mp4", "video/mp4");
         }
         if (count >= 4 && header[0] == 0x1A && header[1] == 0x45 && header[2] == (byte) 0xDF && header[3] == (byte) 0xA3) {
@@ -648,14 +665,20 @@ public class StatusDownloadHook extends BaseFeature {
         if (count >= 3 && header[0] == (byte) 0xFF && header[1] == (byte) 0xD8 && header[2] == (byte) 0xFF) {
             return new MediaFormat(MediaKind.IMAGE, ".jpg", "image/jpeg");
         }
+        if (count >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F') {
+            return new MediaFormat(MediaKind.IMAGE, ".gif", "image/gif");
+        }
         if (count >= 4 && header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S') {
             return new MediaFormat(MediaKind.AUDIO, ".ogg", "audio/ogg");
         }
         if (count >= 3 && header[0] == 'I' && header[1] == 'D' && header[2] == '3') {
             return new MediaFormat(MediaKind.AUDIO, ".mp3", "audio/mpeg");
         }
+        if (count >= 2 && header[0] == (byte) 0xFF
+                && (header[1] == (byte) 0xF1 || header[1] == (byte) 0xF9)) {
+            return new MediaFormat(MediaKind.AUDIO, ".aac", "audio/aac");
+        }
 
-        String name = file.getName().toLowerCase(Locale.ROOT);
         if (name.endsWith(".mp4") || name.endsWith(".3gp") || name.endsWith(".mov")) {
             return new MediaFormat(MediaKind.VIDEO, ".mp4", "video/mp4");
         }
@@ -667,6 +690,12 @@ public class StatusDownloadHook extends BaseFeature {
         }
         if (name.endsWith(".mp3")) {
             return new MediaFormat(MediaKind.AUDIO, ".mp3", "audio/mpeg");
+        }
+        if (name.endsWith(".m4a")) {
+            return new MediaFormat(MediaKind.AUDIO, ".m4a", "audio/mp4");
+        }
+        if (name.endsWith(".aac")) {
+            return new MediaFormat(MediaKind.AUDIO, ".aac", "audio/aac");
         }
         throw new IllegalArgumentException("Unsupported or incomplete status media format");
     }

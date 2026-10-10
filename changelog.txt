@@ -10,6 +10,7 @@
 [Fixed]
 - Fixed media preview
 - Fixed module installation/upgrade issues for v1 users
+- Fixed status download and copy to clipboard
 
 [Improvements]
 - Improved changelog upgrades / downgrades
