@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.privacy
 
+import android.Manifest
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.components.StitchSwitch
+import com.waenhancer.ui.components.RequestRuntimePermissionOnUse
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
@@ -82,6 +84,8 @@ data class PreservedChat(
 
 @Composable
 fun DeletedMessagesVaultScreen() {
+    RequestRuntimePermissionOnUse(Manifest.permission.READ_CONTACTS)
+
     val context = LocalContext.current
     val navController = LocalWaexNavController.current
     val preferenceManager = LocalWaexPreferenceManager.current

@@ -14,3 +14,4 @@
 
 [Improvements]
 - Improved changelog upgrades / downgrades
+- Made initial user permissions optional

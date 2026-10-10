@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.privacy
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -69,6 +70,7 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.ContactPrivacy
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.components.StitchSwitch
+import com.waenhancer.ui.components.RequestRuntimePermissionOnUse
 
 @Composable
 fun PerContactPrivacyListScreen(
@@ -77,6 +79,8 @@ fun PerContactPrivacyListScreen(
     onClearAll: () -> Unit,
     onUpdateContact: (ContactPrivacy) -> Unit
 ) {
+    RequestRuntimePermissionOnUse(Manifest.permission.READ_CONTACTS)
+
     val navController = LocalWaexNavController.current
     val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
     val colors = WaexTheme.colors

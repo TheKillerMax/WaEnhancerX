@@ -1,8 +1,11 @@
 package com.waenhancer.ui.screens.calls
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Environment
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -63,6 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
+import com.waenhancer.ui.components.RequestRuntimePermissionOnUse
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
@@ -96,6 +101,18 @@ fun CallsHubScreen() {
     val radius = WaexTheme.radius
 
     var selectedTab by remember { mutableStateOf("configs") } // "configs" | "recordings"
+    var canReadLegacyRecordings by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    RequestRuntimePermissionOnUse(
+        permission = Manifest.permission.READ_EXTERNAL_STORAGE,
+        enabled = selectedTab == "recordings" && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU,
+        onResult = { canReadLegacyRecordings = it }
+    )
 
     // Call Blocker & Privacy State
     var callPrivacyMode by remember {
@@ -224,8 +241,8 @@ fun CallsHubScreen() {
         isLoadingRecordings = false
     }
 
-    LaunchedEffect(selectedTab) {
-        if (selectedTab == "recordings") {
+    LaunchedEffect(selectedTab, canReadLegacyRecordings) {
+        if (selectedTab == "recordings" && canReadLegacyRecordings) {
             loadRecordings()
         } else {
             stopAudio()

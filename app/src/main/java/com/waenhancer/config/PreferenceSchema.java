@@ -288,6 +288,7 @@ public final class PreferenceSchema {
         add(entries, "open_waex", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "waex_menu_style", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "pending_restart_changes", Type.STRING_SET, Sensitivity.RUNTIME, Store.PRIVATE);
+        add(entries, "permission_onboarding_complete", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "pinnedlimit", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "pref_forward_batch_enabled", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "pref_forward_batch_count", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);

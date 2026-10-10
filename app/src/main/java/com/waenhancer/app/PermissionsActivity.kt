@@ -15,16 +15,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -109,7 +104,7 @@ class PermissionsActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (areAllPermissionsGranted(this)) {
+        if (hasCompletedPermissionOnboarding() || areAllPermissionsGranted(this)) {
             navigateToHome()
         }
     }
@@ -117,7 +112,11 @@ class PermissionsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (areAllPermissionsGranted(this)) {
+        val allPermissionsGranted = areAllPermissionsGranted(this)
+        if (allPermissionsGranted) {
+            preferenceManager.putBoolean(PREF_PERMISSION_ONBOARDING_COMPLETE, true)
+        }
+        if (hasCompletedPermissionOnboarding() || allPermissionsGranted) {
             navigateToHome()
             return
         }
@@ -136,7 +135,10 @@ class PermissionsActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     PermissionsScreen(
-                        onContinue = { navigateToHome() }
+                        onContinue = {
+                            preferenceManager.putBoolean(PREF_PERMISSION_ONBOARDING_COMPLETE, true)
+                            navigateToHome()
+                        }
                     )
                 }
             }
@@ -153,7 +155,12 @@ class PermissionsActivity : ComponentActivity() {
         finish()
     }
 
+    private fun hasCompletedPermissionOnboarding(): Boolean =
+        preferenceManager.getBoolean(PREF_PERMISSION_ONBOARDING_COMPLETE, false)
+
     companion object {
+        const val PREF_PERMISSION_ONBOARDING_COMPLETE = "permission_onboarding_complete"
+
         fun getRequiredPermissionItems(): List<PermissionItem> {
             val items = mutableListOf<PermissionItem>()
 
@@ -448,53 +455,42 @@ fun PermissionsScreen(
                         .padding(horizontal = spacing.pageMargin, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AnimatedVisibility(
-                        visible = allGranted,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(300)),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(200))
+                    Button(
+                        onClick = onContinue,
+                        shape = radius.lgShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = colors.onPrimary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
                     ) {
-                        Button(
-                            onClick = onContinue,
-                            shape = radius.lgShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.primary,
-                                contentColor = colors.onPrimary
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "Continue to WaEnhancerX",
-                                    style = typography.bodyLg,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Icon(
-                                    imageVector = WaexIcons.ChevronRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                            Text(
+                                text = "Continue to WaEnhancerX",
+                                style = typography.bodyLg,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = WaexIcons.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
                     if (!allGranted) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Enable all $totalCount permissions above to proceed ($grantedCount/$totalCount completed)",
-                                style = typography.labelSm,
-                                color = colors.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        Text(
+                            text = "$grantedCount of $totalCount granted. Missing permissions will be requested when a feature needs them.",
+                            style = typography.labelSm,
+                            color = colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -536,7 +532,7 @@ fun PermissionsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Permissions Required",
+                        text = "Optional Permissions",
                         style = typography.displayLgMobile,
                         fontWeight = FontWeight.Bold,
                         color = colors.onBackground
@@ -546,7 +542,7 @@ fun PermissionsScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "To unlock stealth features, status downloaders, AI transcription, and automations, grant the required permissions below.",
+                        text = "Grant everything now for convenience, or continue and allow permissions only when a feature needs them.",
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant,
                         lineHeight = 20.sp
