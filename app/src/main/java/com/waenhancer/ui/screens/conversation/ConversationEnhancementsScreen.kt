@@ -70,7 +70,7 @@ fun ConversationEnhancementsScreen() {
 
     val convKeys = remember {
         listOf(
-            "message_bomber", "anti_edit_messages", "preserve_delete_for_me", "revokeallmessages", "hide_forwarded_tag",
+            "message_bomber", "anti_edit_messages", "preserve_delete_for_me", "preserve_own_revoke", "revokeallmessages", "hide_forwarded_tag",
             "removeforwardlimit", "sticker_confirm_alert", "removeseemore", "stamp_copied_message", "doubletap2like",
             "jump_to_first_message", "unlimited_pinned_chats", "broadcast_tag", "direct_chat_dialer",
             "inline_translation", "copy_status_text", "animation_emojis", "disable_defemojis"
@@ -165,6 +165,14 @@ fun ConversationEnhancementsScreen() {
                         description = "Retain messages locally when Delete for Me is pressed",
                         checked = stateMap["preserve_delete_for_me"] ?: false,
                         onCheckedChange = { onToggle("preserve_delete_for_me", it) },
+                        icon = WaexIcons.Security,
+                        showDivider = true
+                    )
+                    WaexSwitchPreference(
+                        title = "Keep My Revoked Messages",
+                        description = "Keep your local copy after Delete for Everyone while deleting it for recipients",
+                        checked = stateMap["preserve_own_revoke"] ?: false,
+                        onCheckedChange = { onToggle("preserve_own_revoke", it) },
                         icon = WaexIcons.Security,
                         showDivider = true
                     )

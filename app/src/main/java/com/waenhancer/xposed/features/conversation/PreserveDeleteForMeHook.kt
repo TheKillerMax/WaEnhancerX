@@ -93,8 +93,8 @@ class PreserveDeleteForMeHook(
 
                             db.rawQuery(querySql, sqlArgs).use { cursor ->
                                 if (cursor != null && cursor.moveToFirst()) {
+                                    var hasIncomingToPreserve = false
                                     do {
-                                        val rowId = cursor.getLong(0)
                                         val keyId = cursor.getString(1)
                                         val chatRowId = cursor.getLong(2)
                                         val fromMe = cursor.getInt(3) == 1
@@ -103,26 +103,24 @@ class PreserveDeleteForMeHook(
                                         val msgTs = cursor.getLong(6)
                                         val senderJidRowId = if (cursor.columnCount > 7) cursor.getLong(7) else 0L
 
-                                        if (!keyId.isNullOrEmpty() && msgType != 15) {
+                                        // Only preserve INCOMING messages (from_me == 0).
+                                        // Own messages deleted "for everyone" must not be blocked:
+                                        // blocking the DELETE causes WhatsApp's subsequent insertOrThrow
+                                        // (type-15 placeholder, same _id) to crash with
+                                        // SQLiteConstraintException: UNIQUE constraint failed: message._id.
+                                        if (!fromMe && !keyId.isNullOrEmpty() && msgType != 15) {
+                                            hasIncomingToPreserve = true
                                             val now = System.currentTimeMillis()
                                             val chatJid = resolveChatJid(db, chatRowId)
                                             val isGroup = chatJid.contains("@g.us")
                                             val chatDisplayName = resolveChatDisplayName(context, db, chatRowId, chatJid)
+                                            val senderDisplayName = if (isGroup)
+                                                resolveSenderDisplayName(context, db, senderJidRowId, chatDisplayName)
+                                            else chatDisplayName
 
-                                            val senderDisplayName = if (isGroup) {
-                                                if (fromMe) "You" else resolveSenderDisplayName(context, db, senderJidRowId, chatDisplayName)
-                                            } else {
-                                                if (fromMe) "You" else chatDisplayName
-                                            }
-
-                                            // 1. Record in WhatsApp's internal DB
                                             DelMessageStore.getInstance(context).insertMessage(
-                                                chatJid,
-                                                keyId,
-                                                now
+                                                chatJid, keyId, now
                                             )
-
-                                            // 2. Notify Manager App IPC Bridge with resolved group/chat name & sender name
                                             dispatchToManagerApp(
                                                 jid = chatJid,
                                                 chatName = chatDisplayName,
@@ -130,15 +128,16 @@ class PreserveDeleteForMeHook(
                                                 msgId = keyId,
                                                 text = textData,
                                                 timestamp = if (msgTs > 0) msgTs else now,
-                                                fromMe = fromMe,
+                                                fromMe = false,
                                                 isGroup = isGroup
                                             )
-
                                         }
                                     } while (cursor.moveToNext())
 
-                                    // Block physical deletion from msgstore.db
-                                    param.result = 0
+                                    // Only block the DELETE if there are incoming rows to preserve.
+                                    if (hasIncomingToPreserve) {
+                                        param.result = 0
+                                    }
                                 }
                             }
                         } catch (t: Throwable) {

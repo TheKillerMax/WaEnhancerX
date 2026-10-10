@@ -62,6 +62,7 @@ fun SearchScreen() {
             SearchablePreference("hideonceseen", "Hide View Once Seen", "Hide that view one media has been seen", "Message & Delivery Receipts", 1, "privacy", "Privacy"),
             SearchablePreference("hide_forwarded_tag", "Hide \"Forwarded\" Tag", "Forward messages without the tag \"Forwarded\"", "Message & Delivery Receipts", 1, "privacy", "Privacy"),
             SearchablePreference("anti_revoke", "Anti-Revoke Messages", "Messages will not be deleted for you", "Message Protection & Security", 1, "privacy", "Privacy"),
+            SearchablePreference("preserve_own_revoke", "Keep My Revoked Messages", "Keep your local copy after Delete for Everyone while deleting it for recipients", "Anti-Revoke & Deletion Defense", 1, "privacy", "Privacy"),
             SearchablePreference("antirevokestatus", "Anti-Delete Status", "View statuses that users have since deleted", "Message Protection & Security", 1, "privacy", "Privacy"),
             SearchablePreference("anti_view_once", "Unlimited View Once", "Allows you to open view once media multiple times", "Message Protection & Security", 1, "privacy", "Privacy"),
             SearchablePreference("locked_chats_enhancer", "Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "Message Protection & Security", 1, "privacy", "Privacy"),

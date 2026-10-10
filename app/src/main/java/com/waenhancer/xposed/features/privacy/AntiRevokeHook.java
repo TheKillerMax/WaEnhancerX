@@ -201,29 +201,44 @@ public class AntiRevokeHook extends BaseFeature {
                 XposedBridge.hookMethod(revokeMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        boolean antiRevokeMsg = isAntiRevokeEnabled();
-                        boolean antiRevokeStatus = isAntiRevokeStatusEnabled();
-                        if (!antiRevokeMsg && !antiRevokeStatus) return;
+                        // Run if either anti-revoke (incoming) or preserve-own-revoke is enabled.
+                        if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
 
                         try {
                             Object fMessage = (param.args != null && param.args.length > 0) ? param.args[0] : null;
-                            if (fMessage != null) {
-                                if (Boolean.TRUE.equals(extractIsFromMe(fMessage))) {
-                                    return;
-                                }
-                                String keyId = extractKeyIdFromFMessage(fMessage);
-                                if (keyId != null) {
+                            if (fMessage == null) return;
+
+                            Boolean fromMe = extractIsFromMe(fMessage);
+                            if (fromMe == null) return;
+
+                            String keyId = extractKeyIdFromFMessage(fMessage);
+                            if (keyId == null || keyId.isEmpty()) return;
+
+                            if (fromMe) {
+                                // Own-message "delete for everyone".
+                                // Record the key so the UI decorator can show the deleted indicator,
+                                // but do NOT intercept the method — WhatsApp must proceed so the
+                                // revocation signal is sent to recipients over the network.
+                                if (isPreserveOwnRevokeEnabled()) {
                                     long now = System.currentTimeMillis();
                                     REVOKED_MESSAGES.put(keyId, now);
                                     DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                     dispatchRealtimeRevokeUI(keyId, now);
-                                    com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
                                 }
+                                // Fall through — do NOT call setHandledResult / param.setResult.
+                            } else {
+                                // Incoming message being revoked by the sender.
+                                if (!isAntiRevokeEnabled()) return;
+                                long now = System.currentTimeMillis();
+                                REVOKED_MESSAGES.put(keyId, now);
+                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
+                                dispatchRealtimeRevokeUI(keyId, now);
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                setHandledResult(param);
                             }
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error extracting key from bytecode revoke: " + t.getMessage());
                         }
-                        param.setResult(true);
                     }
                 });
             }
@@ -278,29 +293,21 @@ public class AntiRevokeHook extends BaseFeature {
                         if (!isAntiRevokeStatusEnabled()) return;
                         try {
                             Object statusKey = findArgumentOfType(param.args, statusKeyClass);
-                            if (statusKey != null) {
-                                if (Boolean.TRUE.equals(extractIsFromMe(statusKey))) {
-                                    return;
-                                }
-                                String keyId = extractKeyIdFromFMessage(statusKey);
-                                if (keyId != null) {
-                                    long now = System.currentTimeMillis();
-                                    REVOKED_MESSAGES.put(keyId, now);
-                                    DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                                    com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
-                                }
-                            } else {
-                            }
+                            if (statusKey == null) return;
+
+                            Boolean fromMe = extractIsFromMe(statusKey);
+                            if (fromMe == null || fromMe) return;
+
+                            String keyId = extractKeyIdFromFMessage(statusKey);
+                            if (keyId == null || keyId.isEmpty()) return;
+
+                            long now = System.currentTimeMillis();
+                            REVOKED_MESSAGES.put(keyId, now);
+                            DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
+                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                            setHandledResult(param);
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getMessage());
-                        }
-                        Class<?> retType = ((Method) param.method).getReturnType();
-                        if (retType == boolean.class || retType == Boolean.class) {
-                            param.setResult(true);
-                        } else if (retType == int.class || retType == Integer.class) {
-                            param.setResult(0);
-                        } else {
-                            param.setResult(null);
                         }
                     }
                 });
@@ -317,6 +324,30 @@ public class AntiRevokeHook extends BaseFeature {
             if (arg != null && expectedType.isInstance(arg)) return arg;
         }
         return null;
+    }
+
+    /** Completes an intercepted revoke with a value compatible with its runtime method. */
+    private void setHandledResult(@NonNull XC_MethodHook.MethodHookParam param) {
+        Class<?> returnType = ((Method) param.method).getReturnType();
+        if (returnType == boolean.class || returnType == Boolean.class) {
+            param.setResult(true);
+        } else if (returnType == byte.class || returnType == Byte.class) {
+            param.setResult((byte) 0);
+        } else if (returnType == short.class || returnType == Short.class) {
+            param.setResult((short) 0);
+        } else if (returnType == int.class || returnType == Integer.class) {
+            param.setResult(0);
+        } else if (returnType == long.class || returnType == Long.class) {
+            param.setResult(0L);
+        } else if (returnType == float.class || returnType == Float.class) {
+            param.setResult(0f);
+        } else if (returnType == double.class || returnType == Double.class) {
+            param.setResult(0d);
+        } else if (returnType == char.class || returnType == Character.class) {
+            param.setResult('\0');
+        } else {
+            param.setResult(null);
+        }
     }
 
     // ─── Database revocation hooks ───────────────────────────────────────
@@ -408,17 +439,29 @@ public class AntiRevokeHook extends BaseFeature {
                                 String keyId = cursor.getString(2);
                                 long chatRowId = cursor.getLong(3);
 
-                                if (fromMe == 0 && msgType != 15 && keyId != null) {
-                                    boolean antiRevokeMsg = isAntiRevokeEnabled();
-                                    boolean antiRevokeStatus = isAntiRevokeStatusEnabled();
+                                if (msgType != 15 && keyId != null) {
+                                    boolean preserveIncoming = fromMe == 0 && isAntiRevokeEnabled();
+                                    boolean preserveOwnRevoke = fromMe == 1 && isPreserveOwnRevokeEnabled();
 
-                                    if (antiRevokeMsg || antiRevokeStatus) {
+                                    if (preserveIncoming) {
+                                        // Incoming: record & block the DELETE so the row stays visible.
                                         long now = System.currentTimeMillis();
                                         REVOKED_MESSAGES.put(keyId, now);
                                         DelMessageStore.getInstance(context).insertMessage(String.valueOf(chatRowId), keyId, now);
                                         dispatchRealtimeRevokeUI(keyId, now);
                                         com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
                                         param.setResult(0);
+                                    } else if (preserveOwnRevoke) {
+                                        // Own-message "delete for everyone": record the key so the
+                                        // UI can show the deleted indicator, but let the DELETE
+                                        // proceed. Blocking the DELETE causes a UNIQUE PK collision
+                                        // crash when WhatsApp subsequently inserts the type-15
+                                        // revocation placeholder with the same _id via insertOrThrow.
+                                        long now = System.currentTimeMillis();
+                                        REVOKED_MESSAGES.put(keyId, now);
+                                        DelMessageStore.getInstance(context).insertMessage(String.valueOf(chatRowId), keyId, now);
+                                        dispatchRealtimeRevokeUI(keyId, now);
+                                        // Do NOT call param.setResult(0) — let WhatsApp delete the row.
                                     }
                                 }
                             }
@@ -433,7 +476,8 @@ public class AntiRevokeHook extends BaseFeature {
             XposedBridge.hookAllMethods(SQLiteDatabase.class, "insertWithOnConflict", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (!isAntiRevokeEnabled() && !isAntiRevokeStatusEnabled()) return;
+                    if (!isAntiRevokeEnabled() && !isAntiRevokeStatusEnabled()
+                            && !isPreserveOwnRevokeEnabled()) return;
                     String table = (String) param.args[0];
                     if (!"message".equals(table) && !"messages".equals(table)) return;
 
@@ -443,16 +487,37 @@ public class AntiRevokeHook extends BaseFeature {
                     Integer msgType = cv.getAsInteger("message_type");
                     Integer fromMe = cv.getAsInteger("from_me");
 
-                    if (msgType != null && msgType == 15 && fromMe != null && fromMe == 0) {
+                    boolean preserveIncoming = fromMe != null && fromMe == 0
+                            && (isAntiRevokeEnabled() || isAntiRevokeStatusEnabled());
+                    boolean preserveOwnRevoke = fromMe != null && fromMe == 1
+                            && isPreserveOwnRevokeEnabled();
+
+                    if (msgType != null && msgType == 15) {
                         String keyId = cv.getAsString("key_id");
-                        if (keyId != null) {
-                            long now = System.currentTimeMillis();
-                            REVOKED_MESSAGES.put(keyId, now);
-                            DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                            dispatchRealtimeRevokeUI(keyId, now);
-                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                        if (preserveIncoming) {
+                            // Incoming type-15 placeholder: record and block the insert so the
+                            // original row remains visible with the deleted indicator.
+                            if (keyId != null) {
+                                long now = System.currentTimeMillis();
+                                REVOKED_MESSAGES.put(keyId, now);
+                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
+                                dispatchRealtimeRevokeUI(keyId, now);
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                            }
+                            // Block the insert so WhatsApp does not overwrite the preserved row.
+                            param.setResult(-1L);
+                        } else if (preserveOwnRevoke) {
+                            // Own-message type-15 placeholder: record for UI decoration, but
+                            // let WhatsApp write the placeholder row normally. This is safe because
+                            // the original row was already deleted above (we did not block it).
+                            if (keyId != null) {
+                                long now = System.currentTimeMillis();
+                                REVOKED_MESSAGES.put(keyId, now);
+                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
+                                dispatchRealtimeRevokeUI(keyId, now);
+                            }
+                            // Do NOT return -1L — let WhatsApp insert the type-15 placeholder.
                         }
-                        param.setResult(-1L);
                     }
                 }
             });
@@ -557,7 +622,7 @@ public class AntiRevokeHook extends BaseFeature {
                             @Override
                             protected void afterHookedMethod(MethodHookParam p) {
                                 if (p.thisObject != currentAdapter) return;
-                                if (!isAntiRevokeEnabled()) return;
+                                if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
 
                                 int pos = (int) p.args[0];
                                 ViewGroup row = (ViewGroup) p.getResult();
@@ -1813,6 +1878,10 @@ public class AntiRevokeHook extends BaseFeature {
             }
         } catch (Throwable ignored) {}
         return isEnabled("anti_revoke", false);
+    }
+
+    private boolean isPreserveOwnRevokeEnabled() {
+        return isEnabled("preserve_own_revoke", false);
     }
 
     private boolean isAntiRevokeStatusEnabled() {

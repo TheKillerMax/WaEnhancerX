@@ -112,7 +112,7 @@ fun GlobalPrivacySettingsScreen(
             "hide_read_receipts", "hideread_group", "blueonreply", "seentick", "hide_delivery_receipts", "hide_seen_receipts", "hideonceseen",
             "stealth_status_view", "autonext_status", "toast_viewed_status",
             "anti_view_once", "downloadviewonce",
-            "anti_revoke", "antirevokestatus", "antidisappearing", "toastdeleted", "toast_viewed_message",
+            "anti_revoke", "preserve_own_revoke", "antirevokestatus", "antidisappearing", "toastdeleted", "toast_viewed_message",
             "locked_chats_enhancer", "typearchive", "dnd_mode", "hide_chats", "custom_privacy",
             "message_bomber", "anti_edit_messages", "preserve_delete_for_me", "revokeallmessages", "hide_forwarded_tag", "removeforwardlimit",
             "sticker_confirm_alert", "removeseemore", "stamp_copied_message", "doubletap2like",
@@ -199,6 +199,7 @@ fun GlobalPrivacySettingsScreen(
             "Anti-Revoke & Deletion Defense",
             listOf(
                 SettingItem("Anti-Revoke Messages", "Messages will not be deleted for you", "anti_revoke"),
+                SettingItem("Keep My Revoked Messages", "Keep your local copy after Delete for Everyone while deleting it for recipients", "preserve_own_revoke"),
                 SettingItem("Anti-Delete Status", "View statuses that users have since deleted", "antirevokestatus"),
                 SettingItem("Anti Disappearing Messages", "Temporary messages will not be deleted for you", "antidisappearing"),
                 SettingItem("Show toast notification on delete message", "Show toast notification if any contact deletes any message", "toastdeleted"),

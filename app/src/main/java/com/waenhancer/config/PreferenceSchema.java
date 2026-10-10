@@ -86,6 +86,7 @@ public final class PreferenceSchema {
         add(entries, "anti_edit_messages", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "antirevoke", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "anti_revoke", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "preserve_own_revoke", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "anti_revoke_indicator", Type.INT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "antirevokestatus", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "anti_view_once", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
