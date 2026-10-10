@@ -155,9 +155,11 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 } catch (Throwable ignored) {}
 
                                 XposedBridge.log("[WAEX] Target Application created. Initializing features...");
+                                boolean showHookToast = true;
                                 try {
                                     PreferenceBridgeClient bridgeClient =
                                             new PreferenceBridgeClient(appContext, getPrefs());
+                                    showHookToast = bridgeClient.getBoolean("show_hook_toast", true);
 
                                     // Verify universal version compatibility before loading hooks
                                     boolean isSupported = com.waenhancer.xposed.core.VersionGuard.verifyAndGuard(
@@ -167,6 +169,13 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     );
 
                                     if (isSupported) {
+                                        if (showHookToast) {
+                                            android.widget.Toast.makeText(
+                                                appContext,
+                                                "Injecting WAEX hooks into WhatsApp...",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show();
+                                        }
                                         FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
                                         registry.initializeAll();
                                         registry.reportInjectedHooks(appContext, packageName);
@@ -175,6 +184,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     }
                                 } catch (Throwable t) {
                                     XposedBridge.log("[WAEX] Error initializing FeatureRegistry: " + t.getMessage());
+                                    showInjectionErrorSheet(t, packageName, lpparam.processName);
                                 }
                             }
                         }
@@ -183,5 +193,65 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
             }
         }
+    }
+
+    private static void showInjectionErrorSheet(Throwable throwable, String packageName, String processName) {
+        String error = throwable.getMessage() != null
+                ? throwable.getMessage()
+                : throwable.getClass().getSimpleName();
+
+        java.io.StringWriter stackTrace = new java.io.StringWriter();
+        throwable.printStackTrace(new java.io.PrintWriter(stackTrace));
+        String diagnostic = "WaEnhancer X hook injection failed\n"
+                + "Package: " + packageName + "\n"
+                + "Process: " + processName + "\n\n"
+                + stackTrace;
+
+        android.app.Activity currentActivity =
+                com.waenhancer.xposed.utils.ActivityTracker.getCurrentActivity();
+        if (currentActivity != null) {
+            showInjectionErrorSheet(currentActivity, error, diagnostic);
+            return;
+        }
+
+        com.waenhancer.xposed.utils.ActivityTracker.addListener(
+                new com.waenhancer.xposed.utils.ActivityTracker.ActivityListener() {
+                    @Override
+                    public void onActivityResumed(android.app.Activity activity) {
+                        com.waenhancer.xposed.utils.ActivityTracker.removeListener(this);
+                        showInjectionErrorSheet(activity, error, diagnostic);
+                    }
+                }
+        );
+    }
+
+    private static void showInjectionErrorSheet(
+            android.app.Activity activity,
+            String error,
+            String diagnostic
+    ) {
+        activity.runOnUiThread(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+
+            new com.waenhancer.xposed.core.components.WaexBottomSheet(activity)
+                    .asBottomSheet()
+                    .setTitle("WaEnhancer X injection failed")
+                    .setMessage(
+                            "WaEnhancer X could not finish loading its hooks.\n\n"
+                                    + error
+                                    + "\n\nCopy the error details when reporting this issue."
+                    )
+                    .setPositiveButton("Copy error", (dialog, which) -> {
+                        android.content.ClipboardManager clipboard =
+                                (android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            clipboard.setPrimaryClip(
+                                    android.content.ClipData.newPlainText("WaEnhancer X injection error", diagnostic)
+                            );
+                        }
+                    })
+                    .setNegativeButton("Close", (dialog, which) -> dialog.dismiss())
+                    .show();
+        });
     }
 }

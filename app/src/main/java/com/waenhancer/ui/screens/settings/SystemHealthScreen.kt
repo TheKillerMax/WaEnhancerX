@@ -28,8 +28,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.waenhancer.ui.components.WaexTopBar
+import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import kotlinx.coroutines.Dispatchers
@@ -38,12 +40,16 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SystemHealthScreen() {
     val nav = LocalWaexNavController.current
+    val preferences = LocalWaexPreferenceManager.current
     val context = LocalContext.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
     var diagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var showHookToast by remember {
+        mutableStateOf(preferences.getBoolean("show_hook_toast", true))
+    }
     LaunchedEffect(Unit) { diagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) } }
 
     Scaffold(topBar = { WaexTopBar("System Diagnostics", onBackClick = { nav.popBack() }) }, containerColor = colors.background) { insets ->
@@ -78,6 +84,40 @@ fun SystemHealthScreen() {
                     "Manager process hooked" to if (data.moduleActive) "Yes" else "No",
                     "Runtime API captured" to if (data.framework.api != null) "Yes" else "No"
                 ), colors.primary)
+
+                Surface(
+                    shape = radius.bentoCardShape,
+                    color = colors.surfaceContainerLow,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Show hook injection toast",
+                                style = typography.bodyLg,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.onSurface
+                            )
+                            Text(
+                                "Show the injecting hooks notification when WhatsApp opens",
+                                style = typography.bodyMd,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                        StitchSwitch(
+                            checked = showHookToast,
+                            onCheckedChange = { checked ->
+                                showHookToast = checked
+                                preferences.putBoolean("show_hook_toast", checked)
+                            }
+                        )
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
             }
         }

@@ -108,6 +108,10 @@ class WaexNavController(initialScreen: Screen = Screen.MainDashboard) {
     var highlightTargetKey by mutableStateOf<String?>(null)
 
     fun navigateToPreference(tabIndex: Int, subTabId: String?, preferenceKey: String) {
+        if (preferenceKey == "show_hook_toast") {
+            navigateTo(Screen.SystemHealth)
+            return
+        }
         if (preferenceKey == "bootloader_spoofer") {
             navigateTo(Screen.BootloaderSpoofer)
             return

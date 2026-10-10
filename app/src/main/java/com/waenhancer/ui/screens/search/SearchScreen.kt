@@ -144,6 +144,7 @@ fun SearchScreen() {
             SearchablePreference("miscellaneous_enhancements", "Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "Utilities & Data", 4, "layout", "Styles"),
 
             // --- SETTINGS & SYSTEM ---
+            SearchablePreference("show_hook_toast", "Show Hook Injection Toast", "Show or hide the injecting hooks notification when WhatsApp opens", "System & Compatibility", -1, null, "Settings"),
             SearchablePreference("supported_versions", "Supported WhatsApp Versions", "Manage verified WhatsApp and WA Business versions & wildcards", "System & Compatibility", -1, null, "Settings"),
             SearchablePreference("bypass_version_check", "Disable Version Check", "Disables the supported version check of WhatsApp", "System & Compatibility", -1, null, "Settings"),
             SearchablePreference("bootloader_spoofer", "Bootloader Spoofer", "Spoof verified boot attestation for WhatsApp integrity checks", "System & Compatibility", -1, null, "Settings"),

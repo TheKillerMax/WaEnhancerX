@@ -1,6 +1,8 @@
 [Added]
 - Added support for version 2.26.41.xx WA/WB
+- Added support to restore v1 legacy JSON backup files
 - Filter items by id
+- Option to show toast on hooks injection
 
 [Removed]
 - Removed Beta channel flow. Normalized the versioning and update flow
