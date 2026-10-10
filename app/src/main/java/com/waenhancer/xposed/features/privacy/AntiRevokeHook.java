@@ -49,6 +49,7 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -67,6 +68,7 @@ public class AntiRevokeHook extends BaseFeature {
     private static final String TAG = "[WAEX][AntiRevoke]";
 
     private static final Map<String, Long> REVOKED_MESSAGES = new ConcurrentHashMap<>();
+    private static final Set<String> PRESERVED_OWN_ROW_IDS = ConcurrentHashMap.newKeySet();
     private static final DateFormat TIME_FORMAT = DateFormat.getTimeInstance(DateFormat.SHORT);
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
@@ -452,16 +454,19 @@ public class AntiRevokeHook extends BaseFeature {
                                         com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
                                         param.setResult(0);
                                     } else if (preserveOwnRevoke) {
-                                        // Own-message "delete for everyone": record the key so the
-                                        // UI can show the deleted indicator, but let the DELETE
-                                        // proceed. Blocking the DELETE causes a UNIQUE PK collision
-                                        // crash when WhatsApp subsequently inserts the type-15
-                                        // revocation placeholder with the same _id via insertOrThrow.
+                                        // Own-message "delete for everyone" with preserve enabled:
+                                        // Record the key NOW, then block the DELETE to keep the original
+                                        // message row. The insertWithOnConflict hook will detect the key
+                                        // in REVOKED_MESSAGES and block the type-15 placeholder insert,
+                                        // preventing the UNIQUE PK collision crash.
+                                        // Result: original message stays visible with deleted indicator,
+                                        // while the revocation is still sent to recipients via network.
                                         long now = System.currentTimeMillis();
                                         REVOKED_MESSAGES.put(keyId, now);
+                                        PRESERVED_OWN_ROW_IDS.add(msgId);
                                         DelMessageStore.getInstance(context).insertMessage(String.valueOf(chatRowId), keyId, now);
                                         dispatchRealtimeRevokeUI(keyId, now);
-                                        // Do NOT call param.setResult(0) — let WhatsApp delete the row.
+                                        param.setResult(0); // Block DELETE — original row stays.
                                     }
                                 }
                             }
@@ -472,10 +477,22 @@ public class AntiRevokeHook extends BaseFeature {
                 }
             });
 
+            // WhatsApp's own revoke path uses insertOrThrow and reuses the deleted
+            // message's primary key. When that row is intentionally preserved, give
+            // only the local revoke placeholder a fresh row ID. The insert must still
+            // execute and return a real ID so the outbound revoke transaction commits.
+            XposedBridge.hookAllMethods(SQLiteDatabase.class, "insertOrThrow", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    sanitizePreservedOwnRowId(param);
+                }
+            });
+
             // 2. Intercept INSERT of type=15 (revocation placeholder)
             XposedBridge.hookAllMethods(SQLiteDatabase.class, "insertWithOnConflict", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
+                    sanitizePreservedOwnRowId(param);
                     if (!isAntiRevokeEnabled() && !isAntiRevokeStatusEnabled()
                             && !isPreserveOwnRevokeEnabled()) return;
                     String table = (String) param.args[0];
@@ -494,29 +511,32 @@ public class AntiRevokeHook extends BaseFeature {
 
                     if (msgType != null && msgType == 15) {
                         String keyId = cv.getAsString("key_id");
-                        if (preserveIncoming) {
-                            // Incoming type-15 placeholder: record and block the insert so the
-                            // original row remains visible with the deleted indicator.
-                            if (keyId != null) {
+                        if (keyId != null) {
+                            boolean alreadyPreserved = REVOKED_MESSAGES.containsKey(keyId);
+
+                            if (preserveOwnRevoke && alreadyPreserved) {
+                                // WhatsApp reuses the original message row ID for its local revoke
+                                // placeholder. The original row is intentionally still present, so
+                                // let SQLite allocate a distinct placeholder ID. Returning a fake
+                                // failure here aborts the revoke pipeline before it reaches peers.
+                                cv.remove("_id");
+                            } else if (preserveIncoming && alreadyPreserved) {
+                                // Incoming revokes have no outbound work to complete. Keep the
+                                // original row and discard only their local placeholder.
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                param.setResult(-1L);
+                            } else if (preserveIncoming) {
+                                // Fallback: incoming type-15 not seen in delete hook yet.
+                                // Record and block the insert so the original row remains visible.
                                 long now = System.currentTimeMillis();
                                 REVOKED_MESSAGES.put(keyId, now);
                                 DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                 dispatchRealtimeRevokeUI(keyId, now);
                                 com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                param.setResult(-1L);
                             }
-                            // Block the insert so WhatsApp does not overwrite the preserved row.
-                            param.setResult(-1L);
-                        } else if (preserveOwnRevoke) {
-                            // Own-message type-15 placeholder: record for UI decoration, but
-                            // let WhatsApp write the placeholder row normally. This is safe because
-                            // the original row was already deleted above (we did not block it).
-                            if (keyId != null) {
-                                long now = System.currentTimeMillis();
-                                REVOKED_MESSAGES.put(keyId, now);
-                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                                dispatchRealtimeRevokeUI(keyId, now);
-                            }
-                            // Do NOT return -1L — let WhatsApp insert the type-15 placeholder.
+                            // If neither: own message with preserve OFF — let WhatsApp write
+                            // the type-15 placeholder normally.
                         }
                     }
                 }
@@ -524,6 +544,22 @@ public class AntiRevokeHook extends BaseFeature {
 
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getMessage());
+        }
+    }
+
+    private void sanitizePreservedOwnRowId(@NonNull XC_MethodHook.MethodHookParam param) {
+        if (!isPreserveOwnRevokeEnabled() || param.args == null || param.args.length < 3) return;
+        Object tableArg = param.args[0];
+        Object valuesArg = param.args[2];
+        if (!(tableArg instanceof String) || !(valuesArg instanceof ContentValues)) return;
+
+        String table = (String) tableArg;
+        if (!"message".equals(table) && !"messages".equals(table)) return;
+
+        ContentValues values = (ContentValues) valuesArg;
+        Long rowId = values.getAsLong("_id");
+        if (rowId != null && PRESERVED_OWN_ROW_IDS.remove(String.valueOf(rowId))) {
+            values.remove("_id");
         }
     }
 

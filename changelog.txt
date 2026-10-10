@@ -3,6 +3,7 @@
 - Added support to restore v1 legacy JSON backup files
 - Filter items by id
 - Option to show toast on hooks injection
+- Keep own deleted for everyone messages in chat with delete indicator (but deleted for receiver)
 
 [Removed]
 - Removed Beta channel flow. Normalized the versioning and update flow
@@ -11,7 +12,6 @@
 - Fixed media preview
 - Fixed module installation/upgrade issues for v1 users
 - Fixed status download and copy to clipboard
-- Fixed delete for everyone
 
 [Improvements]
 - Improved changelog upgrades / downgrades
