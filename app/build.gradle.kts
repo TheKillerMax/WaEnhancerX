@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.security.KeyStore
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,15 +13,26 @@ plugins {
 }
 
 android {
+    val lastV1VersionCode = 17113
+    val expectedSigningCertificateSha256 =
+        "284325b6f0ca18da5e4c237a6c0618c2a22b08ff8d4a5d11fd12478dad690a84"
+
     namespace = "com.waenhancer.app"
     compileSdk = 36
     
     defaultConfig {
+        val configuredVersionCode =
+            project.findProperty("VERSION_CODE")?.toString()?.toInt() ?: 20100
+
         applicationId = "com.waenhancer"
         minSdk = 24
         targetSdk = 36
-        versionCode = project.findProperty("VERSION_CODE")?.toString()?.toInt() ?: 1
+        versionCode = configuredVersionCode
         versionName = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0"
+
+        require(configuredVersionCode > lastV1VersionCode) {
+            "VERSION_CODE must be greater than the latest v1 version code ($lastV1VersionCode) to support upgrades."
+        }
     }
 
     signingConfigs {
@@ -32,15 +45,36 @@ android {
             val androidStoreFile = (project.findProperty("androidStoreFile") as? String)
                 ?: keystoreProperties.getProperty("androidStoreFile") ?: "key.jks"
             val keyFile = rootProject.file(androidStoreFile)
-            storeFile = if (keyFile.exists()) keyFile else rootProject.file("key.jks")
-            storePassword = (project.findProperty("androidStorePassword") as? String)
+            require(keyFile.isFile) {
+                "Signing keystore not found at ${keyFile.absolutePath}. All builds must use the v1 signing key."
+            }
+
+            val signingStorePassword = (project.findProperty("androidStorePassword") as? String)
                 ?: keystoreProperties.getProperty("androidStorePassword") ?: "123456"
-            keyAlias = (project.findProperty("androidKeyAlias") as? String)
+            val signingKeyAlias = (project.findProperty("androidKeyAlias") as? String)
                 ?: keystoreProperties.getProperty("androidKeyAlias") ?: "my-alias"
-            keyPassword = (project.findProperty("androidKeyPassword") as? String)
+            val signingKeyPassword = (project.findProperty("androidKeyPassword") as? String)
                 ?: keystoreProperties.getProperty("androidKeyPassword") ?: "123456"
+
+            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+            keyFile.inputStream().use { keyStore.load(it, signingStorePassword.toCharArray()) }
+            val certificate = requireNotNull(keyStore.getCertificate(signingKeyAlias)) {
+                "Signing alias '$signingKeyAlias' was not found in ${keyFile.absolutePath}."
+            }
+            val certificateSha256 = MessageDigest.getInstance("SHA-256")
+                .digest(certificate.encoded)
+                .joinToString("") { "%02x".format(it) }
+            require(certificateSha256 == expectedSigningCertificateSha256) {
+                "Signing certificate does not match v1. Expected $expectedSigningCertificateSha256, got $certificateSha256."
+            }
+
+            storeFile = keyFile
+            storePassword = signingStorePassword
+            keyAlias = signingKeyAlias
+            keyPassword = signingKeyPassword
             enableV1Signing = true
             enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
