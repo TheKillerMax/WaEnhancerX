@@ -10,6 +10,7 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import de.robv.android.xposed.XposedBridge;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -198,7 +199,10 @@ public class PreferenceBridgeClient implements SharedPreferences {
         @Override
         public Editor putString(String key, @Nullable String value) { values.put(key, value); return this; }
         @Override
-        public Editor putStringSet(String key, @Nullable Set<String> values) { return this; }
+        public Editor putStringSet(String key, @Nullable Set<String> values) {
+            this.values.put(key, values == null ? null : new HashSet<>(values));
+            return this;
+        }
         @Override
         public Editor putInt(String key, int value) { values.put(key, value); return this; }
         @Override
@@ -238,6 +242,11 @@ public class PreferenceBridgeClient implements SharedPreferences {
                     } else if (val instanceof Float) {
                         extras.putString("type", "float");
                         extras.putFloat("value", (Float) val);
+                    } else if (val instanceof Set) {
+                        extras.putString("type", "string_set");
+                        @SuppressWarnings("unchecked")
+                        Set<String> stringSet = (Set<String>) val;
+                        extras.putStringArrayList("value", new ArrayList<>(stringSet));
                     }
                     context.getContentResolver().call(
                             Uri.parse("content://" + AUTHORITY),

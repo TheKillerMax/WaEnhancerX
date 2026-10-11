@@ -44,6 +44,8 @@ class PreserveDeleteForMeHook(
         hookDatabaseDeleteForMe()
     }
 
+    private val isDeleteForMeActive = ThreadLocal<Boolean>()
+
     private fun hookBytecodeDeleteForMe() {
         try {
             val deleteMethod = resolveDeleteForMeMethod()
@@ -53,12 +55,16 @@ class PreserveDeleteForMeHook(
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (!isEnabled(PREF_KEY, false)) return
-
+                            isDeleteForMeActive.set(true)
                             try {
                                 param.result = null
                             } catch (t: Throwable) {
                                 XposedBridge.log("$TAG Error in bytecode delete hook: ${t.message}")
                             }
+                        }
+
+                        override fun afterHookedMethod(param: MethodHookParam) {
+                            isDeleteForMeActive.set(false)
                         }
                     }
                 )
@@ -78,6 +84,7 @@ class PreserveDeleteForMeHook(
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (!isEnabled(PREF_KEY, false)) return
+                        if (isDeleteForMeActive.get() != true) return
 
                         val table = param.args.getOrNull(0) as? String ?: return
                         if (table != "message") return
@@ -103,11 +110,7 @@ class PreserveDeleteForMeHook(
                                         val msgTs = cursor.getLong(6)
                                         val senderJidRowId = if (cursor.columnCount > 7) cursor.getLong(7) else 0L
 
-                                        // Only preserve INCOMING messages (from_me == 0).
-                                        // Own messages deleted "for everyone" must not be blocked:
-                                        // blocking the DELETE causes WhatsApp's subsequent insertOrThrow
-                                        // (type-15 placeholder, same _id) to crash with
-                                        // SQLiteConstraintException: UNIQUE constraint failed: message._id.
+                                        // Only preserve INCOMING messages (from_me == 0) deleted via Delete For Me.
                                         if (!fromMe && !keyId.isNullOrEmpty() && msgType != 15) {
                                             hasIncomingToPreserve = true
                                             val now = System.currentTimeMillis()

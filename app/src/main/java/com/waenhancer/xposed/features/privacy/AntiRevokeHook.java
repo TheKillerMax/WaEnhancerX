@@ -27,7 +27,9 @@ import com.waenhancer.xposed.core.db.DelMessageStore;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
 import com.waenhancer.xposed.utils.ActivityTracker;
+import com.waenhancer.licensing.features.HideAntiRevokeProFeature;
 
+import com.waenhancer.utils.ContactNameResolver;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
@@ -85,7 +87,6 @@ public class AntiRevokeHook extends BaseFeature {
     private volatile Object statusToMessageMapper;
     private volatile Field cachedFMessageKeyField;
     private volatile Field cachedKeyIdField;
-
     /** Track previous getView hook so we can unhook on adapter change. */
     private volatile XC_MethodHook.Unhook previousGetViewHook;
     /** Track the currently hooked adapter and ListView. */
@@ -102,6 +103,31 @@ public class AntiRevokeHook extends BaseFeature {
         hookBytecodeRevocation();
         hookStatusBytecodeRevocation();
         hookDatabaseRevocation();
+        HideAntiRevokeProFeature.install(classLoader, prefs,
+                new HideAntiRevokeProFeature.HostBridge() {
+                    @Nullable
+                    @Override
+                    public String resolveConversationJid(@NonNull Activity activity) {
+                        return ContactNameResolver.INSTANCE.extractJidFromActivity(activity);
+                    }
+
+                    @Nullable
+                    @Override
+                    public Activity getCurrentConversation() {
+                        return ActivityTracker.getCurrentConversation();
+                    }
+
+                    @Override
+                    public boolean isAntiRevokeAvailable() {
+                        return isAntiRevokeEnabled() || isPreserveOwnRevokeEnabled();
+                    }
+
+                    @Override
+                    public void refreshConversation(@NonNull Activity activity) {
+                        HideAntiRevokeProFeature.refreshConversationRows(
+                                activity, currentAdapter, activeListView);
+                    }
+                });
         hookListViewAdapter();
         hookStatusPlaybackUI();
     }
@@ -636,9 +662,28 @@ public class AntiRevokeHook extends BaseFeature {
                         } catch (Throwable ignored) {}
                         previousGetViewHook = null;
                     }
-
                     currentAdapter = adapter;
                     final ListAdapter boundAdapter = adapter;
+                    final ListAdapter underlyingAdapter = getUnderlyingAdapter(adapter);
+                    HideAntiRevokeProFeature.attachAdapterItemHooks(
+                            boundAdapter, underlyingAdapter, classLoader, prefs,
+                            new HideAntiRevokeProFeature.MessageBridge() {
+                                @Nullable
+                                @Override
+                                public String getMessageKeyId(@Nullable Object message) {
+                                    return getOriginalOrCurrentKeyId(message);
+                                }
+
+                                @Override
+                                public long getRevokedTimestamp(@Nullable String keyId) {
+                                    return AntiRevokeHook.this.getRevokedTimestamp(keyId);
+                                }
+
+                                @Override
+                                public boolean isAntiRevokeAvailable() {
+                                    return isAntiRevokeEnabled() || isPreserveOwnRevokeEnabled();
+                                }
+                            });
 
                     try {
                         Method getViewMethod = XposedHelpers.findMethodBestMatch(
@@ -656,8 +701,16 @@ public class AntiRevokeHook extends BaseFeature {
 
                         previousGetViewHook = XposedBridge.hookMethod(getViewMethod, new XC_MethodHook() {
                             @Override
+                            protected void beforeHookedMethod(MethodHookParam p) {
+                                if (p.args != null && p.args.length > 1 && p.args[1] instanceof ViewGroup) {
+                                    ViewGroup recycledRow = (ViewGroup) p.args[1];
+                                    resetRowDecoration(recycledRow);
+                                }
+                            }
+
+                            @Override
                             protected void afterHookedMethod(MethodHookParam p) {
-                                if (p.thisObject != currentAdapter) return;
+                                if (p.thisObject != currentAdapter && p.thisObject != underlyingAdapter) return;
                                 if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
 
                                 int pos = (int) p.args[0];
@@ -672,7 +725,11 @@ public class AntiRevokeHook extends BaseFeature {
                                 }
                                 if (item == null) return;
 
-                                String keyId = extractKeyIdFromFMessage(item);
+                                if (HideAntiRevokeProFeature.isHiddenForActiveConversation(prefs)) {
+                                    HideAntiRevokeProFeature.observeNativeDeletedRow(row, item);
+                                }
+
+                                String keyId = getOriginalOrCurrentKeyId(item);
                                 if (keyId != null) {
                                     XposedHelpers.setAdditionalInstanceField(row, "waex_key_id", keyId);
                                 } else {
@@ -682,7 +739,15 @@ public class AntiRevokeHook extends BaseFeature {
 
                                 long deletedTs = getRevokedTimestamp(keyId);
                                 if (deletedTs > 0) {
-                                    decorateRevokedRow(row, deletedTs);
+                                    if (HideAntiRevokeProFeature.isHiddenForActiveConversation(prefs)) {
+                                        ViewGroup nativeRevokedRow = HideAntiRevokeProFeature.renderDeletedMessageRow(
+                                                row, item, keyId, deletedTs, classLoader);
+                                        XposedHelpers.setAdditionalInstanceField(
+                                                nativeRevokedRow, "waex_key_id", keyId);
+                                        p.setResult(nativeRevokedRow);
+                                    } else {
+                                        decorateRevokedRow(row, deletedTs);
+                                    }
                                 } else {
                                     resetRowDecoration(row);
                                 }
@@ -1668,6 +1733,7 @@ public class AntiRevokeHook extends BaseFeature {
 
     private void resetRowDecoration(@NonNull ViewGroup rowView) {
         try {
+            rowView.setVisibility(View.VISIBLE);
             Context rowContext = rowView.getContext();
             int dateId = rowContext.getResources().getIdentifier("date", "id", rowContext.getPackageName());
             int messageTextId = rowContext.getResources().getIdentifier("message_text", "id", rowContext.getPackageName());
@@ -1972,4 +2038,23 @@ public class AntiRevokeHook extends BaseFeature {
     public String getName() {
         return "Anti-Revoke";
     }
+
+    @NonNull
+    private ListAdapter getUnderlyingAdapter(@NonNull ListAdapter adapter) {
+        return HideAntiRevokeProFeature.getUnderlyingAdapter(adapter);
+    }
+
+    @Nullable
+    private String getOriginalOrCurrentKeyId(@Nullable Object message) {
+        if (message == null) return null;
+        try {
+            Object original = XposedHelpers.getAdditionalInstanceField(
+                    message, "waex_original_key_id");
+            if (original instanceof String && !((String) original).isEmpty()) {
+                return (String) original;
+            }
+        } catch (Throwable ignored) {}
+        return extractKeyIdFromFMessage(message);
+    }
+
 }

@@ -4,6 +4,7 @@
 - Filter items by id
 - Option to show toast on hooks injection
 - Keep own deleted for everyone messages in chat with delete indicator (but deleted for receiver)
+- Added a per-chat Hide Anti-Revoke option that replaces preserved deleted messages with WhatsApp's native sender and receiver deleted-message layouts
 
 [Removed]
 - Removed Beta channel flow. Normalized the versioning and update flow

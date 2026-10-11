@@ -245,6 +245,8 @@ public final class PreferenceSchema {
         add(entries, "hide_chats", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "hide_delivery_receipts", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "hide_forwarded_tag", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "hide_anti_revoke", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "hidden_antirevoke_chats", Type.STRING_SET, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "hide_read_receipts", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "hide_seen_receipts", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "hide_seen_view", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
