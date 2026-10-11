@@ -57,11 +57,18 @@ public class TypingPrivacyHook extends BaseFeature {
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     if (param.args == null || param.args.length == 0) return;
 
-                    // Global preference checks
-                    boolean globalTypingPrivacy = isEnabled("typing_privacy", false)
+                    boolean isGhostMode = isEnabled("ghostmode_active", false)
+                            || isEnabled("ghostmode_enabled", false);
+
+                    boolean hideTypingGlobal = isGhostMode
+                            || isEnabled("typing_privacy", false)
                             || isEnabled("hide_typing", false)
-                            || isEnabled("ghostmode_t", false)
-                            || isEnabled("ghostmode", false);
+                            || isEnabled("ghostmode_t", false);
+
+                    boolean hideRecordingGlobal = isGhostMode
+                            || isEnabled("typing_privacy", false)
+                            || isEnabled("hide_recording", false)
+                            || isEnabled("ghostmode_r", false);
 
                     // Extract typing state: 0 = typing/composing, 1 = recording audio, 2 = clear
                     int state = -1;
@@ -80,26 +87,29 @@ public class TypingPrivacyHook extends BaseFeature {
                     }
 
                     // Check per-contact privacy override if JID available
-                    boolean blockThisPacket = globalTypingPrivacy;
+                    boolean blockThisPacket = false;
+                    if (state == 0) {
+                        blockThisPacket = hideTypingGlobal;
+                    } else if (state == 1) {
+                        blockThisPacket = hideRecordingGlobal;
+                    }
+
                     if (!blockThisPacket && jidObj != null) {
                         String jidStr = jidObj.toString();
                         // Query per-contact rules from prefs
-                        String contactRulesJson = prefs.getString("per_contact_rules_" + jidStr, null);
-                        if (contactRulesJson != null) {
-                            try {
-                                JSONObject json = new JSONObject(contactRulesJson);
-                                if (json.optBoolean("hide_typing", false) || json.optBoolean("HideTyping", false)) {
-                                    blockThisPacket = true;
-                                }
-                            } catch (Throwable ignored) {}
+                        JSONObject contactJson = CustomPrivacyHook.getContactPrivacy(prefs, jidStr);
+                        if (contactJson != null) {
+                            if (state == 0 && (contactJson.optBoolean("hide_typing", false) || contactJson.optBoolean("HideTyping", false))) {
+                                blockThisPacket = true;
+                            } else if (state == 1 && (contactJson.optBoolean("hide_recording", false) || contactJson.optBoolean("HideRecording", false))) {
+                                blockThisPacket = true;
+                            }
                         }
                     }
 
                     // Block typing (state 0) and voice recording (state 1) indicators
                     if (blockThisPacket) {
-                        if (state == 0 || state == 1) {
-                            param.setResult(null); // Suppress outgoing presence packet
-                        }
+                        param.setResult(null); // Suppress outgoing presence packet
                     }
                 }
             });

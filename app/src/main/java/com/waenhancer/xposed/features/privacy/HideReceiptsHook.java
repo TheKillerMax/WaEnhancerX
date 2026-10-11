@@ -583,7 +583,11 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private boolean shouldHideReadReceipt(String target) {
-        boolean globalEnabled = isHideReadReceiptsEnabled();
+        if (isGhostModeActive()) {
+            return true;
+        }
+        boolean isGroup = target != null && (target.contains("@g.us") || target.contains("-"));
+        boolean globalEnabled = isGroup ? isEnabled("hideread_group", false) : isHideReadReceiptsEnabled();
         if (target != null) {
             JSONObject contactPrivacy = CustomPrivacyHook.getContactPrivacy(prefs, target);
             if (contactPrivacy != null) {
@@ -694,23 +698,30 @@ public class HideReceiptsHook extends BaseFeature {
         return hideVoiceNote || hideViewOnce;
     }
 
+    private boolean isGhostModeActive() {
+        return isEnabled("ghostmode_active", false) || isEnabled("ghostmode_enabled", false);
+    }
+
     private boolean isHideVoiceNotePlayedEnabled() {
-        return isEnabled("hide_seen_receipts", false) || isEnabled("hideaudioseen", false);
+        return isEnabled("hide_seen_receipts", false) || isEnabled("hideaudioseen", false) || isGhostModeActive();
     }
 
     private boolean isHideViewOnceSeenEnabled() {
-        return isEnabled("hideonceseen", false);
+        return isEnabled("hideonceseen", false) || isGhostModeActive();
     }
 
     private boolean isHideReadReceiptsEnabled() {
-        return isEnabled("hide_read_receipts", false) || isEnabled("hideread", false);
+        return isEnabled("hide_read_receipts", false) || isEnabled("hideread", false) || isGhostModeActive();
     }
 
     private boolean isHideDeliveryReceiptsEnabled() {
-        return isEnabled("hide_delivery_receipts", false) || isEnabled("hidereceipt", false);
+        return isEnabled("hide_delivery_receipts", false) || isEnabled("hidereceipt", false) || isGhostModeActive();
     }
 
     private boolean isStealthStatusViewEnabled() {
+        if (isGhostModeActive()) {
+            return true;
+        }
         try {
             if (prefs.contains("stealth_status_view")) {
                 Object val = prefs.getAll().get("stealth_status_view");

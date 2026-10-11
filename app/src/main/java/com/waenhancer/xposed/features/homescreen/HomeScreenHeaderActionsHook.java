@@ -449,11 +449,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
                     .setTitle("Activate Ghost Mode?")
-                    .setMessage("Hides your online status, freezes last seen, and silences typing & read receipt indicators.")
-                    .setPositiveButton("Activate", (d, w) -> {
+                    .setMessage("Ghost Mode hides your online status, freezes last seen, and silences typing & read receipts from all contacts.\n\nRestart WhatsApp to apply changes?")
+                    .setPositiveButton("Activate & Restart", (d, w) -> {
                         prefs.edit().putBoolean("ghostmode_active", true).apply();
                         Toast.makeText(activity, "Ghost Mode Activated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                     .show();
@@ -461,11 +462,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
                     .setTitle("Deactivate Ghost Mode?")
-                    .setMessage("Deactivating restores your online visibility, typing states, and read receipts.")
-                    .setPositiveButton("Deactivate", (d, w) -> {
+                    .setMessage("Deactivating restores your normal online visibility, typing indicators, and read receipts.\n\nRestart WhatsApp to apply changes?")
+                    .setPositiveButton("Deactivate & Restart", (d, w) -> {
                         prefs.edit().putBoolean("ghostmode_active", false).apply();
                         Toast.makeText(activity, "Ghost Mode Deactivated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                     .show();
@@ -478,11 +480,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
                     .setTitle("Freeze Last Seen?")
-                    .setMessage("Locks your last seen timestamp so contacts won't see when you're active.")
-                    .setPositiveButton("Freeze", (d, w) -> {
+                    .setMessage("Locks your last seen timestamp so contacts won't see when you're active.\n\nRestart WhatsApp to apply changes?")
+                    .setPositiveButton("Freeze & Restart", (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
                         Toast.makeText(activity, "Last Seen Frozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                     .show();
@@ -490,11 +493,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
                     .setTitle("Unfreeze Last Seen?")
-                    .setMessage("WhatsApp will resume updating your last seen timestamp normally.")
-                    .setPositiveButton("Unfreeze", (d, w) -> {
+                    .setMessage("WhatsApp will resume updating your last seen timestamp normally.\n\nRestart WhatsApp to apply changes?")
+                    .setPositiveButton("Unfreeze & Restart", (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
                         Toast.makeText(activity, "Last Seen Unfrozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                     .show();
