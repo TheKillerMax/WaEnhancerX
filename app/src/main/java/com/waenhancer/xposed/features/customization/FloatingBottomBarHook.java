@@ -128,7 +128,7 @@ public class FloatingBottomBarHook extends BaseFeature {
 
     @Override
     public void hook() throws Throwable {
-        if (!isEnabled("floating_bottom_bar", true)) return;
+        if (!isEnabled("floating_bottom_bar", false)) return;
 
         scrollHideEnabled = prefs.getBoolean("floating_bottom_bar_scroll_hide", true);
         scrollHideMode = prefs.getString("floating_bottom_bar_scroll_hide_mode", "downward");
@@ -178,12 +178,14 @@ public class FloatingBottomBarHook extends BaseFeature {
                         if (homeClass == null || activity == null || !homeClass.isInstance(activity)) return;
 
                         if (isBottomBar) {
-                            if (view instanceof ViewGroup) {
+                            if (view instanceof ViewGroup && isEnabled("floating_bottom_bar", false)) {
                                 scheduleSetup((ViewGroup) view);
                             }
                             return;
                         }
-                        view.post(() -> positionFabAboveCurrentBar(view));
+                        if (isEnabled("floating_bottom_bar", false)) {
+                            view.post(() -> positionFabAboveCurrentBar(view));
+                        }
                     }
                 }
         );

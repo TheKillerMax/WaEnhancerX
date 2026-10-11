@@ -48,7 +48,7 @@ fun FloatingBottomBarCustomizerScreen() {
     val radius = WaexTheme.radius
 
     var enabled by remember {
-        mutableStateOf(preferenceManager.getBoolean("floating_bottom_bar", true))
+        mutableStateOf(preferenceManager.getBoolean("floating_bottom_bar", false))
     }
     var pillDesign by remember {
         mutableStateOf(preferenceManager.getString("floating_bottom_bar_pill_design", "regular") ?: "regular")
