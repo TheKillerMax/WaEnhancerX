@@ -264,7 +264,7 @@ public class HideReceiptsHook extends BaseFeature {
             Method receiptMethod = DexSearchEngine.getInstance().findMethodWithCache(
                     context,
                     classLoader,
-                    "wpp_receipt_node_generator_dev4mod",
+                    "wpp_receipt_node_generator",
                     (bridge, loader) -> {
                         ClassData classDeviceJid = bridge.findClass(FindClass.create()
                                 .matcher(ClassMatcher.create().className("jid.DeviceJid", StringMatchType.EndsWith))).firstOrNull();
