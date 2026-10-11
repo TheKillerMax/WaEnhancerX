@@ -124,9 +124,6 @@ public class DoubleTapReactionHook extends BaseFeature {
                     });
                 }
             }
-            XposedBridge.log(TAG + " Initialized. FMessage: " + (fMessageClass != null)
-                    + ", ActionUser: " + (actionUserClass != null)
-                    + ", ReactionSender: " + (reactionSenderMethod != null));
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Init reflection error: " + t.getMessage());
         }

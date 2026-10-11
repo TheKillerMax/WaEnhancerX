@@ -64,6 +64,9 @@ fun UpdateSettingsScreen() {
     var allowDowngrades by remember { mutableStateOf(prefManager.getBoolean("downgrades_enabled", false)) }
     var rootAutoInstall by remember { mutableStateOf(prefManager.getBoolean("root_auto_install", false)) }
     var updateFrequency by remember { mutableStateOf(prefManager.getString("update_frequency", "daily")) }
+    var checkModuleOpen by remember { mutableStateOf(prefManager.getBoolean("update_check_module_open", true)) }
+    var checkWhatsAppOpen by remember { mutableStateOf(prefManager.getBoolean("update_check_whatsapp_open", true)) }
+    var ignoredBehavior by remember { mutableStateOf(prefManager.getString("update_ignored_behavior", "next_release")) }
 
     Scaffold(
         topBar = {
@@ -111,7 +114,7 @@ fun UpdateSettingsScreen() {
                                 color = colors.onSurface
                             )
                             Text(
-                                text = "Periodically check the WaEnhancer release service",
+                                text = "Periodically check the WaEnhancerX release service",
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 12.sp
@@ -124,6 +127,64 @@ fun UpdateSettingsScreen() {
                                 prefManager.putBoolean("update_auto_check", it)
                             }
                         )
+                    }
+
+                    HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+
+                    UpdateSwitchRow(
+                        title = "Check when module opens",
+                        description = "Run an eligible update check when WaEnhancerX opens",
+                        checked = checkModuleOpen,
+                        onCheckedChange = {
+                            checkModuleOpen = it
+                            prefManager.putBoolean("update_check_module_open", it)
+                        }
+                    )
+
+                    HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+
+                    UpdateSwitchRow(
+                        title = "Check when WhatsApp opens",
+                        description = "Ask the module to check when WhatsApp starts",
+                        checked = checkWhatsAppOpen,
+                        onCheckedChange = {
+                            checkWhatsAppOpen = it
+                            prefManager.putBoolean("update_check_whatsapp_open", it)
+                        }
+                    )
+
+                    HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+
+                    val frequencies = listOf("every_open", "six_hours", "daily", "weekly")
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            updateFrequency = frequencies[(frequencies.indexOf(updateFrequency).coerceAtLeast(0) + 1) % frequencies.size]
+                            prefManager.putString("update_frequency", updateFrequency)
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Check frequency", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                            Text(frequencyLabel(updateFrequency), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
+                    }
+
+                    HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+
+                    val ignoredOptions = listOf("next_release", "next_check", "after_day", "after_week")
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            ignoredBehavior = ignoredOptions[(ignoredOptions.indexOf(ignoredBehavior).coerceAtLeast(0) + 1) % ignoredOptions.size]
+                            prefManager.putString("update_ignored_behavior", ignoredBehavior)
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("After ignoring an update", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                            Text(ignoredLabel(ignoredBehavior), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
                     }
 
                     HorizontalDivider(
@@ -213,4 +274,36 @@ fun UpdateSettingsScreen() {
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+private fun UpdateSwitchRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+            Text(description, style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+        }
+        StitchSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+private fun frequencyLabel(value: String) = when (value) {
+    "every_open" -> "Every eligible app open"
+    "six_hours" -> "At most every 6 hours"
+    "weekly" -> "At most once a week"
+    else -> "At most once a day"
+}
+
+private fun ignoredLabel(value: String) = when (value) {
+    "next_check" -> "Show it again on the next check"
+    "after_day" -> "Remind me again after one day"
+    "after_week" -> "Remind me again after one week"
+    else -> "Wait until a newer release is available"
 }

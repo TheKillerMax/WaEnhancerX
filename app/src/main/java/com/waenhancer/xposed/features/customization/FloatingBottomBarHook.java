@@ -1103,7 +1103,7 @@ public class FloatingBottomBarHook extends BaseFeature {
 
     /**
      * Refined and iOS Glass replace WhatsApp's stock active indicator with the liquid selection
-     * capsules used by the original WaEnhancer implementation. A per-frame reconciler keeps the
+     * capsules used by the original WaEnhancerX implementation. A per-frame reconciler keeps the
      * effect synchronized across both clicks and WhatsApp's pager swipes.
      */
     private static void applyPresetTabIndicators(ViewGroup bar, float density) {

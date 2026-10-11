@@ -76,6 +76,9 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
         try {
             VersionGuard.onTargetActivityResumed(activity);
         } catch (Throwable ignored) {}
+        try {
+            com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.onTargetActivityResumed(activity);
+        } catch (Throwable ignored) {}
         for (ActivityListener listener : sListeners) {
             try {
                 listener.onActivityResumed(activity);

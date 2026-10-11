@@ -133,6 +133,11 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                                 // Register this package as active hooked package for the dashboard
                                 com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
+                                try {
+                                    appContext.getContentResolver().call(
+                                            android.net.Uri.parse("content://com.waenhancer.hookprovider"),
+                                            "request_update_check", packageName, null);
+                                } catch (Throwable ignored) {}
 
                                 try {
                                     android.content.IntentFilter filter = new android.content.IntentFilter("com.waenhancer.WHATSAPP.RESTART");
@@ -167,6 +172,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     );
 
                                     if (isSupported) {
+                                        com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.init(bridgeClient);
                                         if (showHookToast) {
                                             android.widget.Toast.makeText(
                                                 appContext,

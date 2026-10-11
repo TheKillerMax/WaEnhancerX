@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -982,6 +983,48 @@ fun MainContainerScreen() {
             com.waenhancer.ui.components.NoticeBottomSheet(
                 notice = notice,
                 onDismiss = { activeNotice = null }
+            )
+        }
+
+        // Available Update Bottom Sheet
+        val availableUpdate by com.waenhancer.update.UpdateCheckCoordinator.availableRelease.collectAsState()
+        var downloadingUrl by remember { mutableStateOf<String?>(null) }
+        var downloadingVersion by remember { mutableStateOf<String?>(null) }
+
+        availableUpdate?.let { update ->
+            com.waenhancer.ui.components.UpdateAvailableBottomSheet(
+                release = update,
+                onUpdateNow = {
+                    val asset = update.defaultAsset
+                    if (asset != null) {
+                        downloadingUrl = asset.downloadUrl
+                        downloadingVersion = update.version
+                    } else {
+                        navController.navigateTo(Screen.ReleaseDetails(update.tagName))
+                    }
+                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                },
+                onViewDetails = {
+                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                    navController.navigateTo(Screen.ReleaseDetails(update.tagName))
+                },
+                onDismiss = {
+                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                }
+            )
+        }
+
+        downloadingUrl?.let { url ->
+            val version = downloadingVersion ?: "latest"
+            val useRoot = preferenceManager.getBoolean("root_auto_install", false)
+            com.waenhancer.ui.components.UpdateDownloadSheet(
+                url = url,
+                version = version,
+                useRoot = useRoot,
+                onDismiss = {
+                    downloadingUrl = null
+                    downloadingVersion = null
+                }
             )
         }
     }

@@ -278,8 +278,9 @@ class WaexBottomSheet(private val context: Context) {
             val msgView = createWdsTextView(context).apply {
                 text = messageText
                 textSize = 14f
+                setLineSpacing(0f, 1.25f)
                 setTextColor(secondaryTextColor)
-                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                gravity = Gravity.START or Gravity.TOP
                 setPadding(dp(4), 0, dp(4), dp(10))
             }
             scrollContent.addView(msgView)
@@ -474,14 +475,22 @@ class WaexBottomSheet(private val context: Context) {
             window.setDimAmount(0.6f)
         }
 
-        // Native WhatsApp Bottom Sheet Entrance Slide-Up Animation & max height check
+        // Set max height directly on the scrollView layoutParams with weight so it smoothly scrolls
+        val contentMaxH = (screenHeight * 0.48f).toInt()
+        val scrollLp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1.0f).apply {
+            // Constrain max height through custom measure or onShow post
+        }
+        scrollView.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+
+        // Native WhatsApp Bottom Sheet Entrance Slide-Up Animation & height check
         dialog.setOnShowListener {
             mainLayout.post {
                 val measuredH = mainLayout.height
-                if (measuredH > maxScrollHeight) {
+                if (measuredH > maxScrollHeight || scrollView.height > contentMaxH) {
                     val lp = scrollView.layoutParams
-                    lp.height = maxScrollHeight - dp(110)
+                    lp.height = contentMaxH
                     scrollView.layoutParams = lp
+                    scrollView.requestLayout()
                 }
             }
             mainLayout.translationY = screenHeight.toFloat()

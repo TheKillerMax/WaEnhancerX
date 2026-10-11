@@ -44,6 +44,10 @@
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.Waex">
 
+        <receiver
+            android:name="com.waenhancer.update.UpdateIgnoreReceiver"
+            android:exported="false" />
+
         <!-- Xposed Module Metadata -->
         <meta-data
             android:name="xposedmodule"

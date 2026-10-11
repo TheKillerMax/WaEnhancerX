@@ -361,6 +361,14 @@ public final class PreferenceSchema {
         add(entries, "update_auto_check", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "update_check", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "update_frequency", Type.STRING, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
+        add(entries, "update_check_module_open", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
+        add(entries, "update_check_whatsapp_open", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
+        add(entries, "update_ignored_behavior", Type.STRING, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
+        add(entries, "update_last_check", Type.LONG, Sensitivity.RUNTIME, Store.PRIVATE);
+        add(entries, "available_update_version", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "available_update_tag", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "available_update_name", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "available_update_changelog", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "verify_blocked_contact", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "video_call_screen_rec", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "video_limit_size", Type.FLOAT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);

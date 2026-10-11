@@ -24,6 +24,7 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.MainContainerScreen
 import com.waenhancer.ui.navigation.WaexNavController
+import com.waenhancer.update.UpdateCheckCoordinator
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UpdateCheckCoordinator.request(this, UpdateCheckCoordinator.TRIGGER_MODULE)
         enableEdgeToEdge()
         setContent {
             val initialTheme = remember { preferenceManager.getString("app_theme_mode", "System") }

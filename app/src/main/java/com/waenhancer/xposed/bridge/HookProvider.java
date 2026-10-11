@@ -19,6 +19,7 @@ import com.waenhancer.licensing.LicenseManager;
 import com.waenhancer.licensing.ProFeatureGate;
 import com.waenhancer.licensing.features.BootloaderSpooferFeature;
 import com.waenhancer.xposed.core.db.PreservedMessageStore;
+import com.waenhancer.update.UpdateCheckCoordinator;
 
 /**
  * HookProvider provides preference IPC bridge between WaEnhancerX UI and target processes (WhatsApp / WA Business).
@@ -50,6 +51,14 @@ public class HookProvider extends ContentProvider {
 
             Context context = getContext();
             if (context == null) return null;
+
+            if ("request_update_check".equals(method)) {
+                if (!isWhatsAppCaller(context, callerUid)) return null;
+                UpdateCheckCoordinator.request(context, UpdateCheckCoordinator.TRIGGER_WHATSAPP, false);
+                Bundle result = new Bundle();
+                result.putBoolean("accepted", true);
+                return result;
+            }
 
             if ("create_call_recording".equals(method)) {
                 if (!isWhatsAppCaller(context, callerUid) || extras == null) return null;
