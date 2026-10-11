@@ -465,11 +465,12 @@ class MediaPreviewHook(
                         }
                         mainContainer.addView(contentContainer)
 
-                        val loadingContainer = createLoadingView(context)
+                        val loadingUi = createLoadingView(context, dialog)
+                        val loadingContainer = loadingUi.container
                         contentContainer.addView(loadingContainer)
 
-                        val progressBar = loadingContainer.getChildAt(0) as ProgressBar
-                        val progressText = loadingContainer.getChildAt(1) as TextView
+                        val progressBar = loadingUi.progressBar
+                        val progressText = loadingUi.statusText
 
                         dialog.setContentView(mainContainer)
                         dialog.setOnDismissListener { cleanupResources(executor) }
@@ -548,7 +549,13 @@ class MediaPreviewHook(
         return header
     }
 
-    private fun createLoadingView(context: Context): LinearLayout {
+    private data class LoadingUi(
+        val container: LinearLayout,
+        val progressBar: ProgressBar,
+        val statusText: TextView
+    )
+
+    private fun createLoadingView(context: Context, dialog: Dialog): LoadingUi {
         val loadingContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -556,36 +563,98 @@ class MediaPreviewHook(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
+            setPadding(dipToPixels(context, 24f), dipToPixels(context, 24f),
+                dipToPixels(context, 24f), dipToPixels(context, 24f))
         }
+
+        val card = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dipToPixels(context, 24f), dipToPixels(context, 22f),
+                dipToPixels(context, 24f), dipToPixels(context, 16f))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dipToPixels(context, 20f).toFloat()
+                setColor(Color.parseColor("#E61F2C30"))
+                setStroke(dipToPixels(context, 1f), Color.parseColor("#334A5A5F"))
+            }
+            elevation = dipToPixels(context, 10f).toFloat()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                leftMargin = dipToPixels(context, 16f)
+                rightMargin = dipToPixels(context, 16f)
+            }
+        }
+
+        val title = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            text = "Preparing preview"
+        }
+        card.addView(title)
 
         val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
             progress = 0
             layoutParams = LinearLayout.LayoutParams(
-                dipToPixels(context, 200f),
-                dipToPixels(context, 8f)
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dipToPixels(context, 6f)
             ).apply {
+                topMargin = dipToPixels(context, 20f)
                 gravity = Gravity.CENTER
             }
+            progressDrawable?.let { drawable ->
+                DrawableCompat.setTint(drawable, Color.parseColor("#25D366"))
+            }
         }
-        loadingContainer.addView(progressBar)
+        card.addView(progressBar)
 
         val progressText = TextView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = dipToPixels(context, 16f)
+                topMargin = dipToPixels(context, 12f)
                 gravity = Gravity.CENTER
             }
-            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#D9E1E3"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            text = "Downloading... 0%"
+            text = "Connecting… 0%"
         }
-        loadingContainer.addView(progressText)
+        card.addView(progressText)
 
-        return loadingContainer
+        val cancel = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dipToPixels(context, 44f)
+            ).apply {
+                topMargin = dipToPixels(context, 10f)
+                gravity = Gravity.CENTER
+            }
+            gravity = Gravity.CENTER
+            setPadding(dipToPixels(context, 18f), 0, dipToPixels(context, 18f), 0)
+            setTextColor(Color.parseColor("#53BDEB"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            text = "Cancel"
+            isClickable = true
+            isFocusable = true
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dipToPixels(context, 22f).toFloat()
+                setColor(Color.parseColor("#183B4A54"))
+            }
+            setOnClickListener {
+                if (dialog.isShowing) dialog.dismiss()
+            }
+        }
+        card.addView(cancel)
+        loadingContainer.addView(card)
+
+        return LoadingUi(loadingContainer, progressBar, progressText)
     }
 
     private fun downloadAndDisplayMedia(
@@ -722,7 +791,7 @@ class MediaPreviewHook(
         lastProgressPostAt = now
         mainHandler.post {
             progressBar.progress = progress
-            progressText.text = "Downloading... $progress%\n$sizeInfo"
+            progressText.text = "Downloading… $progress%\n$sizeInfo"
         }
     }
 
