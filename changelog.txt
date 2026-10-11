@@ -3,6 +3,7 @@
 - Added support to restore v1 legacy JSON backup files
 - Filter items by id
 - Option to show toast on hooks injection
+- New Chat (Message unsaved number on WhatsApp by long pressing chat button)
 - Keep own deleted for everyone messages in chat with delete indicator (but deleted for receiver)
 - Added a per-chat Hide Anti-Revoke option that replaces preserved deleted messages with WhatsApp's native sender and receiver deleted-message layouts
 

@@ -51,6 +51,7 @@ import com.waenhancer.licensing.features.AudioToVoiceStatusFeature;
 import com.waenhancer.licensing.features.BootloaderSpooferFeature;
 import com.waenhancer.licensing.features.FileSizeSpooferFeature;
 import com.waenhancer.licensing.features.MessageBomberFeature;
+import com.waenhancer.licensing.features.NewChatFeature;
 import com.waenhancer.licensing.features.StatusSplitterFeature;
 import de.robv.android.xposed.XposedBridge;
 import org.json.JSONArray;
@@ -128,6 +129,15 @@ public final class FeatureRegistry {
         addFeature(new ChatLimitsBypassHook(context, classLoader, prefs), "Conversation");
         addFeature(new DoubleTapReactionHook(context, classLoader, prefs), "Conversation");
         addFeature(new MinorFixesHook(context, classLoader, prefs), "Conversation");
+        try {
+            boolean installed = NewChatFeature.install(classLoader, prefs);
+            features.add(new FeatureEntry("New Chat", "NewChatFeature", "Conversation",
+                    installed ? "ACTIVE" : "DISABLED"));
+        } catch (Throwable t) {
+            FeatureEntry entry = new FeatureEntry("New Chat", "NewChatFeature", "Conversation", "FAILED");
+            entry.error = t.getMessage();
+            features.add(entry);
+        }
         try {
             MessageBomberFeature.install(context, classLoader, prefs);
             features.add(new FeatureEntry("Message Bomber", "MessageBomberFeature", "Conversation", "ACTIVE"));
