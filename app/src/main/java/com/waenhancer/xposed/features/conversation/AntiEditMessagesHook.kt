@@ -30,6 +30,7 @@ import android.widget.TextView
 import com.waenhancer.xposed.core.BaseFeature
 import com.waenhancer.xposed.core.components.WaexBottomSheet
 import com.waenhancer.xposed.core.db.EditMessageStore
+import com.waenhancer.xposed.core.db.MessageStore
 import com.waenhancer.xposed.core.devkit.DexSearchEngine
 import com.waenhancer.xposed.utils.ActivityTracker
 import de.robv.android.xposed.XC_MethodHook
@@ -69,11 +70,16 @@ class AntiEditMessagesHook(
         private const val FIELD_MSG_ID = "waex_msg_id"
         private const val FIELD_MSG_TEXT = "waex_msg_text"
         private val messageTextCache = ConcurrentHashMap<String, String>()
+        private val hookedAdapterClasses = ConcurrentHashMap.newKeySet<Class<*>>()
         private val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
         private val KEY_ID_REGEX = Pattern.compile("id=([A-Za-z0-9]+)")
     }
 
     private val editStore: EditMessageStore by lazy { EditMessageStore.getInstance(context) }
+
+    private fun isFeatureEnabled(): Boolean {
+        return isEnabled(PREF_KEY, false) || isEnabled("antieditmessages", false)
+    }
 
     override fun hook() {
         hookMessageEditMethod()
@@ -92,17 +98,21 @@ class AntiEditMessagesHook(
                     onMessageEdit,
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
-                            if (!isEnabled(PREF_KEY, false)) return
+                            if (!isFeatureEnabled()) return
 
                             try {
                                 val fMessage = param.args.getOrNull(0) ?: return
                                 val keyId = extractKeyId(fMessage)
-                                val rowId = extractRowId(fMessage)
+                                var rowId = extractRowId(fMessage)
                                 val newMessage = extractMessageText(fMessage)
+                                if (rowId <= 0 && !keyId.isNullOrBlank()) {
+                                    rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
+                                }
 
                                 if (!newMessage.isNullOrBlank() && (!keyId.isNullOrEmpty() || rowId > 0)) {
                                     val ts = System.currentTimeMillis()
-                                    editStore.recordEdit(rowId, keyId, newMessage, ts)
+                                    val previous = editStore.getCurrentMessageFromWhatsApp(rowId, keyId)
+                                    editStore.recordTransitionAsync(rowId, keyId, previous, newMessage, ts)
                                     if (!keyId.isNullOrEmpty()) {
                                         messageTextCache[keyId] = newMessage
                                     }
@@ -162,7 +172,7 @@ class AntiEditMessagesHook(
                 Int::class.javaPrimitiveType,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (!isEnabled(PREF_KEY, false)) return
+                        if (!isFeatureEnabled()) return
                         val table = param.args.getOrNull(0) as? String ?: return
                         if (table == "message_edit_info" || table == "message_add_on" || table == "message_add_on_edit_info") {
                             val values = param.args.getOrNull(2) as? android.content.ContentValues ?: return
@@ -176,7 +186,7 @@ class AntiEditMessagesHook(
                                 ?: System.currentTimeMillis()
 
                             if (!editedText.isNullOrBlank() && (!keyId.isNullOrEmpty() || rowId > 0)) {
-                                editStore.recordEdit(rowId, keyId, editedText, ts)
+                                editStore.recordTransitionAsync(rowId, keyId, null, editedText, ts)
                             }
                         }
                     }
@@ -201,34 +211,41 @@ class AntiEditMessagesHook(
                         val actName = currentAct.javaClass.simpleName
                         if (!actName.contains("Conversation")) return
 
-                        val listView = param.thisObject as? ListView ?: return
-                        if (listView.id != android.R.id.list) return
+                        param.thisObject as? ListView ?: return
 
                         var adapter = param.args.getOrNull(0) as? ListAdapter ?: return
                         if (adapter is HeaderViewListAdapter) {
                             adapter = adapter.wrappedAdapter
                         }
-                        if (adapter == null) return
 
                         try {
-                            val getViewMethod = adapter.javaClass.getDeclaredMethod(
+                            if (!hookedAdapterClasses.add(adapter.javaClass)) return
+                            val getViewMethod = XposedHelpers.findMethodBestMatch(
+                                adapter.javaClass,
                                 "getView",
                                 Int::class.javaPrimitiveType,
                                 View::class.java,
                                 ViewGroup::class.java
-                            )
+                            ) ?: return
                             XposedBridge.hookMethod(
                                 getViewMethod,
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(p: MethodHookParam) {
-                                        if (!isEnabled(PREF_KEY, false)) return
+                                        if (!isFeatureEnabled()) return
                                         val pos = p.args.getOrNull(0) as? Int ?: return
                                         val row = p.result as? ViewGroup ?: return
 
                                         val item = try { adapter.getItem(pos) } catch (t: Throwable) { null } ?: return
                                         val keyId = extractKeyId(item)
-                                        val rowId = extractRowId(item)
+                                        var rowId = extractRowId(item)
                                         val msgText = extractMessageText(item)
+                                        if (rowId <= 0 && !keyId.isNullOrBlank()) {
+                                            rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
+                                        }
+
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_TEXT)
 
                                         if (rowId > 0) {
                                             XposedHelpers.setAdditionalInstanceField(row, FIELD_ROW_ID, rowId)
@@ -270,7 +287,7 @@ class AntiEditMessagesHook(
                 "onAttachedToWindow",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        if (!isEnabled(PREF_KEY, false)) return
+                        if (!isFeatureEnabled()) return
 
                         val view = param.thisObject as? View ?: return
                         val resName = getResourceEntryName(view)
@@ -302,6 +319,9 @@ class AntiEditMessagesHook(
             }
         }
 
+        XposedHelpers.removeAdditionalInstanceField(labelView, FIELD_ROW_ID)
+        XposedHelpers.removeAdditionalInstanceField(labelView, FIELD_MSG_ID)
+        XposedHelpers.removeAdditionalInstanceField(labelView, FIELD_MSG_TEXT)
         if (boundRowId > 0) {
             XposedHelpers.setAdditionalInstanceField(labelView, FIELD_ROW_ID, boundRowId)
         }

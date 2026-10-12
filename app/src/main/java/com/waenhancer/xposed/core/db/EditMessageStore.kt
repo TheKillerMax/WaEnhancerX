@@ -6,9 +6,9 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import de.robv.android.xposed.XposedBridge
-import java.io.File
 import java.util.Collections
 import java.util.LinkedHashMap
+import java.util.concurrent.Executors
 
 /**
  * Message history store for recording and querying all versions of edited messages.
@@ -35,6 +35,9 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             }
         }
     )
+    private val writer = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "WAEX-EditHistory").apply { isDaemon = true }
+    }
 
     companion object {
         private const val TAG = "[WAEX:Store]"
@@ -103,6 +106,28 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
     @Synchronized
     fun recordEdit(rowId: Long, keyId: String?, newMessage: String, timestamp: Long) {
+        recordTransition(rowId, keyId, null, newMessage, timestamp)
+    }
+
+    fun recordTransitionAsync(
+        rowId: Long,
+        keyId: String?,
+        previousMessage: String?,
+        newMessage: String,
+        timestamp: Long
+    ) {
+        if (newMessage.isBlank() || (rowId <= 0 && keyId.isNullOrBlank())) return
+        writer.execute { recordTransition(rowId, keyId, previousMessage, newMessage, timestamp) }
+    }
+
+    @Synchronized
+    fun recordTransition(
+        rowId: Long,
+        keyId: String?,
+        previousMessage: String?,
+        newMessage: String,
+        timestamp: Long
+    ) {
         if (newMessage.isBlank()) return
         val ts = if (timestamp > 0) timestamp else System.currentTimeMillis()
         val validKeyId = keyId ?: ""
@@ -111,7 +136,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
         // 1. If first edit, fetch original pre-edit text from WhatsApp's msgstore.db
         if (existing.isEmpty()) {
-            val originalText = getOriginalMessageFromDb(rowId, validKeyId)
+            val originalText = previousMessage?.trim().orEmpty()
+                .ifBlank { getOriginalMessageFromDb(rowId, validKeyId) }
             if (originalText.isNotBlank() && originalText.trim() != newMessage.trim()) {
                 insertMessageDirect(rowId, validKeyId, originalText.trim(), ts - 1000, 1)
                 existing.add(MessageItem(rowId, validKeyId, originalText.trim(), ts - 1000, 1))
@@ -128,6 +154,10 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
         if (rowId > 0) messagesCache[rowId.toString()] = existing
         if (validKeyId.isNotEmpty()) messagesCache[validKeyId] = existing
+    }
+
+    fun getCurrentMessageFromWhatsApp(rowId: Long, keyId: String?): String {
+        return getOriginalMessageFromDb(rowId, keyId.orEmpty())
     }
 
     private fun insertMessageDirect(rowId: Long, keyId: String, text: String, timestamp: Long, version: Int) {
@@ -215,8 +245,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
     private fun getOriginalMessageFromDb(rowId: Long, keyId: String): String {
         try {
-            val dbFile = File(context.filesDir.parentFile, "databases/msgstore.db")
-            if (!dbFile.exists()) return ""
+            val dbFile = MessageStore.findMsgstoreDbFile(context) ?: return ""
 
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 // 1. Query message table
