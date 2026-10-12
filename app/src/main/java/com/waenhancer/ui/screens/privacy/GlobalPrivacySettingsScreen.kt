@@ -168,6 +168,13 @@ fun GlobalPrivacySettingsScreen(
         } else if (key == "locked_chats_enhancer") {
             preferenceManager.putBoolean("lockedchats_enhancer", value)
         }
+        if (key == "hide_read_receipts" && !value) {
+            settingsState["blueonreply"] = false
+            preferenceManager.putBoolean("blueonreply", false)
+            settingsState["seentick"] = false
+            seenTickPlacement = "0"
+            preferenceManager.putString("seentick", "0")
+        }
     }
 
     var showColorPickerDialog by remember { mutableStateOf(false) }

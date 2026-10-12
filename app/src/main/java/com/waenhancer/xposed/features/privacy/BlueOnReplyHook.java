@@ -175,7 +175,7 @@ public class BlueOnReplyHook extends BaseFeature {
     }
 
     public boolean isBlueOnReplyEnabled() {
-        return isEnabled(PREF_KEY, false);
+        return isHideBlueTicksEnabled() && isEnabled(PREF_KEY, false);
     }
 
     public static void captureSuppressedReadJob(String jid, Constructor<?> constructor,
@@ -330,8 +330,12 @@ public class BlueOnReplyHook extends BaseFeature {
     }
 
     private void injectConversationMenuItem(Menu menu, Object conversation) {
-        if (!isManualButtonEnabled() || menu == null
-                || menu.findItem(MENU_SEND_BLUE_TICK) != null) return;
+        if (menu == null) return;
+        if (!isManualButtonEnabled()) {
+            menu.removeItem(MENU_SEND_BLUE_TICK);
+            return;
+        }
+        if (menu.findItem(MENU_SEND_BLUE_TICK) != null) return;
 
         MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, "Send blue tick");
         android.graphics.drawable.Drawable icon = MenuIconLoader.load(context, "ic_waex_mark_read");
@@ -357,6 +361,7 @@ public class BlueOnReplyHook extends BaseFeature {
     }
 
     private boolean isManualButtonEnabled() {
+        if (!isHideBlueTicksEnabled()) return false;
         Object value = prefs.getAll().get("seentick");
         if (value instanceof Boolean) return (Boolean) value;
         if (value instanceof Number) return ((Number) value).intValue() != 0;
@@ -365,6 +370,10 @@ public class BlueOnReplyHook extends BaseFeature {
             return !text.isEmpty() && !"0".equals(text) && !"false".equalsIgnoreCase(text);
         }
         return false;
+    }
+
+    private boolean isHideBlueTicksEnabled() {
+        return isEnabled("hide_read_receipts", false) || isEnabled("hideread", false);
     }
 
     /** 1 = toolbar icon, 2 = overflow menu. Boolean legacy values migrate as toolbar mode. */

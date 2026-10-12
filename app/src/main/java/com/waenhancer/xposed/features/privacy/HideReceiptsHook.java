@@ -222,11 +222,13 @@ public class HideReceiptsHook extends BaseFeature {
                                 if (shouldHideStatusView(target)) {
                                     XposedHelpers.setAdditionalInstanceField(job, "waex_hide_status_view", true);
                                 }
-                            } else if (shouldHideReadReceipt(jid)
-                                    && (isEnabled("blueonreply", false)
-                                    || isManualSeenTickEnabled())) {
+                            } else if ((isEnabled("blueonreply", false)
+                                    || isManualSeenTickEnabled())
+                                    && !hasExplicitReceiptIds(param.args)) {
+                                String captureJid = jid != null ? jid
+                                        : findJidInArguments(param.args);
                                 BlueOnReplyHook.captureSuppressedReadJob(
-                                        jid, (Constructor<?>) param.method, param.args);
+                                        captureJid, (Constructor<?>) param.method, param.args);
                             }
                         } catch (Throwable ignored) {}
                     }
@@ -265,6 +267,7 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private boolean isManualSeenTickEnabled() {
+        if (!isHideReadReceiptsEnabled()) return false;
         Object value = prefs.getAll().get("seentick");
         if (value instanceof Boolean) return (Boolean) value;
         if (value instanceof Number) return ((Number) value).intValue() != 0;
@@ -274,6 +277,32 @@ public class HideReceiptsHook extends BaseFeature {
                     && !"false".equalsIgnoreCase(text);
         }
         return false;
+    }
+
+    private static String findJidInArguments(Object[] arguments) {
+        if (arguments == null) return null;
+        for (Object argument : arguments) {
+            if (argument == null || argument instanceof String[]) continue;
+            String value = String.valueOf(argument);
+            String jid = canonicalJid(value);
+            if (jid != null) return jid;
+        }
+        return null;
+    }
+
+    private static boolean hasExplicitReceiptIds(Object[] constructorArguments) {
+        if (constructorArguments == null) return false;
+        boolean foundIds = false;
+        for (Object argument : constructorArguments) {
+            if (!(argument instanceof String[])) continue;
+            String[] ids = (String[]) argument;
+            if (ids.length == 0) continue;
+            foundIds = true;
+            for (String id : ids) {
+                if (!isExplicitReceiptAllowed(id)) return false;
+            }
+        }
+        return foundIds;
     }
 
     /**
