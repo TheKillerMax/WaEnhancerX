@@ -139,6 +139,13 @@ assert 'contactIdResolved=$hasContactId' in online_presence
 assert 'Presence request failed: ${t.javaClass.simpleName}' in online_presence
 assert 'Setup failed: ${t.javaClass.simpleName}' in online_presence
 assert 'Setup failed: $t' not in online_presence
+# No private-object reflection is performed solely to populate discarded debug strings.
+assert 'val summary = param.args?.mapIndexed' not in online_presence
+assert 'val fields = contact.javaClass.declaredFields' not in online_presence
+assert 'value?.toString()?.take(180)' not in online_presence
+assert 'if (bindDiagnostics.getAndIncrement() < 5) {\n                    }' not in online_presence
+assert 'if (subscriptionDiagnostics.getAndIncrement() < 5) {\n            }' not in online_presence
+
 assert 'Presence request failed for $key' not in online_presence
 
 
