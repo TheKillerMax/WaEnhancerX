@@ -14,6 +14,7 @@ import com.waenhancer.xposed.features.conversation.ChatLimitsBypassHook;
 import com.waenhancer.xposed.features.conversation.CopyStatusTextHook;
 import com.waenhancer.xposed.features.conversation.DoubleTapReactionHook;
 import com.waenhancer.xposed.features.conversation.JumpFirstMessageHook;
+import com.waenhancer.xposed.features.conversation.MessageDeviceSourceHook;
 import com.waenhancer.xposed.features.conversation.MinorFixesHook;
 import com.waenhancer.xposed.features.conversation.PreserveDeleteForMeHook;
 import com.waenhancer.xposed.features.conversation.StickerConfirmHook;
@@ -149,6 +150,7 @@ public final class FeatureRegistry {
         addFeature(CopyStatusTextHook.class, "Conversation", () -> new CopyStatusTextHook(context, classLoader, prefs));
         addFeature(ChatLimitsBypassHook.class, "Conversation", () -> new ChatLimitsBypassHook(context, classLoader, prefs));
         addFeature(DoubleTapReactionHook.class, "Conversation", () -> new DoubleTapReactionHook(context, classLoader, prefs));
+        addFeature(MessageDeviceSourceHook.class, "Conversation", () -> new MessageDeviceSourceHook(context, classLoader, prefs));
         addFeature(MinorFixesHook.class, "Conversation", () -> new MinorFixesHook(context, classLoader, prefs));
         try {
             boolean installed = NewChatFeature.install(classLoader, prefs);
