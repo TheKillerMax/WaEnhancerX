@@ -125,7 +125,7 @@ assert 'XposedBridge.log(TAG + " Status root view still null after delay")' in a
 assert 'XposedBridge.log(TAG + " No timestamp TextView in status view")' in anti
 assert 'Preserved Delete-For-Me: chat=' not in preserve
 online_presence = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt").read_text()
-assert 'jidResolved=${jid != null}' in online_presence
+assert 'contactIdResolved=$hasContactId' in online_presence
 assert 'Presence request failed: ${t.javaClass.simpleName}' in online_presence
 assert 'Presence request failed for $key' not in online_presence
 

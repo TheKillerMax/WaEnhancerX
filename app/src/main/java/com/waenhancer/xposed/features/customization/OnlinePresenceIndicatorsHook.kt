@@ -100,7 +100,8 @@ class OnlinePresenceIndicatorsHook(
                     val row = findConversationRow(param.thisObject)
                     val jid = findJid(param.args, 3)
                     if ((row == null || jid == null) && bindDiagnostics.getAndIncrement() < 5) {
-                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, jidResolved=${jid != null}, args=${param.args?.size ?: 0}")
+                        val hasContactId = jid != null
+                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, contactIdResolved=$hasContactId, args=${param.args?.size ?: 0}")
                     }
                     if (row == null || jid == null) return
                     if (jid.contains("@g.us")) return
