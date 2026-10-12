@@ -14,6 +14,7 @@ import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 
@@ -23,11 +24,15 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  */
 public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
+    public static final String RESTART_PERMISSION = "com.waenhancer.permission.RESTART_TARGET";
+
     public static final String PACKAGE_MANAGER = "com.waenhancer";
     public static final String PACKAGE_WPP = "com.whatsapp";
     public static final String PACKAGE_BUSINESS = "com.whatsapp.w4b";
 
     private static XSharedPreferences sPrefs;
+    private static volatile PreferenceBridgeClient sPreferenceBridge;
+    private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
     private String mModulePath;
 
     @Override
@@ -38,13 +43,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     public static synchronized XSharedPreferences getPrefs() {
         if (sPrefs == null) {
             sPrefs = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
-            sPrefs.makeWorldReadable();
             sPrefs.reload();
         }
         return sPrefs;
     }
 
-    @SuppressLint("WorldReadableFiles")
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         String packageName = lpparam.packageName;
@@ -116,6 +120,36 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 return;
             }
 
+            // Read the world-readable snapshot before Application startup, then begin the
+            // authoritative provider fetch as soon as a Context becomes available. This overlaps
+            // preference IPC with the target's attach -> onCreate work without using stale
+            // entitlement/config values when hooks are installed.
+            final XSharedPreferences preloadedPrefs = getPrefs();
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Application",
+                        lpparam.classLoader,
+                        "attach",
+                        Context.class,
+                        new XC_MethodHook() {
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) {
+                                Context context = (Context) param.thisObject;
+                                if (sPreferenceBridge == null) {
+                                    synchronized (MainHook.class) {
+                                        if (sPreferenceBridge == null) {
+                                            sPreferenceBridge = new PreferenceBridgeClient(
+                                                    context, preloadedPrefs, true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                );
+            } catch (Throwable t) {
+                XposedBridge.log("[WAEX] Failed to start early preference preload: "
+                        + t.getMessage());
+            }
 
             // Initialize features on target Application creation
             try {
@@ -127,6 +161,9 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
                                 Context appContext = (Context) param.thisObject;
+                                if (!TARGET_INITIALIZED.compareAndSet(false, true)) {
+                                    return;
+                                }
                                 if (appContext instanceof android.app.Application) {
                                     com.waenhancer.xposed.utils.ActivityTracker.install((android.app.Application) appContext);
                                 }
@@ -145,23 +182,50 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         @Override
                                         public void onReceive(Context context, android.content.Intent intent) {
                                             String pkg = intent.getStringExtra("PKG");
-                                            if (pkg == null || pkg.equals(packageName)) {
+                                            if (packageName.equals(pkg)) {
                                                 android.os.Process.killProcess(android.os.Process.myPid());
-                                                System.exit(0);
                                             }
                                         }
                                     };
                                     if (android.os.Build.VERSION.SDK_INT >= 33) {
-                                        appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+                                        appContext.registerReceiver(receiver, filter, RESTART_PERMISSION,
+                                                null, Context.RECEIVER_EXPORTED);
                                     } else {
-                                        appContext.registerReceiver(receiver, filter);
+                                        appContext.registerReceiver(receiver, filter, RESTART_PERMISSION, null);
                                     }
                                 } catch (Throwable ignored) {}
 
                                 boolean showHookToast = true;
                                 try {
-                                    PreferenceBridgeClient bridgeClient =
-                                            new PreferenceBridgeClient(appContext, getPrefs());
+                                    PreferenceBridgeClient resolvedBridge = sPreferenceBridge;
+                                    if (resolvedBridge == null) {
+                                        resolvedBridge = new PreferenceBridgeClient(appContext, preloadedPrefs);
+                                        sPreferenceBridge = resolvedBridge;
+                                    } else {
+                                        resolvedBridge.awaitInitialSync();
+                                    }
+                                    final PreferenceBridgeClient bridgeClient = resolvedBridge;
+                                    com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
+                                    try {
+                                        android.content.IntentFilter prefsFilter = new android.content.IntentFilter(
+                                                "com.waenhancer.action.PREFERENCES_CHANGED");
+                                        android.content.BroadcastReceiver prefsReceiver = new android.content.BroadcastReceiver() {
+                                            @Override
+                                            public void onReceive(Context context, android.content.Intent intent) {
+                                                bridgeClient.syncPreferences();
+                                            }
+                                        };
+                                        if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                            appContext.registerReceiver(prefsReceiver, prefsFilter, RESTART_PERMISSION,
+                                                    null, Context.RECEIVER_EXPORTED);
+                                        } else {
+                                            appContext.registerReceiver(prefsReceiver, prefsFilter,
+                                                    RESTART_PERMISSION, null);
+                                        }
+                                    } catch (Throwable t) {
+                                        XposedBridge.log("[WAEX] Failed to register preference refresh receiver: "
+                                                + t.getMessage());
+                                    }
                                     showHookToast = bridgeClient.getBoolean("show_hook_toast", true);
 
                                     // Verify universal version compatibility before loading hooks

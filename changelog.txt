@@ -1,21 +1,15 @@
 [Added]
-- Added support for version 2.26.41.xx WA/WB
-- Added support to restore v1 legacy JSON backup files
-- Filter items by id
-- Option to show toast on hooks injection
-- New Chat (Message unsaved number on WhatsApp by long pressing chat button)
-- Keep own deleted for everyone messages in chat with delete indicator (but deleted for receiver)
-- Added a per-chat Hide Anti-Revoke option that replaces preserved deleted messages with WhatsApp's native sender and receiver deleted-message layouts
-
-[Removed]
-- Removed Beta channel flow. Normalized the versioning and update flow
+- Restart required sheet in WhatsApp on updating a pref
+- Show message device source
+- Unlock WA Plus (Pro)
 
 [Fixed]
-- Fixed media preview
-- Fixed module installation/upgrade issues for v1 users
-- Fixed status download and copy to clipboard
-- Fixed Ghost mode according to latest WA/WB
+- Fixed update checker sheet
+- Fixed message edit history
+- Fixed toast on deleted message
 
 [Improvements]
-- Improved changelog upgrades / downgrades
-- Made initial user permissions optional
+- Improved performance
+- Improved injection strategy
+- Hide blue ticks
+- Hide delivered

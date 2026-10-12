@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.core.devkit.HookReturnTypeGuard;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -48,7 +49,9 @@ public class MediaQualityBypassHook extends BaseFeature {
                     }
             );
 
-            if (imageQualityMethod != null) {
+            if (imageQualityMethod != null && !HookReturnTypeGuard.firstParameterIsInteger(imageQualityMethod)) {
+                XposedBridge.log(TAG + " Skipping image-quality candidate without integer first parameter: " + imageQualityMethod);
+            } else if (imageQualityMethod != null) {
                 XposedBridge.hookMethod(imageQualityMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
@@ -82,7 +85,9 @@ public class MediaQualityBypassHook extends BaseFeature {
                     }
             );
 
-            if (videoFpsMethod != null) {
+            if (videoFpsMethod != null && !HookReturnTypeGuard.returnsInteger(videoFpsMethod)) {
+                XposedBridge.log(TAG + " Skipping video-FPS candidate without integer result: " + videoFpsMethod);
+            } else if (videoFpsMethod != null) {
                 XposedBridge.hookMethod(videoFpsMethod, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
