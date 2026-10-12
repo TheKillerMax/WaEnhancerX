@@ -14,6 +14,7 @@ import com.waenhancer.xposed.features.conversation.ChatLimitsBypassHook;
 import com.waenhancer.xposed.features.conversation.CopyStatusTextHook;
 import com.waenhancer.xposed.features.conversation.DoubleTapReactionHook;
 import com.waenhancer.xposed.features.conversation.JumpFirstMessageHook;
+import com.waenhancer.xposed.features.conversation.MessageDeviceSourceHook;
 import com.waenhancer.xposed.features.conversation.MinorFixesHook;
 import com.waenhancer.xposed.features.conversation.PreserveDeleteForMeHook;
 import com.waenhancer.xposed.features.conversation.StickerConfirmHook;
@@ -53,6 +54,7 @@ import com.waenhancer.licensing.features.FileSizeSpooferFeature;
 import com.waenhancer.licensing.features.MessageBomberFeature;
 import com.waenhancer.licensing.features.NewChatFeature;
 import com.waenhancer.licensing.features.StatusSplitterFeature;
+import com.waenhancer.licensing.features.UnlockWaPlusFeature;
 import de.robv.android.xposed.XposedBridge;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -64,45 +66,45 @@ import java.util.List;
  */
 public final class FeatureRegistry {
 
+    private final List<FeatureEntry> features = new ArrayList<>();
+
     @FunctionalInterface
     private interface FeatureFactory {
         BaseFeature create() throws Throwable;
     }
 
-    private final List<FeatureEntry> features = new ArrayList<>();
-
     public static final class FeatureEntry {
         public BaseFeature feature;
-        private final FeatureFactory factory;
         public String name;
-        public String className;
+        public final String className;
         public final String category;
+        private final FeatureFactory factory;
         public String status = "INITIALIZED";
         public String error = null;
 
         public FeatureEntry(BaseFeature feature, String category) {
             this.feature = feature;
-            this.factory = null;
             this.name = feature.getName();
             this.className = feature.getClass().getSimpleName();
             this.category = category;
-        }
-
-        FeatureEntry(FeatureFactory factory, String className, String category) {
-            this.feature = null;
-            this.factory = factory;
-            this.name = className;
-            this.className = className;
-            this.category = category;
+            this.factory = null;
         }
 
         public FeatureEntry(String name, String className, String category, String status) {
             this.feature = null;
-            this.factory = null;
             this.name = name;
             this.className = className;
             this.category = category;
             this.status = status;
+            this.factory = null;
+        }
+
+        private FeatureEntry(String className, String category, FeatureFactory factory) {
+            this.feature = null;
+            this.name = className;
+            this.className = className;
+            this.category = category;
+            this.factory = factory;
         }
     }
 
@@ -111,11 +113,7 @@ public final class FeatureRegistry {
         try {
             NativeWhatsAppDialog.Companion.initialize(context, classLoader);
         } catch (Throwable t) {
-            FeatureEntry entry = new FeatureEntry("Native WhatsApp Dialog",
-                    "NativeWhatsAppDialog", "Core", "FAILED");
-            entry.error = t.getMessage();
-            features.add(entry);
-            XposedBridge.log("[WAEX] Native dialog initialization failed: " + t);
+            XposedBridge.log("[WAEX] Native dialog initialization failed: " + t.getMessage());
         }
         try {
             BootloaderSpooferFeature.install(context, classLoader, prefs);
@@ -127,32 +125,33 @@ public final class FeatureRegistry {
         }
 
         // Privacy & Seen Controls
-        addFeature(() -> new AntiViewOnceHook(context, classLoader, prefs), "AntiViewOnceHook", "Privacy");
-        addFeature(() -> new TypingPrivacyHook(context, classLoader, prefs), "TypingPrivacyHook", "Privacy");
-        addFeature(() -> new FreezeLastSeenHook(context, classLoader, prefs), "FreezeLastSeenHook", "Privacy");
-        addFeature(() -> new AlwaysOnlineHook(context, classLoader, prefs), "AlwaysOnlineHook", "Privacy");
-        addFeature(() -> new HideReceiptsHook(context, classLoader, prefs), "HideReceiptsHook", "Privacy");
-        addFeature(() -> new BlueOnReplyHook(context, classLoader, prefs), "BlueOnReplyHook", "Privacy");
-        addFeature(() -> new CallPrivacyHook(context, classLoader, prefs), "CallPrivacyHook", "Privacy");
-        addFeature(() -> new AntiRevokeHook(context, classLoader, prefs), "AntiRevokeHook", "Privacy");
-        addFeature(() -> new HideForwardedTagHook(context, classLoader, prefs), "HideForwardedTagHook", "Privacy");
-        addFeature(() -> new CustomPrivacyHook(context, classLoader, prefs), "CustomPrivacyHook", "Privacy");
-        addFeature(() -> new AutoNextStatusHook(context, classLoader, prefs), "AutoNextStatusHook", "Privacy");
-        addFeature(() -> new AntiDisappearingMessagesHook(context, classLoader, prefs), "AntiDisappearingMessagesHook", "Privacy");
-        addFeature(() -> new LockedChatsEnhancerHook(context, classLoader, prefs), "LockedChatsEnhancerHook", "Privacy");
-        addFeature(() -> new HideArchivedChatsHook(context, classLoader, prefs), "HideArchivedChatsHook", "Privacy");
-        addFeature(() -> new DndModeHook(context, classLoader, prefs), "DndModeHook", "Privacy");
-        addFeature(() -> new HideChatsVaultHook(context, classLoader, prefs), "HideChatsVaultHook", "Privacy");
+        addFeature(AntiViewOnceHook.class, "Privacy", () -> new AntiViewOnceHook(context, classLoader, prefs));
+        addFeature(TypingPrivacyHook.class, "Privacy", () -> new TypingPrivacyHook(context, classLoader, prefs));
+        addFeature(FreezeLastSeenHook.class, "Privacy", () -> new FreezeLastSeenHook(context, classLoader, prefs));
+        addFeature(AlwaysOnlineHook.class, "Privacy", () -> new AlwaysOnlineHook(context, classLoader, prefs));
+        addFeature(HideReceiptsHook.class, "Privacy", () -> new HideReceiptsHook(context, classLoader, prefs));
+        addFeature(BlueOnReplyHook.class, "Privacy", () -> new BlueOnReplyHook(context, classLoader, prefs));
+        addFeature(CallPrivacyHook.class, "Privacy", () -> new CallPrivacyHook(context, classLoader, prefs));
+        addFeature(AntiRevokeHook.class, "Privacy", () -> new AntiRevokeHook(context, classLoader, prefs));
+        addFeature(HideForwardedTagHook.class, "Privacy", () -> new HideForwardedTagHook(context, classLoader, prefs));
+        addFeature(CustomPrivacyHook.class, "Privacy", () -> new CustomPrivacyHook(context, classLoader, prefs));
+        addFeature(AutoNextStatusHook.class, "Privacy", () -> new AutoNextStatusHook(context, classLoader, prefs));
+        addFeature(AntiDisappearingMessagesHook.class, "Privacy", () -> new AntiDisappearingMessagesHook(context, classLoader, prefs));
+        addFeature(LockedChatsEnhancerHook.class, "Privacy", () -> new LockedChatsEnhancerHook(context, classLoader, prefs));
+        addFeature(HideArchivedChatsHook.class, "Privacy", () -> new HideArchivedChatsHook(context, classLoader, prefs));
+        addFeature(DndModeHook.class, "Privacy", () -> new DndModeHook(context, classLoader, prefs));
+        addFeature(HideChatsVaultHook.class, "Privacy", () -> new HideChatsVaultHook(context, classLoader, prefs));
 
         // Conversation & Message Controls
-        addFeature(() -> new AntiEditMessagesHook(context, classLoader, prefs), "AntiEditMessagesHook", "Conversation");
-        addFeature(() -> new StickerConfirmHook(context, classLoader, prefs), "StickerConfirmHook", "Conversation");
-        addFeature(() -> new JumpFirstMessageHook(context, classLoader, prefs), "JumpFirstMessageHook", "Conversation");
-        addFeature(() -> new PreserveDeleteForMeHook(context, classLoader, prefs), "PreserveDeleteForMeHook", "Conversation");
-        addFeature(() -> new CopyStatusTextHook(context, classLoader, prefs), "CopyStatusTextHook", "Conversation");
-        addFeature(() -> new ChatLimitsBypassHook(context, classLoader, prefs), "ChatLimitsBypassHook", "Conversation");
-        addFeature(() -> new DoubleTapReactionHook(context, classLoader, prefs), "DoubleTapReactionHook", "Conversation");
-        addFeature(() -> new MinorFixesHook(context, classLoader, prefs), "MinorFixesHook", "Conversation");
+        addFeature(AntiEditMessagesHook.class, "Conversation", () -> new AntiEditMessagesHook(context, classLoader, prefs));
+        addFeature(StickerConfirmHook.class, "Conversation", () -> new StickerConfirmHook(context, classLoader, prefs));
+        addFeature(JumpFirstMessageHook.class, "Conversation", () -> new JumpFirstMessageHook(context, classLoader, prefs));
+        addFeature(PreserveDeleteForMeHook.class, "Conversation", () -> new PreserveDeleteForMeHook(context, classLoader, prefs));
+        addFeature(CopyStatusTextHook.class, "Conversation", () -> new CopyStatusTextHook(context, classLoader, prefs));
+        addFeature(ChatLimitsBypassHook.class, "Conversation", () -> new ChatLimitsBypassHook(context, classLoader, prefs));
+        addFeature(DoubleTapReactionHook.class, "Conversation", () -> new DoubleTapReactionHook(context, classLoader, prefs));
+        addFeature(MessageDeviceSourceHook.class, "Conversation", () -> new MessageDeviceSourceHook(context, classLoader, prefs));
+        addFeature(MinorFixesHook.class, "Conversation", () -> new MinorFixesHook(context, classLoader, prefs));
         try {
             boolean installed = NewChatFeature.install(classLoader, prefs);
             features.add(new FeatureEntry("New Chat", "NewChatFeature", "Conversation",
@@ -172,17 +171,17 @@ public final class FeatureRegistry {
         }
 
         // Homescreen & Layout Controls
-        addFeature(() -> new HomeScreenHeaderActionsHook(context, classLoader, prefs), "HomeScreenHeaderActionsHook", "Customization");
-        addFeature(() -> new ChatListCustomizationsHook(context, classLoader, prefs), "ChatListCustomizationsHook", "Customization");
+        addFeature(HomeScreenHeaderActionsHook.class, "Customization", () -> new HomeScreenHeaderActionsHook(context, classLoader, prefs));
+        addFeature(ChatListCustomizationsHook.class, "Customization", () -> new ChatListCustomizationsHook(context, classLoader, prefs));
 
         // Media & Audio Controls
-        addFeature(() -> new DownloadViewOnceHook(context, classLoader, prefs), "DownloadViewOnceHook", "Media");
-        addFeature(() -> new StatusDownloadHook(context, classLoader, prefs), "StatusDownloadHook", "Media");
-        addFeature(() -> new MediaQualityBypassHook(context, classLoader, prefs), "MediaQualityBypassHook", "Media");
-        addFeature(() -> new MediaPreviewHook(context, classLoader, prefs), "MediaPreviewHook", "Media");
-        addFeature(() -> new ProximitySensorHook(context, classLoader, prefs), "ProximitySensorHook", "Media");
-        addFeature(() -> new CallRecordingHook(context, classLoader, prefs), "CallRecordingHook", "Media");
-        addFeature(() -> new ProfilePhotoDownloadHook(context, classLoader, prefs), "ProfilePhotoDownloadHook", "Media");
+        addFeature(DownloadViewOnceHook.class, "Media", () -> new DownloadViewOnceHook(context, classLoader, prefs));
+        addFeature(StatusDownloadHook.class, "Media", () -> new StatusDownloadHook(context, classLoader, prefs));
+        addFeature(MediaQualityBypassHook.class, "Media", () -> new MediaQualityBypassHook(context, classLoader, prefs));
+        addFeature(MediaPreviewHook.class, "Media", () -> new MediaPreviewHook(context, classLoader, prefs));
+        addFeature(ProximitySensorHook.class, "Media", () -> new ProximitySensorHook(context, classLoader, prefs));
+        addFeature(CallRecordingHook.class, "Media", () -> new CallRecordingHook(context, classLoader, prefs));
+        addFeature(ProfilePhotoDownloadHook.class, "Media", () -> new ProfilePhotoDownloadHook(context, classLoader, prefs));
         try {
             AudioToVoiceStatusFeature.install(context, classLoader, prefs);
             features.add(new FeatureEntry("Audio to Voice Status", "AudioToVoiceStatusFeature", "Media", "ACTIVE"));
@@ -209,29 +208,35 @@ public final class FeatureRegistry {
         }
 
         // Automation & Notification Controls
-        addFeature(() -> new PresenceToastsHook(context, classLoader, prefs), "PresenceToastsHook", "Automation");
-        addFeature(() -> new TaskerIntegrationHook(context, classLoader, prefs), "TaskerIntegrationHook", "Automation");
-        addFeature(() -> new ChatBubbleColorsHook(context, classLoader, prefs), "ChatBubbleColorsHook", "Customization");
-        addFeature(() -> new ChannelRecommendationsFilterHook(context, classLoader, prefs), "ChannelRecommendationsFilterHook", "Customization");
-        addFeature(() -> new OnlinePresenceIndicatorsHook(context, classLoader, prefs), "OnlinePresenceIndicatorsHook", "Customization");
-        addFeature(() -> new SeparateGroupsHook(context, classLoader, prefs), "SeparateGroupsHook", "Customization");
-        addFeature(() -> new FloatingBottomBarHook(context, classLoader, prefs), "FloatingBottomBarHook", "Customization");
-        addFeature(() -> new FilterItemsHook(context, classLoader, prefs), "FilterItemsHook", "Customization");
+        addFeature(PresenceToastsHook.class, "Automation", () -> new PresenceToastsHook(context, classLoader, prefs));
+        addFeature(TaskerIntegrationHook.class, "Automation", () -> new TaskerIntegrationHook(context, classLoader, prefs));
+        addFeature(ChatBubbleColorsHook.class, "Customization", () -> new ChatBubbleColorsHook(context, classLoader, prefs));
+        addFeature(ChannelRecommendationsFilterHook.class, "Customization", () -> new ChannelRecommendationsFilterHook(context, classLoader, prefs));
+        addFeature(OnlinePresenceIndicatorsHook.class, "Customization", () -> new OnlinePresenceIndicatorsHook(context, classLoader, prefs));
+        addFeature(SeparateGroupsHook.class, "Customization", () -> new SeparateGroupsHook(context, classLoader, prefs));
+        addFeature(FloatingBottomBarHook.class, "Customization", () -> new FloatingBottomBarHook(context, classLoader, prefs));
+        addFeature(FilterItemsHook.class, "Customization", () -> new FilterItemsHook(context, classLoader, prefs));
+        try {
+            UnlockWaPlusFeature.install(context, classLoader, prefs);
+            features.add(new FeatureEntry("Unlock WA Plus", "UnlockWaPlusFeature", "Customization", "ACTIVE"));
+        } catch (Throwable t) {
+            FeatureEntry entry = new FeatureEntry("Unlock WA Plus", "UnlockWaPlusFeature", "Customization", "FAILED");
+            entry.error = t.getMessage();
+            features.add(entry);
+        }
     }
 
-    private void addFeature(FeatureFactory factory, String className, String category) {
-        features.add(new FeatureEntry(factory, className, category));
+    private void addFeature(Class<? extends BaseFeature> type, String category, FeatureFactory factory) {
+        features.add(new FeatureEntry(type.getSimpleName(), category, factory));
     }
 
     public void initializeAll() {
         for (FeatureEntry entry : features) {
             if (entry.factory != null) {
                 try {
-                    BaseFeature feature = entry.factory.create();
-                    entry.feature = feature;
-                    entry.name = feature.getName();
-                    entry.className = feature.getClass().getSimpleName();
-                    feature.hook();
+                    entry.feature = entry.factory.create();
+                    entry.name = entry.feature.getName();
+                    entry.feature.hook();
                     entry.status = "ACTIVE";
                 } catch (Throwable t) {
                     entry.status = "FAILED";

@@ -26,6 +26,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Privacy Receipts Hook:
@@ -37,6 +41,11 @@ import java.util.List;
 public class HideReceiptsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][HideReceipts]";
+    private static final long BLUE_REPLY_WINDOW_MS = 120_000L;
+    private static final Pattern JID_PATTERN = Pattern.compile(
+            "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
+    private static final Map<String, Long> BLUE_REPLY_BYPASS = new ConcurrentHashMap<>();
+    private static final Map<String, Long> EXPLICIT_RECEIPT_IDS = new ConcurrentHashMap<>();
 
     private Class<?> protocolTreeNodeClass;
     private Class<?> keyValueClass;
@@ -150,18 +159,22 @@ public class HideReceiptsHook extends BaseFeature {
                         if (fMessageObj == null) return;
 
                         String jid = extractJidString(fMessageObj, "key");
-                        String target = extractParticipantOrJid(fMessageObj);
+                        String participant = extractParticipantOrJid(fMessageObj);
+                        String target = resolveConversationTarget(jid, participant);
 
-                        if (isStatusTarget(jid, target)) {
-                            if (shouldHideStatusView(target != null ? target : jid)) {
+                        if (isStatusTarget(jid, participant)) {
+                            if (shouldHideStatusView(target)) {
                                 param.setResult(null);
                             }
                             return;
                         }
 
-                        if (shouldHideReadReceipt(target != null ? target : jid)) {
-                            param.setResult(null);
-                            XposedBridge.log(TAG + " EnforceHiding: Suppressed Incoming Read Receipt for " + (target != null ? target : jid));
+                        if (shouldHideReadReceipt(target)) {
+                            // Do not cancel this call. On current WhatsApp builds the open-chat
+                            // path may combine delivery and read acknowledgement generation. The
+                            // ProtocolTreeNode hook below downgrades only type=read, preserving the
+                            // sender's ordinary delivered (double-tick) acknowledgement.
+                            XposedBridge.log(TAG + " EnforceHiding: Downgrading read receipt for " + target);
                         }
                     }
                 });
@@ -178,7 +191,12 @@ public class HideReceiptsHook extends BaseFeature {
         try {
             Class<?> sendJobClass = null;
             try {
-                sendJobClass = XposedHelpers.findClassIfExists("com.whatsapp.jobqueue.job.SendReadReceiptJob", classLoader);
+                sendJobClass = XposedHelpers.findClassIfExists(
+                        "com.whatsapp.messaging.receipts.jobqueue.job.SendReadReceiptJob", classLoader);
+                if (sendJobClass == null) {
+                    sendJobClass = XposedHelpers.findClassIfExists(
+                            "com.whatsapp.jobqueue.job.SendReadReceiptJob", classLoader);
+                }
             } catch (Throwable ignored) {}
 
             if (sendJobClass == null) {
@@ -209,8 +227,13 @@ public class HideReceiptsHook extends BaseFeature {
                                 if (shouldHideStatusView(target)) {
                                     XposedHelpers.setAdditionalInstanceField(job, "waex_hide_status_view", true);
                                 }
-                            } else if (shouldHideReadReceipt(jid)) {
-                                XposedHelpers.setAdditionalInstanceField(job, "waex_hide_read", true);
+                            } else if ((isEnabled("blueonreply", false)
+                                    || isManualSeenTickEnabled())
+                                    && !hasExplicitReceiptIds(param.args)) {
+                                String captureJid = jid != null ? jid
+                                        : findJidInArguments(param.args);
+                                BlueOnReplyHook.captureSuppressedReadJob(
+                                        captureJid, (Constructor<?>) param.method, param.args);
                             }
                         } catch (Throwable ignored) {}
                     }
@@ -231,12 +254,6 @@ public class HideReceiptsHook extends BaseFeature {
                                 return;
                             }
 
-                            Boolean hideRead = (Boolean) XposedHelpers.getAdditionalInstanceField(job, "waex_hide_read");
-                            if (hideRead != null && hideRead) {
-                                param.setResult(null);
-                                return;
-                            }
-
                             String jid = extractJidString(job, "jid");
                             String participant = extractJidString(job, "participant");
                             if (isStatusTarget(jid, participant)) {
@@ -244,8 +261,6 @@ public class HideReceiptsHook extends BaseFeature {
                                 if (shouldHideStatusView(target)) {
                                     param.setResult(null);
                                 }
-                            } else if (shouldHideReadReceipt(jid)) {
-                                param.setResult(null);
                             }
                         }
                     });
@@ -254,6 +269,45 @@ public class HideReceiptsHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
         }
+    }
+
+    private boolean isManualSeenTickEnabled() {
+        if (!isHideReadReceiptsEnabled()) return false;
+        Object value = prefs.getAll().get("seentick");
+        if (value instanceof Boolean) return (Boolean) value;
+        if (value instanceof Number) return ((Number) value).intValue() != 0;
+        if (value instanceof String) {
+            String text = (String) value;
+            return !text.isEmpty() && !"0".equals(text)
+                    && !"false".equalsIgnoreCase(text);
+        }
+        return false;
+    }
+
+    private static String findJidInArguments(Object[] arguments) {
+        if (arguments == null) return null;
+        for (Object argument : arguments) {
+            if (argument == null || argument instanceof String[]) continue;
+            String value = String.valueOf(argument);
+            String jid = canonicalJid(value);
+            if (jid != null) return jid;
+        }
+        return null;
+    }
+
+    private static boolean hasExplicitReceiptIds(Object[] constructorArguments) {
+        if (constructorArguments == null) return false;
+        boolean foundIds = false;
+        for (Object argument : constructorArguments) {
+            if (!(argument instanceof String[])) continue;
+            String[] ids = (String[]) argument;
+            if (ids.length == 0) continue;
+            foundIds = true;
+            for (String id : ids) {
+                if (!isExplicitReceiptAllowed(id)) return false;
+            }
+        }
+        return foundIds;
     }
 
     /**
@@ -298,6 +352,11 @@ public class HideReceiptsHook extends BaseFeature {
                         String to = getAttributeValue(node, "to");
                         String participant = getAttributeValue(node, "participant");
                         String type = getAttributeValue(node, "type");
+                        String messageId = getAttributeValue(node, "id");
+
+                        // Manual/Blue-on-Reply jobs authorize exact message IDs. This survives
+                        // phone-JID/LID/device-JID differences between receive and send paths.
+                        if (isExplicitReceiptAllowed(messageId)) return;
 
                         boolean isStatusStanza = isStatusTarget(to, participant) || "readstatus".equals(type);
 
@@ -307,8 +366,9 @@ public class HideReceiptsHook extends BaseFeature {
                             return;
                         }
 
-                        boolean hideDelivery = isHideDeliveryReceiptsEnabled();
-                        boolean hideRead = isHideReadReceiptsEnabled();
+                        String target = participant != null ? participant : to;
+                        boolean hideDelivery = shouldHideDeliveryReceipt(target);
+                        boolean hideRead = shouldHideReadReceipt(target);
 
                         if (hideDelivery) {
                             applyHideDelivery(node);
@@ -583,6 +643,9 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private boolean shouldHideReadReceipt(String target) {
+        if (isBlueReplyBypassed(target)) {
+            return false;
+        }
         if (isGhostModeActive()) {
             return true;
         }
@@ -595,6 +658,78 @@ public class HideReceiptsHook extends BaseFeature {
             }
         }
         return globalEnabled;
+    }
+
+    private boolean shouldHideDeliveryReceipt(String target) {
+        if (isGhostModeActive()) return true;
+        boolean globalEnabled = isEnabled("hide_delivery_receipts", false)
+                || isEnabled("hidereceipt", false);
+        if (target != null) {
+            JSONObject contactPrivacy = CustomPrivacyHook.getContactPrivacy(prefs, target);
+            if (contactPrivacy != null) {
+                return contactPrivacy.optBoolean("HideReceipt", globalEnabled);
+            }
+        }
+        return globalEnabled;
+    }
+
+    /** Temporarily permits an explicit read-receipt job created by Blue-on-Reply. */
+    public static void allowBlueReplyReceipt(String jid) {
+        String key = canonicalJid(jid);
+        if (key == null) return;
+        BLUE_REPLY_BYPASS.put(key, System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS);
+    }
+
+    public static void allowExplicitReceiptIds(Object[] constructorArguments) {
+        if (constructorArguments == null) return;
+        long expiresAt = System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS;
+        for (Object argument : constructorArguments) {
+            if (!(argument instanceof String[])) continue;
+            for (String messageId : (String[]) argument) {
+                if (messageId != null && !messageId.isEmpty()) {
+                    EXPLICIT_RECEIPT_IDS.put(messageId, expiresAt);
+                }
+            }
+        }
+    }
+
+    private static boolean isExplicitReceiptAllowed(String messageId) {
+        if (messageId == null) return false;
+        Long expiresAt = EXPLICIT_RECEIPT_IDS.get(messageId);
+        if (expiresAt == null) return false;
+        if (expiresAt >= System.currentTimeMillis()) return true;
+        EXPLICIT_RECEIPT_IDS.remove(messageId, expiresAt);
+        return false;
+    }
+
+    private static boolean isBlueReplyBypassed(String jid) {
+        String key = canonicalJid(jid);
+        if (key == null) return false;
+        Long expiresAt = BLUE_REPLY_BYPASS.get(key);
+        if (expiresAt == null) return false;
+        if (expiresAt >= System.currentTimeMillis()) return true;
+        BLUE_REPLY_BYPASS.remove(key, expiresAt);
+        return false;
+    }
+
+    private static String canonicalJid(String value) {
+        if (value == null) return null;
+        Matcher matcher = JID_PATTERN.matcher(value);
+        return matcher.find() ? matcher.group(1) + "@" + matcher.group(2) : null;
+    }
+
+    /** Prefer the conversation/group address over a group participant's device address. */
+    private static String resolveConversationTarget(String keyValue, String participantValue) {
+        String keyJid = canonicalJid(keyValue);
+        String participantJid = canonicalJid(participantValue);
+        if (keyJid != null && (keyJid.endsWith("@g.us") || keyJid.endsWith("@broadcast"))) {
+            return keyJid;
+        }
+        if (participantJid != null
+                && (participantJid.endsWith("@g.us") || participantJid.endsWith("@broadcast"))) {
+            return participantJid;
+        }
+        return keyJid != null ? keyJid : participantJid;
     }
 
     /**
@@ -699,7 +834,7 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private boolean isGhostModeActive() {
-        return isEnabled("ghostmode_active", false) || isEnabled("ghostmode_enabled", false);
+        return isEnabled("ghostmode_active", false);
     }
 
     private boolean isHideVoiceNotePlayedEnabled() {
