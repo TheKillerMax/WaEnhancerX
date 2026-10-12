@@ -21,6 +21,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Base64
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -59,6 +60,8 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
+import java.util.Collections
+import java.util.IdentityHashMap
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -354,77 +357,99 @@ class MediaPreviewHook(
 
     private fun startPreview(messageSource: View, context: Context) {
         try {
-            var objMessage: Any? = null
-            try {
-                objMessage = XposedHelpers.callMethod(messageSource, "getFMessage")
-            } catch (_: Throwable) {
-                if (messageSource.tag != null) {
-                    try {
-                        val keyTag = messageSource.tag
-                        objMessage = resolveFMessageFromKeyTag(keyTag)
-                    } catch (_: Throwable) {}
-                }
-            }
-
-            if (objMessage == null) {
-                objMessage = resolveMessageDeep(messageSource)
-            }
+            val objMessage = resolveMessageDeep(messageSource)
+                ?: resolveFMessageFromKeyTag(messageSource.tag)
 
             var rowId = extractRowId(objMessage)
-            if (rowId <= 0L) {
-                val keyId = extractKeyId(objMessage)
-                if (!keyId.isNullOrBlank()) {
-                    rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
-                }
+            val keyId = extractKeyId(objMessage) ?: findKeyIdInViewHierarchy(messageSource)
+            if (!keyId.isNullOrBlank()) {
+                val canonicalRowId = MessageStore.getInstance(context).getIdFromKey(keyId)
+                if (canonicalRowId > 0L) rowId = canonicalRowId
             }
 
-            if (rowId <= 0L && messageSource.tag != null && messageSource.tag !is String) {
-                val tagKeyId = extractKeyId(messageSource.tag)
-                if (!tagKeyId.isNullOrBlank()) {
-                    rowId = MessageStore.getInstance(context).getIdFromKey(tagKeyId)
-                }
-            }
+            val inMemoryMedia = extractMediaInfo(objMessage)
 
-            if (rowId <= 0L) {
-                // If rowId could not be found, fallback to view bitmap directly
-                val rendered = extractBitmapFromView(messageSource)
-                if (rendered != null) {
-                    showBitmap(context, rendered)
-                    return
-                }
+            if (rowId <= 0L && !inMemoryMedia.isUsable()) {
+                XposedBridge.log("[WAEX][MediaPreview] Unable to resolve message row/key or in-memory media")
                 Toast.makeText(context, "Error finding message info", Toast.LENGTH_SHORT).show()
                 return
             }
 
             val isNewsletter = isNewsletterSource(objMessage)
-            startPlayer(rowId, context, isNewsletter, messageSource)
+            startPlayer(rowId.takeIf { it > 0L }, context, isNewsletter, messageSource, inMemoryMedia)
         } catch (t: Throwable) {
             XposedBridge.log("[WAEX][MediaPreview] startPreview error: ${t.message}")
             Toast.makeText(context, "Error launching preview: ${t.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun startPlayer(id: Long, context: Context, isNewsletter: Boolean, sourceView: View?) {
-        val executor = previewExecutor
-        previewExecutor.execute {
+    private fun startPlayer(
+        id: Long?, context: Context, isNewsletter: Boolean, sourceView: View?,
+        inMemoryMedia: MediaInfo
+    ) {
+        val executor = getPreviewExecutor()
+        executor.execute {
             try {
-                val query = String.format(
-                    Locale.ENGLISH,
-                    "SELECT message_url, mime_type, hex(media_key), direct_path, file_length FROM message_media WHERE message_row_id=\"%d\"",
-                    id
-                )
-                val db = MessageStore.getInstance(context).database
-                val cursor = db?.rawQuery(query, null)
+                var media = inMemoryMedia
+                if (id != null) {
+                    try {
+                        val query = "SELECT message_url, mime_type, media_key, direct_path, " +
+                            "file_length, file_path FROM message_media WHERE message_row_id=?"
+                        val db = MessageStore.getInstance(context).database
+                        db?.rawQuery(query, arrayOf(id.toString()))?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                media = MediaInfo(
+                                    url = cursor.getString(0) ?: media.url,
+                                    mimeType = cursor.getString(1) ?: media.mimeType,
+                                    mediaKey = normalizeMediaKey(cursor.getBlob(2)) ?: media.mediaKey,
+                                    directPath = cursor.getString(3) ?: media.directPath,
+                                    fileLength = cursor.getLong(4).takeIf { it > 0L } ?: media.fileLength,
+                                    localFile = cursor.getString(5)?.let(::File)?.takeIf { it.isFile && it.length() > 0L }
+                                        ?: media.localFile
+                                )
+                            }
+                        }
+                    } catch (dbError: Throwable) {
+                        XposedBridge.log("[WAEX][MediaPreview] Database media lookup failed: ${dbError.message}")
+                    }
+                }
 
-                if (cursor != null && cursor.count > 0) {
-                    cursor.moveToFirst()
-                    var url = cursor.getString(0)
-                    val mimeType = cursor.getString(1) ?: "image/jpeg"
-                    val mediaKey = cursor.getString(2)
-                    val directPath = cursor.getString(3)
-                    val fileLength = cursor.getLong(4)
-                    cursor.close()
+                // Obfuscated row/key fields vary between WhatsApp releases. The CDN URL and
+                // direct path are stable identifiers, so use either to recover the canonical
+                // message_media row (and its key) when reflection selected no/wrong row.
+                if (normalizeMediaKey(media.mediaKey) == null &&
+                    (!inMemoryMedia.url.isNullOrBlank() || !inMemoryMedia.directPath.isNullOrBlank())) {
+                    try {
+                        val db = MessageStore.getInstance(context).database
+                        val clauses = ArrayList<String>(2)
+                        val args = ArrayList<String>(2)
+                        inMemoryMedia.url?.takeIf { it.isNotBlank() }?.let {
+                            clauses.add("message_url=?")
+                            args.add(it)
+                        }
+                        inMemoryMedia.directPath?.takeIf { it.isNotBlank() }?.let {
+                            clauses.add("direct_path=?")
+                            args.add(it)
+                        }
+                        if (clauses.isNotEmpty()) {
+                            val query = "SELECT message_url, mime_type, media_key, direct_path, " +
+                                "file_length, file_path FROM message_media WHERE ${clauses.joinToString(" OR ")} " +
+                                "ORDER BY message_row_id DESC LIMIT 1"
+                            db?.rawQuery(query, args.toTypedArray())?.use { cursor ->
+                                if (cursor.moveToFirst()) media = mergeMediaInfo(media, cursor)
+                            }
+                        }
+                    } catch (dbError: Throwable) {
+                        XposedBridge.log("[WAEX][MediaPreview] URL media lookup failed: ${dbError.message}")
+                    }
+                }
 
+                if (media.isUsable()) {
+                    var url = media.url
+                    val mimeType = media.mimeType ?: inferMimeType(media.localFile)
+                    val mediaKey = normalizeMediaKey(media.mediaKey)
+                    val directPath = media.directPath
+                    val fileLength = media.fileLength
                     if (isNewsletter && !directPath.isNullOrBlank()) {
                         url = "https://mmg.whatsapp.net$directPath"
                     } else if (url.isNullOrBlank() && !directPath.isNullOrBlank()) {
@@ -476,22 +501,23 @@ class MediaPreviewHook(
                         dialog.setOnDismissListener { cleanupResources(executor) }
                         dialog.show()
 
-                        executor.execute {
-                            downloadAndDisplayMedia(
-                                finalUrl, mediaKey, mimeType, fileLength, isNewsletter, context,
-                                contentContainer, loadingContainer, progressBar, progressText, executor, sourceView
-                            )
+                        val localFile = media.localFile
+                        if (localFile != null) {
+                            executor.execute {
+                                displayLocalMedia(localFile, mimeType, context, contentContainer, loadingContainer)
+                            }
+                        } else {
+                            executor.execute {
+                                downloadAndDisplayMedia(
+                                    finalUrl, mediaKey, mimeType, fileLength, isNewsletter, context,
+                                    contentContainer, loadingContainer, progressBar, progressText, executor, sourceView
+                                )
+                            }
                         }
                     }
                 } else {
-                    cursor?.close()
                     mainHandler.post {
-                        val rendered = extractBitmapFromView(sourceView)
-                        if (rendered != null) {
-                            showBitmap(context, rendered)
-                        } else {
-                            Toast.makeText(context, "No media info found for row $id", Toast.LENGTH_SHORT).show()
-                        }
+                        Toast.makeText(context, "Full-quality media info is unavailable", Toast.LENGTH_LONG).show()
                     }
                     cleanupDialog(executor)
                 }
@@ -712,12 +738,7 @@ class MediaPreviewHook(
                         if (bitmap != null) {
                             displayImage(context, contentContainer, bitmap)
                         } else {
-                            val fallbackBitmap = extractBitmapFromView(sourceView)
-                            if (fallbackBitmap != null) {
-                                displayImage(context, contentContainer, fallbackBitmap)
-                            } else {
-                                Toast.makeText(context, "The preview image could not be decoded", Toast.LENGTH_SHORT).show()
-                            }
+                            Toast.makeText(context, "The full-quality image could not be decoded", Toast.LENGTH_LONG).show()
                         }
                     } else {
                         displayVideo(context, contentContainer, file)
@@ -807,6 +828,27 @@ class MediaPreviewHook(
             container.addView(imageView)
         } catch (e: Exception) {
             Toast.makeText(context, "Error displaying image: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun displayLocalMedia(
+        file: File, mimeType: String, context: Context,
+        contentContainer: FrameLayout, loadingContainer: LinearLayout
+    ) {
+        try {
+            if (!file.isFile || file.length() <= 0L) throw Exception("Downloaded media file is unavailable")
+            val bitmap = if (mimeType.startsWith("image")) BitmapFactory.decodeFile(file.absolutePath) else null
+            mainHandler.post {
+                loadingContainer.visibility = View.GONE
+                if (mimeType.startsWith("image")) {
+                    if (bitmap != null) displayImage(context, contentContainer, bitmap)
+                    else Toast.makeText(context, "The full-quality image could not be decoded", Toast.LENGTH_LONG).show()
+                } else {
+                    displayVideo(context, contentContainer, file)
+                }
+            }
+        } catch (t: Throwable) {
+            handleError(t, getPreviewExecutor(), context, null)
         }
     }
 
@@ -1080,12 +1122,7 @@ class MediaPreviewHook(
         val message = if (e is InvocationTargetException) e.cause?.message else e.message
         XposedBridge.log("[WAEX][MediaPreview] Error: $message")
         mainHandler.post {
-            val rendered = extractBitmapFromView(fallbackView)
-            if (rendered != null) {
-                showBitmap(context, rendered)
-            } else {
-                Toast.makeText(context, message ?: "Unknown preview error", Toast.LENGTH_LONG).show()
-            }
+            Toast.makeText(context, message ?: "Unknown preview error", Toast.LENGTH_LONG).show()
         }
         cleanupDialog(executor)
     }
@@ -1104,9 +1141,8 @@ class MediaPreviewHook(
             currentFilePath = null
         }
 
-        if (executor != null && !executor.isShutdown) {
-            executor.shutdownNow()
-        }
+        // previewExecutor is shared for the lifetime of the WhatsApp process. Shutting it down
+        // here makes every preview after the first dismissed dialog fail permanently.
     }
 
     private fun cleanupDialog(executor: ExecutorService?) {
@@ -1119,13 +1155,16 @@ class MediaPreviewHook(
     }
 
     private fun decryptMedia(encryptedData: ByteArray, mediaKey: String?, mimeType: String): ByteArray? {
-        if (mediaKey == null || mediaKey.length % 2 != 0 || mediaKey.length != 64) {
+        val normalizedKey = normalizeMediaKey(mediaKey)
+        if (normalizedKey == null) {
+            XposedBridge.log("[WAEX][MediaPreview] Invalid media key length=${mediaKey?.length ?: 0}")
             throw IllegalArgumentException("Invalid media key.")
         }
 
         val keyBytes = ByteArray(32)
         for (i in 0 until 64 step 2) {
-            keyBytes[i / 2] = ((Character.digit(mediaKey[i], 16) shl 4) + Character.digit(mediaKey[i + 1], 16)).toByte()
+            keyBytes[i / 2] = ((Character.digit(normalizedKey[i], 16) shl 4) +
+                Character.digit(normalizedKey[i + 1], 16)).toByte()
         }
 
         val typeKey = MEDIA_KEYS[mimeType] ?: (MEDIA_KEYS[mimeType.substringBefore("/")] ?: MEDIA_KEYS["document"]!!)
@@ -1156,12 +1195,25 @@ class MediaPreviewHook(
 
     private fun resolveMessageDeep(source: View): Any? {
         var current: View? = source
-        repeat(8) {
+        repeat(16) {
             val view = current ?: return@repeat
             runCatching { XposedHelpers.callMethod(view, "getFMessage") }.getOrNull()?.let { return it }
             runCatching { XposedHelpers.callMethod(view, "getMessage") }.getOrNull()?.let { return it }
             val tag = view.tag
-            if (tag != null && tag !is String && (extractRowId(tag) > 0L || extractKeyId(tag) != null)) return tag
+            if (tag != null && tag !is String) {
+                resolveFMessageFromKeyTag(tag)?.let { return it }
+                if (extractRowId(tag) > 0L || extractKeyId(tag) != null) return tag
+            }
+            current = view.parent as? View
+        }
+        return null
+    }
+
+    private fun findKeyIdInViewHierarchy(source: View): String? {
+        var current: View? = source
+        repeat(16) {
+            val view = current ?: return@repeat
+            extractKeyId(view.tag)?.let { return it }
             current = view.parent as? View
         }
         return null
@@ -1169,7 +1221,7 @@ class MediaPreviewHook(
 
     private fun extractRowId(message: Any?): Long {
         if (message == null) return 0L
-        val preferred = listOf("rowId", "_id", "A0m", "A0n", "A0l", "A0k")
+        val preferred = listOf("rowId", "_id", "sortId", "A0j", "A0k", "A0l", "A0m", "A0n", "A00", "A01")
         var type: Class<*>? = message.javaClass
         while (type != null && type != Any::class.java) {
             for (name in preferred) {
@@ -1178,6 +1230,7 @@ class MediaPreviewHook(
                     field.isAccessible = true
                     val value = field.get(message)
                     if (value is Long && value > 0L) return value
+                    if (value is Int && value > 0) return value.toLong()
                 } catch (_: Throwable) {}
             }
             type = type.superclass
@@ -1187,6 +1240,9 @@ class MediaPreviewHook(
 
     private fun extractKeyId(message: Any?): String? {
         if (message == null) return null
+        extractMessageIdFromKey(message)?.let { direct ->
+            if (looksLikeMessageKey(message.javaClass)) return direct
+        }
         var type: Class<*>? = message.javaClass
         while (type != null && type != Any::class.java) {
             for (field in type.declaredFields) {
@@ -1194,33 +1250,178 @@ class MediaPreviewHook(
                 try {
                     field.isAccessible = true
                     val candidate = field.get(message) ?: continue
-                    var hasBoolean = false
-                    var id: String? = null
-                    var nested: Class<*>? = candidate.javaClass
-                    while (nested != null && nested != Any::class.java) {
-                        for (keyField in nested.declaredFields) {
-                            if (Modifier.isStatic(keyField.modifiers)) continue
-                            keyField.isAccessible = true
-                            if (keyField.type == Boolean::class.javaPrimitiveType) hasBoolean = true
-                            if (keyField.type == String::class.java) {
-                                val value = keyField.get(candidate) as? String
-                                if (!value.isNullOrBlank() && !value.contains('@') && !value.contains('/')) id = value
-                            }
-                        }
-                        nested = nested.superclass
+                    val representation = candidate.toString()
+                    if (candidate.javaClass.name.contains("Key", true) ||
+                        representation.startsWith("Key(") || looksLikeMessageKey(candidate.javaClass)) {
+                        extractMessageIdFromKey(candidate)?.let { return it }
+                        KEY_ID_REGEX.find(representation)?.groupValues?.getOrNull(1)?.let { return it }
                     }
-                    if (hasBoolean && !id.isNullOrBlank()) return id
                 } catch (_: Throwable) {}
             }
             type = type.superclass
         }
+        KEY_ID_REGEX.find(message.toString())?.groupValues?.getOrNull(1)?.let { return it }
         return null
+    }
+
+    private fun looksLikeMessageKey(type: Class<*>): Boolean {
+        var hasString = false
+        var hasBoolean = false
+        var current: Class<*>? = type
+        while (current != null && current != Any::class.java) {
+            current.declaredFields.forEach { field ->
+                if (!Modifier.isStatic(field.modifiers)) {
+                    if (field.type == String::class.java) hasString = true
+                    if (field.type == Boolean::class.javaPrimitiveType || field.type == Boolean::class.java) hasBoolean = true
+                }
+            }
+            current = current.superclass
+        }
+        return hasString && hasBoolean
+    }
+
+    private fun extractMessageIdFromKey(key: Any): String? {
+        var best: String? = null
+        var current: Class<*>? = key.javaClass
+        while (current != null && current != Any::class.java) {
+            for (field in current.declaredFields) {
+                if (Modifier.isStatic(field.modifiers) || field.type != String::class.java) continue
+                runCatching {
+                    field.isAccessible = true
+                    field.get(key) as? String
+                }.getOrNull()?.takeIf { it.length >= 6 && !it.contains('@') && !it.contains('/') }?.let {
+                    if (it.length >= 12) return it
+                    if (best == null) best = it
+                }
+            }
+            current = current.superclass
+        }
+        return best
     }
 
     private fun isNewsletterSource(message: Any?): Boolean {
         if (message == null) return false
         val str = message.toString()
         return str.contains("newsletter", ignoreCase = true)
+    }
+
+    private data class MediaInfo(
+        val url: String? = null,
+        val mimeType: String? = null,
+        val mediaKey: String? = null,
+        val directPath: String? = null,
+        val fileLength: Long = 0L,
+        val localFile: File? = null
+    ) {
+        fun isUsable(): Boolean = localFile?.let { it.isFile && it.length() > 0L } == true ||
+            !url.isNullOrBlank() || !directPath.isNullOrBlank()
+    }
+
+    private fun mergeMediaInfo(current: MediaInfo, cursor: Cursor): MediaInfo = MediaInfo(
+        url = cursor.getString(0) ?: current.url,
+        mimeType = cursor.getString(1) ?: current.mimeType,
+        mediaKey = normalizeMediaKey(cursor.getBlob(2)) ?: current.mediaKey,
+        directPath = cursor.getString(3) ?: current.directPath,
+        fileLength = cursor.getLong(4).takeIf { it > 0L } ?: current.fileLength,
+        localFile = cursor.getString(5)?.let(::File)?.takeIf { it.isFile && it.length() > 0L }
+            ?: current.localFile
+    )
+
+    private fun extractMediaInfo(message: Any?): MediaInfo {
+        if (message == null) return MediaInfo()
+        var url: String? = null
+        var mimeType: String? = null
+        var mediaKey: String? = null
+        var directPath: String? = null
+        var fileLength = 0L
+        var localFile: File? = null
+        val visited = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+
+        fun inspect(value: Any?, depth: Int) {
+            if (value == null || depth > 3 || !visited.add(value)) return
+            if (value is File) {
+                if (value.isFile && value.length() > 0L && (localFile == null || value.length() > localFile!!.length())) {
+                    localFile = value
+                }
+                return
+            }
+            val className = value.javaClass.name
+            if (className.startsWith("android.") || className.startsWith("java.util.") ||
+                (className.startsWith("java.lang.") && value !is String)) return
+
+            var current: Class<*>? = value.javaClass
+            while (current != null && current != Any::class.java) {
+                for (field in current.declaredFields) {
+                    if (Modifier.isStatic(field.modifiers)) continue
+                    val fieldValue = runCatching {
+                        field.isAccessible = true
+                        field.get(value)
+                    }.getOrNull() ?: continue
+                    val name = field.name.lowercase(Locale.ROOT)
+                    when (fieldValue) {
+                        is File -> inspect(fieldValue, depth + 1)
+                        is ByteArray -> if (mediaKey == null && fieldValue.size == 32 &&
+                            (name.contains("key") || current.simpleName.contains("Media", true))) {
+                            mediaKey = normalizeMediaKey(fieldValue)
+                        }
+                        is String -> when {
+                            name.contains("key") && normalizeMediaKey(fieldValue) != null ->
+                                if (mediaKey == null) mediaKey = normalizeMediaKey(fieldValue)
+                            fieldValue.startsWith("http://") || fieldValue.startsWith("https://") ->
+                                if (url == null) url = fieldValue
+                            fieldValue.startsWith("/") && (name.contains("direct") || fieldValue.contains("/mms/")) ->
+                                if (directPath == null) directPath = fieldValue
+                            fieldValue.contains('/') && !fieldValue.contains(' ') &&
+                                (name.contains("mime") || fieldValue.startsWith("image/") || fieldValue.startsWith("video/")) ->
+                                if (mimeType == null) mimeType = fieldValue
+                        }
+                        is Long -> if (fieldValue > fileLength && (name.contains("length") || name.contains("size"))) fileLength = fieldValue
+                        is Int -> if (fieldValue > fileLength && (name.contains("length") || name.contains("size"))) fileLength = fieldValue.toLong()
+                        else -> if (!fieldValue.javaClass.isPrimitive &&
+                            !fieldValue.javaClass.name.startsWith("java.") &&
+                            (depth == 0 || name.contains("media") || fieldValue.javaClass.name.contains("Media", true))) {
+                            inspect(fieldValue, depth + 1)
+                        }
+                    }
+                }
+                current = current.superclass
+            }
+        }
+
+        inspect(message, 0)
+        return MediaInfo(url, mimeType, mediaKey, directPath, fileLength, localFile)
+    }
+
+    private fun normalizeMediaKey(value: Any?): String? {
+        val bytes = when (value) {
+            is ByteArray -> if (value.size == 32) value
+                else return normalizeMediaKey(value.toString(Charsets.UTF_8))
+            is String -> {
+                val cleaned = value.trim()
+                if (cleaned.length == 64 && cleaned.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
+                    return cleaned.uppercase(Locale.ROOT)
+                }
+                decodeMediaKeyString(cleaned)
+            }
+            else -> null
+        } ?: return null
+        if (bytes.size != 32) return null
+        return bytes.joinToString("") { "%02X".format(Locale.ROOT, it.toInt() and 0xff) }
+    }
+
+    private fun decodeMediaKeyString(value: String): ByteArray? {
+        if (value.isBlank()) return null
+        for (flags in intArrayOf(Base64.DEFAULT, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)) {
+            val decoded = runCatching { Base64.decode(value, flags) }.getOrNull()
+            if (decoded?.size == 32) return decoded
+        }
+        return null
+    }
+
+    private fun inferMimeType(file: File?): String {
+        val name = file?.name?.lowercase(Locale.ROOT).orEmpty()
+        return if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".3gp") ||
+            name.endsWith(".webm") || name.endsWith(".mov")) "video/mp4" else "image/jpeg"
     }
 
     private fun extractBitmapFromView(view: View?): Bitmap? {
@@ -1297,6 +1498,7 @@ class MediaPreviewHook(
         private const val TAG_INSTALLED = 0x7f0f7b20
         private const val BUTTON_TAG = "waex_media_preview"
         private const val MEDIA_PREVIEW_WRAPPER_TAG = "wpp_media_preview_wrapper"
+        private val KEY_ID_REGEX = Regex("(?:messageId|messageID|keyId|id)=([A-Za-z0-9_-]{6,})")
 
         private val CONTROL_IDS = listOf(
             "invisible_press_surface", "video_control_frame_view", "control_frame_new",
@@ -1318,8 +1520,26 @@ class MediaPreviewHook(
         )
 
         private val mainHandler = Handler(Looper.getMainLooper())
-        private val previewExecutor = Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "WAEX-MediaPreview").apply { isDaemon = true }
+        @Volatile
+        private var previewExecutor: ExecutorService = createPreviewExecutor()
+
+        private fun createPreviewExecutor(): ExecutorService =
+            Executors.newSingleThreadExecutor { runnable ->
+                Thread(runnable, "WAEX-MediaPreview").apply { isDaemon = true }
+            }
+
+        private fun getPreviewExecutor(): ExecutorService {
+            var executor = previewExecutor
+            if (!executor.isShutdown && !executor.isTerminated) return executor
+            synchronized(MediaPreviewHook::class.java) {
+                executor = previewExecutor
+                if (executor.isShutdown || executor.isTerminated) {
+                    executor = createPreviewExecutor()
+                    previewExecutor = executor
+                    XposedBridge.log("[WAEX][MediaPreview] Recreated terminated preview executor")
+                }
+                return executor
+            }
         }
     }
 
