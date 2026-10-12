@@ -30,6 +30,12 @@ RAW_EXCEPTION_TEXT = re.compile(
     r"\b(?:t|ex|e|error|throwable)\s*\.\s*getMessage\s*\("
     r"|\$\{\s*(?:t|ex|e|error|throwable)\s*\.\s*message\s*\}"
 )
+RAW_EXCEPTION_OBJECT = re.compile(
+    r"\\$\\{\\s*(?:t|ex|e|error|throwable)\\s*\\}"
+    r"|\\$(?:t|ex|e|error|throwable)\\b"
+    r"|\\+\\s*(?:t|ex|e|error|throwable)(?![\\w.])"
+    r"|\\+\\s*(?:t|ex|e|error|throwable)\\.toString\\s*\\("
+)
 RAW_LITERAL = re.compile(
     r"(?:keyId|message[_ -]?id|sender[_ -]?jid|chat[_ -]?jid)\s*="
 )
@@ -74,7 +80,7 @@ def hook_logs(src: str):
 
 def exposure(expr: str) -> bool:
     return bool(DYNAMIC_PII.search(expr) or RAW_EXCEPTION_TEXT.search(expr)
-                or RAW_LITERAL.search(expr))
+                or RAW_EXCEPTION_OBJECT.search(expr) or RAW_LITERAL.search(expr))
 
 
 # Negative controls: an unsafe regression must fail this test even if it
@@ -87,6 +93,10 @@ unsafe_samples = [
     '"$TAG error=${t.message}"',
     '"$TAG sender=$senderName"',
     'TAG + " keyId=" + keyId + "\\n" + other',
+    '"$TAG setup failed: $t"',
+    '"$TAG setup failed: ${t}"',
+    'TAG + " setup failed: " + ex',
+    'TAG + " setup failed: " + ex.toString()',
 ]
 for sample in unsafe_samples:
     assert exposure(sample), f"Detector missed unsafe fixture: {sample}"
@@ -127,6 +137,8 @@ assert 'Preserved Delete-For-Me: chat=' not in preserve
 online_presence = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt").read_text()
 assert 'contactIdResolved=$hasContactId' in online_presence
 assert 'Presence request failed: ${t.javaClass.simpleName}' in online_presence
+assert 'Setup failed: ${t.javaClass.simpleName}' in online_presence
+assert 'Setup failed: $t' not in online_presence
 assert 'Presence request failed for $key' not in online_presence
 
 

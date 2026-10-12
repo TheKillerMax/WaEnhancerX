@@ -131,7 +131,7 @@ class OnlinePresenceIndicatorsHook(
                 }
             }
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: $t")
+            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: ${t.javaClass.simpleName}")
         }
     }
 
