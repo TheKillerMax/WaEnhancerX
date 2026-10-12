@@ -261,7 +261,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 REVOKED_MESSAGES.put(keyId, now);
                                 DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                 dispatchRealtimeRevokeUI(keyId, now);
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                showDeletedMessageToast(extractSenderJid(fMessage));
                                 setHandledResult(param);
                             }
                         } catch (Throwable t) {
@@ -332,7 +332,7 @@ public class AntiRevokeHook extends BaseFeature {
                             long now = System.currentTimeMillis();
                             REVOKED_MESSAGES.put(keyId, now);
                             DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                            showDeletedMessageToast(extractSenderJid(statusKey));
                             setHandledResult(param);
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getMessage());
@@ -435,7 +435,7 @@ public class AntiRevokeHook extends BaseFeature {
                                             long now = System.currentTimeMillis();
                                             REVOKED_MESSAGES.put(keyId, now);
                                             DelMessageStore.getInstance(context).insertMessage(jid, keyId, now);
-                                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                            showDeletedMessageToast(jid);
                                         }
                                     } while (cursor.moveToNext());
                                 }
@@ -459,13 +459,14 @@ public class AntiRevokeHook extends BaseFeature {
 
                         String msgId = whereArgs[0];
                         try (Cursor cursor = db.rawQuery(
-                                "SELECT from_me, message_type, key_id, chat_row_id FROM " + table + " WHERE _id=?",
+                                "SELECT from_me, message_type, key_id, chat_row_id, sender_jid_row_id FROM " + table + " WHERE _id=?",
                                 new String[]{msgId})) {
                             if (cursor != null && cursor.moveToFirst()) {
                                 int fromMe = cursor.getInt(0);
                                 int msgType = cursor.getInt(1);
                                 String keyId = cursor.getString(2);
                                 long chatRowId = cursor.getLong(3);
+                                long senderJidRowId = cursor.isNull(4) ? 0L : cursor.getLong(4);
 
                                 if (msgType != 15 && keyId != null) {
                                     boolean preserveIncoming = fromMe == 0 && isAntiRevokeEnabled();
@@ -477,7 +478,9 @@ public class AntiRevokeHook extends BaseFeature {
                                         REVOKED_MESSAGES.put(keyId, now);
                                         DelMessageStore.getInstance(context).insertMessage(String.valueOf(chatRowId), keyId, now);
                                         dispatchRealtimeRevokeUI(keyId, now);
-                                        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                        String senderJid = resolveJidRowId(db, senderJidRowId);
+                                        if (senderJid == null) senderJid = resolveChatJid(db, chatRowId);
+                                        showDeletedMessageToast(senderJid);
                                         param.setResult(0);
                                     } else if (preserveOwnRevoke) {
                                         // Own-message "delete for everyone" with preserve enabled:
@@ -526,6 +529,7 @@ public class AntiRevokeHook extends BaseFeature {
 
                     ContentValues cv = (ContentValues) param.args[2];
                     if (cv == null) return;
+                    SQLiteDatabase db = (SQLiteDatabase) param.thisObject;
 
                     Integer msgType = cv.getAsInteger("message_type");
                     Integer fromMe = cv.getAsInteger("from_me");
@@ -549,7 +553,7 @@ public class AntiRevokeHook extends BaseFeature {
                             } else if (preserveIncoming && alreadyPreserved) {
                                 // Incoming revokes have no outbound work to complete. Keep the
                                 // original row and discard only their local placeholder.
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                showDeletedMessageToast(resolveSenderJid(db, cv));
                                 param.setResult(-1L);
                             } else if (preserveIncoming) {
                                 // Fallback: incoming type-15 not seen in delete hook yet.
@@ -558,7 +562,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 REVOKED_MESSAGES.put(keyId, now);
                                 DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                 dispatchRealtimeRevokeUI(keyId, now);
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                showDeletedMessageToast(resolveSenderJid(db, cv));
                                 param.setResult(-1L);
                             }
                             // If neither: own message with preserve OFF — let WhatsApp write
@@ -570,6 +574,86 @@ public class AntiRevokeHook extends BaseFeature {
 
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getMessage());
+        }
+    }
+
+    private void showDeletedMessageToast(@Nullable String senderJid) {
+        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(
+                context, prefs, senderJid, uiHandler);
+    }
+
+    @Nullable
+    private String resolveSenderJid(@NonNull SQLiteDatabase db, @NonNull ContentValues values) {
+        Long senderRowId = values.getAsLong("sender_jid_row_id");
+        String jid = resolveJidRowId(db, senderRowId != null ? senderRowId : 0L);
+        if (jid != null) return jid;
+        Long chatRowId = values.getAsLong("chat_row_id");
+        return resolveChatJid(db, chatRowId != null ? chatRowId : 0L);
+    }
+
+    @Nullable
+    private String resolveJidRowId(@NonNull SQLiteDatabase db, long jidRowId) {
+        if (jidRowId <= 0) return null;
+        try (Cursor cursor = db.rawQuery(
+                "SELECT raw_string FROM jid WHERE _id=? LIMIT 1",
+                new String[]{String.valueOf(jidRowId)})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    private String resolveChatJid(@NonNull SQLiteDatabase db, long chatRowId) {
+        if (chatRowId <= 0) return null;
+        try (Cursor cursor = db.rawQuery(
+                "SELECT j.raw_string FROM chat c JOIN jid j ON j._id=c.jid_row_id "
+                        + "WHERE c._id=? LIMIT 1",
+                new String[]{String.valueOf(chatRowId)})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Finds the sender/remote JID carried by an FMessage or status key. */
+    @Nullable
+    private String extractSenderJid(@Nullable Object value) {
+        java.util.LinkedHashSet<String> candidates = new java.util.LinkedHashSet<>();
+        collectJids(value, 4,
+                java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()),
+                candidates);
+        for (String jid : candidates) {
+            if (jid.contains("@s.whatsapp.net") || jid.endsWith("@lid")) return jid;
+        }
+        for (String jid : candidates) {
+            if (!jid.contains("@broadcast")) return jid;
+        }
+        return candidates.isEmpty() ? null : candidates.iterator().next();
+    }
+
+    private void collectJids(@Nullable Object value, int depth, @NonNull Set<Object> seen,
+                             @NonNull Set<String> output) {
+        if (value == null || depth < 0 || !seen.add(value)) return;
+        try {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                    "[+0-9A-Za-z._:-]+@(?:s\\.whatsapp\\.net|lid|g\\.us|broadcast)")
+                    .matcher(value.toString());
+            while (matcher.find()) output.add(matcher.group());
+        } catch (Throwable ignored) {}
+
+        Class<?> type = value.getClass();
+        while (type != null && type != Object.class
+                && !type.getName().startsWith("java.")
+                && !type.getName().startsWith("android.")) {
+            for (Field field : type.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())) continue;
+                try {
+                    field.setAccessible(true);
+                    collectJids(field.get(value), depth - 1, seen, output);
+                } catch (Throwable ignored) {}
+            }
+            type = type.getSuperclass();
         }
     }
 

@@ -73,13 +73,10 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) {
-            // A duplicate-column error is not a reason to destroy saved chats.
             val columns = mutableSetOf<String>()
             db.rawQuery("PRAGMA table_info($TABLE_NAME)", null).use { cursor ->
                 val nameIndex = cursor.getColumnIndex("name")
-                while (cursor.moveToNext()) if (nameIndex >= 0) {
-                    columns.add(cursor.getString(nameIndex))
-                }
+                while (cursor.moveToNext()) if (nameIndex >= 0) columns.add(cursor.getString(nameIndex))
             }
             if (columns.isEmpty()) {
                 onCreate(db)

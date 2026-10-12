@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.core.devkit.HookReturnTypeGuard;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -50,7 +51,9 @@ public class ChatLimitsBypassHook extends BaseFeature {
                     }
             );
 
-            if (pinLimitMethod != null) {
+            if (pinLimitMethod != null && !HookReturnTypeGuard.firstParameterIsInteger(pinLimitMethod)) {
+                XposedBridge.log(TAG + " Ignoring pinned-limit candidate with incompatible first parameter: " + pinLimitMethod);
+            } else if (pinLimitMethod != null) {
                 XposedBridge.hookMethod(pinLimitMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
@@ -84,7 +87,11 @@ public class ChatLimitsBypassHook extends BaseFeature {
                     }
             );
 
-            if (forwardLimitMethod != null) {
+            if (forwardLimitMethod != null && !HookReturnTypeGuard.returnsInteger(forwardLimitMethod)) {
+                // In 2.26.39.79, all six methods matching "forward_limit" return void.
+                // A non-int return type must never receive setResult(1000).
+                XposedBridge.log(TAG + " Skipping non-integer forward-limit candidate: " + forwardLimitMethod);
+            } else if (forwardLimitMethod != null) {
                 XposedBridge.hookMethod(forwardLimitMethod, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
@@ -115,7 +122,9 @@ public class ChatLimitsBypassHook extends BaseFeature {
                     }
             );
 
-            if (revokeWindowMethod != null) {
+            if (revokeWindowMethod != null && !HookReturnTypeGuard.returnsBoolean(revokeWindowMethod)) {
+                XposedBridge.log(TAG + " Ignoring revoke-time candidate with non-boolean result: " + revokeWindowMethod);
+            } else if (revokeWindowMethod != null) {
                 XposedBridge.hookMethod(revokeWindowMethod, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
