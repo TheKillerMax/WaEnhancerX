@@ -14,6 +14,7 @@ import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 
@@ -30,6 +31,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     public static final String PACKAGE_BUSINESS = "com.whatsapp.w4b";
 
     private static XSharedPreferences sPrefs;
+    private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
     private String mModulePath;
 
     @Override
@@ -128,6 +130,9 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
                                 Context appContext = (Context) param.thisObject;
+                                if (!TARGET_INITIALIZED.compareAndSet(false, true)) {
+                                    return;
+                                }
                                 if (appContext instanceof android.app.Application) {
                                     com.waenhancer.xposed.utils.ActivityTracker.install((android.app.Application) appContext);
                                 }
@@ -162,7 +167,8 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                 boolean showHookToast = true;
                                 try {
                                     PreferenceBridgeClient bridgeClient =
-                                            new PreferenceBridgeClient(appContext, getPrefs());
+                                        new PreferenceBridgeClient(appContext, getPrefs());
+                                    com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
                                     showHookToast = bridgeClient.getBoolean("show_hook_toast", true);
 
                                     // Verify universal version compatibility before loading hooks

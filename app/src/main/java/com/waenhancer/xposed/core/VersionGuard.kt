@@ -1,22 +1,13 @@
 package com.waenhancer.xposed.core
 
 import android.app.Activity
-import android.app.Application
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageInfo
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.xposed.core.components.WaexBottomSheet
-import com.waenhancer.xposed.utils.AppRestartHelper
-import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -51,38 +42,6 @@ object VersionGuard {
             dialogShown.set(false)
 
             XposedBridge.log("$TAG Unsupported WhatsApp version detected: $currentVersion (${appContext.packageName}). Pausing features.")
-
-            // Hook Activity.onResume for immediate, reliable bottom sheet trigger on UI startup
-            try {
-                XposedHelpers.findAndHookMethod(
-                    Activity::class.java,
-                    "onResume",
-                    object : XC_MethodHook() {
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            val activity = param.thisObject as? Activity ?: return
-                            onTargetActivityResumed(activity)
-                        }
-                    }
-                )
-            } catch (t: Throwable) {
-                XposedBridge.log("$TAG Error hooking Activity.onResume: ${t.message}")
-            }
-
-            // Fallback via ActivityLifecycleCallbacks
-            if (appContext is Application) {
-                appContext.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-                    override fun onActivityResumed(activity: Activity) {
-                        onTargetActivityResumed(activity)
-                    }
-
-                    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-                    override fun onActivityStarted(activity: Activity) {}
-                    override fun onActivityPaused(activity: Activity) {}
-                    override fun onActivityStopped(activity: Activity) {}
-                    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-                    override fun onActivityDestroyed(activity: Activity) {}
-                })
-            }
 
             return false
         } catch (t: Throwable) {
@@ -156,4 +115,3 @@ object VersionGuard {
         }
     }
 }
-

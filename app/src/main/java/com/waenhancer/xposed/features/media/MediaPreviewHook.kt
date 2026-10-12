@@ -405,8 +405,8 @@ class MediaPreviewHook(
     }
 
     private fun startPlayer(id: Long, context: Context, isNewsletter: Boolean, sourceView: View?) {
-        val executor = Executors.newSingleThreadExecutor()
-        executor.execute {
+        val executor = previewExecutor
+        previewExecutor.execute {
             try {
                 val query = String.format(
                     Locale.ENGLISH,
@@ -1318,6 +1318,9 @@ class MediaPreviewHook(
         )
 
         private val mainHandler = Handler(Looper.getMainLooper())
+        private val previewExecutor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "WAEX-MediaPreview").apply { isDaemon = true }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
