@@ -39,8 +39,7 @@ public class PresenceToastsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][PresenceToasts]";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    // Share one bounded, short-lived worker among presence and deletion toasts.
-    // No new executor/thread is created for each deleted-message notification.
+    // Bound asynchronous name lookups rather than allowing unbounded queued tasks.
     private static final ExecutorService TOAST_EXECUTOR = new ThreadPoolExecutor(
             0, 1, 30L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(96),
             task -> {
@@ -351,17 +350,9 @@ public class PresenceToastsHook extends BaseFeature {
         });
     }
 
-    /** Legacy API retained for existing external callers; host features pass their preference bridge below. */
-    @Deprecated
-    public static void showDeletedMessageToast(Context context, String senderJid, Handler handler) {
-        if (context == null) return;
-        showDeletedMessageToast(context, senderJid, handler,
-                context.getSharedPreferences("com.waenhancer_preferences", Context.MODE_PRIVATE));
-    }
-
-    public static void showDeletedMessageToast(Context context, String senderJid, Handler handler,
-                                               SharedPreferences prefs) {
-        if (context == null || handler == null || prefs == null) return;
+    public static void showDeletedMessageToast(Context context, SharedPreferences prefs,
+                                               String senderJid, Handler handler) {
+        if (context == null || prefs == null || handler == null) return;
         boolean enabled = prefs.getBoolean("toastdeleted", false);
         if (!enabled) return;
 

@@ -55,7 +55,13 @@ object UpdateCheckCoordinator {
                 val installed = app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: "0"
                 val releases = ReleaseRepository.fetchReleases()
                 prefs.edit().putLong("update_last_check", now).apply()
-                val release = ReleaseRepository.findUpdate(releases, installed) ?: return@launch
+                val release = ReleaseRepository.findUpdate(releases, installed)
+                if (release == null) {
+                    clearAvailableUpdate(app)
+                    _availableRelease.value = null
+                    NotificationManagerCompat.from(app).cancel(NOTIFICATION_ID)
+                    return@launch
+                }
                 
                 // Save update metadata in public store so hooked WhatsApp process can display WDS bottom sheet
                 PreferenceStores.publicStore(app).edit()
@@ -76,6 +82,15 @@ object UpdateCheckCoordinator {
                 checking.set(false)
             }
         }
+    }
+
+    private fun clearAvailableUpdate(context: Context) {
+        PreferenceStores.publicStore(context).edit()
+            .remove("available_update_version")
+            .remove("available_update_tag")
+            .remove("available_update_name")
+            .remove("available_update_changelog")
+            .apply()
     }
 
     private fun intervalMillis(value: String): Long = when (value) {

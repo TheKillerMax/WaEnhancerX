@@ -110,7 +110,10 @@ class OnlinePresenceIndicatorsHook(
                     subscriptionMethod?.let { method ->
                         if (contact != null && method.parameterTypes.size == 4) {
                             findObjectOfType(contact, method.parameterTypes[0], 4, HashSet())?.let {
-                                identityAliases[PresenceStateStore.normalize(it.toString())] = PresenceStateStore.normalize(jid)
+                                recordIdentityAlias(
+                                    PresenceStateStore.normalize(it.toString()),
+                                    PresenceStateStore.normalize(jid)
+                                )
                             }
                         }
                     }
@@ -148,7 +151,7 @@ class OnlinePresenceIndicatorsHook(
         val now = android.os.SystemClock.uptimeMillis()
         val previous = subscriptions[key]
         if (previous != null && now - previous < 30_000L) return
-        subscriptions[key] = now
+        recordSubscription(key, now)
         try {
             val tokenType = method.parameterTypes[2]
             val tokenConstructor = tokenType.declaredConstructors.firstOrNull()
@@ -332,7 +335,23 @@ class OnlinePresenceIndicatorsHook(
 
     private fun dp(value: Int): Int = (value * context.resources.displayMetrics.density + 0.5f).toInt()
 
+    private fun recordSubscription(key: String, timestamp: Long) {
+        subscriptions[key] = timestamp
+        if (subscriptions.size > MAX_TRACKED_IDENTITIES) {
+            subscriptions.entries.minByOrNull { it.value }?.let { subscriptions.remove(it.key, it.value) }
+        }
+    }
+
+    private fun recordIdentityAlias(alias: String, jid: String) {
+        if (alias.isBlank() || jid.isBlank()) return
+        if (identityAliases.size >= MAX_TRACKED_IDENTITIES && !identityAliases.containsKey(alias)) {
+            identityAliases.clear()
+        }
+        identityAliases[alias] = jid
+    }
+
     companion object {
+        private const val MAX_TRACKED_IDENTITIES = 2048
         private const val ID_OVERLAY = 0x7f0f7a10
         private const val ID_DOT = 0x7f0f7a11
         private const val ID_TEXT = 0x7f0f7a12

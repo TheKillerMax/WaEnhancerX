@@ -20,7 +20,8 @@ anti_edit = (root / "app/src/main/java/com/waenhancer/xposed/features/conversati
 assert "Executors.newSingleThreadExecutor().execute" not in presence
 assert "ThreadPoolExecutor.DiscardOldestPolicy" in presence
 assert "TOAST_THROTTLE.shouldEmit" in presence
-assert "showDeletedMessageToast(context, null, uiHandler, prefs)" in anti_revoke
+assert "context, prefs, senderJid, uiHandler" in anti_revoke
+assert "private void showDeletedMessageToast(" in anti_revoke
 assert "messageTextCache" not in anti_edit
 assert "MAX_RECENT_REVOKES = 4096" in anti_revoke
 assert "ThreadLocal<String> sStatusKeyByThread" in anti_revoke
@@ -28,4 +29,5 @@ assert "DelMessageStore.getInstance(context).getTimestampByMessageId(keyId) > 0L
 assert "TIME_FORMAT.get().format" in anti_revoke
 assert "if (!(renderedRow instanceof ViewGroup)) return;" in anti_revoke
 assert "timeFormatter.get().format" in anti_edit
+assert "stateCount()" in (source / "PresenceStateStore.java").read_text()
 print("PASS: no per-notification executor, bridged delete-toast setting, unused text cache removed")

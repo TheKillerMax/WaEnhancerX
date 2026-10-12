@@ -79,6 +79,9 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
         try {
             com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.onTargetActivityResumed(activity);
         } catch (Throwable ignored) {}
+        try {
+            com.waenhancer.xposed.core.RestartPromptController.onTargetActivityResumed(activity);
+        } catch (Throwable ignored) {}
         for (ActivityListener listener : sListeners) {
             try {
                 listener.onActivityResumed(activity);
@@ -87,7 +90,11 @@ public final class ActivityTracker implements Application.ActivityLifecycleCallb
     }
 
     @Override
-    public void onActivityPaused(@NonNull Activity activity) {}
+    public void onActivityPaused(@NonNull Activity activity) {
+        try {
+            com.waenhancer.xposed.core.RestartPromptController.onTargetActivityPaused(activity);
+        } catch (Throwable ignored) {}
+    }
 
     @Override
     public void onActivityStopped(@NonNull Activity activity) {}

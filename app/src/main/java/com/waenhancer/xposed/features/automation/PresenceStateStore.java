@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 /** Process-local presence state shared by the receiver hook and visible conversation rows. */
 public final class PresenceStateStore {
+    private static final int MAX_STATES = 2048;
     public interface Listener { void onPresenceChanged(String jid, State state); }
 
     public static final class State {
@@ -19,8 +20,6 @@ public final class PresenceStateStore {
         }
     }
 
-    // Presence updates are transient; keep recently used contacts, not an unbounded history.
-    private static final int MAX_STATES = 4096;
     private static final Map<String, State> STATES = Collections.synchronizedMap(
             new LinkedHashMap<String, State>(256, 0.75f, true) {
                 @Override protected boolean removeEldestEntry(Map.Entry<String, State> eldest) {
@@ -32,6 +31,7 @@ public final class PresenceStateStore {
     private PresenceStateStore() {}
 
     public static State get(String jid) { return jid == null ? null : STATES.get(normalize(jid)); }
+    static int stateCount() { return STATES.size(); }
     public static void addListener(Listener listener) { if (listener != null) LISTENERS.add(listener); }
     public static void removeListener(Listener listener) { LISTENERS.remove(listener); }
 
@@ -47,12 +47,10 @@ public final class PresenceStateStore {
         }
         for (Listener listener : LISTENERS) {
             try { listener.onPresenceChanged(key, state); }
-            catch (RuntimeException ignored) { /* One failed UI observer cannot break others. */ }
+            catch (RuntimeException ignored) { /* A broken observer must not block other listeners. */ }
         }
         return true;
     }
-
-    static int trackedCountForTests() { synchronized (STATES) { return STATES.size(); } }
 
     public static String normalize(String jid) {
         if (jid == null) return "";

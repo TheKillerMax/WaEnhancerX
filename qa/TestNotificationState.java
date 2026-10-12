@@ -16,7 +16,7 @@ public final class TestNotificationState {
         for (int i=0; i<20000; ++i) {
             PresenceStateStore.update("person-" + i + "@s.whatsapp.net", i%2==0);
         }
-        ok(PresenceStateStore.trackedCountForTests() <= 4096, "bounded presence state");
+        ok(PresenceStateStore.stateCount() <= 2048, "bounded presence state");
         AtomicInteger hits = new AtomicInteger();
         PresenceStateStore.Listener crash = (jid, state) -> { throw new IllegalStateException("bad observer"); };
         PresenceStateStore.Listener good = (jid, state) -> hits.incrementAndGet();

@@ -57,8 +57,7 @@ public class TypingPrivacyHook extends BaseFeature {
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     if (param.args == null || param.args.length == 0) return;
 
-                    boolean isGhostMode = isEnabled("ghostmode_active", false)
-                            || isEnabled("ghostmode_enabled", false);
+                    boolean isGhostMode = isEnabled("ghostmode_active", false);
 
                     boolean hideTypingGlobal = isGhostMode
                             || isEnabled("typing_privacy", false)
