@@ -13,18 +13,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import com.waenhancer.config.PreferenceSchema;
-import com.waenhancer.utils.WhatsAppPackageDetector;
 import com.waenhancer.licensing.LicenseManager;
 import com.waenhancer.licensing.ProFeatureGate;
 import com.waenhancer.licensing.features.BootloaderSpooferFeature;
 import com.waenhancer.xposed.core.db.PreservedMessageStore;
 import com.waenhancer.update.UpdateCheckCoordinator;
+import com.waenhancer.utils.WhatsAppPackageDetector;
 
 /**
  * HookProvider provides preference IPC bridge between WaEnhancerX UI and target processes (WhatsApp / WA Business).
@@ -32,6 +33,8 @@ import com.waenhancer.update.UpdateCheckCoordinator;
 public class HookProvider extends ContentProvider {
 
     public static final String AUTHORITY = "com.waenhancer.hookprovider";
+    public static final String KEY_VALUES = "values";
+    public static final String KEY_SETS = "sets";
 
     @Override
     public boolean onCreate() {
@@ -51,9 +54,8 @@ public class HookProvider extends ContentProvider {
         int callerUid = Binder.getCallingUid();
         Context context = getContext();
         if (context == null) return null;
-        // Enforce authorization before clearing Binder identity, including reads.
         if (!isTrustedCaller(context, callerUid)) {
-            throw new SecurityException("WAEX provider: unauthorized caller UID");
+            throw new SecurityException("WAEX provider caller is outside the configured hook scope");
         }
         long token = Binder.clearCallingIdentity();
         try {
@@ -61,7 +63,6 @@ public class HookProvider extends ContentProvider {
             if (prefs == null) return null;
 
             if ("request_update_check".equals(method)) {
-                if (!isTrustedCaller(context, callerUid)) return null;
                 UpdateCheckCoordinator.request(context, UpdateCheckCoordinator.TRIGGER_WHATSAPP, false);
                 Bundle result = new Bundle();
                 result.putBoolean("accepted", true);
@@ -69,7 +70,7 @@ public class HookProvider extends ContentProvider {
             }
 
             if ("create_call_recording".equals(method)) {
-                if (!isTrustedCaller(context, callerUid) || extras == null) return null;
+                if (extras == null) return null;
                 String requestedName = extras.getString("name", "Call.m4a");
                 String safeName = requestedName.replaceAll("[^A-Za-z0-9._-]", "_");
                 if (safeName.isEmpty()) safeName = "Call.m4a";
@@ -94,7 +95,7 @@ public class HookProvider extends ContentProvider {
             }
 
             if ("delete_call_recording".equals(method)) {
-                if (!isTrustedCaller(context, callerUid) || extras == null) return null;
+                if (extras == null) return null;
                 String requestedName = extras.getString("name", "");
                 String safeName = requestedName.replaceAll("[^A-Za-z0-9._-]", "_");
                 File base = context.getExternalFilesDir(null);
@@ -108,14 +109,13 @@ public class HookProvider extends ContentProvider {
 
             if ("register_hooked_package".equals(method)) {
                 String pkg = (arg != null) ? arg : (extras != null ? extras.getString("package") : null);
-                if (pkg != null && !pkg.isEmpty() && callerOwnsPackage(context, callerUid, pkg)) {
+                if (pkg != null && callerOwnsPackage(context, callerUid, pkg)) {
                     var currentSet = new HashSet<>(prefs.getStringSet("hooked_whatsapp_packages", new HashSet<>()));
                     currentSet.add(pkg);
                     var editor = prefs.edit();
                     editor.putStringSet("hooked_whatsapp_packages", currentSet);
                     editor.putLong("last_active_" + pkg, System.currentTimeMillis());
                     editor.commit();
-                    fixPermissions();
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
                     Bundle result = new Bundle();
                     result.putBoolean("success", true);
@@ -127,8 +127,7 @@ public class HookProvider extends ContentProvider {
                 String pkg = extras.getString("package", arg);
                 String hooksJson = extras.getString("hooks_json");
                 long timestamp = extras.getLong("timestamp", System.currentTimeMillis());
-                if (pkg != null && !pkg.isEmpty() && hooksJson != null
-                        && callerOwnsPackage(context, callerUid, pkg)) {
+                if (pkg != null && callerOwnsPackage(context, callerUid, pkg) && hooksJson != null) {
                     var currentSet = new HashSet<>(prefs.getStringSet("hooked_whatsapp_packages", new HashSet<>()));
                     currentSet.add(pkg);
                     var editor = prefs.edit();
@@ -137,7 +136,6 @@ public class HookProvider extends ContentProvider {
                     editor.putLong("injected_hooks_time_" + pkg, timestamp);
                     editor.putLong("last_active_" + pkg, timestamp);
                     editor.commit();
-                    fixPermissions();
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/injected_hooks"), null);
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
                     Bundle result = new Bundle();
@@ -185,9 +183,11 @@ public class HookProvider extends ContentProvider {
                 boolean filterItemsEntitled = ProFeatureGate.isEntitled(
                         context, ProFeatureGate.FILTER_ITEMS);
                 all.put(ProFeatureGate.FILTER_ITEMS_ENTITLEMENT, filterItemsEntitled);
-                Bundle result = new Bundle();
-                result.putSerializable("prefs", all);
-                return result;
+                boolean unlockWaPlusEntitled = ProFeatureGate.isEntitled(
+                        context, ProFeatureGate.UNLOCK_WA_PLUS);
+                all.put(ProFeatureGate.UNLOCK_WA_PLUS_ENTITLEMENT, unlockWaPlusEntitled);
+                if (!unlockWaPlusEntitled) all.put(ProFeatureGate.UNLOCK_WA_PLUS_PREF, false);
+                return encodePreferences(all);
             }
 
             if ("get_preference".equals(method) && extras != null) {
@@ -204,13 +204,12 @@ public class HookProvider extends ContentProvider {
                 return result;
             }
 
-            // Legacy single-key API and atomic batch API both use the same
-            // validation, entitlement checks and persistence code.
             if ("put_preference".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = new ArrayList<>();
                 operations.add(extras);
                 return applyPreferenceChanges(context, prefs, false, operations);
             }
+
             if ("apply_preferences".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = extras.getParcelableArrayList("operations");
                 return applyPreferenceChanges(context, prefs,
@@ -238,11 +237,8 @@ public class HookProvider extends ContentProvider {
         }
     }
 
-    /** A caller must own an explicitly listed scoped target package, not merely
-     * put an arbitrary WhatsApp-looking string in an IPC argument. The module's
-     * own UID is permitted for its settings UI. Custom clones outside the scope
-     * are deliberately not trusted by the provider. */
     private boolean isTrustedCaller(@NonNull Context context, int uid) {
+        // Keep the Binder caller check before clearCallingIdentity().
         return CallerScopePolicy.isTrusted(uid, context.getApplicationInfo().uid,
                 context.getPackageManager().getPackagesForUid(uid),
                 WhatsAppPackageDetector.getSupportedPackages(context));
@@ -253,14 +249,35 @@ public class HookProvider extends ContentProvider {
                 context.getPackageManager().getPackagesForUid(uid), pkg);
     }
 
+    private Bundle encodePreferences(Map<String, Object> source) {
+        Bundle values = new Bundle();
+        Bundle sets = new Bundle();
+        for (Map.Entry<String, Object> entry : source.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Boolean) values.putBoolean(key, (Boolean) value);
+            else if (value instanceof Integer) values.putInt(key, (Integer) value);
+            else if (value instanceof Long) values.putLong(key, (Long) value);
+            else if (value instanceof Float) values.putFloat(key, (Float) value);
+            else if (value instanceof String) values.putString(key, (String) value);
+            else if (value instanceof Set<?>) {
+                ArrayList<String> strings = new ArrayList<>();
+                for (Object item : (Set<?>) value) if (item instanceof String) strings.add((String) item);
+                sets.putStringArrayList(key, strings);
+            }
+        }
+        Bundle result = new Bundle();
+        result.putBundle(KEY_VALUES, values);
+        result.putBundle(KEY_SETS, sets);
+        return result;
+    }
+
     private static Bundle writeResult(boolean success) {
         Bundle result = new Bundle();
         result.putBoolean("success", success);
         return result;
     }
 
-    /** Validate the complete batch before making any changes, avoiding partial
-     * writes and inconsistent quick-toggle states when an operation fails. */
     private Bundle applyPreferenceChanges(Context context, SharedPreferences prefs,
                                           boolean clear, @Nullable ArrayList<Bundle> operations) {
         if (operations == null || operations.size() > 128) return writeResult(false);
@@ -268,28 +285,16 @@ public class HookProvider extends ContentProvider {
             if (op == null) return writeResult(false);
             String key = op.getString("key");
             String type = op.getString("type");
-            if (key == null || key.isEmpty() || key.length() > 200 || type == null) {
-                return writeResult(false);
-            }
+            if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
-            if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) {
-                return writeResult(false);
-            }
-            if (!("remove".equals(type) || "string".equals(type)
-                    || "string_set".equals(type) || "boolean".equals(type)
-                    || "int".equals(type) || "long".equals(type)
+            if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
+            if (!("remove".equals(type) || "string".equals(type) || "string_set".equals(type)
+                    || "boolean".equals(type) || "int".equals(type) || "long".equals(type)
                     || "float".equals(type))) return writeResult(false);
-            if ("boolean".equals(type) && op.getBoolean("value", false)) {
-                if (ProFeatureGate.AUDIO_TO_VOICE_STATUS_PREF.equals(key)
-                        && !ProFeatureGate.isEntitled(context, ProFeatureGate.AUDIO_TO_VOICE_STATUS)) return writeResult(false);
-                if (ProFeatureGate.MESSAGE_BOMBER_PREF.equals(key)
-                        && !ProFeatureGate.isEntitled(context, ProFeatureGate.MESSAGE_BOMBER)) return writeResult(false);
-                if (ProFeatureGate.STATUS_SPLITTER_PREF.equals(key)
-                        && !ProFeatureGate.isEntitled(context, ProFeatureGate.STATUS_SPLITTER)) return writeResult(false);
-                if (ProFeatureGate.FILE_SIZE_SPOOFER_PREF.equals(key)
-                        && !ProFeatureGate.isEntitled(context, ProFeatureGate.FILE_SIZE_SPOOFER)) return writeResult(false);
-            }
+            if ("boolean".equals(type) && op.getBoolean("value", false)
+                    && !isEntitledBoolean(context, key)) return writeResult(false);
         }
+
         SharedPreferences.Editor editor = prefs.edit();
         if (clear) editor.clear();
         for (Bundle op : operations) {
@@ -298,8 +303,8 @@ public class HookProvider extends ContentProvider {
                 case "remove": editor.remove(key); break;
                 case "string": editor.putString(key, op.getString("value")); break;
                 case "string_set":
-                    ArrayList<String> values = op.getStringArrayList("value");
-                    editor.putStringSet(key, values == null ? null : new HashSet<>(values));
+                    ArrayList<String> list = op.getStringArrayList("value");
+                    editor.putStringSet(key, list == null ? null : new HashSet<>(list));
                     break;
                 case "boolean": editor.putBoolean(key, op.getBoolean("value")); break;
                 case "int": editor.putInt(key, op.getInt("value")); break;
@@ -309,11 +314,24 @@ public class HookProvider extends ContentProvider {
         }
         boolean committed = editor.commit();
         if (committed) {
-            fixPermissions();
             context.getContentResolver().notifyChange(
                     Uri.parse("content://" + AUTHORITY + "/preferences"), null);
         }
         return writeResult(committed);
+    }
+
+    private boolean isEntitledBoolean(Context context, String key) {
+        if (ProFeatureGate.AUDIO_TO_VOICE_STATUS_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.AUDIO_TO_VOICE_STATUS);
+        if (ProFeatureGate.MESSAGE_BOMBER_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.MESSAGE_BOMBER);
+        if (ProFeatureGate.STATUS_SPLITTER_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.STATUS_SPLITTER);
+        if (ProFeatureGate.FILE_SIZE_SPOOFER_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.FILE_SIZE_SPOOFER);
+        if (ProFeatureGate.UNLOCK_WA_PLUS_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.UNLOCK_WA_PLUS);
+        return true;
     }
 
     @Nullable
@@ -344,21 +362,4 @@ public class HookProvider extends ContentProvider {
         return 0;
     }
 
-    private void fixPermissions() {
-        try {
-            Context context = getContext();
-            if (context == null) return;
-            File dataDir = new File(context.getApplicationInfo().dataDir);
-            File prefsDir = new File(dataDir, "shared_prefs");
-            File prefsFile = new File(prefsDir, "waex_prefs.xml");
-
-            dataDir.setExecutable(true, false);
-            dataDir.setReadable(true, false);
-
-            prefsDir.setExecutable(true, false);
-            prefsDir.setReadable(true, false);
-
-            prefsFile.setReadable(true, false);
-        } catch (Throwable ignored) {}
-    }
 }

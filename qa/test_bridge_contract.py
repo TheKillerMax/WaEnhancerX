@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """JDK-only contract regression test for PreferenceBridgeClient.
 
-Runs without Android SDK / Gradle. Compiles the *actual* bridge source against
+Runs without Android SDK / Gradle. Compiles the *actual current-upstream* bridge source against
 minimal fake platform types, then executes persistence, caching and observer tests.
 This is not a device or LSPosed integration test.
 """
@@ -47,6 +47,10 @@ STUBS = {
             public ArrayList<Bundle> getParcelableArrayList(String k) { return (ArrayList<Bundle>) entries.get(k); }
             public void putSerializable(String k, java.io.Serializable v) { entries.put(k, v); }
             public java.io.Serializable getSerializable(String k) { return (java.io.Serializable) entries.get(k); }
+            public void putBundle(String k, Bundle v) { entries.put(k, v); }
+            public Bundle getBundle(String k) { return (Bundle) entries.get(k); }
+            public Set<String> keySet() { return entries.keySet(); }
+            public Object get(String k) { return entries.get(k); }
         }''',
     'android/database/ContentObserver.java': '''package android.database;
         public abstract class ContentObserver {
@@ -116,8 +120,25 @@ STUBS = {
                 @Override public Bundle call(Uri uri, String method, String arg, Bundle extras) {
                     if (!available) throw new SecurityException("provider unavailable");
                     if ("get_all_preferences".equals(method)) {
-                        Bundle result = new Bundle();
-                        synchronized (db) { result.putSerializable("prefs", new HashMap<>(db)); }
+                        Bundle result = new Bundle(), values = new Bundle(), sets = new Bundle();
+                        synchronized (db) {
+                            for (Map.Entry<String,Object> entry : db.entrySet()) {
+                                String key = entry.getKey();
+                                Object val = entry.getValue();
+                                if (val instanceof String v) values.putString(key, v);
+                                else if (val instanceof Boolean v) values.putBoolean(key, v);
+                                else if (val instanceof Integer v) values.putInt(key, v);
+                                else if (val instanceof Long v) values.putLong(key, v);
+                                else if (val instanceof Float v) values.putFloat(key, v);
+                                else if (val instanceof Set<?> v) {
+                                    ArrayList<String> list = new ArrayList<>();
+                                    for (Object item : v) if (item instanceof String) list.add((String) item);
+                                    sets.putStringArrayList(key, list);
+                                } else throw new AssertionError("Unsupported fake preference: " + key);
+                            }
+                        }
+                        result.putBundle("values", values);
+                        result.putBundle("sets", sets);
                         return result;
                     }
                     if ("apply_preferences".equals(method)) {

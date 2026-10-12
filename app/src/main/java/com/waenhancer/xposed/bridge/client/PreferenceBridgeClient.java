@@ -27,12 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Thread-safe preference bridge for the hooked host process.
- *
- * <p>One initial IPC request hydrates the settings before feature installation.
- * Subsequent updates are read on a dedicated executor so provider I/O never
- * stalls WhatsApp's rendering thread. All snapshots are atomically swapped.
- * Editor operations are sent in a single atomic IPC transaction.</p>
+ * High-performance, fallback-resilient Preference Bridge for injected processes.
+ * Combines direct XSharedPreferences disk reads with ContentProvider IPC fallback and real-time ContentObserver updates.
  */
 public final class PreferenceBridgeClient implements SharedPreferences {
 
@@ -44,7 +40,6 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     private final Context context;
     private final SharedPreferences diskPrefs;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Set<OnSharedPreferenceChangeListener> listeners = new CopyOnWriteArraySet<>();
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "WAEX-Preferences");
         thread.setDaemon(true);
@@ -52,71 +47,155 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     });
     private final AtomicInteger refreshGeneration = new AtomicInteger();
     private final AtomicBoolean refreshScheduled = new AtomicBoolean();
+    @Nullable private final Future<?> initialSync;
     private volatile Map<String, Object> memoryCache = Collections.emptyMap();
 
     public PreferenceBridgeClient(@NonNull Context context, @Nullable SharedPreferences diskPrefs) {
-        Context app = context.getApplicationContext();
-        this.context = app != null ? app : context;
+        this(context, diskPrefs, false);
+    }
+
+    /**
+     * Creates a bridge and optionally overlaps the authoritative provider read with target-app
+     * startup. The disk snapshot is published first so reads always have a usable fallback.
+     */
+    public PreferenceBridgeClient(@NonNull Context context, @Nullable SharedPreferences diskPrefs,
+                                  boolean syncInBackground) {
+        this.context = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         this.diskPrefs = diskPrefs;
+
+        publishDiskSnapshot(false);
         registerObserver();
-        syncPreferences(); // The version guard must see the correct settings at startup.
+        if (syncInBackground) {
+            initialSync = ioExecutor.submit(this::syncPreferences);
+        } else {
+            initialSync = null;
+            syncPreferences();
+        }
+    }
+
+    private final Set<OnSharedPreferenceChangeListener> changeListeners = new CopyOnWriteArraySet<>();
+
+    /** Waits for the startup provider read before security-sensitive feature decisions are made. */
+    public void awaitInitialSync() {
+        Future<?> pending = initialSync;
+        if (pending == null) return;
+        try {
+            pending.get();
+        } catch (Throwable t) {
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: Initial preference sync failed: "
+                    + t.getMessage());
+        }
     }
 
     public void syncPreferences() {
-        Map<String, ?> newValues = null;
+        Map<String, Object> loaded = null;
         try {
-            Bundle bundle = context.getContentResolver().call(
-                    PROVIDER_URI, "get_all_preferences", null, null);
+            Bundle bundle = context.getContentResolver().call(PROVIDER_URI,
+                    "get_all_preferences", null, null);
             if (bundle != null) {
-                Object data = bundle.getSerializable("prefs");
-                if (data instanceof Map<?, ?>) {
-                    Map<String, Object> validValues = new HashMap<>();
-                    for (Map.Entry<?, ?> entry : ((Map<?, ?>) data).entrySet()) {
-                        if (entry.getKey() instanceof String && entry.getValue() != null) {
-                            validValues.put((String) entry.getKey(), entry.getValue());
-                        }
-                    }
-                    newValues = validValues;
-                }
+                loaded = decodePreferences(bundle);
             }
         } catch (Throwable t) {
-            XposedBridge.log("[WAEX] Preference provider unavailable: " + t.getMessage());
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: Provider IPC query failed: " + t.getMessage());
         }
-        if (newValues == null && diskPrefs != null) {
-            try {
-                if (diskPrefs instanceof XSharedPreferences) {
-                    ((XSharedPreferences) diskPrefs).reload();
-                }
-                newValues = diskPrefs.getAll();
-            } catch (Throwable ignored) { }
+
+        // Disk read fallback if provider query was unavailable
+        if (loaded == null) loaded = readDiskSnapshot(true);
+        if (loaded != null) publishSnapshot(loaded);
+    }
+
+    private void publishDiskSnapshot(boolean reload) {
+        Map<String, Object> loaded = readDiskSnapshot(reload);
+        if (loaded != null) publishSnapshot(loaded);
+    }
+
+    @Nullable
+    private Map<String, Object> readDiskSnapshot(boolean reload) {
+        if (diskPrefs == null) return null;
+        try {
+            if (reload && diskPrefs instanceof XSharedPreferences) {
+                ((XSharedPreferences) diskPrefs).reload();
+            }
+            Map<String, ?> all = diskPrefs.getAll();
+            return all == null ? null : copyValues(all);
+        } catch (Throwable ignored) {
+            return null;
         }
-        if (newValues != null) publishSnapshot(newValues);
-        // Keep the last known-good snapshot on transient IPC failures.
+    }
+
+    @SuppressWarnings("deprecation")
+    private Map<String, Object> decodePreferences(Bundle result) {
+        Bundle values = result.getBundle("values");
+        Bundle sets = result.getBundle("sets");
+        if (values == null && sets == null) return null;
+        Map<String, Object> map = new HashMap<>();
+        if (values != null) {
+            for (String key : values.keySet()) {
+                Object value = values.get(key);
+                if (value != null) map.put(key, value);
+            }
+        }
+        if (sets != null) {
+            for (String key : sets.keySet()) {
+                ArrayList<String> value = sets.getStringArrayList(key);
+                if (value != null) map.put(key, new HashSet<>(value));
+            }
+        }
+        return map;
+    }
+
+    private static Map<String, Object> copyValues(Map<String, ?> source) {
+        Map<String, Object> copy = new HashMap<>();
+        for (Map.Entry<String, ?> entry : source.entrySet()) {
+            Object value = entry.getValue();
+            if (entry.getKey() != null && value != null) {
+                copy.put(entry.getKey(), value instanceof Set<?>
+                        ? Collections.unmodifiableSet(new HashSet<>((Set<?>) value)) : value);
+            }
+        }
+        return copy;
+    }
+
+    private synchronized void publishSnapshot(Map<String, ?> candidate) {
+        Map<String, Object> next = Collections.unmodifiableMap(copyValues(candidate));
+        Map<String, Object> previous = memoryCache;
+        memoryCache = next;
+        Set<String> modified = new HashSet<>(previous.keySet());
+        modified.addAll(next.keySet());
+        modified.removeIf(key -> Objects.equals(previous.get(key), next.get(key)));
+        if (!modified.isEmpty() && !changeListeners.isEmpty()) {
+            mainHandler.post(() -> {
+                for (String key : modified) notifyListeners(key);
+            });
+        }
+    }
+
+    private void notifyListeners(@Nullable String key) {
+        for (OnSharedPreferenceChangeListener listener : changeListeners) {
+            try { listener.onSharedPreferenceChanged(this, key); }
+            catch (Throwable t) { XposedBridge.log("[WAEX] Preference change listener error: " + t.getMessage()); }
+        }
     }
 
     private void registerObserver() {
         try {
             context.getContentResolver().registerContentObserver(
-                    PREFS_URI, true,
+                    PREFS_URI,
+                    true,
                     new ContentObserver(mainHandler) {
                         @Override
                         public void onChange(boolean selfChange) {
                             requestRefresh();
                         }
-                    });
+                    }
+            );
         } catch (Throwable t) {
-            XposedBridge.log("[WAEX] Preference observer registration failed: " + t.getMessage());
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: ContentObserver registration failed: " + t.getMessage());
         }
     }
 
-    /** Coalesce bursts of changes without discarding a notification that arrives
-     * during the provider read. */
     private void requestRefresh() {
         refreshGeneration.incrementAndGet();
-        scheduleRefreshWorker();
-    }
-
-    private void scheduleRefreshWorker() {
         if (!refreshScheduled.compareAndSet(false, true)) return;
         ioExecutor.execute(() -> {
             int observed = refreshGeneration.get();
@@ -127,219 +206,127 @@ public final class PreferenceBridgeClient implements SharedPreferences {
                 } while (observed != refreshGeneration.get());
             } finally {
                 refreshScheduled.set(false);
-                if (refreshGeneration.get() != observed) scheduleRefreshWorker();
+                if (observed != refreshGeneration.get()) requestRefresh();
             }
         });
     }
 
-    private synchronized void publishSnapshot(Map<String, ?> candidate) {
-        Map<String, Object> copy = new HashMap<>();
-        for (Map.Entry<String, ?> entry : candidate.entrySet()) {
-            Object value = entry.getValue();
-            if (entry.getKey() == null || value == null) continue;
-            if (value instanceof Set<?>) {
-                copy.put(entry.getKey(), Collections.unmodifiableSet(new HashSet<>((Set<?>) value)));
-            } else {
-                copy.put(entry.getKey(), value);
-            }
-        }
-        Map<String, Object> before = memoryCache;
-        memoryCache = Collections.unmodifiableMap(copy); // Single visible, complete snapshot.
-        if (listeners.isEmpty()) return;
-        Set<String> modified = new HashSet<>(before.keySet());
-        modified.addAll(copy.keySet());
-        modified.removeIf(key -> Objects.equals(before.get(key), copy.get(key)));
-        if (!modified.isEmpty()) {
-            mainHandler.post(() -> {
-                for (String key : modified) {
-                    for (OnSharedPreferenceChangeListener listener : listeners) {
-                        try { listener.onSharedPreferenceChanged(this, key); }
-                        catch (Throwable t) { XposedBridge.log("[WAEX] Preference listener error: " + t); }
-                    }
-                }
-            });
-        }
-    }
-
     @Override
-    public Map<String, ?> getAll() { return mutableCopy(memoryCache); }
-
-    private static Map<String, Object> mutableCopy(Map<String, ?> values) {
-        Map<String, Object> copy = new HashMap<>();
-        for (Map.Entry<String, ?> e : values.entrySet()) {
-            Object value = e.getValue();
-            copy.put(e.getKey(), value instanceof Set<?> ? new HashSet<>((Set<?>) value) : value);
-        }
-        return copy;
+    public Map<String, ?> getAll() {
+        return copyValues(memoryCache);
     }
 
     @Nullable
     @Override
     public String getString(String key, @Nullable String defValue) {
-        Object value = memoryCache.get(key);
-        return value instanceof String ? (String) value : defValue;
+        Object val = memoryCache.get(key);
+        return val instanceof String ? (String) val : defValue;
     }
 
     @Nullable
     @Override
-    @SuppressWarnings("unchecked")
     public Set<String> getStringSet(String key, @Nullable Set<String> defValues) {
-        Object value = memoryCache.get(key);
-        return value instanceof Set<?> ? new HashSet<>((Set<String>) value) : defValues;
+        Object val = memoryCache.get(key);
+        return val instanceof Set ? new HashSet<>((Set<String>) val) : defValues;
     }
 
     @Override
     public int getInt(String key, int defValue) {
-        Object value = memoryCache.get(key);
-        if (value instanceof Number) return ((Number) value).intValue();
-        if (value instanceof String) try { return Integer.parseInt((String) value); }
-        catch (NumberFormatException ignored) { }
+        Object val = memoryCache.get(key);
+        if (val instanceof Integer) return (Integer) val;
+        if (val instanceof String) {
+            try { return Integer.parseInt((String) val); } catch (Throwable ignored) {}
+        }
         return defValue;
     }
 
     @Override
     public long getLong(String key, long defValue) {
-        Object value = memoryCache.get(key);
-        if (value instanceof Number) return ((Number) value).longValue();
-        if (value instanceof String) try { return Long.parseLong((String) value); }
-        catch (NumberFormatException ignored) { }
+        Object val = memoryCache.get(key);
+        if (val instanceof Long) return (Long) val;
+        if (val instanceof String) {
+            try { return Long.parseLong((String) val); } catch (Throwable ignored) {}
+        }
         return defValue;
     }
 
     @Override
     public float getFloat(String key, float defValue) {
-        Object value = memoryCache.get(key);
-        if (value instanceof Number) return ((Number) value).floatValue();
-        if (value instanceof String) try { return Float.parseFloat((String) value); }
-        catch (NumberFormatException ignored) { }
+        Object val = memoryCache.get(key);
+        if (val instanceof Float) return (Float) val;
+        if (val instanceof String) {
+            try { return Float.parseFloat((String) val); } catch (Throwable ignored) {}
+        }
         return defValue;
     }
 
     @Override
     public boolean getBoolean(String key, boolean defValue) {
-        Object value = memoryCache.get(key);
-        if (value instanceof Boolean) return (Boolean) value;
-        if (value instanceof Number) return ((Number) value).intValue() != 0;
-        if (value instanceof String) {
-            if ("1".equals(value)) return true;
-            if ("0".equals(value)) return false;
-            return Boolean.parseBoolean((String) value);
-        }
+        Object val = memoryCache.get(key);
+        if (val instanceof Boolean) return (Boolean) val;
+        if (val instanceof String) return Boolean.parseBoolean((String) val);
         return defValue;
     }
 
     @Override
-    public boolean contains(String key) { return memoryCache.containsKey(key); }
+    public boolean contains(String key) {
+        return memoryCache.containsKey(key);
+    }
 
     @Override
-    public Editor edit() { return new BridgeEditor(); }
+    public Editor edit() {
+        return new BridgeEditor();
+    }
 
     @Override
     public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
-        if (listener != null) listeners.add(listener);
+        if (listener != null) {
+            changeListeners.add(listener);
+        }
     }
 
     @Override
     public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
-        listeners.remove(listener);
-    }
-
-    private boolean persist(boolean clear, Map<String, Object> updates) {
-        try {
-            Bundle request = new Bundle();
-            request.putBoolean("clear", clear);
-            ArrayList<Bundle> operations = new ArrayList<>();
-            for (Map.Entry<String, Object> entry : updates.entrySet()) {
-                Bundle operation = new Bundle();
-                operation.putString("key", entry.getKey());
-                Object value = entry.getValue();
-                if (value == REMOVED) {
-                    operation.putString("type", "remove");
-                } else if (value instanceof String) {
-                    operation.putString("type", "string");
-                    operation.putString("value", (String) value);
-                } else if (value instanceof Set<?>) {
-                    operation.putString("type", "string_set");
-                    @SuppressWarnings("unchecked") Set<String> values = (Set<String>) value;
-                    operation.putStringArrayList("value", new ArrayList<>(values));
-                } else if (value instanceof Boolean) {
-                    operation.putString("type", "boolean");
-                    operation.putBoolean("value", (Boolean) value);
-                } else if (value instanceof Integer) {
-                    operation.putString("type", "int");
-                    operation.putInt("value", (Integer) value);
-                } else if (value instanceof Long) {
-                    operation.putString("type", "long");
-                    operation.putLong("value", (Long) value);
-                } else if (value instanceof Float) {
-                    operation.putString("type", "float");
-                    operation.putFloat("value", (Float) value);
-                } else {
-                    return false;
-                }
-                operations.add(operation);
-            }
-            request.putParcelableArrayList("operations", operations);
-            Bundle reply = context.getContentResolver().call(PROVIDER_URI,
-                    "apply_preferences", null, request);
-            return reply != null && reply.getBoolean("success", false);
-        } catch (Throwable t) {
-            XposedBridge.log("[WAEX] Unable to save preferences via IPC: " + t.getMessage());
-            return false;
+        if (listener != null) {
+            changeListeners.remove(listener);
         }
     }
 
-    private synchronized void publishLocalEdits(boolean clear, Map<String, Object> updates) {
-        Map<String, Object> next = clear ? new HashMap<>() : mutableCopy(memoryCache);
-        for (Map.Entry<String, Object> change : updates.entrySet()) {
-            if (change.getValue() == REMOVED) next.remove(change.getKey());
-            else next.put(change.getKey(), change.getValue());
-        }
-        publishSnapshot(next);
-    }
-
-    private final class BridgeEditor implements Editor {
-        private final Map<String, Object> updates = new LinkedHashMap<>();
+    private class BridgeEditor implements Editor {
+        private final Map<String, Object> values = new LinkedHashMap<>();
         private boolean clear;
 
         @Override
         public Editor putString(String key, @Nullable String value) {
-            updates.put(key, value == null ? REMOVED : value);
-            return this;
+            values.put(key, value == null ? REMOVED : value); return this;
         }
         @Override
         public Editor putStringSet(String key, @Nullable Set<String> values) {
-            updates.put(key, values == null ? REMOVED : new HashSet<>(values));
+            this.values.put(key, values == null ? REMOVED : new HashSet<>(values));
             return this;
         }
         @Override
-        public Editor putInt(String key, int value) { updates.put(key, value); return this; }
+        public Editor putInt(String key, int value) { values.put(key, value); return this; }
         @Override
-        public Editor putLong(String key, long value) { updates.put(key, value); return this; }
+        public Editor putLong(String key, long value) { values.put(key, value); return this; }
         @Override
-        public Editor putFloat(String key, float value) { updates.put(key, value); return this; }
+        public Editor putFloat(String key, float value) { values.put(key, value); return this; }
         @Override
-        public Editor putBoolean(String key, boolean value) { updates.put(key, value); return this; }
+        public Editor putBoolean(String key, boolean value) { values.put(key, value); return this; }
         @Override
-        public Editor remove(String key) { updates.put(key, REMOVED); return this; }
+        public Editor remove(String key) { values.put(key, REMOVED); return this; }
         @Override
         public Editor clear() { clear = true; return this; }
-
-        private Map<String, Object> frozenUpdates() {
-            return mutableCopy(updates);
-        }
-
         @Override
         public boolean commit() {
-            Map<String, Object> changes = frozenUpdates();
+            Map<String, Object> changes = new LinkedHashMap<>(values);
             if (!clear && changes.isEmpty()) return true;
             try {
-                // Serializing commits with pending apply() jobs preserves edit order.
                 Future<Boolean> result = ioExecutor.submit(() -> persist(clear, changes));
-                boolean succeeded = result.get();
-                if (succeeded) publishLocalEdits(clear, changes);
+                boolean success = result.get();
+                if (success) publishLocalEdits(clear, changes);
                 else requestRefresh();
-                return succeeded;
+                return success;
             } catch (Throwable t) {
                 requestRefresh();
                 return false;
@@ -348,12 +335,54 @@ public final class PreferenceBridgeClient implements SharedPreferences {
 
         @Override
         public void apply() {
-            Map<String, Object> changes = frozenUpdates();
+            Map<String, Object> changes = new LinkedHashMap<>(values);
             if (!clear && changes.isEmpty()) return;
-            publishLocalEdits(clear, changes); // SharedPreferences.apply: visible immediately.
+            publishLocalEdits(clear, changes);
             ioExecutor.execute(() -> {
                 if (!persist(clear, changes)) requestRefresh();
             });
         }
+    }
+
+    private boolean persist(boolean clear, Map<String, Object> values) {
+        try {
+            Bundle request = new Bundle();
+            request.putBoolean("clear", clear);
+            ArrayList<Bundle> operations = new ArrayList<>();
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                String key = entry.getKey();
+                Object val = entry.getValue();
+                Bundle operation = new Bundle();
+                operation.putString("key", key);
+                if (val == REMOVED) operation.putString("type", "remove");
+                else if (val instanceof String) { operation.putString("type", "string"); operation.putString("value", (String) val); }
+                else if (val instanceof Boolean) { operation.putString("type", "boolean"); operation.putBoolean("value", (Boolean) val); }
+                else if (val instanceof Integer) { operation.putString("type", "int"); operation.putInt("value", (Integer) val); }
+                else if (val instanceof Long) { operation.putString("type", "long"); operation.putLong("value", (Long) val); }
+                else if (val instanceof Float) { operation.putString("type", "float"); operation.putFloat("value", (Float) val); }
+                else if (val instanceof Set) {
+                    operation.putString("type", "string_set");
+                    @SuppressWarnings("unchecked") Set<String> set = (Set<String>) val;
+                    operation.putStringArrayList("value", new ArrayList<>(set));
+                } else return false;
+                operations.add(operation);
+            }
+            request.putParcelableArrayList("operations", operations);
+            Bundle response = context.getContentResolver().call(
+                    PROVIDER_URI, "apply_preferences", null, request);
+            return response != null && response.getBoolean("success", false);
+        } catch (Throwable t) {
+            XposedBridge.log("[WAEX] Preference batch write failed: " + t.getMessage());
+            return false;
+        }
+    }
+
+    private synchronized void publishLocalEdits(boolean clear, Map<String, Object> changes) {
+        Map<String, Object> next = clear ? new HashMap<>() : copyValues(memoryCache);
+        for (Map.Entry<String, Object> entry : changes.entrySet()) {
+            if (entry.getValue() == REMOVED) next.remove(entry.getKey());
+            else next.put(entry.getKey(), entry.getValue());
+        }
+        publishSnapshot(next);
     }
 }

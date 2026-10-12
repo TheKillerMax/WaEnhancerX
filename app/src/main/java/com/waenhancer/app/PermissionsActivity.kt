@@ -129,7 +129,7 @@ class PermissionsActivity : ComponentActivity() {
                 "Light" -> false
                 else -> isSystemInDarkTheme()
             }
-            WaexTheme(darkTheme = isDark) {
+            WaexTheme(darkTheme = isDark, useMonet = themeMode == "Monet") {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

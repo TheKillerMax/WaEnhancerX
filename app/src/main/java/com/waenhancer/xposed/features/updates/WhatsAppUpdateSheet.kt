@@ -18,6 +18,7 @@ import android.widget.TextView
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.update.ChangelogParser
 import com.waenhancer.update.ChangelogSection
+import com.waenhancer.update.ReleaseRepository
 import com.waenhancer.xposed.core.components.WaexBottomSheet
 import de.robv.android.xposed.XposedBridge
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,6 +48,12 @@ object WhatsAppUpdateSheet {
         val context: Context = activity.applicationContext
         val publicPrefs: SharedPreferences = sPrefs ?: PreferenceStores.publicStore(context)
         val availableVersion = publicPrefs.getString("available_update_version", null) ?: return
+        val installedVersion = publicPrefs.getString("wae_version_name", null)
+        if (installedVersion != null && ReleaseRepository.versionCode(availableVersion) <=
+            ReleaseRepository.versionCode(installedVersion)) {
+            clearStaleUpdate(publicPrefs)
+            return
+        }
         val availableTag = publicPrefs.getString("available_update_tag", availableVersion) ?: availableVersion
         val availableName = publicPrefs.getString("available_update_name", "WaEnhancerX $availableVersion") ?: "WaEnhancerX $availableVersion"
         val availableBody = publicPrefs.getString("available_update_changelog", "") ?: ""
@@ -94,6 +101,15 @@ object WhatsAppUpdateSheet {
                 shownThisSession.set(false)
             }
         }
+    }
+
+    private fun clearStaleUpdate(prefs: SharedPreferences) {
+        prefs.edit()
+            .remove("available_update_version")
+            .remove("available_update_tag")
+            .remove("available_update_name")
+            .remove("available_update_changelog")
+            .apply()
     }
 
     private fun shouldSuppressIgnored(prefs: SharedPreferences, version: String, now: Long): Boolean {

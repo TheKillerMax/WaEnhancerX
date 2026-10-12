@@ -21,4 +21,8 @@
     <string name="support_desc">If you encounter any issues or have questions about WaEnhancer X, please visit Telegram.</string>
     <string name="license">License</string>
     <string name="license_desc">This project is licensed under the Apache License 2.0 - see the LICENSE file for details.\n\nWaEnhancer X is developed independently by Mubashar Dev. It is not affiliated with, endorsed by, or in any way associated with WhatsApp Inc. or Meta Platforms, Inc. This project is provided \"as is\" for research and educational purposes. Use at your own risk. Misuse of this tool may lead to legal consequences.</string>
+    <string name="show_message_device_source">Show Message Device Source</string>
+    <string name="show_message_device_source_sum">Shows whether a message was sent from the primary device or a linked device</string>
+    <string name="message_sent_via_phone">This message was sent via Phone</string>
+    <string name="message_sent_via_linked_device">This message was sent via Linked Device</string>
 </resources>

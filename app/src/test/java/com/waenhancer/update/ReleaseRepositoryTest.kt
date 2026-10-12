@@ -28,5 +28,6 @@ class ReleaseRepositoryTest {
     fun sameOrOlderBuildIsNotAnUpdate() {
         assertNull(ReleaseRepository.findUpdate(listOf(release("v3.2.0")), "3.2.0+42"))
         assertNull(ReleaseRepository.findUpdate(listOf(release("v3.1.0")), "3.2.0"))
+        assertNull(ReleaseRepository.findUpdate(listOf(release("2.0.0-beta-3")), "2.0.1"))
     }
 }

@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
                     preferenceManager.putString("app_theme_mode", it)
                 }
             ) {
-                WaexTheme(darkTheme = isDark) {
+                WaexTheme(darkTheme = isDark, useMonet = themeMode == "Monet") {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
