@@ -31,10 +31,10 @@ RAW_EXCEPTION_TEXT = re.compile(
     r"|\$\{\s*(?:t|ex|e|error|throwable)\s*\.\s*message\s*\}"
 )
 RAW_EXCEPTION_OBJECT = re.compile(
-    r"\\$\\{\\s*(?:t|ex|e|error|throwable)\\s*\\}"
-    r"|\\$(?:t|ex|e|error|throwable)\\b"
-    r"|\\+\\s*(?:t|ex|e|error|throwable)(?![\\w.])"
-    r"|\\+\\s*(?:t|ex|e|error|throwable)\\.toString\\s*\\("
+    r"\$\{\s*(?:t|ex|e|error|throwable)\s*\}"
+    r"|\$(?:t|ex|e|error|throwable)\b"
+    r"|\+\s*(?:t|ex|e|error|throwable)(?![\w.])"
+    r"|\+\s*(?:t|ex|e|error|throwable)\.toString\s*\("
 )
 RAW_LITERAL = re.compile(
     r"(?:keyId|message[_ -]?id|sender[_ -]?jid|chat[_ -]?jid)\s*="
