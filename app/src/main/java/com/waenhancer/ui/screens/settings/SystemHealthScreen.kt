@@ -50,6 +50,9 @@ fun SystemHealthScreen() {
     var showHookToast by remember {
         mutableStateOf(preferences.getBoolean("show_hook_toast", true))
     }
+    var showRestartSheet by remember {
+        mutableStateOf(preferences.getBoolean("show_restart_sheet", true))
+    }
     LaunchedEffect(Unit) { diagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) } }
 
     Scaffold(topBar = { WaexTopBar("System Diagnostics", onBackClick = { nav.popBack() }) }, containerColor = colors.background) { insets ->
@@ -114,6 +117,39 @@ fun SystemHealthScreen() {
                             onCheckedChange = { checked ->
                                 showHookToast = checked
                                 preferences.putBoolean("show_hook_toast", checked)
+                            }
+                        )
+                    }
+                }
+                Surface(
+                    shape = radius.bentoCardShape,
+                    color = colors.surfaceContainerLow,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Show restart sheet after changes",
+                                style = typography.bodyLg,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.onSurface
+                            )
+                            Text(
+                                "Preferences refresh immediately; restarting WhatsApp re-injects hooks that only load at startup",
+                                style = typography.bodyMd,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                        StitchSwitch(
+                            checked = showRestartSheet,
+                            onCheckedChange = { checked ->
+                                showRestartSheet = checked
+                                preferences.putBoolean("show_restart_sheet", checked)
                             }
                         )
                     }

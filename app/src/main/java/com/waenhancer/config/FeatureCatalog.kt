@@ -45,7 +45,7 @@ object FeatureCatalog {
         FeatureItem("ghostmode", "Show Ghost Mode Button", "Show a Ghost Mode button on the home screen toolbar", "Home Menu Shortcuts", 1, "privacy", "Privacy"),
         FeatureItem("show_dndmode", "Show DND Button", "Show button for DND Mode on home screen toolbar", "Home Menu Shortcuts", 1, "privacy", "Privacy"),
         FeatureItem("restartbutton", "Enable Restart Button", "Add button in Home Screen to Restart App", "Home Menu Shortcuts", 1, "privacy", "Privacy"),
-        FeatureItem("open_wae", "Enable Wa Enhancer Button", "Add button in Home Screen or WhatsApp Settings to open Wa Enhancer", "Home Menu Shortcuts", 1, "privacy", "Privacy"),
+        FeatureItem("open_wae", "Enable WAEX Button", "Add button in Home Screen or WhatsApp Settings to open Wa Enhancer", "Home Menu Shortcuts", 1, "privacy", "Privacy"),
 
         // --- PRIVACY TAB (Tab 1), Sub-tab "conversation" ---
         FeatureItem("message_bomber", "Message Bomber", "Send a short, delayed sequence of messages from inside a WhatsApp chat", "Message Controls", 1, "conversation", "Conversation"),
@@ -114,6 +114,7 @@ object FeatureCatalog {
 
         // --- SETTINGS & SYSTEM ---
         FeatureItem("show_hook_toast", "Show Hook Injection Toast", "Show or hide the injecting hooks notification when WhatsApp opens", "System & Compatibility", -1, null, "Settings"),
+        FeatureItem("show_restart_sheet", "Show Restart Sheet", "Prompt to restart WhatsApp after preference changes so hooks are re-injected", "System & Compatibility", -1, null, "Settings"),
         FeatureItem("supported_versions", "Supported WhatsApp Versions", "Manage verified WhatsApp and WA Business versions & wildcards", "System & Compatibility", -1, null, "Settings"),
         FeatureItem("bypass_version_check", "Disable Version Check", "Disables the supported version check of WhatsApp", "System & Compatibility", -1, null, "Settings"),
         FeatureItem("bootloader_spoofer", "Bootloader Spoofer", "Spoof verified boot attestation for WhatsApp integrity checks", "System & Compatibility", -1, null, "Settings"),

@@ -17,6 +17,7 @@ public class PreferenceRestartTrackerTest {
     public void runtimeAndPrivateStateDoesNotRequireRestart() {
         assertFalse(PreferenceRestartTracker.requiresRestart("need_restart"));
         assertFalse(PreferenceRestartTracker.requiresRestart("pending_restart_changes"));
+        assertFalse(PreferenceRestartTracker.requiresRestart("show_restart_sheet"));
         assertFalse(PreferenceRestartTracker.requiresRestart("active_xposed_api_version"));
         assertFalse(PreferenceRestartTracker.requiresRestart("assemblyai_key"));
         assertFalse(PreferenceRestartTracker.requiresRestart("unknown_key"));

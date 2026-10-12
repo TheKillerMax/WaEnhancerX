@@ -324,6 +324,7 @@ public final class PreferenceSchema {
         add(entries, "show_hidereceipt", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_home_menu", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_hook_toast", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "show_restart_sheet", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_name_home", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_status_menu", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "showbiohome", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);

@@ -247,7 +247,7 @@ fun GlobalPrivacySettingsScreen(
                 SettingItem("Show Freeze Last Seen Button", "Show button for Freezing Last Seen on home screen toolbar", "freezelastseen"),
                 SettingItem("Show DND Button", "Show button for DND Mode on home screen toolbar", "show_dndmode"),
                 SettingItem("Enable Restart Button", "Add button in Home Screen to Restart App", "restartbutton"),
-                SettingItem("Enable Wa Enhancer Button", "Add button in Home Screen to open Wa Enhancer", "open_wae")
+                SettingItem("Enable WAEX Button", "Add button in Home Screen to open Wa Enhancer", "open_wae")
             )
         )
     )

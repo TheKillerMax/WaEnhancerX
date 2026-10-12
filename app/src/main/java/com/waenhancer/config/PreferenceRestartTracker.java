@@ -11,12 +11,23 @@ import java.util.Set;
 public final class PreferenceRestartTracker {
     public static final String NEED_RESTART = "need_restart";
     public static final String PENDING_CHANGES = "pending_restart_changes";
+    public static final String SHOW_RESTART_SHEET = "show_restart_sheet";
 
     private PreferenceRestartTracker() {}
 
 
     public static synchronized void onPreferenceChanged(
             @NonNull SharedPreferences preferences, @Nullable String key) {
+        if (SHOW_RESTART_SHEET.equals(key)) {
+            if (!preferences.getBoolean(SHOW_RESTART_SHEET, true)) {
+                preferences.edit()
+                        .putBoolean(NEED_RESTART, false)
+                        .remove(PENDING_CHANGES)
+                        .apply();
+            }
+            return;
+        }
+        if (!preferences.getBoolean(SHOW_RESTART_SHEET, true)) return;
         if (!requiresRestart(key)) return;
 
         Set<String> pending = new LinkedHashSet<>(preferences.getStringSet(
@@ -30,7 +41,8 @@ public final class PreferenceRestartTracker {
     }
 
     public static boolean requiresRestart(@Nullable String key) {
-        if (key == null || NEED_RESTART.equals(key) || PENDING_CHANGES.equals(key)) return false;
+        if (key == null || NEED_RESTART.equals(key) || PENDING_CHANGES.equals(key)
+                || SHOW_RESTART_SHEET.equals(key)) return false;
         PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
         return entry != null
                 && entry.store == PreferenceSchema.Store.PUBLIC

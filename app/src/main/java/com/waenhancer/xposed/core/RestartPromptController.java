@@ -42,7 +42,9 @@ public final class RestartPromptController {
         preferences = sharedPreferences;
         // A newly created target process has already loaded the changed settings, so an old
         // restart request is fulfilled and must not be shown on its first Activity resume.
-        if (sharedPreferences.getBoolean(PreferenceRestartTracker.NEED_RESTART, false)) {
+        if (sharedPreferences.getBoolean(PreferenceRestartTracker.NEED_RESTART, false)
+                || !sharedPreferences.getBoolean(
+                        PreferenceRestartTracker.SHOW_RESTART_SHEET, true)) {
             sharedPreferences.edit()
                     .putBoolean(PreferenceRestartTracker.NEED_RESTART, false)
                     .remove(PreferenceRestartTracker.PENDING_CHANGES)
@@ -71,6 +73,7 @@ public final class RestartPromptController {
     private static void showIfNeeded(Activity activity) {
         SharedPreferences prefs = preferences;
         if (prefs == null || activity.isFinishing() || activity.isDestroyed()
+                || !prefs.getBoolean(PreferenceRestartTracker.SHOW_RESTART_SHEET, true)
                 || !prefs.getBoolean(PreferenceRestartTracker.NEED_RESTART, false)
                 || !SHOWING.compareAndSet(false, true)) {
             return;
