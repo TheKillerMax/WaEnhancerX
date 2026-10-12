@@ -78,10 +78,34 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+        // Preserve saved message history. Older versions may be missing columns
+        // or indexes; perform an additive, transactional migration instead.
+        val columns = mutableSetOf<String>()
+        db.rawQuery("PRAGMA table_info($TABLE_NAME)", null).use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) if (nameIndex >= 0) {
+                columns.add(cursor.getString(nameIndex))
+            }
+        }
+        if (columns.isEmpty()) {
+            onCreate(db)
+            return
+        }
+        val missing = mapOf(
+            COL_ROW_ID to "INTEGER DEFAULT 0",
+            COL_KEY_ID to "TEXT",
+            COL_TEXT to "TEXT",
+            COL_TIMESTAMP to "INTEGER DEFAULT 0",
+            COL_VERSION to "INTEGER DEFAULT 1"
+        )
+        for ((column, declaration) in missing) {
+            if (column !in columns) db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $column $declaration")
+        }
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_hist_rowid ON $TABLE_NAME ($COL_ROW_ID)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_hist_keyid ON $TABLE_NAME ($COL_KEY_ID)")
     }
 
+    @Synchronized
     fun recordEdit(rowId: Long, keyId: String?, newMessage: String, timestamp: Long) {
         if (newMessage.isBlank()) return
         val ts = if (timestamp > 0) timestamp else System.currentTimeMillis()
@@ -112,7 +136,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
     private fun insertMessageDirect(rowId: Long, keyId: String, text: String, timestamp: Long, version: Int) {
         try {
-            writableDatabase.use { db ->
+            val db = writableDatabase // Owned by SQLiteOpenHelper; only close cursors.
+            run {
                 val cv = ContentValues().apply {
                     put(COL_ROW_ID, rowId)
                     put(COL_KEY_ID, keyId)
@@ -120,13 +145,14 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                     put(COL_TIMESTAMP, timestamp)
                     put(COL_VERSION, version)
                 }
-                val row = db.insert(TABLE_NAME, null, cv)
+                db.insert(TABLE_NAME, null, cv)
             }
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Insert DB error: ${t.message}")
         }
     }
 
+    @Synchronized
     fun getMessages(rowId: Long, keyId: String?): List<MessageItem> {
         if (rowId > 0 && messagesCache.containsKey(rowId.toString())) {
             val cached = messagesCache[rowId.toString()]
@@ -139,7 +165,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
         val result = mutableListOf<MessageItem>()
         try {
-            readableDatabase.use { db ->
+            val db = readableDatabase // Owned by SQLiteOpenHelper; only close cursors.
+            run {
                 val selection = if (rowId > 0 && !keyId.isNullOrEmpty()) {
                     "$COL_ROW_ID=? OR $COL_KEY_ID=?"
                 } else if (rowId > 0) {
