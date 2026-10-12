@@ -47,7 +47,7 @@ public final class PresenceStateStore {
         }
         for (Listener listener : LISTENERS) {
             try { listener.onPresenceChanged(key, state); }
-            catch (RuntimeException ignored) { /* A broken observer must not block other listeners. */ }
+            catch (RuntimeException | LinkageError ignored) { /* Isolate incompatible listeners. */ }
         }
         return true;
     }

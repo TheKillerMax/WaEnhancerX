@@ -19,13 +19,16 @@ public final class TestNotificationState {
         ok(PresenceStateStore.stateCount() <= 2048, "bounded presence state");
         AtomicInteger hits = new AtomicInteger();
         PresenceStateStore.Listener crash = (jid, state) -> { throw new IllegalStateException("bad observer"); };
+        PresenceStateStore.Listener brokenLinkage = (jid, state) -> { throw new NoClassDefFoundError("simulated missing WhatsApp class"); };
         PresenceStateStore.Listener good = (jid, state) -> hits.incrementAndGet();
         PresenceStateStore.addListener(crash);
+        PresenceStateStore.addListener(brokenLinkage);
         PresenceStateStore.addListener(good);
         ok(PresenceStateStore.update("current@s.whatsapp.net", true), "change emits");
         ok(hits.get() == 1, "failed observer does not block next");
         ok(!PresenceStateStore.update("current@s.whatsapp.net", true), "duplicate suppressed");
         PresenceStateStore.removeListener(crash);
+        PresenceStateStore.removeListener(brokenLinkage);
         PresenceStateStore.removeListener(good);
         CountDownLatch ready = new CountDownLatch(5);
         for (int t=0;t<5;t++) {
