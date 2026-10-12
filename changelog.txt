@@ -11,3 +11,5 @@
 [Improvements]
 - Improved performance
 - Improved injection strategy
+- Hide blue ticks
+- Hide delivered
