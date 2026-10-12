@@ -31,6 +31,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     public static final String PACKAGE_BUSINESS = "com.whatsapp.w4b";
 
     private static XSharedPreferences sPrefs;
+    private static volatile PreferenceBridgeClient sPreferenceBridge;
     private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
     private String mModulePath;
 
@@ -119,6 +120,36 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 return;
             }
 
+            // Read the world-readable snapshot before Application startup, then begin the
+            // authoritative provider fetch as soon as a Context becomes available. This overlaps
+            // preference IPC with the target's attach -> onCreate work without using stale
+            // entitlement/config values when hooks are installed.
+            final XSharedPreferences preloadedPrefs = getPrefs();
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Application",
+                        lpparam.classLoader,
+                        "attach",
+                        Context.class,
+                        new XC_MethodHook() {
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) {
+                                Context context = (Context) param.thisObject;
+                                if (sPreferenceBridge == null) {
+                                    synchronized (MainHook.class) {
+                                        if (sPreferenceBridge == null) {
+                                            sPreferenceBridge = new PreferenceBridgeClient(
+                                                    context, preloadedPrefs, true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                );
+            } catch (Throwable t) {
+                XposedBridge.log("[WAEX] Failed to start early preference preload: "
+                        + t.getMessage());
+            }
 
             // Initialize features on target Application creation
             try {
@@ -166,8 +197,13 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                                 boolean showHookToast = true;
                                 try {
-                                    PreferenceBridgeClient bridgeClient =
-                                        new PreferenceBridgeClient(appContext, getPrefs());
+                                    PreferenceBridgeClient bridgeClient = sPreferenceBridge;
+                                    if (bridgeClient == null) {
+                                        bridgeClient = new PreferenceBridgeClient(appContext, preloadedPrefs);
+                                        sPreferenceBridge = bridgeClient;
+                                    } else {
+                                        bridgeClient.awaitInitialSync();
+                                    }
                                     com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
                                     try {
                                         android.content.IntentFilter prefsFilter = new android.content.IntentFilter(

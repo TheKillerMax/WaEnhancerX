@@ -47,17 +47,45 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     });
     private final AtomicInteger refreshGeneration = new AtomicInteger();
     private final AtomicBoolean refreshScheduled = new AtomicBoolean();
+    @Nullable private final Future<?> initialSync;
     private volatile Map<String, Object> memoryCache = Collections.emptyMap();
 
     public PreferenceBridgeClient(@NonNull Context context, @Nullable SharedPreferences diskPrefs) {
+        this(context, diskPrefs, false);
+    }
+
+    /**
+     * Creates a bridge and optionally overlaps the authoritative provider read with target-app
+     * startup. The disk snapshot is published first so reads always have a usable fallback.
+     */
+    public PreferenceBridgeClient(@NonNull Context context, @Nullable SharedPreferences diskPrefs,
+                                  boolean syncInBackground) {
         this.context = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         this.diskPrefs = diskPrefs;
 
+        publishDiskSnapshot(false);
         registerObserver();
-        syncPreferences();
+        if (syncInBackground) {
+            initialSync = ioExecutor.submit(this::syncPreferences);
+        } else {
+            initialSync = null;
+            syncPreferences();
+        }
     }
 
     private final Set<OnSharedPreferenceChangeListener> changeListeners = new CopyOnWriteArraySet<>();
+
+    /** Waits for the startup provider read before security-sensitive feature decisions are made. */
+    public void awaitInitialSync() {
+        Future<?> pending = initialSync;
+        if (pending == null) return;
+        try {
+            pending.get();
+        } catch (Throwable t) {
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: Initial preference sync failed: "
+                    + t.getMessage());
+        }
+    }
 
     public void syncPreferences() {
         Map<String, Object> loaded = null;
@@ -72,16 +100,27 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         }
 
         // Disk read fallback if provider query was unavailable
-        if (loaded == null && diskPrefs != null) {
-            try {
-                if (diskPrefs instanceof XSharedPreferences) {
-                    ((XSharedPreferences) diskPrefs).reload();
-                }
-                Map<String, ?> all = diskPrefs.getAll();
-                if (all != null) loaded = copyValues(all);
-            } catch (Throwable ignored) {}
-        }
+        if (loaded == null) loaded = readDiskSnapshot(true);
         if (loaded != null) publishSnapshot(loaded);
+    }
+
+    private void publishDiskSnapshot(boolean reload) {
+        Map<String, Object> loaded = readDiskSnapshot(reload);
+        if (loaded != null) publishSnapshot(loaded);
+    }
+
+    @Nullable
+    private Map<String, Object> readDiskSnapshot(boolean reload) {
+        if (diskPrefs == null) return null;
+        try {
+            if (reload && diskPrefs instanceof XSharedPreferences) {
+                ((XSharedPreferences) diskPrefs).reload();
+            }
+            Map<String, ?> all = diskPrefs.getAll();
+            return all == null ? null : copyValues(all);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     @SuppressWarnings("deprecation")
