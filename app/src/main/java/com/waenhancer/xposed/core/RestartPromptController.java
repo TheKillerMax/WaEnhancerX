@@ -2,14 +2,13 @@ package com.waenhancer.xposed.core;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Process;
 import androidx.annotation.NonNull;
 import com.waenhancer.config.PreferenceRestartTracker;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
+import com.waenhancer.xposed.utils.WhatsAppProcessRestarter;
 import de.robv.android.xposed.XposedBridge;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,6 +40,14 @@ public final class RestartPromptController {
         SharedPreferences previous = preferences;
         if (previous != null) previous.unregisterOnSharedPreferenceChangeListener(CHANGE_LISTENER);
         preferences = sharedPreferences;
+        // A newly created target process has already loaded the changed settings, so an old
+        // restart request is fulfilled and must not be shown on its first Activity resume.
+        if (sharedPreferences.getBoolean(PreferenceRestartTracker.NEED_RESTART, false)) {
+            sharedPreferences.edit()
+                    .putBoolean(PreferenceRestartTracker.NEED_RESTART, false)
+                    .remove(PreferenceRestartTracker.PENDING_CHANGES)
+                    .apply();
+        }
         sharedPreferences.registerOnSharedPreferenceChangeListener(CHANGE_LISTENER);
     }
 
@@ -84,7 +91,8 @@ public final class RestartPromptController {
                     .asBottomSheet()
                     .setTitle("Restart required")
                     .setMessage(message)
-                    .setPositiveButton("Restart WhatsApp", (ignored, which) -> restart(activity))
+                    .setPositiveButton("Restart WhatsApp",
+                            (ignored, which) -> WhatsAppProcessRestarter.restart(activity))
                     .setNegativeButton("Later", null)
                     .show();
             if (dialog == null) {
@@ -113,21 +121,4 @@ public final class RestartPromptController {
         return message.toString().trim();
     }
 
-    private static void restart(Activity activity) {
-        try {
-            Intent launch = activity.getPackageManager()
-                    .getLaunchIntentForPackage(activity.getPackageName());
-            if (launch != null && launch.getComponent() != null) {
-                Intent restart = Intent.makeRestartActivityTask(launch.getComponent());
-                restart.setPackage(activity.getPackageName());
-                activity.startActivity(restart);
-            }
-        } catch (Throwable throwable) {
-            XposedBridge.log("[WAEX] WhatsApp relaunch failed: " + throwable.getMessage());
-        }
-        MAIN.postDelayed(() -> {
-            Process.killProcess(Process.myPid());
-            System.exit(0);
-        }, 150L);
-    }
 }

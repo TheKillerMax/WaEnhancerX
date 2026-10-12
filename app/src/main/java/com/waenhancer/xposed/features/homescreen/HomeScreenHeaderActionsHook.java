@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
-import android.os.Process;
 import android.os.SystemClock;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -415,28 +414,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
      */
     private void forceRestartWhatsApp(Activity activity) {
         if (activity == null) return;
-        try {
-            android.content.pm.PackageManager pm = activity.getPackageManager();
-            Intent launchIntent = pm.getLaunchIntentForPackage(activity.getPackageName());
-            if (launchIntent != null && launchIntent.getComponent() != null) {
-                Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
-                restartIntent.setPackage(activity.getPackageName());
-                activity.startActivity(restartIntent);
-            } else {
-                Intent fallback = new Intent(activity, activity.getClass());
-                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                activity.startActivity(fallback);
-            }
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " forceRestartWhatsApp failed: " + t.getMessage());
-        }
-
-        try {
-            Runtime.getRuntime().exit(0);
-        } catch (Throwable ignored) {
-            Process.killProcess(Process.myPid());
-            System.exit(0);
-        }
+        com.waenhancer.xposed.utils.WhatsAppProcessRestarter.restart(activity);
     }
 
     // -------------------------------------------------------------------------

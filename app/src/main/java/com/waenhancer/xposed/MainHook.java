@@ -169,6 +169,26 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     PreferenceBridgeClient bridgeClient =
                                         new PreferenceBridgeClient(appContext, getPrefs());
                                     com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
+                                    try {
+                                        android.content.IntentFilter prefsFilter = new android.content.IntentFilter(
+                                                "com.waenhancer.action.PREFERENCES_CHANGED");
+                                        android.content.BroadcastReceiver prefsReceiver = new android.content.BroadcastReceiver() {
+                                            @Override
+                                            public void onReceive(Context context, android.content.Intent intent) {
+                                                bridgeClient.syncPreferences();
+                                            }
+                                        };
+                                        if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                            appContext.registerReceiver(prefsReceiver, prefsFilter, RESTART_PERMISSION,
+                                                    null, Context.RECEIVER_EXPORTED);
+                                        } else {
+                                            appContext.registerReceiver(prefsReceiver, prefsFilter,
+                                                    RESTART_PERMISSION, null);
+                                        }
+                                    } catch (Throwable t) {
+                                        XposedBridge.log("[WAEX] Failed to register preference refresh receiver: "
+                                                + t.getMessage());
+                                    }
                                     showHookToast = bridgeClient.getBoolean("show_hook_toast", true);
 
                                     // Verify universal version compatibility before loading hooks
