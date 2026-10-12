@@ -151,16 +151,17 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         + t.getMessage());
             }
 
-            // Initialize features on target Application creation
-            try {
-                XposedHelpers.findAndHookMethod(
-                        "android.app.Application",
-                        lpparam.classLoader,
-                        "onCreate",
-                        new XC_MethodHook() {
+            // Reuse one initializer from both lifecycle entry points. Some custom
+            // Application subclasses override onCreate() without calling super.
+            XC_MethodHook applicationInitializer = new XC_MethodHook() {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
-                                Context appContext = (Context) param.thisObject;
+                                // onCreate: thisObject is Application; Instrumentation: args[0].
+                                Object application = param.thisObject instanceof android.app.Application
+                                        ? param.thisObject
+                                        : (param.args != null && param.args.length == 1 ? param.args[0] : null);
+                                if (!(application instanceof android.app.Application)) return;
+                                Context appContext = (Context) application;
                                 if (!TARGET_INITIALIZED.compareAndSet(false, true)) {
                                     return;
                                 }
@@ -285,10 +286,29 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     showInjectionErrorSheet(t, packageName, lpparam.processName);
                                 }
                             }
-                        }
-                );
+                        };
+
+            // Keep the previous hook for compatible runtimes. Both callbacks are
+            // protected by TARGET_INITIALIZED.compareAndSet(false, true).
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Application", lpparam.classLoader,
+                        "onCreate", applicationInitializer);
             } catch (Throwable t) {
                 XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
+            }
+
+            // Instrumentation normally invokes the actual Application.onCreate,
+            // including subclasses that bypass the superclass implementation.
+            // Hook registration is independent so either entry point can work.
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Instrumentation", lpparam.classLoader,
+                        "callApplicationOnCreate", android.app.Application.class,
+                        applicationInitializer);
+            } catch (Throwable t) {
+                XposedBridge.log("[WAEX] Cannot hook Instrumentation.callApplicationOnCreate: " +
+                        t.getClass().getSimpleName());
             }
         }
     }

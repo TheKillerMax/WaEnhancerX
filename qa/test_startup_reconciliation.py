@@ -16,6 +16,11 @@ registry = (SRC / "core/FeatureRegistry.java").read_text(encoding="utf-8")
 
 checks = {
     "one initialization attempt per process": "TARGET_INITIALIZED.compareAndSet(false, true)" in main,
+    "dual lifecycle fallback": '"callApplicationOnCreate", android.app.Application.class,' in main,
+    "legacy Application hook preserved": '"onCreate", applicationInitializer' in main,
+    "shared lifecycle callback used twice": main.count("applicationInitializer") == 3,
+    "Instrumentation supplies Application from argument": "param.args[0]" in main and
+         "application instanceof android.app.Application" in main,
     "startup preference preload retained": "sPreferenceBridge = new PreferenceBridgeClient(" in main,
     "initial provider sync before hook decisions": "resolvedBridge.awaitInitialSync();" in main,
     "hooked-package report retained": "WhatsAppPackageDetector.registerHookedPackage(" in main,
