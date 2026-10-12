@@ -191,7 +191,12 @@ public class HideReceiptsHook extends BaseFeature {
         try {
             Class<?> sendJobClass = null;
             try {
-                sendJobClass = XposedHelpers.findClassIfExists("com.whatsapp.jobqueue.job.SendReadReceiptJob", classLoader);
+                sendJobClass = XposedHelpers.findClassIfExists(
+                        "com.whatsapp.messaging.receipts.jobqueue.job.SendReadReceiptJob", classLoader);
+                if (sendJobClass == null) {
+                    sendJobClass = XposedHelpers.findClassIfExists(
+                            "com.whatsapp.jobqueue.job.SendReadReceiptJob", classLoader);
+                }
             } catch (Throwable ignored) {}
 
             if (sendJobClass == null) {
