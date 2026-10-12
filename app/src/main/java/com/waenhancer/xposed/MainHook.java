@@ -14,6 +14,7 @@ import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 
@@ -28,6 +29,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     public static final String PACKAGE_BUSINESS = "com.whatsapp.w4b";
 
     private static XSharedPreferences sPrefs;
+    private static final AtomicBoolean targetInitialized = new AtomicBoolean(false);
     private String mModulePath;
 
     @Override
@@ -127,12 +129,21 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
                                 Context appContext = (Context) param.thisObject;
-                                if (appContext instanceof android.app.Application) {
-                                    com.waenhancer.xposed.utils.ActivityTracker.install((android.app.Application) appContext);
+                                if (!targetInitialized.compareAndSet(false, true)) return;
+                                try {
+                                    if (appContext instanceof android.app.Application) {
+                                        com.waenhancer.xposed.utils.ActivityTracker.install((android.app.Application) appContext);
+                                    }
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[WAEX] ActivityTracker installation failed: " + t);
                                 }
 
-                                // Register this package as active hooked package for the dashboard
-                                com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
+                                // Reporting failures should not suppress unrelated hooks or update checks.
+                                try {
+                                    com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[WAEX] Hooked-package reporting failed: " + t);
+                                }
                                 try {
                                     appContext.getContentResolver().call(
                                             android.net.Uri.parse("content://com.waenhancer.hookprovider"),

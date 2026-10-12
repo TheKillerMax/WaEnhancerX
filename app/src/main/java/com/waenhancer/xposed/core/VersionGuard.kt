@@ -87,7 +87,7 @@ object VersionGuard {
             return false
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error verifying version: ${t.message}")
-            return true // Fallback to allowing execution if packageInfo fails
+            return false // An unverified obfuscated host version must not execute hooks.
         }
     }
 
@@ -150,6 +150,7 @@ object VersionGuard {
                     }
                     .show()
             } catch (t: Throwable) {
+                dialogShown.set(false)
                 XposedBridge.log("$TAG Failed to show native bottom sheet: ${t.message}")
                 t.printStackTrace()
             }
