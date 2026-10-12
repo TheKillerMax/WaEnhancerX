@@ -197,13 +197,14 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                                 boolean showHookToast = true;
                                 try {
-                                    PreferenceBridgeClient bridgeClient = sPreferenceBridge;
-                                    if (bridgeClient == null) {
-                                        bridgeClient = new PreferenceBridgeClient(appContext, preloadedPrefs);
-                                        sPreferenceBridge = bridgeClient;
+                                    PreferenceBridgeClient resolvedBridge = sPreferenceBridge;
+                                    if (resolvedBridge == null) {
+                                        resolvedBridge = new PreferenceBridgeClient(appContext, preloadedPrefs);
+                                        sPreferenceBridge = resolvedBridge;
                                     } else {
-                                        bridgeClient.awaitInitialSync();
+                                        resolvedBridge.awaitInitialSync();
                                     }
+                                    final PreferenceBridgeClient bridgeClient = resolvedBridge;
                                     com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
                                     try {
                                         android.content.IntentFilter prefsFilter = new android.content.IntentFilter(
