@@ -110,7 +110,13 @@ public final class RestartPromptController {
         if (changes == null || changes.isEmpty()) {
             return "Your WA Enhancer preferences changed. Restart WhatsApp to apply them.";
         }
-        List<String> sorted = new ArrayList<>(changes);
+        List<String> sorted = new ArrayList<>();
+        for (String change : changes) {
+            // New records contain stable preference keys. Preserve already-readable legacy
+            // records created by older versions so an in-flight prompt remains useful.
+            sorted.add(com.waenhancer.config.PreferenceSchema.isKnown(change)
+                    ? PreferenceRestartTracker.displayName(change) : change);
+        }
         sorted.sort(String.CASE_INSENSITIVE_ORDER);
         StringBuilder message = new StringBuilder("Restart WhatsApp to apply:\n\n");
         int shown = Math.min(sorted.size(), 8);

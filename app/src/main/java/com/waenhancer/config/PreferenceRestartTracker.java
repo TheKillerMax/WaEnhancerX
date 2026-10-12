@@ -4,9 +4,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import java.util.LinkedHashSet;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 /** Records user-facing feature names that require the hooked app to restart. */
@@ -14,45 +12,8 @@ public final class PreferenceRestartTracker {
     public static final String NEED_RESTART = "need_restart";
     public static final String PENDING_CHANGES = "pending_restart_changes";
 
-    private static final Map<String, String> LABELS = createLabels();
-
     private PreferenceRestartTracker() {}
 
-    private static Map<String, String> createLabels() {
-        Map<String, String> labels = new HashMap<>();
-        labels.put("always_online", "Always Online");
-        labels.put("freezelastseen", "Freeze Last Seen");
-        labels.put("freeze_last_seen", "Freeze Last Seen");
-        labels.put("ghostmode_t", "Hide Typing");
-        labels.put("ghostmode_r", "Hide Recording Audio");
-        labels.put("hide_read_receipts", "Hide Blue Ticks");
-        labels.put("hideread_group", "Hide Blue Ticks in Groups");
-        labels.put("anti_revoke", "Anti-Revoke Messages");
-        labels.put("antirevoke", "Anti-Revoke Messages");
-        labels.put("toastdeleted", "Show toast notification on delete message");
-        labels.put("anti_view_once", "Unlimited View Once");
-        labels.put("status_downloader", "Download and Share Status");
-        labels.put("downloadstatus", "Download and Share Status");
-        labels.put("media_upload_quality", "HD Quality Images and Videos");
-        labels.put("send_audio_as_voice_status", "Audio to Voice Status");
-        labels.put("call_recording", "Call Recording");
-        labels.put("voice_transcription", "Audio Transcription");
-        labels.put("floating_bottom_bar", "Floating Bottom Bar");
-        labels.put("separate_groups_tabs", "Separate Groups");
-        labels.put("dotonline", "Online Dot in Conversation List");
-        labels.put("showonlinetext", "Online and Last Seen in Conversation List");
-        labels.put("show_hook_toast", "Hook Injection Toast");
-        labels.put("bypass_version_check", "Version Check");
-        labels.put("bootloader_spoofer", "Bootloader Spoofer");
-        labels.put("custom_css", "Custom Theme CSS");
-        labels.put("custom_theme", "Custom Theme CSS");
-        labels.put("change_dpi", "WhatsApp Display Size");
-        labels.put("custom_view_dpi", "WhatsApp Display Size");
-        labels.put("restartbutton", "Restart Button");
-        labels.put("open_wae", "WaEnhancer Button");
-        labels.put("open_waex", "WaEnhancer Button");
-        return java.util.Collections.unmodifiableMap(labels);
-    }
 
     public static synchronized void onPreferenceChanged(
             @NonNull SharedPreferences preferences, @Nullable String key) {
@@ -60,7 +21,8 @@ public final class PreferenceRestartTracker {
 
         Set<String> pending = new LinkedHashSet<>(preferences.getStringSet(
                 PENDING_CHANGES, java.util.Collections.emptySet()));
-        pending.add(displayName(key));
+        // Store the stable key and resolve its current UI title when the sheet is built.
+        pending.add(key);
         preferences.edit()
                 .putStringSet(PENDING_CHANGES, pending)
                 .putBoolean(NEED_RESTART, true)
@@ -77,7 +39,7 @@ public final class PreferenceRestartTracker {
 
     @NonNull
     public static String displayName(@NonNull String key) {
-        String known = LABELS.get(key);
+        String known = FeatureCatalog.getTitle(key);
         if (known != null) return known;
 
         String[] words = key.replace('-', '_').split("_+");
