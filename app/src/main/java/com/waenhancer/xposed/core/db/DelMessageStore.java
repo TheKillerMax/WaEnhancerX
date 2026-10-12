@@ -78,7 +78,7 @@ public final class DelMessageStore extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_DEL_MESSAGES);
+        // The current schema is additive; never erase anti-revoke history on upgrade.
         onCreate(db);
     }
 

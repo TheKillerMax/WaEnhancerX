@@ -23,6 +23,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  */
 public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
+    public static final String RESTART_PERMISSION = "com.waenhancer.permission.RESTART_TARGET";
+
     public static final String PACKAGE_MANAGER = "com.waenhancer";
     public static final String PACKAGE_WPP = "com.whatsapp";
     public static final String PACKAGE_BUSINESS = "com.whatsapp.w4b";
@@ -38,13 +40,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     public static synchronized XSharedPreferences getPrefs() {
         if (sPrefs == null) {
             sPrefs = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
-            sPrefs.makeWorldReadable();
             sPrefs.reload();
         }
         return sPrefs;
     }
 
-    @SuppressLint("WorldReadableFiles")
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         String packageName = lpparam.packageName;
@@ -145,16 +146,16 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         @Override
                                         public void onReceive(Context context, android.content.Intent intent) {
                                             String pkg = intent.getStringExtra("PKG");
-                                            if (pkg == null || pkg.equals(packageName)) {
+                                            if (packageName.equals(pkg)) {
                                                 android.os.Process.killProcess(android.os.Process.myPid());
-                                                System.exit(0);
                                             }
                                         }
                                     };
                                     if (android.os.Build.VERSION.SDK_INT >= 33) {
-                                        appContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+                                        appContext.registerReceiver(receiver, filter, RESTART_PERMISSION,
+                                                null, Context.RECEIVER_EXPORTED);
                                     } else {
-                                        appContext.registerReceiver(receiver, filter);
+                                        appContext.registerReceiver(receiver, filter, RESTART_PERMISSION, null);
                                     }
                                 } catch (Throwable ignored) {}
 
