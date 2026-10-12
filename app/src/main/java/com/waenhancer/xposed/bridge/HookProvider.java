@@ -183,6 +183,10 @@ public class HookProvider extends ContentProvider {
                 boolean filterItemsEntitled = ProFeatureGate.isEntitled(
                         context, ProFeatureGate.FILTER_ITEMS);
                 all.put(ProFeatureGate.FILTER_ITEMS_ENTITLEMENT, filterItemsEntitled);
+                boolean unlockWaPlusEntitled = ProFeatureGate.isEntitled(
+                        context, ProFeatureGate.UNLOCK_WA_PLUS);
+                all.put(ProFeatureGate.UNLOCK_WA_PLUS_ENTITLEMENT, unlockWaPlusEntitled);
+                if (!unlockWaPlusEntitled) all.put(ProFeatureGate.UNLOCK_WA_PLUS_PREF, false);
                 return encodePreferences(all);
             }
 
@@ -330,6 +334,8 @@ public class HookProvider extends ContentProvider {
             return ProFeatureGate.isEntitled(context, ProFeatureGate.STATUS_SPLITTER);
         if (ProFeatureGate.FILE_SIZE_SPOOFER_PREF.equals(key))
             return ProFeatureGate.isEntitled(context, ProFeatureGate.FILE_SIZE_SPOOFER);
+        if (ProFeatureGate.UNLOCK_WA_PLUS_PREF.equals(key))
+            return ProFeatureGate.isEntitled(context, ProFeatureGate.UNLOCK_WA_PLUS);
         return true;
     }
 

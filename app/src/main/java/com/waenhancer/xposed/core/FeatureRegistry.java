@@ -53,6 +53,7 @@ import com.waenhancer.licensing.features.FileSizeSpooferFeature;
 import com.waenhancer.licensing.features.MessageBomberFeature;
 import com.waenhancer.licensing.features.NewChatFeature;
 import com.waenhancer.licensing.features.StatusSplitterFeature;
+import com.waenhancer.licensing.features.UnlockWaPlusFeature;
 import de.robv.android.xposed.XposedBridge;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -213,6 +214,14 @@ public final class FeatureRegistry {
         addFeature(SeparateGroupsHook.class, "Customization", () -> new SeparateGroupsHook(context, classLoader, prefs));
         addFeature(FloatingBottomBarHook.class, "Customization", () -> new FloatingBottomBarHook(context, classLoader, prefs));
         addFeature(FilterItemsHook.class, "Customization", () -> new FilterItemsHook(context, classLoader, prefs));
+        try {
+            UnlockWaPlusFeature.install(context, classLoader, prefs);
+            features.add(new FeatureEntry("Unlock WA Plus", "UnlockWaPlusFeature", "Customization", "ACTIVE"));
+        } catch (Throwable t) {
+            FeatureEntry entry = new FeatureEntry("Unlock WA Plus", "UnlockWaPlusFeature", "Customization", "FAILED");
+            entry.error = t.getMessage();
+            features.add(entry);
+        }
     }
 
     private void addFeature(Class<? extends BaseFeature> type, String category, FeatureFactory factory) {

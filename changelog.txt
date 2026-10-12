@@ -1,5 +1,6 @@
 [Added]
 - Restart required sheet in WhatsApp on updating a pref
+- Unlock WA Plus (Pro)
 
 [Fixed]
 - Fixed update checker sheet
