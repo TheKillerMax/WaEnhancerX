@@ -3,6 +3,7 @@
 
 [Fixed]
 - Fixed update checker sheet
+- Fixed message edit history
 
 [Improvements]
 - Improved performance

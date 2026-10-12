@@ -152,8 +152,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             existing.add(MessageItem(rowId, validKeyId, newMessage.trim(), ts, nextVer))
         }
 
-        if (rowId > 0) messagesCache[rowId.toString()] = existing
         if (validKeyId.isNotEmpty()) messagesCache[validKeyId] = existing
+        else if (rowId > 0) messagesCache[rowId.toString()] = existing
     }
 
     fun getCurrentMessageFromWhatsApp(rowId: Long, keyId: String?): String {
@@ -179,34 +179,32 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
 
     @Synchronized
     fun getMessages(rowId: Long, keyId: String?): List<MessageItem> {
-        if (rowId > 0 && messagesCache.containsKey(rowId.toString())) {
-            val cached = messagesCache[rowId.toString()]
-            if (!cached.isNullOrEmpty()) return synchronized(cached) { ArrayList(cached) }
-        }
+        // A message key identifies exactly one message. Never combine it with a numeric ID
+        // using OR: a stale/reflected numeric value can otherwise merge unrelated histories.
         if (!keyId.isNullOrEmpty() && messagesCache.containsKey(keyId)) {
             val cached = messagesCache[keyId]
+            if (!cached.isNullOrEmpty()) return synchronized(cached) { ArrayList(cached) }
+        }
+        if (keyId.isNullOrEmpty() && rowId > 0 && messagesCache.containsKey(rowId.toString())) {
+            val cached = messagesCache[rowId.toString()]
             if (!cached.isNullOrEmpty()) return synchronized(cached) { ArrayList(cached) }
         }
 
         val result = mutableListOf<MessageItem>()
         try {
             readableDatabase.let { db ->
-                val selection = if (rowId > 0 && !keyId.isNullOrEmpty()) {
-                    "$COL_ROW_ID=? OR $COL_KEY_ID=?"
+                val selection = if (!keyId.isNullOrEmpty()) {
+                    "$COL_KEY_ID=?"
                 } else if (rowId > 0) {
                     "$COL_ROW_ID=?"
-                } else if (!keyId.isNullOrEmpty()) {
-                    "$COL_KEY_ID=?"
                 } else {
                     return emptyList()
                 }
 
-                val args = if (rowId > 0 && !keyId.isNullOrEmpty()) {
-                    arrayOf(rowId.toString(), keyId)
-                } else if (rowId > 0) {
-                    arrayOf(rowId.toString())
-                } else {
+                val args = if (!keyId.isNullOrEmpty()) {
                     arrayOf(keyId!!)
+                } else {
+                    arrayOf(rowId.toString())
                 }
 
                 val cursor = db.query(
@@ -233,8 +231,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                 }
             }
             if (result.isNotEmpty()) {
-                if (rowId > 0) messagesCache[rowId.toString()] = result
                 if (!keyId.isNullOrEmpty()) messagesCache[keyId] = result
+                else if (rowId > 0) messagesCache[rowId.toString()] = result
             }
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Query error: ${t.message}")
@@ -248,26 +246,37 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             val dbFile = MessageStore.findMsgstoreDbFile(context) ?: return ""
 
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                // 1. Query message table
-                try {
-                    val selection = if (rowId > 0) "_id=?" else "key_id=?"
-                    val args = if (rowId > 0) arrayOf(rowId.toString()) else arrayOf(keyId)
-                    val cursor = db.query(
-                        "message",
-                        arrayOf("text_data"),
-                        selection,
-                        args,
-                        null, null, null
-                    )
-                    cursor?.use {
-                        if (it.moveToFirst()) {
-                            val txt = it.getString(0)
-                            if (!txt.isNullOrBlank()) return txt
+                // The message key is stable across edit processing. Prefer it over reflected
+                // numeric fields, which can be timestamps or other obfuscated values.
+                if (keyId.isNotBlank()) {
+                    try {
+                        db.query(
+                            "message", arrayOf("text_data"), "key_id=?", arrayOf(keyId),
+                            null, null, null
+                        )?.use {
+                            if (it.moveToFirst()) {
+                                val text = it.getString(0)
+                                if (!text.isNullOrBlank()) return text
+                            }
                         }
-                    }
-                } catch (ignored: Throwable) {}
+                    } catch (ignored: Throwable) {}
+                }
 
-                // 2. Query message_ftsv2_content
+                if (rowId > 0) {
+                    try {
+                        db.query(
+                            "message", arrayOf("text_data"), "_id=?", arrayOf(rowId.toString()),
+                            null, null, null
+                        )?.use {
+                            if (it.moveToFirst()) {
+                                val text = it.getString(0)
+                                if (!text.isNullOrBlank()) return text
+                            }
+                        }
+                    } catch (ignored: Throwable) {}
+                }
+
+                // FTS fallback for builds where message.text_data is unavailable.
                 if (rowId > 0) {
                     try {
                         val cursor = db.query(

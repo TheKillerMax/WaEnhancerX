@@ -42,6 +42,7 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.io.File
 import java.lang.reflect.Field
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.text.DateFormat
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
@@ -76,12 +77,14 @@ class AntiEditMessagesHook(
     }
 
     private val editStore: EditMessageStore by lazy { EditMessageStore.getInstance(context) }
+    private var originalKeyMethod: Method? = null
 
     private fun isFeatureEnabled(): Boolean {
         return isEnabled(PREF_KEY, false) || isEnabled("antieditmessages", false)
     }
 
     override fun hook() {
+        originalKeyMethod = resolveOriginalKeyMethod()
         hookMessageEditMethod()
         hookDatabaseEditInsert()
         hookListViewAdapter()
@@ -102,12 +105,10 @@ class AntiEditMessagesHook(
 
                             try {
                                 val fMessage = param.args.getOrNull(0) ?: return
-                                val keyId = extractKeyId(fMessage)
+                                val keyId = extractStableKeyId(fMessage)
                                 var rowId = extractRowId(fMessage)
                                 val newMessage = extractMessageText(fMessage)
-                                if (rowId <= 0 && !keyId.isNullOrBlank()) {
-                                    rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
-                                }
+                                rowId = resolveCanonicalRowId(rowId, keyId)
 
                                 if (!newMessage.isNullOrBlank() && (!keyId.isNullOrEmpty() || rowId > 0)) {
                                     val ts = System.currentTimeMillis()
@@ -159,6 +160,28 @@ class AntiEditMessagesHook(
         }
     }
 
+    private fun resolveOriginalKeyMethod(): Method? {
+        return try {
+            DexSearchEngine.getInstance().findMethodWithCache(
+                context,
+                classLoader,
+                "wpp_original_key_for_edited_message_v1",
+                { bridge, loader ->
+                    bridge.findMethod(
+                        FindMethod.create().matcher(
+                            MethodMatcher.create().addUsingString(
+                                "FMessageUtil/getOriginalMessageKeyIfEdited",
+                                StringMatchType.Contains
+                            )
+                        )
+                    ).firstOrNull()?.getMethodInstance(loader)
+                }
+            )
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     // ─── 2. SQLite Database Interception Fallback ──────────────────────────────
 
     private fun hookDatabaseEditInsert() {
@@ -177,13 +200,14 @@ class AntiEditMessagesHook(
                         if (table == "message_edit_info" || table == "message_add_on" || table == "message_add_on_edit_info") {
                             val values = param.args.getOrNull(2) as? android.content.ContentValues ?: return
                             val keyId = values.getAsString("original_key_id") ?: values.getAsString("key_id")
-                            val rowId = values.getAsLong("message_row_id") ?: 0L
+                            var rowId = values.getAsLong("message_row_id") ?: 0L
                             val editedText = values.getAsString("edited_text")
                                 ?: values.getAsString("new_text")
                                 ?: values.getAsString("text_data")
                             val ts = values.getAsLong("edit_timestamp")
                                 ?: values.getAsLong("sender_timestamp")
                                 ?: System.currentTimeMillis()
+                            rowId = resolveCanonicalRowId(rowId, keyId)
 
                             if (!editedText.isNullOrBlank() && (!keyId.isNullOrEmpty() || rowId > 0)) {
                                 editStore.recordTransitionAsync(rowId, keyId, null, editedText, ts)
@@ -236,12 +260,10 @@ class AntiEditMessagesHook(
                                         val row = p.result as? ViewGroup ?: return
 
                                         val item = try { adapter.getItem(pos) } catch (t: Throwable) { null } ?: return
-                                        val keyId = extractKeyId(item)
+                                        val keyId = extractStableKeyId(item)
                                         var rowId = extractRowId(item)
                                         val msgText = extractMessageText(item)
-                                        if (rowId <= 0 && !keyId.isNullOrBlank()) {
-                                            rowId = MessageStore.getInstance(context).getIdFromKey(keyId)
-                                        }
+                                        rowId = resolveCanonicalRowId(rowId, keyId)
 
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
@@ -293,12 +315,25 @@ class AntiEditMessagesHook(
                         val resName = getResourceEntryName(view)
 
                         if (resName == "edit_label" || resName == "edited_label") {
-                            bindEditLabel(view, null, 0L, null, null)
+                            val row = findParentMessageRow(view)
+                            val rowId = row?.let {
+                                XposedHelpers.getAdditionalInstanceField(it, FIELD_ROW_ID) as? Long
+                            } ?: 0L
+                            val keyId = row?.let {
+                                XposedHelpers.getAdditionalInstanceField(it, FIELD_MSG_ID) as? String
+                            }
+                            val text = row?.let {
+                                XposedHelpers.getAdditionalInstanceField(it, FIELD_MSG_TEXT) as? String
+                            }
+                            bindEditLabel(view, row, rowId, keyId, text)
                         } else if (view is ViewGroup) {
                             val editLabel = findChildByResourceName(view, "edit_label")
                                 ?: findChildByResourceName(view, "edited_label")
                             if (editLabel != null) {
-                                bindEditLabel(editLabel, view, 0L, null, null)
+                                val rowId = XposedHelpers.getAdditionalInstanceField(view, FIELD_ROW_ID) as? Long ?: 0L
+                                val keyId = XposedHelpers.getAdditionalInstanceField(view, FIELD_MSG_ID) as? String
+                                val text = XposedHelpers.getAdditionalInstanceField(view, FIELD_MSG_TEXT) as? String
+                                bindEditLabel(editLabel, view, rowId, keyId, text)
                             }
                         }
                     }
@@ -422,7 +457,8 @@ class AntiEditMessagesHook(
 
                 val title = when {
                     isLatest -> "Version ${item.versionNumber} (Latest) • $timeStr"
-                    isFirst -> "Version 1 (Original) • $timeStr"
+                    isFirst && totalVersions > 1 -> "Version 1 (Original) • $timeStr"
+                    totalVersions == 1 -> "Version 1 (Latest) • $timeStr"
                     else -> "Version ${item.versionNumber} • $timeStr"
                 }
                 val color = if (isLatest) 0xFF21C063.toInt() else 0xFF00A884.toInt()
@@ -662,6 +698,27 @@ class AntiEditMessagesHook(
 
     // ─── Multi-Level Key & Row ID Extraction ───────────────────────────────────
 
+    private fun extractStableKeyId(messageObj: Any): String? {
+        val resolver = originalKeyMethod
+        if (resolver != null) {
+            try {
+                resolver.isAccessible = true
+                val originalKey = when {
+                    Modifier.isStatic(resolver.modifiers) && resolver.parameterCount == 1 ->
+                        resolver.invoke(null, messageObj)
+                    !Modifier.isStatic(resolver.modifiers) && resolver.parameterCount == 0 &&
+                        resolver.declaringClass.isInstance(messageObj) -> resolver.invoke(messageObj)
+                    else -> null
+                }
+                if (originalKey != null) {
+                    extractMessageIdFromKey(originalKey)?.let { return it }
+                }
+            } catch (_: Throwable) {
+            }
+        }
+        return extractKeyId(messageObj)
+    }
+
     private fun extractKeyId(messageObj: Any): String? {
         try {
             var curr: Class<*>? = messageObj.javaClass
@@ -670,29 +727,57 @@ class AntiEditMessagesHook(
                     field.isAccessible = true
                     val valObj = field.get(messageObj) ?: continue
                     val valClass = valObj.javaClass
+                    val representation = valObj.toString()
 
-                    val str = valObj.toString()
-                    if (str.startsWith("Key(") || str.contains("id=") || valClass.name.contains("Key") || valClass.simpleName.contains("Key")) {
-                        val matcher = KEY_ID_REGEX.matcher(str)
+                    // JID/contact objects also contain an "id" in toString(). Only inspect
+                    // objects whose type represents a message key, otherwise every message in
+                    // one chat can accidentally receive the same contact ID.
+                    if (valClass.name.contains("Key", ignoreCase = true)
+                        || valClass.simpleName.contains("Key", ignoreCase = true)
+                        || representation.startsWith("Key(")
+                        || looksLikeMessageKey(valClass)) {
+                        val directId = extractMessageIdFromKey(valObj)
+                        if (!directId.isNullOrEmpty()) return directId
+                        val matcher = KEY_ID_REGEX.matcher(representation)
                         if (matcher.find()) {
                             val id = matcher.group(1)
                             if (!id.isNullOrEmpty()) return id
                         }
-                        val id = extractMessageIdFromKey(valObj)
-                        if (id != null) return id
                     }
                 }
                 curr = curr.superclass
             }
 
+            if (looksLikeMessageKey(messageObj.javaClass)) {
+                extractMessageIdFromKey(messageObj)?.let { return it }
+            }
+
             val objStr = messageObj.toString()
-            val matcher = KEY_ID_REGEX.matcher(objStr)
+            val matcher = Pattern.compile("(?:messageId|messageID|keyId)=([A-Za-z0-9_-]+)")
+                .matcher(objStr)
             if (matcher.find()) {
                 val id = matcher.group(1)
                 if (!id.isNullOrEmpty()) return id
             }
         } catch (ignored: Throwable) {}
         return null
+    }
+
+    private fun looksLikeMessageKey(type: Class<*>): Boolean {
+        var hasString = false
+        var hasBoolean = false
+        var current: Class<*>? = type
+        while (current != null && current != Any::class.java) {
+            for (field in current.declaredFields) {
+                if (Modifier.isStatic(field.modifiers)) continue
+                if (field.type == String::class.java) hasString = true
+                if (field.type == Boolean::class.javaPrimitiveType || field.type == Boolean::class.java) {
+                    hasBoolean = true
+                }
+            }
+            current = current.superclass
+        }
+        return hasString && hasBoolean
     }
 
     private fun extractMessageIdFromKey(keyObj: Any): String? {
@@ -731,6 +816,14 @@ class AntiEditMessagesHook(
             }
         } catch (ignored: Throwable) {}
         return 0L
+    }
+
+    private fun resolveCanonicalRowId(reflectedRowId: Long, keyId: String?): Long {
+        if (!keyId.isNullOrBlank()) {
+            val databaseRowId = MessageStore.getInstance(context).getIdFromKey(keyId)
+            if (databaseRowId > 0) return databaseRowId
+        }
+        return reflectedRowId
     }
 
     private fun extractMessageText(messageObj: Any): String? {
