@@ -738,8 +738,9 @@ public class AntiRevokeHook extends BaseFeature {
                                 if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
 
                                 int pos = (int) p.args[0];
-                                ViewGroup row = (ViewGroup) p.getResult();
-                                if (row == null) return;
+                                Object renderedRow = p.getResult();
+                                if (!(renderedRow instanceof ViewGroup)) return;
+                                ViewGroup row = (ViewGroup) renderedRow;
 
                                 Object item;
                                 try {

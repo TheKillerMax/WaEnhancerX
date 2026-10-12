@@ -26,5 +26,6 @@ assert "MAX_RECENT_REVOKES = 4096" in anti_revoke
 assert "ThreadLocal<String> sStatusKeyByThread" in anti_revoke
 assert "DelMessageStore.getInstance(context).getTimestampByMessageId(keyId) > 0L" in anti_revoke
 assert "TIME_FORMAT.get().format" in anti_revoke
+assert "if (!(renderedRow instanceof ViewGroup)) return;" in anti_revoke
 assert "timeFormatter.get().format" in anti_edit
 print("PASS: no per-notification executor, bridged delete-toast setting, unused text cache removed")
