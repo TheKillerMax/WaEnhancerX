@@ -460,7 +460,9 @@ fun MainContainerScreen() {
                                     onDismissRequest = { showThemeMenu = false },
                                     modifier = Modifier.background(colors.surface)
                                 ) {
-                                    val modes = listOf("Light", "Dark", "System")
+                                    val modes = listOf("Light", "Dark", "System") +
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) listOf("Monet")
+                                        else emptyList()
                                     modes.forEach { mode ->
                                         val active = themeMode == mode
                                         DropdownMenuItem(
