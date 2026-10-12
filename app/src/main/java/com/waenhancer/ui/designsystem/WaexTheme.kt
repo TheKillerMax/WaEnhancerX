@@ -3,14 +3,19 @@ package com.waenhancer.ui.designsystem
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import android.os.Build
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 val LocalThemeMode = staticCompositionLocalOf { "System" }
 val LocalThemeModeUpdater = staticCompositionLocalOf<(String) -> Unit> { {} }
@@ -46,12 +51,49 @@ fun animateWaexColors(targetColors: WaexColors): WaexColors {
     )
 }
 
+/** Map system Material You roles into WAEX's custom design-system colors. */
+private fun monetWaexColors(scheme: ColorScheme, isDark: Boolean) = WaexColors(
+    primary = scheme.primary,
+    primaryContainer = scheme.primaryContainer,
+    onPrimary = scheme.onPrimary,
+    background = scheme.background,
+    onBackground = scheme.onBackground,
+    surface = scheme.surface,
+    onSurface = scheme.onSurface,
+    surfaceDim = scheme.surfaceDim,
+    surfaceContainerLow = scheme.surfaceContainerLow,
+    surfaceContainer = scheme.surfaceContainer,
+    surfaceContainerHigh = scheme.surfaceContainerHigh,
+    surfaceContainerHighest = scheme.surfaceContainerHighest,
+    onSurfaceVariant = scheme.onSurfaceVariant,
+    outline = scheme.outline,
+    outlineVariant = scheme.outlineVariant,
+    error = scheme.error,
+    errorContainer = scheme.errorContainer,
+    onError = scheme.onError,
+    onErrorContainer = scheme.onErrorContainer,
+    secondary = scheme.secondary,
+    onSecondary = scheme.onSecondary,
+    secondaryContainer = scheme.secondaryContainer,
+    onSecondaryContainer = scheme.onSecondaryContainer,
+    isLight = !isDark
+)
+
 @Composable
 fun WaexTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    useMonet: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val targetColors = if (darkTheme) darkColors else lightColors
+    val context = LocalContext.current
+    // Monet is opt-in. Android <= 11 and OEM palette failures preserve the existing theme.
+    val systemPalette = if (useMonet && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        runCatching {
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }.getOrNull()
+    } else null
+    val targetColors = systemPalette?.let { monetWaexColors(it, darkTheme) }
+        ?: if (darkTheme) darkColors else lightColors
     val colors = animateWaexColors(targetColors)
     val typography = WaexTypography()
     val spacing = WaexSpacing()
@@ -63,7 +105,7 @@ fun WaexTheme(
             primary = colors.primary,
             onPrimary = colors.onPrimary,
             primaryContainer = colors.primaryContainer,
-            onPrimaryContainer = colors.onSecondaryContainer,
+            onPrimaryContainer = systemPalette?.onPrimaryContainer ?: colors.onSecondaryContainer,
             secondary = colors.secondary,
             onSecondary = colors.onSecondary,
             secondaryContainer = colors.secondaryContainer,
@@ -91,7 +133,7 @@ fun WaexTheme(
             primary = colors.primary,
             onPrimary = colors.onPrimary,
             primaryContainer = colors.primaryContainer,
-            onPrimaryContainer = Color(0xFF002119),
+            onPrimaryContainer = systemPalette?.onPrimaryContainer ?: Color(0xFF002119),
             secondary = colors.secondary,
             onSecondary = colors.onSecondary,
             secondaryContainer = colors.secondaryContainer,
