@@ -29,6 +29,7 @@ public final class PreferenceRestartTracker {
         labels.put("hideread_group", "Hide Blue Ticks in Groups");
         labels.put("anti_revoke", "Anti-Revoke Messages");
         labels.put("antirevoke", "Anti-Revoke Messages");
+        labels.put("toastdeleted", "Show toast notification on delete message");
         labels.put("anti_view_once", "Unlimited View Once");
         labels.put("status_downloader", "Download and Share Status");
         labels.put("downloadstatus", "Download and Share Status");

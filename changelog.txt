@@ -4,6 +4,8 @@
 [Fixed]
 - Fixed update checker sheet
 - Fixed message edit history
+- Fixed toast on deleted message
 
 [Improvements]
 - Improved performance
+- Improved injection strategy

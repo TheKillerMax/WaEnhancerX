@@ -26,6 +26,8 @@ public class PreferenceRestartTrackerTest {
     public void usesFeatureLabelsAndReadableFallbacks() {
         assertEquals("Anti-Revoke Messages",
                 PreferenceRestartTracker.displayName("anti_revoke"));
+        assertEquals("Show toast notification on delete message",
+                PreferenceRestartTracker.displayName("toastdeleted"));
         assertEquals("Floating Bottom Bar Radius",
                 PreferenceRestartTracker.displayName("floating_bottom_bar_radius"));
         assertEquals("DPI Mode", PreferenceRestartTracker.displayName("dpi_mode"));
