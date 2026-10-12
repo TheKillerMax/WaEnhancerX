@@ -63,6 +63,7 @@ public class MessageDeviceSourceHook extends BaseFeature {
 
     private static volatile boolean conversationActive = false;
     private final Set<Class<?>> hookedAdapterClasses = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static Class<?> fMessageClass;
     private static Class<?> deviceJidClass;
 
     private static final Executor UI_EXECUTOR = action -> {
@@ -96,6 +97,8 @@ public class MessageDeviceSourceHook extends BaseFeature {
             return;
         }
 
+        resolveMessageClasses();
+
         ActivityTracker.addListener(activity -> {
             String name = activity.getClass().getSimpleName();
             conversationActive = name.contains("Conversation");
@@ -125,11 +128,11 @@ public class MessageDeviceSourceHook extends BaseFeature {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
                         if (!isEnabled(PREF_KEY, false)) return;
-                        if (param.args == null || param.args.length == 0 || param.args[0] == null) return;
-                        Object firstArg = param.args[0];
-                        String messageId = extractMessageId(firstArg);
+                        Object message = findFMessage(param.args);
+                        if (message == null) return;
+                        String messageId = extractMessageId(message);
                         if (messageId != null && !messageId.isEmpty()) {
-                            int devId = extractDeviceId(firstArg);
+                            int devId = extractDeviceId(message);
                             if (devId >= 0) {
                                 MessageDeviceSourceStore.getInstance(context).upsertDeviceId(messageId, devId);
                             }
@@ -176,24 +179,29 @@ public class MessageDeviceSourceHook extends BaseFeature {
                             );
                             if (getViewMethod == null) return;
 
-                            final ListAdapter finalAdapter = adapter;
                             XposedBridge.hookMethod(getViewMethod, new XC_MethodHook() {
                                 @Override
                                 protected void afterHookedMethod(MethodHookParam p) {
                                     if (!isEnabled(PREF_KEY, false)) return;
+                                    if (!(p.thisObject instanceof ListAdapter)) return;
+                                    ListAdapter activeAdapter = (ListAdapter) p.thisObject;
                                     int pos = (int) p.args[0];
                                     if (!(p.getResult() instanceof ViewGroup)) return;
                                     ViewGroup row = (ViewGroup) p.getResult();
 
                                     Object item;
                                     try {
-                                        item = finalAdapter.getItem(pos);
+                                        // The method hook belongs to the adapter class and survives chat
+                                        // recreation. Always read from the instance rendering this row;
+                                        // capturing the first adapter leaves reopened chats bound to stale data.
+                                        item = activeAdapter.getItem(pos);
                                     } catch (Throwable t) {
                                         return;
                                     }
-                                    if (item == null) return;
+                                    Object message = findFMessage(item);
+                                    if (message == null) return;
 
-                                    bindMessageRow(row, item);
+                                    bindMessageRow(row, message);
                                 }
                             });
                         }
@@ -202,6 +210,82 @@ public class MessageDeviceSourceHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " ListView setAdapter hook error: " + t.getMessage());
         }
+    }
+
+    private void resolveMessageClasses() {
+        try {
+            fMessageClass = DexSearchEngine.getInstance().findClassWithCache(
+                    context,
+                    classLoader,
+                    "wpp_fmessage_class",
+                    (bridge, loader) -> {
+                        MethodData data = bridge.findMethod(FindMethod.create().matcher(
+                                MethodMatcher.create().addUsingString(
+                                        "FMessage/getSenderUserJid/key.id",
+                                        StringMatchType.Contains)
+                        )).firstOrNull();
+                        return data != null
+                                ? data.getMethodInstance(loader).getDeclaringClass()
+                                : null;
+                    }
+            );
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Failed to resolve FMessage class: " + t.getMessage());
+        }
+
+        try {
+            deviceJidClass = classLoader.loadClass("com.whatsapp.jid.DeviceJid");
+        } catch (Throwable ignored) {
+            try {
+                deviceJidClass = DexSearchEngine.getInstance().findClassWithCache(
+                        context,
+                        classLoader,
+                        "wpp_device_jid_class",
+                        (bridge, loader) -> {
+                            var data = bridge.findClass(org.luckypray.dexkit.query.FindClass.create()
+                                    .matcher(org.luckypray.dexkit.query.matchers.ClassMatcher.create()
+                                            .className("jid.DeviceJid", StringMatchType.EndsWith)))
+                                    .firstOrNull();
+                            return data != null ? data.getInstance(loader) : null;
+                        }
+                );
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + " Failed to resolve DeviceJid class: " + t.getMessage());
+            }
+        }
+    }
+
+    private Object findFMessage(Object[] candidates) {
+        if (candidates == null) return null;
+        for (Object candidate : candidates) {
+            Object message = findFMessage(candidate);
+            if (message != null) return message;
+        }
+        return null;
+    }
+
+    /** Resolves the typed FMessage from adapter items and plaintext-processor wrappers. */
+    private Object findFMessage(Object candidate) {
+        if (candidate == null || fMessageClass == null) return null;
+        if (fMessageClass.isInstance(candidate)) return candidate;
+
+        Class<?> current = candidate.getClass();
+        while (current != null && current != Object.class) {
+            for (Field field : current.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())
+                        || !fMessageClass.isAssignableFrom(field.getType())) {
+                    continue;
+                }
+                try {
+                    field.setAccessible(true);
+                    Object nested = field.get(candidate);
+                    if (nested != null) return nested;
+                } catch (Throwable ignored) {
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
     }
 
     private void bindMessageRow(ViewGroup row, Object messageObj) {
@@ -414,7 +498,7 @@ public class MessageDeviceSourceHook extends BaseFeature {
                 curr = curr.getSuperclass();
             }
 
-            Pattern pattern = Pattern.compile("(?:messageId|messageID|keyId)=([A-Za-z0-9_-]+)");
+            Pattern pattern = Pattern.compile("(?:messageId|messageID|keyId|Key\\(id)=([A-Za-z0-9_-]+)");
             var matcher = pattern.matcher(messageObj.toString());
             if (matcher.find()) return matcher.group(1);
         } catch (Throwable ignored) {}
@@ -428,11 +512,11 @@ public class MessageDeviceSourceHook extends BaseFeature {
                 for (Field f : curr.getDeclaredFields()) {
                     f.setAccessible(true);
                     if (f.getType() == String.class) {
-                        String fname = f.getName().toLowerCase();
-                        if (fname.contains("id") || fname.equals("a") || fname.equals("b") || fname.equals("c")) {
-                            String v = (String) f.get(keyObj);
-                            if (v != null && v.length() >= 8 && !v.contains("@")) return v;
-                        }
+                        // Message-key member names are obfuscated (often A00/A01). The key has a
+                        // single String payload, so validate its value instead of its field name.
+                        String value = (String) f.get(keyObj);
+                        if (value != null && value.length() >= 8 && !value.contains("@")
+                                && value.indexOf(' ') < 0) return value;
                     }
                 }
                 curr = curr.getSuperclass();
@@ -483,21 +567,7 @@ public class MessageDeviceSourceHook extends BaseFeature {
     private Object getDeviceJidObject(Object messageObj) {
         try {
             if (deviceJidClass == null) {
-                try {
-                    deviceJidClass = classLoader.loadClass("com.whatsapp.jid.DeviceJid");
-                } catch (Throwable t) {
-                    deviceJidClass = DexSearchEngine.getInstance().findClassWithCache(
-                            context,
-                            classLoader,
-                            "wpp_device_jid_class",
-                            (bridge, loader) -> {
-                                var cd = bridge.findClass(org.luckypray.dexkit.query.FindClass.create()
-                                        .matcher(org.luckypray.dexkit.query.matchers.ClassMatcher.create()
-                                                .className("jid.DeviceJid", StringMatchType.EndsWith))).firstOrNull();
-                                return cd != null ? cd.getInstance(loader) : null;
-                            }
-                    );
-                }
+                resolveMessageClasses();
             }
 
             if (deviceJidClass != null) {

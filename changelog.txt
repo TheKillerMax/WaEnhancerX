@@ -1,5 +1,6 @@
 [Added]
 - Restart required sheet in WhatsApp on updating a pref
+- Show message device source
 - Unlock WA Plus (Pro)
 
 [Fixed]
