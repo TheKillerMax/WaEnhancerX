@@ -16,6 +16,7 @@ FILES = {
     "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 6,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 6,
     "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 2,
+    "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt": 4,
 }
 
 # Each source is scanned as an expression, including Java multi-line logs
@@ -123,6 +124,11 @@ assert 'XposedBridge.log(TAG + " Enqueued blue-on-reply receipt")' in blue
 assert 'XposedBridge.log(TAG + " Status root view still null after delay")' in anti
 assert 'XposedBridge.log(TAG + " No timestamp TextView in status view")' in anti
 assert 'Preserved Delete-For-Me: chat=' not in preserve
+online_presence = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt").read_text()
+assert 'jidResolved=${jid != null}' in online_presence
+assert 'Presence request failed: ${t.javaClass.simpleName}' in online_presence
+assert 'Presence request failed for $key' not in online_presence
+
 
 # Feature behavior and data retention were deliberately not removed.
 assert "PENDING_JOBS.computeIfAbsent(" in blue
