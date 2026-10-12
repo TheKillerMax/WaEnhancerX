@@ -130,6 +130,15 @@ fun GlobalPrivacySettingsScreen(
         mutableStateOf(preferenceManager.getString("open_waex", "home_menu") ?: "home_menu")
     }
 
+    var seenTickPlacement by remember {
+        val stored = preferenceManager.getString("seentick", "0") ?: "0"
+        mutableStateOf(when (stored) {
+            "2" -> "2"
+            "1", "true" -> "1"
+            else -> "0"
+        })
+    }
+
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             privacyKeys.forEach { key ->
@@ -137,6 +146,9 @@ fun GlobalPrivacySettingsScreen(
                 if (!boolVal && key == "typearchive") {
                     val strVal = preferenceManager.getString("typearchive", "0")
                     boolVal = (strVal != null && strVal != "0" && !strVal.equals("false", ignoreCase = true))
+                } else if (!boolVal && key == "seentick") {
+                    val strVal = preferenceManager.getString("seentick", "0")
+                    boolVal = strVal == "1" || strVal == "2"
                 }
                 put(key, boolVal)
             }
@@ -145,7 +157,12 @@ fun GlobalPrivacySettingsScreen(
 
     val updatePreference: (String, Boolean) -> Unit = { key, value ->
         settingsState[key] = value
-        preferenceManager.putBoolean(key, value)
+        if (key == "seentick") {
+            seenTickPlacement = if (value) "1" else "0"
+            preferenceManager.putString("seentick", seenTickPlacement)
+        } else {
+            preferenceManager.putBoolean(key, value)
+        }
         if (key == "typearchive") {
             preferenceManager.putString("typearchive", if (value) "1" else "0")
         } else if (key == "locked_chats_enhancer") {
@@ -585,6 +602,59 @@ fun GlobalPrivacySettingsScreen(
                                         isUnlocked = isPro,
                                         modifier = Modifier.align(Alignment.TopEnd)
                                     )
+                                }
+                            }
+
+                            if (item.key == "seentick" && settingsState["seentick"] == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceDim.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "BUTTON PLACEMENT",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(colors.surface)
+                                                .padding(4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            listOf("1" to "Top icon", "2" to "Menu option").forEach { (value, label) ->
+                                                val selected = seenTickPlacement == value
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(if (selected) colors.primary else Color.Transparent)
+                                                        .clickable {
+                                                            seenTickPlacement = value
+                                                            preferenceManager.putString("seentick", value)
+                                                        }
+                                                        .padding(vertical = 8.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = label,
+                                                        style = typography.labelSm,
+                                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (selected) Color.White else colors.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 

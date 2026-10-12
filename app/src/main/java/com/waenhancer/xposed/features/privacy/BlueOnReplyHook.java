@@ -2,9 +2,16 @@ package com.waenhancer.xposed.features.privacy;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.app.Activity;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
+import com.waenhancer.xposed.utils.ActivityTracker;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
@@ -20,8 +27,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
@@ -42,6 +51,8 @@ public class BlueOnReplyHook extends BaseFeature {
     private static volatile Constructor<?> sendReadConstructor;
     private static volatile Method enqueueJobMethod;
     private static volatile Object jobManager;
+    private static volatile String lastHiddenConversationJid;
+    private static final int MENU_SEND_BLUE_TICK = 0x7EAE0012;
 
     private static final class ReadJobRecipe {
         final Constructor<?> constructor;
@@ -61,6 +72,7 @@ public class BlueOnReplyHook extends BaseFeature {
     public void hook() throws Throwable {
         initializeReadReceiptDispatcher();
         hookMessageSend();
+        hookConversationMenu();
     }
 
     private void initializeReadReceiptDispatcher() {
@@ -93,9 +105,15 @@ public class BlueOnReplyHook extends BaseFeature {
             if (anchor == null) return;
 
             Class<?> managerClass = anchor.getDeclaringClass();
+            Class<?> baseJobClass = XposedHelpers.findClassIfExists(
+                    "org.whispersystems.jobqueue.Job", classLoader);
             for (Method method : managerClass.getDeclaredMethods()) {
-                if (method.getParameterCount() == 1
-                        && method.getParameterTypes()[0].isAssignableFrom(sendReadClass)) {
+                if (method.getParameterCount() != 1) continue;
+                Class<?> parameter = method.getParameterTypes()[0];
+                boolean exactJobMethod = baseJobClass != null && parameter == baseJobClass;
+                boolean compatibleJobMethod = baseJobClass == null
+                        && parameter.isAssignableFrom(sendReadClass);
+                if (exactJobMethod || compatibleJobMethod) {
                     method.setAccessible(true);
                     enqueueJobMethod = method;
                     break;
@@ -139,7 +157,14 @@ public class BlueOnReplyHook extends BaseFeature {
 
                         String remoteJid = extractRemoteJid(param.thisObject);
                         if (remoteJid != null) {
-                            sendPendingReadJobs(remoteJid);
+                            String receiptJid = remoteJid;
+                            Activity activity = ActivityTracker.getCurrentActivity();
+                            if (activity != null
+                                    && activity.getClass().getSimpleName().contains("Conversation")) {
+                                String currentConversation = resolveConversationJid(activity);
+                                if (currentConversation != null) receiptJid = currentConversation;
+                            }
+                            sendPendingReadJobs(receiptJid);
                         }
                     }
                 });
@@ -169,31 +194,63 @@ public class BlueOnReplyHook extends BaseFeature {
         }
         constructor.setAccessible(true);
         pending.add(new ReadJobRecipe(constructor, copy));
+        lastHiddenConversationJid = key;
+        XposedBridge.log(TAG + " Captured hidden read job for " + key
+                + " (pending=" + pending.size() + ")");
     }
 
-    private static void sendPendingReadJobs(String jid) {
+    private static int sendPendingReadJobs(String jid) {
         String key = canonicalJid(jid);
         Method enqueue = enqueueJobMethod;
         Object manager = jobManager;
-        if (key == null || enqueue == null || manager == null) return;
+        if (key == null) return 0;
+        if (enqueue == null || manager == null) {
+            XposedBridge.log(TAG + " Cannot dispatch for " + key
+                    + ": WaJobManager is not ready");
+            return 0;
+        }
 
         List<ReadJobRecipe> pending = PENDING_JOBS.remove(key);
-        if (pending == null || pending.isEmpty()) return;
+        if ((pending == null || pending.isEmpty()) && lastHiddenConversationJid != null
+                && !lastHiddenConversationJid.equals(key)) {
+            String conversationKey = lastHiddenConversationJid;
+            pending = PENDING_JOBS.remove(conversationKey);
+            if (pending != null && !pending.isEmpty()) key = conversationKey;
+        }
+        if (pending == null || pending.isEmpty()) {
+            XposedBridge.log(TAG + " No captured read jobs for reply to " + key);
+            return 0;
+        }
         HideReceiptsHook.allowBlueReplyReceipt(key);
 
+        int sent = 0;
         for (ReadJobRecipe recipe : pending) {
             try {
+                HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments);
                 Object job = recipe.constructor.newInstance(recipe.arguments);
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
+                sent++;
+                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt for " + key);
             } catch (Throwable t) {
                 XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getMessage());
             }
         }
+        return sent;
     }
 
     private String extractRemoteJid(Object source) {
         if (source == null) return null;
+        // SendE2EMessageJob deliberately keeps this serialized field name stable. This is the
+        // exact path used by Dev4Mod and avoids selecting participant/device JIDs from other fields.
+        try {
+            Object jid = XposedHelpers.getObjectField(source, "jid");
+            if (jid != null) {
+                String raw = jid.toString();
+                if (canonicalJid(raw) != null) return raw;
+            }
+        } catch (Throwable ignored) {
+        }
         try {
             Class<?> current = source.getClass();
             while (current != null && current != Object.class) {
@@ -212,6 +269,135 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         } catch (Throwable ignored) {}
         return null;
+    }
+
+    private void hookConversationMenu() {
+        try {
+            Class<?> conversationClass = XposedHelpers.findClassIfExists(
+                    "com.whatsapp.Conversation", classLoader);
+            if (conversationClass == null) {
+                XposedBridge.log(TAG + " Conversation class not found");
+                return;
+            }
+
+            Set<Method> menuMethods = new LinkedHashSet<>();
+            Class<?> current = conversationClass;
+            while (current != null && current != Object.class) {
+                String className = current.getName();
+                if (className.startsWith("android.") || className.startsWith("androidx.")) break;
+                for (Method method : current.getDeclaredMethods()) {
+                    Class<?>[] parameters = method.getParameterTypes();
+                    for (Class<?> parameter : parameters) {
+                        if (parameter == Menu.class) {
+                            menuMethods.add(method);
+                            break;
+                        }
+                    }
+                }
+                current = current.getSuperclass();
+            }
+            if (menuMethods.isEmpty()) {
+                XposedBridge.log(TAG + " No Conversation method accepting Menu found");
+                return;
+            }
+
+            XC_MethodHook menuHook = new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    // Some menu methods live on a base activity shared by HomeActivity and
+                    // Conversation. A hook on that declaration runs for every subclass, so never
+                    // inject unless the current receiver is the real chat screen.
+                    if (param.thisObject == null
+                            || !conversationClass.isInstance(param.thisObject)) return;
+                    Menu menu = null;
+                    for (Object argument : param.args) {
+                        if (argument instanceof Menu) {
+                            menu = (Menu) argument;
+                            break;
+                        }
+                    }
+                    injectConversationMenuItem(menu, param.thisObject);
+                }
+            };
+            for (Method menuMethod : menuMethods) {
+                menuMethod.setAccessible(true);
+                XposedBridge.hookMethod(menuMethod, menuHook);
+                XposedBridge.log(TAG + " Hooked Conversation menu method: " + menuMethod);
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getMessage());
+        }
+    }
+
+    private void injectConversationMenuItem(Menu menu, Object conversation) {
+        if (!isManualButtonEnabled() || menu == null
+                || menu.findItem(MENU_SEND_BLUE_TICK) != null) return;
+
+        MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, "Send blue tick");
+        android.graphics.drawable.Drawable icon = MenuIconLoader.load(context, "ic_waex_mark_read");
+        if (icon == null) {
+            int iconId = context.getResources().getIdentifier(
+                    "ic_notif_mark_read", "drawable", "com.whatsapp");
+            if (iconId != 0) item.setIcon(iconId);
+        } else {
+            item.setIcon(icon);
+        }
+        item.setShowAsAction(manualButtonPlacement() == 1
+                ? MenuItem.SHOW_AS_ACTION_ALWAYS : MenuItem.SHOW_AS_ACTION_NEVER);
+        item.setOnMenuItemClickListener(clicked -> {
+            String jid = resolveConversationJid(conversation);
+            int sent = jid == null ? 0 : sendPendingReadJobs(jid);
+            Context toastContext = conversation instanceof Context
+                    ? (Context) conversation : context;
+            Toast.makeText(toastContext,
+                    sent > 0 ? "Blue tick sent" : "No hidden read receipt to send",
+                    Toast.LENGTH_SHORT).show();
+            return true;
+        });
+    }
+
+    private boolean isManualButtonEnabled() {
+        Object value = prefs.getAll().get("seentick");
+        if (value instanceof Boolean) return (Boolean) value;
+        if (value instanceof Number) return ((Number) value).intValue() != 0;
+        if (value instanceof String) {
+            String text = (String) value;
+            return !text.isEmpty() && !"0".equals(text) && !"false".equalsIgnoreCase(text);
+        }
+        return false;
+    }
+
+    /** 1 = toolbar icon, 2 = overflow menu. Boolean legacy values migrate as toolbar mode. */
+    private int manualButtonPlacement() {
+        Object value = prefs.getAll().get("seentick");
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return isManualButtonEnabled() ? 1 : 0;
+    }
+
+    private String resolveConversationJid(Object conversation) {
+        String reflected = extractRemoteJid(conversation);
+        if (reflected != null) return reflected;
+        if (conversation instanceof Activity) {
+            try {
+                Bundle extras = ((Activity) conversation).getIntent().getExtras();
+                if (extras != null) {
+                    for (String key : extras.keySet()) {
+                        Object value = extras.get(key);
+                        if (value != null && canonicalJid(value.toString()) != null) {
+                            return value.toString();
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return lastHiddenConversationJid;
     }
 
     private static String canonicalJid(String value) {

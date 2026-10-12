@@ -41,10 +41,11 @@ import java.util.regex.Pattern;
 public class HideReceiptsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][HideReceipts]";
-    private static final long BLUE_REPLY_WINDOW_MS = 15_000L;
+    private static final long BLUE_REPLY_WINDOW_MS = 120_000L;
     private static final Pattern JID_PATTERN = Pattern.compile(
             "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
     private static final Map<String, Long> BLUE_REPLY_BYPASS = new ConcurrentHashMap<>();
+    private static final Map<String, Long> EXPLICIT_RECEIPT_IDS = new ConcurrentHashMap<>();
 
     private Class<?> protocolTreeNodeClass;
     private Class<?> keyValueClass;
@@ -222,7 +223,8 @@ public class HideReceiptsHook extends BaseFeature {
                                     XposedHelpers.setAdditionalInstanceField(job, "waex_hide_status_view", true);
                                 }
                             } else if (shouldHideReadReceipt(jid)
-                                    && isEnabled("blueonreply", false)) {
+                                    && (isEnabled("blueonreply", false)
+                                    || isManualSeenTickEnabled())) {
                                 BlueOnReplyHook.captureSuppressedReadJob(
                                         jid, (Constructor<?>) param.method, param.args);
                             }
@@ -260,6 +262,18 @@ public class HideReceiptsHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
         }
+    }
+
+    private boolean isManualSeenTickEnabled() {
+        Object value = prefs.getAll().get("seentick");
+        if (value instanceof Boolean) return (Boolean) value;
+        if (value instanceof Number) return ((Number) value).intValue() != 0;
+        if (value instanceof String) {
+            String text = (String) value;
+            return !text.isEmpty() && !"0".equals(text)
+                    && !"false".equalsIgnoreCase(text);
+        }
+        return false;
     }
 
     /**
@@ -304,6 +318,11 @@ public class HideReceiptsHook extends BaseFeature {
                         String to = getAttributeValue(node, "to");
                         String participant = getAttributeValue(node, "participant");
                         String type = getAttributeValue(node, "type");
+                        String messageId = getAttributeValue(node, "id");
+
+                        // Manual/Blue-on-Reply jobs authorize exact message IDs. This survives
+                        // phone-JID/LID/device-JID differences between receive and send paths.
+                        if (isExplicitReceiptAllowed(messageId)) return;
 
                         boolean isStatusStanza = isStatusTarget(to, participant) || "readstatus".equals(type);
 
@@ -625,6 +644,28 @@ public class HideReceiptsHook extends BaseFeature {
         String key = canonicalJid(jid);
         if (key == null) return;
         BLUE_REPLY_BYPASS.put(key, System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS);
+    }
+
+    public static void allowExplicitReceiptIds(Object[] constructorArguments) {
+        if (constructorArguments == null) return;
+        long expiresAt = System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS;
+        for (Object argument : constructorArguments) {
+            if (!(argument instanceof String[])) continue;
+            for (String messageId : (String[]) argument) {
+                if (messageId != null && !messageId.isEmpty()) {
+                    EXPLICIT_RECEIPT_IDS.put(messageId, expiresAt);
+                }
+            }
+        }
+    }
+
+    private static boolean isExplicitReceiptAllowed(String messageId) {
+        if (messageId == null) return false;
+        Long expiresAt = EXPLICIT_RECEIPT_IDS.get(messageId);
+        if (expiresAt == null) return false;
+        if (expiresAt >= System.currentTimeMillis()) return true;
+        EXPLICIT_RECEIPT_IDS.remove(messageId, expiresAt);
+        return false;
     }
 
     private static boolean isBlueReplyBypassed(String jid) {
