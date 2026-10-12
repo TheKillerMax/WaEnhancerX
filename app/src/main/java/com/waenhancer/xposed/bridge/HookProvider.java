@@ -243,20 +243,14 @@ public class HookProvider extends ContentProvider {
      * own UID is permitted for its settings UI. Custom clones outside the scope
      * are deliberately not trusted by the provider. */
     private boolean isTrustedCaller(@NonNull Context context, int uid) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] packages = context.getPackageManager().getPackagesForUid(uid);
-        if (packages == null) return false;
-        Set<String> scopes = WhatsAppPackageDetector.getSupportedPackages(context);
-        for (String name : packages) {
-            if (scopes.contains(name)) return true;
-        }
-        return false;
+        return CallerScopePolicy.isTrusted(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid),
+                WhatsAppPackageDetector.getSupportedPackages(context));
     }
 
     private boolean callerOwnsPackage(@NonNull Context context, int uid, @NonNull String pkg) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] owned = context.getPackageManager().getPackagesForUid(uid);
-        return owned != null && Arrays.asList(owned).contains(pkg);
+        return CallerScopePolicy.ownsPackage(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid), pkg);
     }
 
     private static Bundle writeResult(boolean success) {
