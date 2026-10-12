@@ -1,7 +1,9 @@
 package com.waenhancer.xposed.features.automation;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class TestNotificationState {
     private static void ok(boolean result, String message) { if (!result) throw new AssertionError(message); }
@@ -40,6 +42,28 @@ public final class TestNotificationState {
         }
         ready.await();
         ok(limiter.trackedCountForTests() <= 2048, "concurrent bounded throttle");
+        // Concurrent presence updates must remain bounded and survive access-order LRU reads.
+        CountDownLatch presenceReady = new CountDownLatch(6);
+        AtomicReference<Throwable> presenceFailure = new AtomicReference<>();
+        for (int t = 0; t < 6; t++) {
+            final int worker = t;
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < 2000; i++) {
+                        String jid = "parallel-" + worker + "-" + i + "@s.whatsapp.net";
+                        PresenceStateStore.update(jid, true);
+                        PresenceStateStore.get(jid);
+                    }
+                } catch (Throwable failure) {
+                    presenceFailure.compareAndSet(null, failure);
+                } finally {
+                    presenceReady.countDown();
+                }
+            }).start();
+        }
+        ok(presenceReady.await(30, TimeUnit.SECONDS), "concurrent presence workers completed");
+        ok(presenceFailure.get() == null, "concurrent presence updates and reads");
+        ok(PresenceStateStore.stateCount() <= 2048, "concurrent presence cache stays bounded");
         System.out.println("PASS: toast throttle and presence state bounds, concurrency, listeners");
     }
 }
