@@ -48,11 +48,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.text.DateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Anti-Revoke & Deleted Indicator Engine for Messages and Statuses.
@@ -69,9 +72,28 @@ public class AntiRevokeHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][AntiRevoke]";
 
-    private static final Map<String, Long> REVOKED_MESSAGES = new ConcurrentHashMap<>();
-    private static final Set<String> PRESERVED_OWN_ROW_IDS = ConcurrentHashMap.newKeySet();
-    private static final DateFormat TIME_FORMAT = DateFormat.getTimeInstance(DateFormat.SHORT);
+    // Full revoke history lives in DelMessageStore; only recent keys need process memory.
+    private static final int MAX_RECENT_REVOKES = 4096;
+    private static final Map<String, Long> REVOKED_MESSAGES = Collections.synchronizedMap(
+            new LinkedHashMap<String, Long>(256, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
+                    return size() > MAX_RECENT_REVOKES;
+                }
+            });
+    // A failed/abandoned revoke transaction must not retain a pending row ID forever.
+    private static final Set<String> PRESERVED_OWN_ROW_IDS = Collections.synchronizedSet(
+            new LinkedHashSet<String>() {
+                @Override public boolean add(String value) {
+                    boolean added = super.add(value);
+                    if (size() > MAX_RECENT_REVOKES) {
+                        Iterator<String> it = iterator();
+                        if (it.hasNext()) { it.next(); it.remove(); }
+                    }
+                    return added;
+                }
+            });
+    private static final ThreadLocal<DateFormat> TIME_FORMAT =
+            ThreadLocal.withInitial(() -> DateFormat.getTimeInstance(DateFormat.SHORT));
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     /** Resolved WhatsApp FMessage class — used to guard getView items. */
@@ -261,7 +283,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 REVOKED_MESSAGES.put(keyId, now);
                                 DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                 dispatchRealtimeRevokeUI(keyId, now);
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                                 setHandledResult(param);
                             }
                         } catch (Throwable t) {
@@ -332,7 +354,7 @@ public class AntiRevokeHook extends BaseFeature {
                             long now = System.currentTimeMillis();
                             REVOKED_MESSAGES.put(keyId, now);
                             DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                             setHandledResult(param);
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getMessage());
@@ -435,7 +457,7 @@ public class AntiRevokeHook extends BaseFeature {
                                             long now = System.currentTimeMillis();
                                             REVOKED_MESSAGES.put(keyId, now);
                                             DelMessageStore.getInstance(context).insertMessage(jid, keyId, now);
-                                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                            com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                                         }
                                     } while (cursor.moveToNext());
                                 }
@@ -477,7 +499,7 @@ public class AntiRevokeHook extends BaseFeature {
                                         REVOKED_MESSAGES.put(keyId, now);
                                         DelMessageStore.getInstance(context).insertMessage(String.valueOf(chatRowId), keyId, now);
                                         dispatchRealtimeRevokeUI(keyId, now);
-                                        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                                         param.setResult(0);
                                     } else if (preserveOwnRevoke) {
                                         // Own-message "delete for everyone" with preserve enabled:
@@ -538,7 +560,9 @@ public class AntiRevokeHook extends BaseFeature {
                     if (msgType != null && msgType == 15) {
                         String keyId = cv.getAsString("key_id");
                         if (keyId != null) {
-                            boolean alreadyPreserved = REVOKED_MESSAGES.containsKey(keyId);
+                            // The memory cache is intentionally bounded; disk remains authoritative.
+                            boolean alreadyPreserved = REVOKED_MESSAGES.containsKey(keyId)
+                                    || DelMessageStore.getInstance(context).getTimestampByMessageId(keyId) > 0L;
 
                             if (preserveOwnRevoke && alreadyPreserved) {
                                 // WhatsApp reuses the original message row ID for its local revoke
@@ -549,7 +573,7 @@ public class AntiRevokeHook extends BaseFeature {
                             } else if (preserveIncoming && alreadyPreserved) {
                                 // Incoming revokes have no outbound work to complete. Keep the
                                 // original row and discard only their local placeholder.
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                                 param.setResult(-1L);
                             } else if (preserveIncoming) {
                                 // Fallback: incoming type-15 not seen in delete hook yet.
@@ -558,7 +582,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 REVOKED_MESSAGES.put(keyId, now);
                                 DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                                 dispatchRealtimeRevokeUI(keyId, now);
-                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler);
+                                com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(context, null, uiHandler, prefs);
                                 param.setResult(-1L);
                             }
                             // If neither: own message with preserve OFF — let WhatsApp write
@@ -770,7 +794,9 @@ public class AntiRevokeHook extends BaseFeature {
      * Thread-local map: records the most recently DB-read status keyId per thread.
      * This allows reliable keyId lookup even when fragment field scanning fails.
      */
-    private static final Map<Long, String> sStatusKeyByThread = new ConcurrentHashMap<>();
+    // The status renderer only reads the key from the same executing thread.
+    // ThreadLocal avoids retaining IDs for every transient worker thread globally.
+    private static final ThreadLocal<String> sStatusKeyByThread = new ThreadLocal<>();
 
     private void hookStatusPlaybackUI() {
         try {
@@ -1006,7 +1032,7 @@ public class AntiRevokeHook extends BaseFeature {
                         if (!cursor.isBeforeFirst() && !cursor.isAfterLast()) {
                             String keyId = cursor.getString(keyIdCol);
                             if (isLikelyStatusKeyId(keyId)) {
-                                sStatusKeyByThread.put(Thread.currentThread().getId(), keyId);
+                                sStatusKeyByThread.set(keyId);
                             }
                         }
                     } catch (Throwable ignored) {}
@@ -1221,7 +1247,7 @@ public class AntiRevokeHook extends BaseFeature {
 
             // Priority 2: last DB-read keyId for this thread
             if (keyId == null) {
-                keyId = sStatusKeyByThread.get(Thread.currentThread().getId());
+                keyId = sStatusKeyByThread.get();
             }
 
             // Priority 3: fall back to general FMessage extraction
@@ -1702,7 +1728,7 @@ public class AntiRevokeHook extends BaseFeature {
 
             // Clickable deletion timestamp toast
             if (deletedTimestamp > 0) {
-                String formattedTime = TIME_FORMAT.format(new Date(deletedTimestamp));
+                String formattedTime = TIME_FORMAT.get().format(new Date(deletedTimestamp));
                 dateTextView.getPaint().setUnderlineText(true);
                 dateTextView.setOnClickListener(v ->
                         Toast.makeText(rowContext, "Deleted at: " + formattedTime, Toast.LENGTH_LONG).show()
