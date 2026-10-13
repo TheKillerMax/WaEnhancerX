@@ -28,10 +28,12 @@ CALL = re.compile(r'(?<![\w])(' + '|'.join(map(re.escape, TYPE_BY_METHOD))
 
 
 def without_comments(text: str) -> str:
-    """Replace // and /* */ comments with spaces while preserving line numbers.
+    """Replace comments and triple-quoted text blocks with spaces.
 
-    Java/Kotlin string and char literals are preserved so literal-key calls can
-    be found. This does not parse interpolated or dynamically generated keys.
+    Preserve source lengths and line positions. Regular Java/Kotlin string and
+    char literals remain intact for literal-key matching, but Kotlin raw
+    strings and Java text blocks are data, not executable preference calls.
+    String-template interpolation and dynamic keys are not parsed.
     """
     out = list(text)
     state = 'code'
@@ -40,6 +42,11 @@ def without_comments(text: str) -> str:
         c = text[i]
         next_char = text[i+1] if i+1 < len(text) else ''
         if state == 'code':
+            if text.startswith('"""', i):
+                # Kotlin raw strings and Java text blocks may contain examples
+                # resembling preference writes; their contents are not calls.
+                out[i:i+3] = '   '
+                i += 3; state = 'raw_string'; continue
             if c == '/' and next_char == '/':
                 out[i] = out[i+1] = ' '
                 i += 2; state = 'line_comment'; continue
@@ -55,6 +62,11 @@ def without_comments(text: str) -> str:
             if c == '*' and next_char == '/':
                 out[i] = out[i+1] = ' '
                 i += 2; state = 'code'; continue
+            if c != '\n': out[i] = ' '
+        elif state == 'raw_string':
+            if text.startswith('"""', i):
+                out[i:i+3] = '   '
+                i += 3; state = 'code'; continue
             if c != '\n': out[i] = ' '
         elif state in ('double', 'single'):
             if c == '\\':
