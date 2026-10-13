@@ -110,7 +110,7 @@ object FeatureCatalog {
         FeatureItem("separate_groups_tabs", "Separate Groups", "Separate your chats by: Groups, Private Chats, Status, Calls, Communities", "Home Layout & Navigation", 4, "layout", "Styles"),
         FeatureItem("quick_home_menu", "Quick Action Home Menu", "Add quick actions to home long-press", "Home Layout & Navigation", 4, "layout", "Styles"),
         FeatureItem("contact_blocked_verify", "Show Contact Added Status in Conversation", "This option verifies whether the contact added you or has a public profile photo", "Utilities & Data", 4, "layout", "Styles"),
-        FeatureItem("miscellaneous_enhancements", "Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "Utilities & Data", 4, "layout", "Styles"),
+        FeatureItem("disable_sensor_proximity", "Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "Utilities & Data", 4, "layout", "Styles"),
 
         // --- SETTINGS & SYSTEM ---
         FeatureItem("show_hook_toast", "Show Hook Injection Toast", "Show or hide the injecting hooks notification when WhatsApp opens", "System & Compatibility", -1, null, "Settings"),
@@ -134,7 +134,10 @@ object FeatureCatalog {
         "downloadviewonce" to "download_view_once",
         "custom_css" to "custom_theme",
         "change_dpi" to "custom_view_dpi",
-        "open_waex" to "open_wae"
+        "open_waex" to "open_wae",
+        // Historical Styles toggle key did not connect to the sensor hook.
+        // Keep navigation/search compatible without silently enabling sensor changes.
+        "miscellaneous_enhancements" to "disable_sensor_proximity"
     )
 
     @JvmStatic
