@@ -149,11 +149,22 @@ object SettingsBackupCodec {
 
         require(records.isNotEmpty()) { "No valid settings found in backup" }
 
-        val publicEditor = PreferenceStores.publicStore(context).edit()
-        val privateEditor = PreferenceStores.privateStore(context).edit()
+        val publicStore = PreferenceStores.publicStore(context)
+        val privateStore = PreferenceStores.privateStore(context)
+        // Preserve original *runtime* types, including legacy wrong-typed
+        // entries. Capture only touched keys and clone string sets so changes
+        // during the import cannot silently mutate our rollback snapshots.
+        val publicBefore = snapshotForRollback(publicStore.all)
+        val privateBefore = snapshotForRollback(privateStore.all)
+        val publicKeys = LinkedHashSet<String>()
+        val privateKeys = LinkedHashSet<String>()
+        val publicEditor = publicStore.edit()
+        val privateEditor = privateStore.edit()
         records.forEach { record ->
             val schema = PreferenceSchema.entry(record.key)!!
-            val editor = if (schema.store == PreferenceSchema.Store.PRIVATE) privateEditor else publicEditor
+            val isPrivate = schema.store == PreferenceSchema.Store.PRIVATE
+            val editor = if (isPrivate) privateEditor else publicEditor
+            if (isPrivate) privateKeys.add(record.key) else publicKeys.add(record.key)
             when (record.type) {
                 PreferenceSchema.Type.BOOLEAN -> editor.putBoolean(record.key, record.value as Boolean)
                 PreferenceSchema.Type.STRING -> editor.putString(record.key, record.value as String)
@@ -164,8 +175,67 @@ object SettingsBackupCodec {
                 PreferenceSchema.Type.FLOAT -> editor.putFloat(record.key, record.value as Float)
             }
         }
-        check(privateEditor.commit() && publicEditor.commit()) { "Could not save imported settings" }
+
+        // SharedPreferences has no atomic multi-file commit. When either
+        // commit fails, attempt to restore the keys written to BOTH stores.
+        // Never report a successful import after a partially committed backup.
+        var privateAttempted = false
+        var publicAttempted = false
+        try {
+            if (privateKeys.isNotEmpty()) {
+                privateAttempted = true
+                check(privateEditor.commit()) { "Could not save imported private settings" }
+            }
+            if (publicKeys.isNotEmpty()) {
+                publicAttempted = true
+                check(publicEditor.commit()) { "Could not save imported public settings" }
+            }
+        } catch (failure: Exception) {
+            val publicRecovered = !publicAttempted ||
+                    restoreTouchedKeys(publicStore, publicBefore, publicKeys)
+            val privateRecovered = !privateAttempted ||
+                    restoreTouchedKeys(privateStore, privateBefore, privateKeys)
+            check(publicRecovered && privateRecovered) {
+                "Backup restore failed and rollback could not restore all preferences"
+            }
+            throw IllegalStateException("Backup restore failed; previous preferences restored", failure)
+        }
         return records.size
+    }
+
+    private fun snapshotForRollback(values: Map<String, *>): Map<String, Any?> =
+        values.mapValues { (_, value) ->
+            if (value is Set<*>) value.filterIsInstance<String>().toSet() else value
+        }
+
+    /** Best-effort compensation for a failed multi-store commit, limited to touched keys. */
+    private fun restoreTouchedKeys(
+        store: android.content.SharedPreferences,
+        original: Map<String, Any?>,
+        touched: Set<String>
+    ): Boolean {
+        if (touched.isEmpty()) return true
+        return try {
+            val editor = store.edit()
+            for (key in touched) {
+                if (!original.containsKey(key)) {
+                    editor.remove(key)
+                    continue
+                }
+                when (val value = original[key]) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is String -> editor.putString(key, value)
+                    is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    else -> return false
+                }
+            }
+            editor.commit()
+        } catch (ignored: Exception) {
+            false
+        }
     }
 
     private fun decodeBinary(bytes: java.io.ByteArrayInputStream.() -> Unit = {}): List<Record> {

@@ -27,7 +27,13 @@ assert 'if (legacy && rawKey != key && source.has(key)) continue' in codec, (
     'Canonical JSON values could be overwritten by an older alias')
 assert 'val legacy = !root.has("schemaVersion")' in codec
 assert 'Record(key, entry.type, it)' in codec
-assert 'privateEditor.commit() && publicEditor.commit()' in codec
+# A two-store restore is not atomic; partial successes must be compensated.
+assert 'privateEditor.commit() && publicEditor.commit()' not in codec
+assert 'restoreTouchedKeys(publicStore, publicBefore, publicKeys)' in codec
+assert 'restoreTouchedKeys(privateStore, privateBefore, privateKeys)' in codec
+assert 'Backup restore failed and rollback could not restore all preferences' in codec
+assert 'snapshotForRollback' in codec
+assert 'original.containsKey(key)' in codec
 colliding = [(a, b) for a, b in aliases.items() if a in keys and b in keys]
 incompatible = [(a, b) for a, b in colliding if keys[a] != keys[b]]
 assert len(colliding) >= 30, 'expected current keys shadowed by legacy aliases'
