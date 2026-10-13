@@ -10,6 +10,8 @@ These checks are **diagnostics**, not evidence that WhatsApp hooks are working. 
 | `test_audit_apks.py` | Python 3.10+ | Synthetic malformed ZIP and DEX fixtures, correct multidex enumeration, CLI exit codes and JSON output |
 | `dex_source_anchor_inventory.py` | Python 3.10+; **locally supplied** WhatsApp APK | Generate a full, source-derived list of `addUsingString` literals and report which occur in DEX string tables. An absent anchor blocks **only that literal search**, not all feature implementations. |
 | `test_dex_source_anchor_inventory.py` | Python 3.10+ | Synthetic source/DEX fixtures for complete anchor discovery, strict exit status, malformed checksums and table-only matching |
+| `feature_contract_inventory.py` | Python 3.10+; project source | Read-only catalog/schema/direct Xposed-key reference inventory. Lists review flags, **not** proven broken features or executed hooks. |
+| `test_feature_contract_inventory.py` | Python 3.10+ | Current-source smoke checks and synthetic tests for duplicate keys, source references and legacy alias metadata |
 | `test_hook_return_types.py` | Python 3 and JDK | Hook return/parameter contract checks |
 | `test_host_class_relocations.py` | Python 3 and a **locally supplied** WhatsApp APK | Exact host class definitions for a known version (expected to change across WhatsApp releases) |
 | `test_monet_wiring.py` | Python 3 | Source-level dynamic-theme wiring, not UI instrumentation |
@@ -43,6 +45,21 @@ than relying on the **18 historical samples** in `audit_apks.py`. Different
 source revisions can have different numbers of anchors. It does not execute
 DexKit or prove that the host method's class, arguments, and return value match.
 Avoid claiming a feature is fixed from the presence of an anchor alone.
+
+## Review advertised feature preference wiring
+
+```sh
+python3 qa/feature_contract_inventory.py
+python3 qa/feature_contract_inventory.py --markdown > feature_inventory.md
+python3 qa/feature_contract_inventory.py --json > feature_inventory.json
+python3 qa/test_feature_contract_inventory.py
+```
+
+The inventory identifies catalog keys absent from `PreferenceSchema` and keys
+without **direct** references in the public Xposed source. This is a review
+queue, **not proof a feature is broken**: direct references may be hidden behind
+constants, dynamic names or the private `:licensing` module, while even
+literal references in a hook do not prove the hook installed successfully.
 
 ## What the report does *not* establish
 
