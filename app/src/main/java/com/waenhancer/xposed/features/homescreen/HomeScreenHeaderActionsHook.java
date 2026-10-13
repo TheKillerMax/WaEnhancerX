@@ -16,6 +16,8 @@ import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.features.privacy.ArchivedChatsPreferencePolicy;
+import java.util.concurrent.atomic.AtomicLong;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
@@ -46,6 +48,8 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     private static final int MENU_ID_SETTINGS      = 0x7EAE0005;
     /** Separate-mode: the single WAEX shield toolbar button */
     private static final int MENU_ID_WAEX_TOOLBAR  = 0x7EAE0006;
+    private static final int MENU_ID_ARCHIVED      = 0x7EAE0007;
+    private static final AtomicLong LAST_ARCHIVE_OPEN_MS = new AtomicLong(-1L);
 
     // Style constants
     private static final String STYLE_GROUPED  = "grouped";
@@ -185,6 +189,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         menu.removeItem(MENU_ID_DND);
         menu.removeItem(MENU_ID_RESTART);
         menu.removeItem(MENU_ID_SETTINGS);
+        menu.removeItem(MENU_ID_ARCHIVED);
     }
 
     /** Grouped mode: all WAEX items nested inside a single "WAEX" submenu entry in the 3-dots menu. */
@@ -204,12 +209,15 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     private void addItemsSeparate(Menu menu, Activity activity) {
         if (!hasAnyActiveItem()) return;
 
-        MenuItem waexBtn = menu.add(Menu.NONE, MENU_ID_WAEX_TOOLBAR, Menu.NONE, "WAEX");
-        waexBtn.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-
-        Drawable logo = MenuIconLoader.logoIcon(context);
-        if (logo != null) waexBtn.setIcon(logo);
-        // NOTE: No setOnMenuItemClickListener – handled in handleItemSelected via the Xposed hook.
+        if (hasNormalWaexAction()) {
+            MenuItem waexBtn = menu.add(Menu.NONE, MENU_ID_WAEX_TOOLBAR, Menu.NONE, "WAEX");
+            waexBtn.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+            Drawable logo = MenuIconLoader.logoIcon(context);
+            if (logo != null) waexBtn.setIcon(logo);
+        }
+        // In separate mode the quick-action sheet is unchanged; the archive
+        // is reachable from the overflow menu even if it is hidden in the list.
+        appendArchiveEntry(menu, activity);
     }
 
     /**
@@ -297,15 +305,32 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             item.setShowAsAction(showAsAction);
             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
         }
+        appendArchiveEntry(target, activity);
+    }
+
+    /** Always place recovery in overflow, not as a conspicuous toolbar icon. */
+    private void appendArchiveEntry(Menu target, Activity activity) {
+        if (!isArchivedHidden()) return;
+        MenuItem item = target.add(Menu.NONE, MENU_ID_ARCHIVED, Menu.NONE, "Open archived chats");
+        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+    }
+
+    private boolean isArchivedHidden() {
+        try {
+            return ArchivedChatsPreferencePolicy.isHidden(prefs.getAll().get("typearchive"));
+        } catch (Throwable ignored) { return false; }
+    }
+
+    private boolean hasNormalWaexAction() {
+        return isEnabled("ghostmode", false) || isEnabled("freezelastseen", false)
+                || isEnabled("show_dndmode", false) || isEnabled("restartbutton", false)
+                || isEnabled("open_wae", false);
     }
 
     /** Returns true if at least one injected item should be visible. */
     private boolean hasAnyActiveItem() {
-        return isEnabled("ghostmode", false)
-                || isEnabled("freezelastseen", false)
-                || isEnabled("show_dndmode", false)
-                || isEnabled("restartbutton", false)
-                || isEnabled("open_wae", false);
+        return hasNormalWaexAction() || isArchivedHidden();
     }
 
     // -------------------------------------------------------------------------
@@ -315,6 +340,11 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     private boolean handleItemSelected(MenuItem item, Object activityObj) {
         if (item == null) return false;
         int id = item.getItemId();
+
+        if (id == MENU_ID_ARCHIVED) {
+            if (activityObj instanceof Activity) openArchivedConversations((Activity) activityObj);
+            return true;
+        }
 
         // Separate mode: WAEX toolbar button opens the native quick-action sheet
         if (id == MENU_ID_WAEX_TOOLBAR) {
@@ -404,6 +434,29 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         activity.getPackageManager().getLaunchIntentForPackage("com.waenhancer");
                 if (intent != null) activity.startActivity(intent);
             } catch (Throwable ignored) {}
+        }
+    }
+
+    /** Launch only the verified in-package WhatsApp archive Activity. */
+    private void openArchivedConversations(Activity activity) {
+        if (!isArchivedHidden() || activity.isFinishing() || activity.isDestroyed()) return;
+        long now = SystemClock.elapsedRealtime();
+        long previous = LAST_ARCHIVE_OPEN_MS.get();
+        if (previous >= 0L && now >= previous && now - previous < 800L) return;
+        if (!LAST_ARCHIVE_OPEN_MS.compareAndSet(previous, now)) return;
+        try {
+            Class<?> archived = XposedHelpers.findClassIfExists(
+                    "com.whatsapp.conversation.conversationslist.ArchivedConversationsActivity",
+                    classLoader);
+            if (archived == null || !Activity.class.isAssignableFrom(archived)) {
+                Toast.makeText(activity, "Archived chats unavailable in this WhatsApp build",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            activity.startActivity(new Intent(activity, archived));
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Cannot open archived chats: " + t.getClass().getSimpleName());
+            Toast.makeText(activity, "Could not open archived chats", Toast.LENGTH_SHORT).show();
         }
     }
 

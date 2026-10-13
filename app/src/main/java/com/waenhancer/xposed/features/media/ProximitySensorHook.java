@@ -4,7 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
+import android.util.SparseArray;
+import java.util.concurrent.atomic.AtomicBoolean;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import de.robv.android.xposed.XC_MethodHook;
@@ -19,6 +20,7 @@ public class ProximitySensorHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][ProximitySensor]";
     private static final String PREF_KEY = "disable_sensor_proximity";
+    private static final AtomicBoolean SENSOR_MAP_WARNING = new AtomicBoolean(false);
 
     public ProximitySensorHook(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
         super(context, classLoader, prefs);
@@ -31,30 +33,35 @@ public class ProximitySensorHook extends BaseFeature {
 
     private void hookProximitySensor() {
         try {
-            Class<?> proximityClass = XposedHelpers.findClassIfExists("android.hardware.SystemSensorManager$SensorEventQueue", classLoader);
-            if (proximityClass == null) {
-                proximityClass = XposedHelpers.findClassIfExists("android.hardware.SensorManager", classLoader);
-            }
-
-            if (proximityClass != null) {
-                XposedBridge.hookAllMethods(proximityClass, "dispatchSensorEvent", new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
-                        if (!isProximitySensorDisabled()) return;
-
-                        if (param.args.length > 0 && param.args[0] instanceof Integer) {
-                            int handle = (int) param.args[0];
-                            // Suppress proximity event dispatch
-                            if (param.args.length > 1 && param.args[1] instanceof float[]) {
-                                float[] values = (float[]) param.args[1];
-                                if (values.length > 0) {
-                                    values[0] = 100.0f; // Force far distance (screen remains on)
-                                }
-                            }
+            Class<?> sensorQueue = XposedHelpers.findClassIfExists(
+                    "android.hardware.SystemSensorManager$SensorEventQueue", classLoader);
+            if (sensorQueue == null) return;
+            XposedBridge.hookAllMethods(sensorQueue, "dispatchSensorEvent", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (!isProximitySensorDisabled() || param.args == null || param.args.length < 2
+                            || !(param.args[0] instanceof Integer)
+                            || !(param.args[1] instanceof float[])) return;
+                    try {
+                        // A queue carries many sensor types. Never alter accelerometer/gyro events.
+                        // AOSP keeps its handle -> SensorEvent mapping in mSensorsEvents.
+                        Object mapping = XposedHelpers.getObjectField(param.thisObject, "mSensorsEvents");
+                        if (!(mapping instanceof SparseArray<?>)) return;
+                        Object candidate = ((SparseArray<?>) mapping).get((Integer) param.args[0]);
+                        if (!(candidate instanceof SensorEvent)) return;
+                        Sensor sensor = ((SensorEvent) candidate).sensor;
+                        if (sensor == null) return;
+                        ProximityEventPolicy.replaceNearWithFar(
+                                sensor.getType(), sensor.getMaximumRange(), (float[]) param.args[1]);
+                    } catch (Throwable failure) {
+                        // Vendor sensor queue layouts may differ: fail closed, not all-sensor mutation.
+                        if (SENSOR_MAP_WARNING.compareAndSet(false, true)) {
+                            XposedBridge.log(TAG + " Sensor-event mapping unavailable: "
+                                    + failure.getClass().getSimpleName());
                         }
                     }
-                });
-            }
+                }
+            });
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking Proximity Sensor: " + t.getMessage());
         }
