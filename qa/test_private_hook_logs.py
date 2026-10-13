@@ -127,7 +127,13 @@ anti = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRev
 preserve = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt").read_text()
 edit = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt").read_text()
 store = (ROOT / "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt").read_text()
-assert 'XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")")' in blue
+# Both the standalone privacy-log PR and the bounded-recipient PR must retain
+# a safe capture diagnostic, although their queues use different implementations.
+if 'PendingReadReceiptStore<ReadJobRecipe>' in blue:
+    assert 'PENDING_JOBS.pendingCount(key)' in blue
+    assert 'XposedBridge.log(TAG + " Captured hidden read job (pending="' in blue
+else:
+    assert 'XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")")' in blue
 assert 'XposedBridge.log(TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready")' in blue
 assert 'XposedBridge.log(TAG + " No captured read jobs for reply")' in blue
 assert 'XposedBridge.log(TAG + " Enqueued blue-on-reply receipt")' in blue
@@ -149,13 +155,25 @@ assert 'if (subscriptionDiagnostics.getAndIncrement() < 5) {\n            }' not
 assert 'Presence request failed for $key' not in online_presence
 
 
-# Feature behavior and data retention were deliberately not removed.
-assert "PENDING_JOBS.computeIfAbsent(" in blue
-assert "HideReceiptsHook.allowBlueReplyReceipt(key)" in blue
-assert "HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)" in blue
-assert "getOrFindJobManager()" in blue
-assert "lastHiddenConversationJid" in blue
-assert "SendE2EMessageJob/onRun" in blue
+# This log-redaction PR can run alone or after the bounded-recipient privacy PR.
+# The older store remains a valid *log regression fixture* on its original PR;
+# the integrated variant must not reintroduce its JID-wide bypass.
+if 'PendingReadReceiptStore<ReadJobRecipe>' in blue:
+    assert 'PENDING_JOBS.drain(key)' in blue
+    assert 'HideReceiptsHook.allowExplicitReceiptIds(key, recipe.arguments)' in blue
+    assert 'HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments)' in blue
+    assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' not in blue
+    assert 'lastHiddenConversationJid' not in blue
+    hide = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java").read_text()
+    assert 'BLUE_REPLY_BYPASS' not in hide
+    assert 'ExplicitReadReceiptPolicy.maySend(type, target, messageId,' in hide
+else:
+    assert 'PENDING_JOBS.computeIfAbsent(' in blue
+    assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' in blue
+    assert 'HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)' in blue
+    assert 'lastHiddenConversationJid' in blue
+assert 'getOrFindJobManager()' in blue
+assert 'SendE2EMessageJob/onRun' in blue
 assert "doApplyStatusDecoration(r, keyId, ts)" in anti
 assert "decorateRevokedStatusTextView(target, ts)" in anti
 assert "DelMessageStore.getInstance(context).insertMessage(" in preserve
