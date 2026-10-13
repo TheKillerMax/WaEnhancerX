@@ -24,8 +24,9 @@ assert 'lastHiddenConversationJid' not in blue
 assert 'getUserPart(' not in blue
 assert 'PENDING_JOBS.size() == 1' not in blue
 assert 'PENDING_JOBS.remove(candidateKey)' not in blue
-assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' in blue
-assert 'HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)' in blue
+assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' not in blue
+assert 'HideReceiptsHook.allowExplicitReceiptIds(key, recipe.arguments)' in blue
+assert 'HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments)' in blue
 assert 'getOrFindJobManager()' in blue
 assert 'SendE2EMessageJob/onRun' in blue
 assert 'new PendingReadReceiptStore<>(128, 64)' in blue
@@ -38,8 +39,13 @@ assert 'JID_PATTERN' not in hide
 assert 'JID_PATTERN' not in blue
 assert 'matcher.find()' not in hide
 assert 'matcher.find()' not in blue
-assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048)' in hide
-assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096)' in hide
+assert 'BLUE_REPLY_BYPASS' not in hide
+assert 'isBlueReplyBypassed' not in hide
+assert 'allowBlueReplyReceipt' not in hide
+assert 'new RecipientReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096)' in hide
+assert 'EXPLICIT_RECEIPT_IDS.isAllowed(canonicalJid(recipient), messageId' in hide
+assert 'if (isExplicitReceiptAllowed(target, messageId)) return;' in hide
+assert 'hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)' in hide
 assert 'SystemClock.elapsedRealtime()' in hide
 assert 'EXPLICIT_RECEIPT_IDS.isAllowed(' in hide
 assert 'BLUE_REPLY_BYPASS.isAllowed(' in hide
@@ -55,6 +61,8 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     str(root/'qa/java/TestPendingReadReceiptStore.java'),
                     str(src/'BoundedReceiptAllowance.java'),
                     str(root/'qa/java/TestBoundedReceiptAllowance.java'),
+                    str(src/'RecipientReceiptAllowance.java'),
+                    str(root/'qa/java/TestRecipientReceiptAllowance.java'),
                     str(root/'qa/java/TestReceiptPropertyStress.java')], check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestReceiptJidPolicy'],check=True)
@@ -63,5 +71,7 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestBoundedReceiptAllowance'],check=True)
     subprocess.run(['java','-cp',dest,
+                    'com.waenhancer.xposed.features.privacy.TestRecipientReceiptAllowance'],check=True)
+    subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestReceiptPropertyStress'],check=True)
-print('PASS: exact-recipient, bounded queue, monotonic TTL and feature-retention invariants')
+print('PASS: recipient+message exact permissions, fail-closed routing and bounded storage invariants')
