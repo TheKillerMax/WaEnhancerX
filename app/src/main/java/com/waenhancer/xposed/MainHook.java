@@ -49,8 +49,15 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     public static synchronized XSharedPreferences getPrefs() {
         if (sPrefs == null) {
-            sPrefs = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
-            sPrefs.reload();
+            try {
+                XSharedPreferences candidate = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
+                candidate.reload();
+                sPrefs = candidate;
+            } catch (Throwable t) {
+                // Provider-backed preferences can operate without the optional disk snapshot.
+                XposedBridge.log("[WAEX] Disk preference snapshot unavailable: "
+                        + t.getClass().getSimpleName());
+            }
         }
         return sPrefs;
     }
@@ -143,13 +150,19 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
                                 Context context = (Context) param.thisObject;
-                                if (sPreferenceBridge == null) {
-                                    synchronized (MainHook.class) {
-                                        if (sPreferenceBridge == null) {
-                                            sPreferenceBridge = new PreferenceBridgeClient(
-                                                    context, preloadedPrefs, true);
+                                try {
+                                    if (sPreferenceBridge == null) {
+                                        synchronized (MainHook.class) {
+                                            if (sPreferenceBridge == null) {
+                                                sPreferenceBridge = new PreferenceBridgeClient(
+                                                        context, preloadedPrefs, true);
+                                            }
                                         }
                                     }
+                                } catch (Throwable t) {
+                                    // Application.onCreate can still build a provider-backed bridge.
+                                    XposedBridge.log("[WAEX] Early preference bridge unavailable: "
+                                            + t.getClass().getSimpleName());
                                 }
                             }
                         }
@@ -159,25 +172,35 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         + t.getMessage());
             }
 
-            // Initialize features on target Application creation
-            try {
-                XposedHelpers.findAndHookMethod(
-                        "android.app.Application",
-                        lpparam.classLoader,
-                        "onCreate",
-                        new XC_MethodHook() {
+            // Reuse an initializer from the Application and Instrumentation entry points.
+            // Some WhatsApp/clone Application subclasses bypass superclass onCreate().
+            XC_MethodHook applicationInitializer = new XC_MethodHook() {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
-                                Context appContext = (Context) param.thisObject;
+                                Object app = param.thisObject instanceof android.app.Application
+                                        ? param.thisObject
+                                        : (param.args != null && param.args.length == 1 ? param.args[0] : null);
+                                if (!(app instanceof android.app.Application)) return;
+                                Context appContext = (Context) app;
                                 if (!TARGET_INITIALIZED.compareAndSet(false, true)) {
                                     return;
                                 }
-                                if (appContext instanceof android.app.Application) {
-                                    com.waenhancer.xposed.utils.ActivityTracker.install((android.app.Application) appContext);
+                                // Optional observers and reports may fail without disabling hooks.
+                                try {
+                                    com.waenhancer.xposed.utils.ActivityTracker.install(
+                                            (android.app.Application) appContext);
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[WAEX] ActivityTracker initialization failed: "
+                                            + t.getClass().getSimpleName());
                                 }
 
-                                // Register this package as active hooked package for the dashboard
-                                com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
+                                try {
+                                    com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(
+                                            appContext, packageName);
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[WAEX] Hooked-package reporting failed: "
+                                            + t.getClass().getSimpleName());
+                                }
                                 reportTargetRuntime(
                                         appContext, packageName, "INJECTED", "PENDING", null);
                                 try {
@@ -221,7 +244,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             "INITIALIZING",
                                             bridgeClient.getLastSyncSource(),
                                             bridgeClient.getLastSyncError());
-                                    com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
+                                    try {
+                                        com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
+                                    } catch (Throwable t) {
+                                        XposedBridge.log("[WAEX] Restart prompt setup failed: "
+                                                + t.getClass().getSimpleName());
+                                    }
                                     try {
                                         android.content.IntentFilter prefsFilter = new android.content.IntentFilter(
                                                 "com.waenhancer.action.PREFERENCES_CHANGED");
@@ -252,13 +280,23 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     );
 
                                     if (isSupported) {
-                                        com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.init(bridgeClient);
+                                        try {
+                                            com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.init(bridgeClient);
+                                        } catch (Throwable t) {
+                                            XposedBridge.log("[WAEX] WhatsApp update-sheet setup failed: "
+                                                    + t.getClass().getSimpleName());
+                                        }
                                         if (showHookToast) {
-                                            android.widget.Toast.makeText(
-                                                appContext,
-                                                "Injecting WAEX hooks into WhatsApp...",
-                                                android.widget.Toast.LENGTH_SHORT
-                                            ).show();
+                                            try {
+                                                android.widget.Toast.makeText(
+                                                    appContext,
+                                                    "Injecting WAEX hooks into WhatsApp...",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show();
+                                            } catch (Throwable t) {
+                                                XposedBridge.log("[WAEX] Injection toast unavailable: "
+                                                        + t.getClass().getSimpleName());
+                                            }
                                         }
                                         FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
                                         registry.initializeAll();
@@ -293,10 +331,26 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     showInjectionErrorSheet(t, packageName, lpparam.processName);
                                 }
                             }
-                        }
-                );
+                        };
+
+            // Each lifecycle entry point may independently fail to register.
+            // TARGET_INITIALIZED guarantees initialization occurs at most once.
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Application", lpparam.classLoader,
+                        "onCreate", applicationInitializer);
             } catch (Throwable t) {
-                XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
+                XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: "
+                        + t.getClass().getSimpleName());
+            }
+            try {
+                XposedHelpers.findAndHookMethod(
+                        "android.app.Instrumentation", lpparam.classLoader,
+                        "callApplicationOnCreate", android.app.Application.class,
+                        applicationInitializer);
+            } catch (Throwable t) {
+                XposedBridge.log("[WAEX] Cannot hook Instrumentation.callApplicationOnCreate: "
+                        + t.getClass().getSimpleName());
             }
         }
     }

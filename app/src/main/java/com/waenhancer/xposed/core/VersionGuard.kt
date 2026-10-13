@@ -45,8 +45,8 @@ object VersionGuard {
 
             return false
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Error verifying version: ${t.message}")
-            return true // Fallback to allowing execution if packageInfo fails
+            XposedBridge.log("$TAG Unable to verify WhatsApp version: ${t.javaClass.simpleName}")
+            return false // Fail closed: unknown obfuscated methods must not be hooked.
         }
     }
 
@@ -109,8 +109,9 @@ object VersionGuard {
                     }
                     .show()
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG Failed to show native bottom sheet: ${t.message}")
-                t.printStackTrace()
+                // A failed UI attempt must not permanently suppress future warnings.
+                dialogShown.set(false)
+                XposedBridge.log("$TAG Failed to show native bottom sheet: ${t.javaClass.simpleName}")
             }
         }
     }

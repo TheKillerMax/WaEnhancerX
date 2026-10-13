@@ -1,15 +1,19 @@
 package com.waenhancer.xposed.features.automation
 
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import com.waenhancer.xposed.core.BaseFeature
 import com.waenhancer.xposed.core.devkit.DexSearchEngine
+import com.waenhancer.xposed.utils.ActivityTracker
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -19,7 +23,9 @@ import java.lang.reflect.Method
 
 /**
  * Tasker & External Automation Dispatcher Hook.
- * Allows Tasker, MacroDroid, and Automate to send messages and receive WhatsApp incoming message events.
+ * Receives external automation requests and opens a WhatsApp chat with prefilled text,
+ * requiring the user to confirm sending. Preserves incoming-message event broadcasts.
+ * Never silently sends messages or starts an Activity while WhatsApp is backgrounded.
  */
 class TaskerIntegrationHook(
     context: Context,
@@ -28,6 +34,7 @@ class TaskerIntegrationHook(
 ) : BaseFeature(context, classLoader, prefs) {
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val launchGate = TaskerMessagePolicy.LaunchGate(1_500L)
 
     override val name: String
         get() = "Tasker Integration"
@@ -44,13 +51,16 @@ class TaskerIntegrationHook(
             val filter = IntentFilter(ACTION_SEND_MESSAGE)
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(ctx: Context, intent: Intent) {
-                    val phoneOrJid = intent.getStringExtra("number") ?: return
-                    val messageText = intent.getStringExtra("message") ?: return
-                    if (phoneOrJid.isBlank() || messageText.isBlank()) return
-
-                    val cleanNumber = phoneOrJid.replace("\\D".toRegex(), "")
-                    if (cleanNumber.isNotEmpty()) {
-                        sendMessageDirectly(cleanNumber, messageText)
+                    try {
+                        if (intent.action != ACTION_SEND_MESSAGE) return
+                        val prepared = TaskerMessagePolicy.prepare(
+                            intent.getStringExtra("number"), intent.getStringExtra("message")
+                        ) ?: return
+                        openPreparedMessage(prepared)
+                    } catch (t: RuntimeException) {
+                        // Malformed/untrusted broadcast extras must not crash WhatsApp.
+                        // Do not log telephone numbers or message contents.
+                        XposedBridge.log("[WAEX][Tasker] Rejected invalid automation broadcast: ${t.javaClass.simpleName}")
                     }
                 }
             }
@@ -111,12 +121,41 @@ class TaskerIntegrationHook(
         }
     }
 
-    private fun sendMessageDirectly(phoneNumber: String, text: String) {
-        try {
-            val jidString = if (phoneNumber.contains("@")) phoneNumber else "$phoneNumber@s.whatsapp.net"
-            val uri = android.net.Uri.parse("https://api.whatsapp.com/send?phone=$phoneNumber&text=${android.net.Uri.encode(text)}")
-        } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][Tasker] Error dispatching message: ${t.message}")
+    /**
+     * Launch only from a focused, visible WhatsApp Activity. ActivityTracker can
+     * hold a paused Activity, so a non-null reference alone is not sufficient.
+     * Android 10+ restricts background Activity launches; never bypass the limit.
+     */
+    private fun openPreparedMessage(prepared: TaskerMessagePolicy.PreparedMessage) {
+        mainHandler.post {
+            try {
+                if (!isEnabled("tasker_integration", false)) return@post
+                val foreground = ActivityTracker.getCurrentActivity() ?: return@post
+                if (foreground.isFinishing || foreground.isDestroyed ||
+                    foreground.packageName != context.packageName ||
+                    foreground.window?.decorView?.hasWindowFocus() != true
+                ) return@post
+                if (!launchGate.tryAcquire(SystemClock.elapsedRealtime())) return@post
+
+                val encodedText = Uri.encode(prepared.text)
+                // Restrict both link variants to the hooked WhatsApp package,
+                // including WA Business and supported clones. Never launch a browser.
+                val primary = Intent(Intent.ACTION_VIEW, Uri.parse(
+                    "https://api.whatsapp.com/send?phone=${prepared.phone}&text=$encodedText"
+                )).apply { setPackage(context.packageName) }
+                try {
+                    foreground.startActivity(primary)
+                } catch (_: ActivityNotFoundException) {
+                    // Some older/modified builds resolve only the shorter wa.me form.
+                    val fallback = Intent(Intent.ACTION_VIEW, Uri.parse(
+                        "https://wa.me/${prepared.phone}?text=$encodedText"
+                    )).apply { setPackage(context.packageName) }
+                    foreground.startActivity(fallback)
+                }
+            } catch (t: RuntimeException) {
+                // An unsupported host link must fail without crashing WhatsApp.
+                XposedBridge.log("[WAEX][Tasker] Cannot open prepared chat: ${t.javaClass.simpleName}")
+            }
         }
     }
 
