@@ -160,12 +160,14 @@ fun GlobalPrivacySettingsScreen(
         if (key == "seentick") {
             seenTickPlacement = if (value) "1" else "0"
             preferenceManager.putString("seentick", seenTickPlacement)
+        } else if (key == "typearchive") {
+            // typearchive is STRING in PreferenceSchema. Never first write
+            // a transient Boolean under the same key and notify observers.
+            preferenceManager.putString("typearchive", if (value) "1" else "0")
         } else {
             preferenceManager.putBoolean(key, value)
         }
-        if (key == "typearchive") {
-            preferenceManager.putString("typearchive", if (value) "1" else "0")
-        } else if (key == "locked_chats_enhancer") {
+        if (key == "locked_chats_enhancer") {
             preferenceManager.putBoolean("lockedchats_enhancer", value)
         }
         if (key == "hide_read_receipts" && !value) {
@@ -235,7 +237,7 @@ fun GlobalPrivacySettingsScreen(
             "Security & Vault",
             listOf(
                 SettingItem("Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "locked_chats_enhancer"),
-                SettingItem("Hide Archived Chats", "Hide archived chats, to access click 5 times or hold on the \"WhatsApp\" title", "typearchive"),
+                SettingItem("Hide Archived Chats", "Hide the archive shortcut; open archived chats from the WAEX menu", "typearchive"),
                 SettingItem("DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "dnd_mode"),
                 SettingItem("Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "hide_chats")
             )
