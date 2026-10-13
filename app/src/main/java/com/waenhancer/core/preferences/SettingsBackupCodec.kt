@@ -186,7 +186,9 @@ object SettingsBackupCodec {
             buildList(count) {
                 repeat(count) {
                     val rawKey = readText(source)
-                    val key = resolveKey(rawKey)
+                    // Binary WAEX backups already contain canonical schema keys.
+                    // Never reinterpret a valid key through a legacy JSON alias.
+                    val key = resolveKey(rawKey, legacyJson = false)
                     val typeOrdinal = source.readUnsignedByte()
                     val type = PreferenceSchema.Type.entries.getOrNull(typeOrdinal)
                         ?: throw IllegalArgumentException("Unknown settings value type")
@@ -236,7 +238,8 @@ object SettingsBackupCodec {
         val keys = source.keys()
         while (keys.hasNext()) {
             val rawKey = keys.next()
-            val key = resolveKey(rawKey) ?: continue
+            // Only unversioned v1 JSON files use the old alias migration rules.
+            val key = resolveKey(rawKey, legacyJson = legacy) ?: continue
             if (isSensitive(key)) continue
 
             val schema = PreferenceSchema.entry(key) ?: continue
@@ -299,11 +302,20 @@ object SettingsBackupCodec {
         }
     }
 
-    private fun resolveKey(originalKey: String): String? {
-        val mapped = LEGACY_ALIASES.getOrDefault(originalKey, originalKey)
-        if (PreferenceSchema.isKnown(mapped)) return mapped
-        if (PreferenceSchema.isKnown(originalKey)) return originalKey
-        return null
+    private fun resolveKey(originalKey: String, legacyJson: Boolean): String? {
+        val original = PreferenceSchema.entry(originalKey)
+        // Binary backups and versioned JSON contain canonical names. A current
+        // preference must never be silently rewritten into another setting.
+        if (!legacyJson && original != null) return originalKey
+
+        // Preserve legacy JSON mappings where the old and new schema types are
+        // compatible. Do not turn a Boolean into a String/Float or lose its value.
+        val mappedKey = LEGACY_ALIASES[originalKey]
+        val mapped = mappedKey?.let(PreferenceSchema::entry)
+        if (mapped != null && (original == null || original.type == mapped.type)) {
+            return mappedKey
+        }
+        return if (original != null) originalKey else null
     }
 
     private fun isSensitive(key: String?): Boolean {
