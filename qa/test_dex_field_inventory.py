@@ -135,6 +135,19 @@ class DexFieldInventoryTests(unittest.TestCase):
                 with self.assertRaisesRegex(module.MalformedDex,'Total DEX'):
                     module.inspect_apk(path,OWNER,'jid')
 
+    def test_explicit_field_type_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'types.apk'
+            with zipfile.ZipFile(path,'w') as z:z.writestr('classes.dex',sample())
+            good=module.inspect_apk(path,OWNER,'jid','Ljava/lang/String;')
+            self.assertEqual(good['status'],'PRESENT')
+            self.assertEqual(good['found_field_types'],['Ljava/lang/String;'])
+            self.assertTrue(good['type_compatible'])
+            bad=module.inspect_apk(path,OWNER,'jid','Ljava/lang/Object;')
+            self.assertEqual(bad['status'],'INCOMPATIBLE_TYPE')
+            self.assertFalse(bad['type_compatible'])
+            self.assertTrue(bad['expected_field_declared'])
+
     def test_cli_report_matches_expected_field(self):
         with tempfile.TemporaryDirectory() as dest:
             path=Path(dest)/'synthetic.apk'
