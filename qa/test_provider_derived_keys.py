@@ -17,9 +17,9 @@ policy_start = provider.index('private Bundle applyPreferenceChanges(')
 editor_start = provider.index('SharedPreferences.Editor editor = prefs.edit()', policy_start)
 validation = provider[policy_start:editor_start]
 clear_guard = re.search(
-    r'if\\s*\\(\\s*clear\\s*&&\\s*!\\s*ProviderDerivedKeyPolicy\\.mayClearPreferences'
-    r'\\s*\\(\\s*callerUid\\s*,\\s*context\\.getApplicationInfo\\(\\)\\.uid'
-    r'\\s*\\)\\s*\\)\\s*return\\s+writeResult\\(false\\)\\s*;',
+    r'if\s*\(\s*clear\s*&&\s*!\s*ProviderDerivedKeyPolicy\.mayClearPreferences'
+    r'\s*\(\s*callerUid\s*,\s*context\.getApplicationInfo\(\)\.uid'
+    r'\s*\)\s*\)\s*return\s+writeResult\(false\)\s*;',
     validation,
 )
 assert clear_guard, 'Privileged clear check missing, malformed or executed after editor creation'
