@@ -1,21 +1,30 @@
 #!/usr/bin/env python3
-"""Compile a production IPC policy and check its fail-closed provider integration.
-
-JDK tests only; does not establish Android Binder/runtime authorization.
-"""
+"""JDK policy and source integration checks; not Android Binder instrumentation."""
 from pathlib import Path
 import subprocess
 import tempfile
 
-ROOT=Path(__file__).resolve().parents[1]
-PROVIDER=ROOT/'app/src/main/java/com/waenhancer/xposed/bridge/HookProvider.java'
-POLICY=ROOT/'app/src/main/java/com/waenhancer/xposed/bridge/ProviderDerivedKeyPolicy.java'
-TEST=ROOT/'qa/java/TestProviderDerivedKeyPolicy.java'
-source=PROVIDER.read_text(encoding='utf-8')
-assert 'ProviderDerivedKeyPolicy.allowsGenericWrite(key)' in source
-assert source.index('ProviderDerivedKeyPolicy.allowsGenericWrite(key)') < source.index('SharedPreferences.Editor editor = prefs.edit()',source.index('private Bundle applyPreferenceChanges('))
-assert 'callerOwnsPackage(context, callerUid, pkg)' in source
-assert source.index('isTrustedCaller(context, callerUid)') < source.index('Binder.clearCallingIdentity()')
-with tempfile.TemporaryDirectory(prefix='waex_provider_policy_') as temp:
-    subprocess.run(['javac','--release','17','-d',temp,str(POLICY),str(TEST)],check=True)
-    subprocess.run(['java','-cp',temp,'com.waenhancer.xposed.bridge.TestProviderDerivedKeyPolicy'],check=True)
+root = Path(__file__).resolve().parents[1]
+bridge = root / "app/src/main/java/com/waenhancer/xposed/bridge"
+provider = (bridge / "HookProvider.java").read_text(encoding="utf-8")
+assert 'ProviderDerivedKeyPolicy.allowsGenericWrite(key)' in provider
+assert provider.index('ProviderDerivedKeyPolicy.allowsGenericWrite(key)') < provider.index(
+    'SharedPreferences.Editor editor = prefs.edit()', provider.index('private Bundle applyPreferenceChanges('))
+assert 'ProviderDerivedKeyPolicy.mayClearPreferences(callerUid, context.getApplicationInfo().uid)' in provider
+assert provider.index('ProviderDerivedKeyPolicy.mayClearPreferences(') < provider.index(
+    'SharedPreferences.Editor editor = prefs.edit()', provider.index('private Bundle applyPreferenceChanges('))
+assert 'return applyPreferenceChanges(context, prefs, callerUid, false, operations)' in provider
+assert 'return applyPreferenceChanges(context, prefs, callerUid,' in provider
+assert 'callerOwnsPackage(context, callerUid, pkg)' in provider
+assert provider.index('isTrustedCaller(context, callerUid)') < provider.index('Binder.clearCallingIdentity()')
+assert '"report_runtime_health".equals(method)' in provider
+for signal in ('runtime_boot_', 'runtime_status_', 'runtime_error_', 'bridge_status_'):
+    assert signal in provider, f"Current upstream telemetry removed: {signal}"
+assert 'PreferenceWriteTypePolicy.accepts(entry.type.name(), type)' in provider
+with tempfile.TemporaryDirectory(prefix="waex_provider_policy_") as temp:
+    subprocess.run(["javac", "--release", "17", "-d", temp,
+                    str(bridge / "ProviderDerivedKeyPolicy.java"),
+                    str(root / "qa/java/TestProviderDerivedKeyPolicy.java")], check=True)
+    subprocess.run(["java", "-cp", temp,
+                    "com.waenhancer.xposed.bridge.TestProviderDerivedKeyPolicy"], check=True)
+print("PASS: derived IPC key restrictions, privileged clear, and runtime telemetry preserved")
