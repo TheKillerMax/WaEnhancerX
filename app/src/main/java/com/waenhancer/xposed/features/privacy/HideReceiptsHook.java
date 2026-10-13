@@ -386,11 +386,13 @@ public class HideReceiptsHook extends BaseFeature {
                             return;
                         }
 
-                        // A receipt ID alone is insufficient: require the exact conversation,
-                        // including its JID namespace, and keep status suppression unchanged.
+                        // Only explicit READ receipts may bypass hiding for the exact
+                        // recipient + message ID. Preserve delivery hiding and Ghost Mode.
                         String target = resolveConversationTarget(to, participant);
-                        if (isExplicitReceiptAllowed(target, messageId)) return;
                         boolean hideDelivery = shouldHideDeliveryReceipt(target);
+                        if (ExplicitReadReceiptPolicy.maySend(type, target, messageId,
+                                hideDelivery, EXPLICIT_RECEIPT_IDS,
+                                SystemClock.elapsedRealtime())) return;
                         boolean hideRead = shouldHideReadReceipt(target);
 
                         if (hideDelivery) {
