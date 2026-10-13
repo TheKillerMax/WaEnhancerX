@@ -35,7 +35,6 @@ public class HookProvider extends ContentProvider {
     public static final String AUTHORITY = "com.waenhancer.hookprovider";
     public static final String KEY_VALUES = "values";
     public static final String KEY_SETS = "sets";
-
     @Override
     public boolean onCreate() {
 
@@ -115,10 +114,45 @@ public class HookProvider extends ContentProvider {
                     var editor = prefs.edit();
                     editor.putStringSet("hooked_whatsapp_packages", currentSet);
                     editor.putLong("last_active_" + pkg, System.currentTimeMillis());
+                    editor.putInt("runtime_boot_" + pkg,
+                            extras != null ? extras.getInt("boot_count", -1) : -1);
+                    editor.putString("runtime_status_" + pkg, "INJECTED");
                     editor.commit();
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
                     Bundle result = new Bundle();
                     result.putBoolean("success", true);
+                    return result;
+                }
+            }
+
+            if ("report_runtime_health".equals(method) && extras != null) {
+                String pkg = extras.getString("package", arg);
+                String runtimeStatus = allowedRuntimeStatus(extras.getString("runtime_status"));
+                String bridgeStatus = allowedBridgeStatus(extras.getString("bridge_status"));
+                if (pkg != null && callerOwnsPackage(context, callerUid, pkg)
+                        && runtimeStatus != null && bridgeStatus != null) {
+                    long timestamp = extras.getLong("timestamp", System.currentTimeMillis());
+                    String error = sanitizeDiagnosticError(extras.getString("error"));
+                    var currentSet = new HashSet<>(prefs.getStringSet(
+                            "hooked_whatsapp_packages", new HashSet<>()));
+                    currentSet.add(pkg);
+                    var editor = prefs.edit()
+                            .putStringSet("hooked_whatsapp_packages", currentSet)
+                            .putLong("last_active_" + pkg, timestamp)
+                            .putInt("runtime_boot_" + pkg, extras.getInt("boot_count", -1))
+                            .putString("runtime_status_" + pkg, runtimeStatus)
+                            .putString("bridge_status_" + pkg, bridgeStatus);
+                    if (error == null) editor.remove("runtime_error_" + pkg);
+                    else editor.putString("runtime_error_" + pkg, error);
+                    boolean committed = editor.commit();
+                    if (committed) {
+                        context.getContentResolver().notifyChange(
+                                Uri.parse("content://" + AUTHORITY + "/runtime_health"), null);
+                        context.getContentResolver().notifyChange(
+                                Uri.parse("content://" + AUTHORITY + "/preferences"), null);
+                    }
+                    Bundle result = new Bundle();
+                    result.putBoolean("success", committed);
                     return result;
                 }
             }
@@ -237,21 +271,38 @@ public class HookProvider extends ContentProvider {
         }
     }
 
+    @Nullable
+    private static String allowedRuntimeStatus(@Nullable String value) {
+        if (value == null) return null;
+        return Arrays.asList("INJECTED", "INITIALIZING", "READY", "READY_WITH_ERRORS", "UNSUPPORTED_VERSION",
+                "INITIALIZATION_FAILED").contains(value) ? value : null;
+    }
+
+    @Nullable
+    private static String allowedBridgeStatus(@Nullable String value) {
+        if (value == null) return null;
+        return Arrays.asList("PENDING", "PROVIDER", "DISK_FALLBACK", "FAILED").contains(value)
+                ? value : null;
+    }
+
+    @Nullable
+    private static String sanitizeDiagnosticError(@Nullable String value) {
+        if (value == null) return null;
+        String sanitized = value.replace('\n', ' ').replace('\r', ' ').trim();
+        if (sanitized.isEmpty()) return null;
+        return sanitized.length() <= 240 ? sanitized : sanitized.substring(0, 240);
+    }
+
     private boolean isTrustedCaller(@NonNull Context context, int uid) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] packages = context.getPackageManager().getPackagesForUid(uid);
-        if (packages == null) return false;
-        Set<String> supported = WhatsAppPackageDetector.getSupportedPackages(context);
-        for (String packageName : packages) {
-            if (supported.contains(packageName)) return true;
-        }
-        return false;
+        // Keep the Binder caller check before clearCallingIdentity().
+        return CallerScopePolicy.isTrusted(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid),
+                WhatsAppPackageDetector.getSupportedPackages(context));
     }
 
     private boolean callerOwnsPackage(@NonNull Context context, int uid, @NonNull String pkg) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] owned = context.getPackageManager().getPackagesForUid(uid);
-        return owned != null && Arrays.asList(owned).contains(pkg);
+        return CallerScopePolicy.ownsPackage(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid), pkg);
     }
 
     private Bundle encodePreferences(Map<String, Object> source) {
@@ -293,6 +344,10 @@ public class HookProvider extends ContentProvider {
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
+            // Known public keys must retain their declared schema types. Otherwise a
+            // string-encoded boolean could sidestep the following entitlement guard.
+            if (entry != null && !PreferenceWriteTypePolicy.accepts(entry.type.name(), type))
+                return writeResult(false);
             if (!("remove".equals(type) || "string".equals(type) || "string_set".equals(type)
                     || "boolean".equals(type) || "int".equals(type) || "long".equals(type)
                     || "float".equals(type))) return writeResult(false);
