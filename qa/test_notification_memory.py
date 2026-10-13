@@ -27,6 +27,8 @@ assert "MAX_RECENT_REVOKES = 4096" in anti_revoke
 assert "StatusKeyHandoff.record(keyId)" in anti_revoke
 assert "String pendingDbKey = StatusKeyHandoff.consume();" in anti_revoke
 assert "sStatusKeyByThread" not in anti_revoke
+assert 't.getMessage()' not in anti_revoke, 'Throwable messages may contain private status IDs'
+assert '${t.message}' not in anti_edit, 'Throwable messages may contain private chat content'
 assert "DelMessageStore.getInstance(context).getTimestampByMessageId(keyId) > 0L" in anti_revoke
 assert "TIME_FORMAT.get().format" in anti_revoke
 assert "if (!(renderedRow instanceof ViewGroup)) return;" in anti_revoke
