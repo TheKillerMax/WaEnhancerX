@@ -693,8 +693,12 @@ public class AntiRevokeHook extends BaseFeature {
         if (!"message".equals(table) && !"messages".equals(table)) return;
 
         ContentValues values = (ContentValues) valuesArg;
+        // Non-revoke INSERTs may reuse an explicit row ID. Never consume their
+        // pending reservation before WhatsApp writes the type-15 placeholder.
+        Integer messageType = values.getAsInteger("message_type");
         Long rowId = values.getAsLong("_id");
-        if (rowId != null && PRESERVED_OWN_ROW_IDS.remove(String.valueOf(rowId))) {
+        if (PreservedOwnRowIdPolicy.shouldStripPlaceholderId(
+                messageType, rowId, PRESERVED_OWN_ROW_IDS)) {
             values.remove("_id");
         }
     }
