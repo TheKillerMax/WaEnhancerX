@@ -93,12 +93,31 @@ import org.jetbrains.kotlin.psi.KtFile;
 import org.jetbrains.kotlin.psi.KtPsiFactory;
 
 public final class WaexKotlinSyntaxRunner {
+    /**
+     * Kotlin 2.4+ requires the compiler configuration factory to initialize
+     * extension storage and diagnostic services; bare new CompilerConfiguration()
+     * throws "Extensions storage is not registered". Kotlin 1.9 uses the
+     * legacy constructor. An incompatible NEW factory fails closed.
+     */
+    private static CompilerConfiguration newConfiguration() throws ReflectiveOperationException {
+        try {
+            Class<?> creator = Class.forName("org.jetbrains.kotlin.cli.CreateKt");
+            Object companion = CompilerConfiguration.class.getField("Companion").get(null);
+            java.lang.reflect.Method create = creator.getMethod("create", companion.getClass());
+            CompilerConfiguration config = (CompilerConfiguration) create.invoke(null, companion);
+            if (config == null) throw new IllegalStateException("Kotlin factory returned null configuration");
+            return config;
+        } catch (ClassNotFoundException | NoSuchFieldException olderCompiler) {
+            return new CompilerConfiguration();
+        }
+    }
+
     public static void main(String[] paths) throws Exception {
         Disposable disposable = Disposer.newDisposable();
         int errors = 0;
         try {
             KotlinCoreEnvironment env = KotlinCoreEnvironment.createForProduction(
-                    disposable, new CompilerConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES);
+                    disposable, newConfiguration(), EnvironmentConfigFiles.JVM_CONFIG_FILES);
             KtPsiFactory factory = new KtPsiFactory(env.getProject(), false);
             for (String path : paths) {
                 File file = new File(path);
