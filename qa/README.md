@@ -12,6 +12,8 @@ These checks are **diagnostics**, not evidence that WhatsApp hooks are working. 
 | `test_dex_source_anchor_inventory.py` | Python 3.10+ | Synthetic source/DEX fixtures for complete anchor discovery, strict exit status, malformed checksums and table-only matching |
 | `feature_contract_inventory.py` | Python 3.10+; project source | Read-only catalog/schema/direct Xposed-key reference inventory. Lists review flags, **not** proven broken features or executed hooks. |
 | `test_feature_contract_inventory.py` | Python 3.10+ | Current-source smoke checks and synthetic tests for duplicate keys, source references and legacy alias metadata |
+| `preference_type_audit.py` | Python 3.10+ | Report literal get/put/isEnabled calls incompatible with PreferenceSchema; distinguish writes from intentional legacy reads. |
+| `test_preference_type_audit.py` | Python 3.10+ | Synthetic key type and comment-filtering fixtures plus current-source smoke checks. |
 | `test_hook_return_types.py` | Python 3 and JDK | Hook return/parameter contract checks |
 | `test_host_class_relocations.py` | Python 3 and a **locally supplied** WhatsApp APK | Exact host class definitions for a known version (expected to change across WhatsApp releases) |
 | `test_monet_wiring.py` | Python 3 | Source-level dynamic-theme wiring, not UI instrumentation |
@@ -60,6 +62,26 @@ without **direct** references in the public Xposed source. This is a review
 queue, **not proof a feature is broken**: direct references may be hidden behind
 constants, dynamic names or the private `:licensing` module, while even
 literal references in a hook do not prove the hook installed successfully.
+
+## Inspect literal preference type mismatches
+
+```sh
+python3 qa/preference_type_audit.py
+python3 qa/preference_type_audit.py --json
+python3 qa/test_preference_type_audit.py
+# Once current UI fixes are merged, opt in to a failing check:
+python3 qa/preference_type_audit.py --fail-on-writes
+```
+
+The version-2.0.2 main snapshot currently contains two direct schema-mismatched
+writes to `anti_revoke_indicator` and `deleted_message_color`; their matching
+UI fix is proposed separately on the Archive/Anti-Revoke branch. After applying
+that fix, the audit reports zero mismatched literal writes. Guarded legacy
+reads in AntiRevokeHook are reported for manual classification.
+
+This is a literal-source review only: dynamic keys, indirect write helpers,
+private licensing code and legacy fallback semantics cannot be proven by
+matching method calls alone.
 
 ## What the report does *not* establish
 
