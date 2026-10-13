@@ -156,7 +156,7 @@ public class BlueOnReplyHook extends BaseFeature {
 
                         // Use the outgoing job's actual recipient, not the Activity currently
                         // in the foreground: a queued send may belong to another conversation.
-                        String remoteJid = extractRemoteJid(param.thisObject);
+                        String remoteJid = extractOutgoingJobJid(param.thisObject);
                         if (remoteJid != null) sendPendingReadJobs(remoteJid);
                     }
                 });
@@ -241,6 +241,23 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         }
         return sent;
+    }
+
+    /**
+     * The verified SendE2EMessageJob host declares a String field named "jid".
+     * Never scan arbitrary job fields: they may contain participant or device IDs
+     * that are valid JIDs but do not identify the outbound conversation.
+     * Unknown hosts fail closed rather than releasing another chat's receipts.
+     */
+    private static String extractOutgoingJobJid(Object job) {
+        if (job == null) return null;
+        try {
+            Object value = XposedHelpers.getObjectField(job, "jid");
+            return value instanceof String
+                    ? ReceiptJidPolicy.canonical((String) value) : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private String extractRemoteJid(Object source) {
