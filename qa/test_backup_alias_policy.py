@@ -15,9 +15,12 @@ start = codec.index('private val LEGACY_ALIASES:')
 stop = codec.index('\n    fun encode(', start)
 aliases = dict(re.findall(r'"([^"]+)"\s+to\s+"([^"]+)"', codec[start:stop]))
 resolver = codec[codec.index('private fun resolveKey('):codec.index('private fun isSensitive(')]
-assert 'if (!legacyJson && original != null) return originalKey' in resolver
-assert 'original == null || original.type == mapped.type' in resolver
-assert 'return if (original != null) originalKey else null' in resolver
+# Every still-declared preference keeps its own meaning in ALL backup formats.
+assert 'if (PreferenceSchema.entry(originalKey) != null) return originalKey' in resolver
+assert 'if (!legacyJson) return null' in resolver
+assert 'val mappedKey = LEGACY_ALIASES[originalKey] ?: return null' in resolver
+assert 'return mappedKey.takeIf { PreferenceSchema.entry(it) != null }' in resolver
+assert 'original == null || original.type == mapped.type' not in resolver
 assert 'val key = resolveKey(rawKey, legacyJson = false)' in codec
 assert 'val key = resolveKey(rawKey, legacyJson = legacy)' in codec
 assert 'val legacy = !root.has("schemaVersion")' in codec
@@ -30,5 +33,24 @@ assert len(incompatible) >= 4, 'expected cross-type aliases to remain protected'
 for name in ('anti_revoke', 'status_text_composer', 'voice_note_speed_modifier',
              'floating_bottom_bar_scroll_hide'):
     assert any(a == name for a, _ in incompatible), name
-print(f'PASS: canonical binary and versioned JSON precedence; '
-      f'{len(colliding)} current-key aliases, {len(incompatible)} cross-type collisions protected')
+
+# Equal storage types are not proof of semantic equivalence: each pair below
+# controls an independent feature in the actual hook consumers.
+for original, incorrectly_redirected in {
+    'typing_online_toasts': 'typing_privacy',
+    'hide_seen_receipts': 'hidereceipt',
+}.items():
+    assert keys[original] == keys[incorrectly_redirected] == 'BOOLEAN'
+    assert aliases[original] == incorrectly_redirected
+
+hooks = root / 'xposed/features'
+toast = (hooks / 'automation/PresenceToastsHook.java').read_text()
+typing = (hooks / 'privacy/TypingPrivacyHook.java').read_text()
+receipts = (hooks / 'privacy/HideReceiptsHook.java').read_text()
+assert 'isEnabled("typing_online_toasts", false)' in toast
+assert 'isEnabled("typing_privacy", false)' in typing
+assert 'isEnabled("hide_seen_receipts", false)' in receipts
+assert 'isEnabled("hidereceipt", false)' in receipts
+print(f'PASS: canonical keys preserved even in legacy JSON; '
+      f'{len(colliding)} current-key aliases, {len(incompatible)} cross-type collisions protected; '
+      'two unrelated privacy preferences kept separate')
