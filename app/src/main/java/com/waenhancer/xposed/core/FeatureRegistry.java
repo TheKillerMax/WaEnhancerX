@@ -247,6 +247,13 @@ public final class FeatureRegistry {
         }
     }
 
+    public boolean hasFailures() {
+        for (FeatureEntry entry : features) {
+            if ("FAILED".equals(entry.status)) return true;
+        }
+        return false;
+    }
+
     public void reportInjectedHooks(@NonNull Context context, @NonNull String packageName) {
         try {
             JSONArray array = new JSONArray();

@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.waenhancer.app.R
@@ -31,12 +32,45 @@ data class HookedAppInfo(
     val isInstalled: Boolean,
     val isHooked: Boolean,
     val injectedHooks: List<InjectedHookItem> = emptyList(),
-    val lastActiveTime: Long = 0L
+    val lastActiveTime: Long = 0L,
+    val scopeState: RuntimeScopeState = RuntimeScopeState.NOT_DETECTED,
+    val runtimeStatus: String = "NOT_DETECTED",
+    val bridgeStatus: String = "NOT_REPORTED",
+    val initializationError: String? = null
 )
+
+enum class RuntimeScopeState { ACTIVE_THIS_BOOT, PREVIOUSLY_ACTIVE, NOT_DETECTED }
+
+internal fun resolveRuntimeScopeState(
+    isModuleActive: Boolean,
+    wasEverHooked: Boolean,
+    recordedBoot: Int,
+    currentBoot: Int,
+    lastActiveTime: Long,
+    verificationStartedAt: Long
+): RuntimeScopeState = when {
+    isModuleActive && wasEverHooked && recordedBoot == currentBoot &&
+            lastActiveTime >= verificationStartedAt -> RuntimeScopeState.ACTIVE_THIS_BOOT
+    wasEverHooked -> RuntimeScopeState.PREVIOUSLY_ACTIVE
+    else -> RuntimeScopeState.NOT_DETECTED
+}
 
 object WhatsAppPackageDetector {
 
     private const val MODULE_PACKAGE = "com.waenhancer"
+
+    /**
+     * A scope manager cannot expose one portable, trustworthy "is package scoped" API.
+     * Require target-process evidence newer than the last time WAEX left the foreground;
+     * otherwise an already-running process can retain old hooks after its scope is removed.
+     */
+    @Volatile
+    private var scopeVerificationStartedAt = System.currentTimeMillis()
+
+    @JvmStatic
+    fun startNewScopeVerification() {
+        scopeVerificationStartedAt = System.currentTimeMillis()
+    }
 
     /**
      * Dynamically reads supported WhatsApp packages & clones from arrays.xml.
@@ -116,6 +150,7 @@ object WhatsAppPackageDetector {
             val extras = Bundle().apply {
                 putString("package", packageName)
                 putLong("timestamp", System.currentTimeMillis())
+                putInt("boot_count", currentBootCount(context))
             }
             context.contentResolver.call(uri, "register_hooked_package", packageName, extras)
         } catch (_: Throwable) {}
@@ -141,6 +176,55 @@ object WhatsAppPackageDetector {
                     .apply()
             }
         } catch (_: Throwable) {}
+    }
+
+    /** Reports sanitized runtime health from a package that is executing WAEX hooks. */
+    @JvmStatic
+    fun reportRuntimeHealth(
+        context: Context,
+        packageName: String,
+        runtimeStatus: String,
+        bridgeStatus: String,
+        error: String? = null
+    ) {
+        var accepted = false
+        try {
+            val extras = Bundle().apply {
+                putString("package", packageName)
+                putString("runtime_status", runtimeStatus)
+                putString("bridge_status", bridgeStatus)
+                putString("error", error)
+                putLong("timestamp", System.currentTimeMillis())
+                putInt("boot_count", currentBootCount(context))
+            }
+            accepted = context.contentResolver.call(
+                Uri.parse("content://com.waenhancer.hookprovider"),
+                "report_runtime_health",
+                packageName,
+                extras
+            )?.getBoolean("success", false) == true
+        } catch (_: Throwable) {}
+
+        // Wake the dashboard when fresh runtime evidence arrives. This is also what makes an
+        // already-running, genuinely injected target recover after the manager starts a new
+        // verification window; users do not have to reopen either app to refresh the card.
+        if (accepted) {
+            try {
+                context.sendBroadcast(Intent("com.waenhancer.ACTION_TARGET_APP_ACTIVE").apply {
+                    setPackage(MODULE_PACKAGE)
+                    putExtra("PACKAGE", packageName)
+                    putExtra("TIMESTAMP", System.currentTimeMillis())
+                })
+            } catch (_: Throwable) {}
+        }
+    }
+
+    @JvmStatic
+    fun currentBootCount(context: Context): Int = runCatching {
+        Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
+    }.getOrElse {
+        runCatching { java.io.File("/proc/sys/kernel/random/boot_id").readText().trim().hashCode() }
+            .getOrDefault(-1)
     }
 
     /**
@@ -250,9 +334,20 @@ object WhatsAppPackageDetector {
                     else -> "WhatsApp ($pkg)"
                 }
 
-                val isHooked = isGlobalModuleActive && (hookedSet?.contains(pkg) == true)
-                val injectedHooks = if (isHooked) getInjectedHooks(context, pkg) else emptyList()
                 val lastActiveTime = prefs.getLong("last_active_$pkg", 0L)
+                val recordedBoot = prefs.getInt("runtime_boot_$pkg", Int.MIN_VALUE)
+                val currentBoot = currentBootCount(context)
+                val wasEverHooked = hookedSet?.contains(pkg) == true || lastActiveTime > 0L
+                val scopeState = resolveRuntimeScopeState(
+                    isModuleActive = isGlobalModuleActive,
+                    wasEverHooked = wasEverHooked,
+                    recordedBoot = recordedBoot,
+                    currentBoot = currentBoot,
+                    lastActiveTime = lastActiveTime,
+                    verificationStartedAt = scopeVerificationStartedAt
+                )
+                val activeThisBoot = scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT
+                val injectedHooks = if (activeThisBoot) getInjectedHooks(context, pkg) else emptyList()
 
                 result.add(
                     HookedAppInfo(
@@ -260,9 +355,13 @@ object WhatsAppPackageDetector {
                         appName = friendlyName,
                         versionName = "v${pInfo.versionName ?: "Unknown"}",
                         isInstalled = true,
-                        isHooked = isHooked,
+                        isHooked = activeThisBoot,
                         injectedHooks = injectedHooks,
-                        lastActiveTime = lastActiveTime
+                        lastActiveTime = lastActiveTime,
+                        scopeState = scopeState,
+                        runtimeStatus = prefs.getString("runtime_status_$pkg", "NOT_DETECTED") ?: "NOT_DETECTED",
+                        bridgeStatus = prefs.getString("bridge_status_$pkg", "NOT_REPORTED") ?: "NOT_REPORTED",
+                        initializationError = prefs.getString("runtime_error_$pkg", null)
                     )
                 )
             } catch (e: PackageManager.NameNotFoundException) {
@@ -286,10 +385,19 @@ object WhatsAppPackageDetector {
 
         // Filter out uninstalled placeholders if at least one app is installed
         val installedCount = result.count { it.isInstalled }
-        return if (installedCount > 0) {
+        val visible = if (installedCount > 0) {
             result.filter { it.isInstalled }
         } else {
             result
         }
+        return visible.sortedWith(
+            compareBy<HookedAppInfo> {
+                when (it.scopeState) {
+                    RuntimeScopeState.ACTIVE_THIS_BOOT -> 0
+                    RuntimeScopeState.PREVIOUSLY_ACTIVE -> 1
+                    RuntimeScopeState.NOT_DETECTED -> 2
+                }
+            }.thenBy { it.appName.lowercase() }
+        )
     }
 }

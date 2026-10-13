@@ -49,6 +49,8 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     private final AtomicBoolean refreshScheduled = new AtomicBoolean();
     @Nullable private final Future<?> initialSync;
     private volatile Map<String, Object> memoryCache = Collections.emptyMap();
+    private volatile String lastSyncSource = "PENDING";
+    @Nullable private volatile String lastSyncError;
 
     public PreferenceBridgeClient(@NonNull Context context, @Nullable SharedPreferences diskPrefs) {
         this(context, diskPrefs, false);
@@ -89,6 +91,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
 
     public void syncPreferences() {
         Map<String, Object> loaded = null;
+        String providerError = null;
         try {
             Bundle bundle = context.getContentResolver().call(PROVIDER_URI,
                     "get_all_preferences", null, null);
@@ -96,12 +99,42 @@ public final class PreferenceBridgeClient implements SharedPreferences {
                 loaded = decodePreferences(bundle);
             }
         } catch (Throwable t) {
+            providerError = diagnosticError(t);
             XposedBridge.log("[WAEX] PreferenceBridgeClient: Provider IPC query failed: " + t.getMessage());
         }
 
         // Disk read fallback if provider query was unavailable
-        if (loaded == null) loaded = readDiskSnapshot(true);
-        if (loaded != null) publishSnapshot(loaded);
+        if (loaded != null) {
+            lastSyncSource = "PROVIDER";
+            lastSyncError = null;
+            publishSnapshot(loaded);
+            return;
+        }
+        loaded = readDiskSnapshot(true);
+        if (loaded != null) {
+            lastSyncSource = "DISK_FALLBACK";
+            lastSyncError = providerError;
+            publishSnapshot(loaded);
+        } else {
+            lastSyncSource = "FAILED";
+            lastSyncError = providerError != null ? providerError : "No preference source was readable";
+        }
+    }
+
+    public String getLastSyncSource() {
+        return lastSyncSource;
+    }
+
+    @Nullable
+    public String getLastSyncError() {
+        return lastSyncError;
+    }
+
+    private static String diagnosticError(Throwable error) {
+        String detail = error.getClass().getSimpleName() + ": "
+                + (error.getMessage() == null ? "No detail" : error.getMessage());
+        detail = detail.replace('\n', ' ').replace('\r', ' ').trim();
+        return detail.length() <= 240 ? detail : detail.substring(0, 240);
     }
 
     private void publishDiskSnapshot(boolean reload) {

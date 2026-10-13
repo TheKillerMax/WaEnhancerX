@@ -25,6 +25,7 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.MainContainerScreen
 import com.waenhancer.ui.navigation.WaexNavController
 import com.waenhancer.update.UpdateCheckCoordinator
+import com.waenhancer.utils.WhatsAppPackageDetector
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -59,6 +60,11 @@ class MainActivity : ComponentActivity() {
                 if (wasPro != isProNow && !isFinishing && !isDestroyed) recreate()
             }
         }
+    }
+
+    override fun onStop() {
+        WhatsAppPackageDetector.startNewScopeVerification()
+        super.onStop()
     }
 
 
