@@ -131,7 +131,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 }
             });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getMessage());
+            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getClass().getSimpleName());
         }
     }
 
@@ -166,7 +166,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getClass().getSimpleName());
         }
     }
 
@@ -333,7 +333,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedBridge.log(TAG + " Hooked Conversation menu method: " + menuMethod);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getMessage());
+            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getClass().getSimpleName());
         }
     }
 

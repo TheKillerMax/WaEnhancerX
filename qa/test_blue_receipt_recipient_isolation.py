@@ -24,6 +24,9 @@ assert 'HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)' in blue
 assert 'getOrFindJobManager()' in blue
 assert 'SendE2EMessageJob/onRun' in blue
 assert 'new PendingReadReceiptStore<>(128, 64)' in blue
+# Exception messages can contain private JIDs, so diagnostics show type only.
+assert 't.getMessage()' not in blue
+assert blue.count('t.getClass().getSimpleName()') >= 4
 hide = (src/'HideReceiptsHook.java').read_text(encoding='utf-8')
 assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048)' in hide
 assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096)' in hide
