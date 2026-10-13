@@ -89,10 +89,7 @@ public final class AppRestartHelper {
                         startedByRoot = RestartTargetPolicy.reportsMonkeyLaunch(output);
                     }
                     if (startedByRoot) {
-                        if (!MAIN.post(() -> {
-                            toast(context, "Restart requested");
-                            RESTART_PENDING.set(false);
-                        })) RESTART_PENDING.set(false);
+                        RESTART_PENDING.set(false);
                         return;
                     }
 
@@ -116,8 +113,9 @@ public final class AppRestartHelper {
                             launch.setPackage(packageName);
                             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             context.startActivity(launch);
-                            toast(context, stoppedByRoot
-                                    ? "Restart requested" : "WhatsApp opened; restart not verified");
+                            if (!stoppedByRoot) {
+                                toast(context, "WhatsApp opened; restart not verified");
+                            }
                         } catch (RuntimeException ignored) {
                             toast(context, "Could not reopen WhatsApp");
                         } finally {
