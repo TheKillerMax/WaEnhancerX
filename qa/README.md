@@ -90,6 +90,7 @@ SendE2EMessageJob and check whether its jid field actually exists:
 
     python3 qa/dex_field_inventory.py /path/to/WhatsApp.apk --class-descriptor 'Lcom/whatsapp/jobqueue/job/SendE2EMessageJob;' --expected-field jid
     python3 qa/dex_field_inventory.py /path/to/WhatsApp.apk --class-descriptor 'Lcom/whatsapp/jobqueue/job/SendE2EMessageJob;' --expected-field jid --fail-on-missing
+    python3 qa/dex_field_inventory.py /path/to/WhatsApp.apk --class-descriptor 'Lcom/whatsapp/jobqueue/job/SendE2EMessageJob;' --expected-field jid --expected-type 'Ljava/lang/String;' --fail-on-missing
     python3 qa/test_dex_field_inventory.py
 
 The tool reads the DEX class_defs, class_data_item, and encoded field tables
@@ -97,6 +98,8 @@ The tool reads the DEX class_defs, class_data_item, and encoded field tables
 SendE2EMessageJob declares a jid string field and also has obfuscated
 typed JID fields. The latter **do not** establish which field represents the
 outgoing conversation; do not infer it from name or field order.
+
+The scanner refuses oversized ZIP/DEX inputs, duplicate DEX entries or class definitions, and can require the expected field type descriptor in addition to its name. Synthetic regressions cover these fail-closed cases.
 
 This is structural metadata verification only. It neither validates the value
 read at runtime nor proves the intended receipt is released. Do not redistribute
