@@ -27,8 +27,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Privacy Receipts Hook:
@@ -41,8 +39,6 @@ public class HideReceiptsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][HideReceipts]";
     private static final long BLUE_REPLY_WINDOW_MS = 120_000L;
-    private static final Pattern JID_PATTERN = Pattern.compile(
-            "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
     private static final BoundedReceiptAllowance BLUE_REPLY_BYPASS =
             new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048);
     private static final BoundedReceiptAllowance EXPLICIT_RECEIPT_IDS =
@@ -730,9 +726,7 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private static String canonicalJid(String value) {
-        if (value == null) return null;
-        Matcher matcher = JID_PATTERN.matcher(value);
-        return matcher.find() ? matcher.group(1) + "@" + matcher.group(2) : null;
+        return ReceiptJidPolicy.canonical(value);
     }
 
     /** Prefer the conversation/group address over a group participant's device address. */
