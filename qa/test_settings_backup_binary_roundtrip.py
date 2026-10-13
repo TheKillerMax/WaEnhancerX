@@ -28,6 +28,7 @@ public interface SharedPreferences {
   Editor putInt(String key, int value);
   Editor putLong(String key, long value);
   Editor putFloat(String key, float value);
+  Editor remove(String key);
   boolean commit();
  }
 }''',
@@ -40,19 +41,35 @@ public final class TestContext extends Context {
  public void seed(String store,String key,Object v){stores.get(store).data.put(key,v);}
  public Object get(String store,String key){return stores.get(store).data.get(key);}
  public int count(){return stores.get("waex_prefs").data.size()+stores.get("private_config").data.size();}
+ public void failCommits(String store,int count,boolean writeBeforeFailure){
+  Prefs prefs=stores.get(store);
+  if(prefs==null) throw new IllegalArgumentException("Unknown store");
+  prefs.failCount=count; prefs.partialFailure=writeBeforeFailure;
+ }
  static final class Prefs implements SharedPreferences {
   final Map<String,Object> data = new HashMap<>();
+  int failCount; boolean partialFailure;
   @Override public Map<String,?> getAll(){return new HashMap<>(data);}
   @Override public Editor edit(){return new E();}
   private final class E implements Editor {
    final Map<String,Object> edits = new HashMap<>();
-   public Editor putBoolean(String k,boolean v){edits.put(k,v);return this;}
-   public Editor putString(String k,String v){edits.put(k,v);return this;}
-   public Editor putStringSet(String k,Set<String> v){edits.put(k,new HashSet<>(v));return this;}
-   public Editor putInt(String k,int v){edits.put(k,v);return this;}
-   public Editor putLong(String k,long v){edits.put(k,v);return this;}
-   public Editor putFloat(String k,float v){edits.put(k,v);return this;}
-   public boolean commit(){data.putAll(edits);return true;}
+   final Set<String> removed = new HashSet<>();
+   public Editor putBoolean(String k,boolean v){removed.remove(k);edits.put(k,v);return this;}
+   public Editor putString(String k,String v){removed.remove(k);edits.put(k,v);return this;}
+   public Editor putStringSet(String k,Set<String> v){removed.remove(k);edits.put(k,new HashSet<>(v));return this;}
+   public Editor putInt(String k,int v){removed.remove(k);edits.put(k,v);return this;}
+   public Editor putLong(String k,long v){removed.remove(k);edits.put(k,v);return this;}
+   public Editor putFloat(String k,float v){removed.remove(k);edits.put(k,v);return this;}
+   public Editor remove(String k){edits.remove(k);removed.add(k);return this;}
+   public boolean commit(){
+    boolean failed=failCount>0;
+    if(failed) failCount--;
+    if(!failed || partialFailure){
+      for(String k:removed)data.remove(k);
+      data.putAll(edits);
+    }
+    return !failed;
+   }
   }
  }
 }''',
