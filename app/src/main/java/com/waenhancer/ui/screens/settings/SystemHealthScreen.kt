@@ -12,6 +12,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,10 +33,13 @@ import androidx.compose.ui.unit.dp
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexTheme
+import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
+import com.waenhancer.utils.RuntimeScopeState
+import com.waenhancer.utils.WhatsAppPackageDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -47,19 +53,42 @@ fun SystemHealthScreen() {
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
     var diagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
     var showHookToast by remember {
         mutableStateOf(preferences.getBoolean("show_hook_toast", true))
     }
     var showRestartSheet by remember {
         mutableStateOf(preferences.getBoolean("show_restart_sheet", true))
     }
-    LaunchedEffect(Unit) { diagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) } }
+    LaunchedEffect(refreshTrigger) {
+        diagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
+    }
 
-    Scaffold(topBar = { WaexTopBar("System Diagnostics", onBackClick = { nav.popBack() }) }, containerColor = colors.background) { insets ->
+    Scaffold(
+        topBar = {
+            WaexTopBar(
+                "System Diagnostics",
+                onBackClick = { nav.popBack() },
+                actions = {
+                    IconButton(onClick = { refreshTrigger++ }) {
+                        Icon(
+                            imageVector = WaexIcons.Refresh,
+                            contentDescription = "Refresh diagnostics",
+                            tint = colors.onSurface
+                        )
+                    }
+                }
+            )
+        },
+        containerColor = colors.background
+    ) { insets ->
         val data = diagnostics
         if (data == null) {
             Column(Modifier.fillMaxSize().padding(insets), Arrangement.Center, Alignment.CenterHorizontally) { CircularProgressIndicator(color = colors.primary) }
         } else {
+            val targetApps = remember(data) {
+                WhatsAppPackageDetector.detectWhatsAppApps(context).filter { it.isInstalled }
+            }
             Column(
                 Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState()).padding(horizontal = spacing.pageMargin, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -82,11 +111,40 @@ fun SystemHealthScreen() {
                     "SELinux" to data.selinux
                 ), colors.primary)
 
-                DiagnosticCard("Hook Runtime", listOf(
-                    "Reported hooked targets" to data.hookedTargets,
-                    "Manager process hooked" to if (data.moduleActive) "Yes" else "No",
-                    "Runtime API captured" to if (data.framework.api != null) "Yes" else "No"
-                ), colors.primary)
+                DiagnosticCard(
+                    "Hook Runtime",
+                    buildList {
+                        add("Reported hooked targets" to data.hookedTargets)
+                        add("Manager process hooked" to if (data.moduleActive) "Yes" else "No")
+                        add("Runtime API captured" to if (data.framework.api != null) "Yes" else "No")
+                        targetApps.forEach { app ->
+                            add("${app.appName} scope" to when (app.scopeState) {
+                                RuntimeScopeState.ACTIVE_THIS_BOOT -> "Active this boot"
+                                RuntimeScopeState.PREVIOUSLY_ACTIVE -> "Scope changed or unverified; restart app"
+                                RuntimeScopeState.NOT_DETECTED -> "Not detected; restart app to verify"
+                            })
+                            add("${app.appName} preference bridge" to when (app.bridgeStatus) {
+                                "PROVIDER" -> "Connected directly"
+                                "DISK_FALLBACK" -> "Using disk fallback"
+                                "FAILED" -> "Unavailable"
+                                else -> "Awaiting runtime report"
+                            })
+                            add("${app.appName} initialization" to when (app.runtimeStatus) {
+                                "READY" -> "Completed"
+                                "READY_WITH_ERRORS" -> "Completed with hook failures"
+                                "INITIALIZING" -> "In progress"
+                                "UNSUPPORTED_VERSION" -> "Paused: unsupported version"
+                                "INITIALIZATION_FAILED" -> "Failed"
+                                "INJECTED" -> "Injection detected"
+                                else -> "Not reported"
+                            })
+                            app.initializationError?.takeIf { it.isNotBlank() }?.let {
+                                add("${app.appName} last error" to it)
+                            }
+                        }
+                    },
+                    colors.primary
+                )
 
                 Surface(
                     shape = radius.bentoCardShape,
