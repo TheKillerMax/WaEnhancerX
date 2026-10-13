@@ -3,8 +3,8 @@ package com.waenhancer.xposed.features.media;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
+import android.util.SparseArray;
+import java.util.Map;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import de.robv.android.xposed.XC_MethodHook;
@@ -31,32 +31,47 @@ public class ProximitySensorHook extends BaseFeature {
 
     private void hookProximitySensor() {
         try {
-            Class<?> proximityClass = XposedHelpers.findClassIfExists("android.hardware.SystemSensorManager$SensorEventQueue", classLoader);
-            if (proximityClass == null) {
-                proximityClass = XposedHelpers.findClassIfExists("android.hardware.SensorManager", classLoader);
+            Class<?> eventQueue = XposedHelpers.findClassIfExists(
+                    "android.hardware.SystemSensorManager$SensorEventQueue", classLoader);
+            if (eventQueue == null) {
+                XposedBridge.log(TAG + " SensorEventQueue unavailable; events left untouched");
+                return;
             }
-
-            if (proximityClass != null) {
-                XposedBridge.hookAllMethods(proximityClass, "dispatchSensorEvent", new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
-                        if (!isProximitySensorDisabled()) return;
-
-                        if (param.args.length > 0 && param.args[0] instanceof Integer) {
-                            int handle = (int) param.args[0];
-                            // Suppress proximity event dispatch
-                            if (param.args.length > 1 && param.args[1] instanceof float[]) {
-                                float[] values = (float[]) param.args[1];
-                                if (values.length > 0) {
-                                    values[0] = 100.0f; // Force far distance (screen remains on)
-                                }
-                            }
-                        }
+            XposedBridge.hookAllMethods(eventQueue, "dispatchSensorEvent", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (!isProximitySensorDisabled() || param.args == null || param.args.length < 2
+                            || !(param.args[0] instanceof Integer) || !(param.args[1] instanceof float[])) {
+                        return;
                     }
-                });
-            }
+                    Sensor sensor = lookupSensor(param.thisObject, (Integer) param.args[0]);
+                    if (sensor == null) return; // Fail closed: never alter an unidentified sensor.
+                    ProximityDispatchPolicy.replaceNearWithFar(
+                            sensor.getType() == Sensor.TYPE_PROXIMITY,
+                            sensor.getMaximumRange(), (float[]) param.args[1]);
+                }
+            });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Proximity Sensor: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Proximity Sensor: " + t.getClass().getSimpleName());
+        }
+    }
+
+    /** Resolve the dispatched handle using the same table as Android's sensor queue. */
+    private static Sensor lookupSensor(Object queue, int handle) {
+        if (queue == null) return null;
+        try {
+            Object manager = XposedHelpers.getObjectField(queue, "mManager");
+            if (manager == null) return null;
+            Object handles = XposedHelpers.getObjectField(manager, "mHandleToSensor");
+            Object sensor = null;
+            if (handles instanceof Map<?, ?>) {
+                sensor = ((Map<?, ?>) handles).get(handle);
+            } else if (handles instanceof SparseArray<?>) {
+                sensor = ((SparseArray<?>) handles).get(handle);
+            }
+            return sensor instanceof Sensor ? (Sensor) sensor : null;
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
