@@ -133,7 +133,7 @@ class MediaPreviewHook(
                 })
             }
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][MediaPreview] Error hooking videoViewContainer: ${t.message}")
+            XposedBridge.log("[WAEX][MediaPreview] Error hooking videoViewContainer: ${t.javaClass.simpleName}")
         }
 
         try {
@@ -189,7 +189,7 @@ class MediaPreviewHook(
                 })
             }
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][MediaPreview] Error hooking imageViewContainer: ${t.message}")
+            XposedBridge.log("[WAEX][MediaPreview] Error hooking imageViewContainer: ${t.javaClass.simpleName}")
         }
 
         // Secondary fallback: bubble row attachment hook
@@ -211,7 +211,7 @@ class MediaPreviewHook(
                 })
             }
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][MediaPreview] Secondary bubble hook error: ${t.message}")
+            XposedBridge.log("[WAEX][MediaPreview] Secondary bubble hook error: ${t.javaClass.simpleName}")
         }
     }
 
@@ -378,7 +378,7 @@ class MediaPreviewHook(
             val isNewsletter = isNewsletterSource(objMessage)
             startPlayer(rowId.takeIf { it > 0L }, context, isNewsletter, messageSource, inMemoryMedia)
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][MediaPreview] startPreview error: ${t.message}")
+            XposedBridge.log("[WAEX][MediaPreview] startPreview error: ${t.javaClass.simpleName}")
             Toast.makeText(context, "Error launching preview: ${t.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -410,7 +410,7 @@ class MediaPreviewHook(
                             }
                         }
                     } catch (dbError: Throwable) {
-                        XposedBridge.log("[WAEX][MediaPreview] Database media lookup failed: ${dbError.message}")
+                        XposedBridge.log("[WAEX][MediaPreview] Database media lookup failed: ${dbError.javaClass.simpleName}")
                     }
                 }
 
@@ -440,7 +440,7 @@ class MediaPreviewHook(
                             }
                         }
                     } catch (dbError: Throwable) {
-                        XposedBridge.log("[WAEX][MediaPreview] URL media lookup failed: ${dbError.message}")
+                        XposedBridge.log("[WAEX][MediaPreview] URL media lookup failed: ${dbError.javaClass.simpleName}")
                     }
                 }
 
@@ -1120,7 +1120,7 @@ class MediaPreviewHook(
 
     private fun handleError(e: Throwable, executor: ExecutorService, context: Context, fallbackView: View?) {
         val message = if (e is InvocationTargetException) e.cause?.message else e.message
-        XposedBridge.log("[WAEX][MediaPreview] Error: $message")
+        XposedBridge.log("[WAEX][MediaPreview] Error: ${e.javaClass.simpleName}")
         mainHandler.post {
             Toast.makeText(context, message ?: "Unknown preview error", Toast.LENGTH_LONG).show()
         }
