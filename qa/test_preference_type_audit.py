@@ -29,6 +29,26 @@ val sample = "// not a comment";
         self.assertEqual(len(masked), len(raw))
         self.assertEqual(masked.count('\n'), raw.count('\n'))
 
+    def test_kotlin_raw_strings_and_java_text_blocks_are_not_calls(self):
+        raw = '''val documentation = """
+// A commented documentation example, not an actual preference call:
+prefs.putString("color", "#000000")
+/* Another example: */ prefs.putBoolean("status_mode", false)
+"""
+prefs.putInt("color", 7)
+prefs.putString("color", "#FFFFFF")
+'''
+        masked = without_comments(raw)
+        self.assertEqual(len(masked), len(raw))
+        self.assertEqual(masked.count('\n'), raw.count('\n'))
+        self.assertNotIn('prefs.putBoolean("status_mode"', masked)
+        self.assertNotIn('prefs.putString("color", "#000000")', masked)
+        self.assertIn('prefs.putInt("color", 7)', masked)
+        result = analyse(SYNTHETIC_SCHEMA, {'Example.kt': raw})
+        self.assertEqual(result['counts']['matched_literals'], 2)
+        self.assertEqual(len(result['mismatched_writes']), 1)
+        self.assertEqual(result['mismatched_writes'][0]['method'], 'putString')
+
     def test_mismatched_write_and_read_are_separated(self):
         src = {
           'Ui.kt': 'manager.putString("color", "#FF0000"); manager.getBoolean("status_mode", false);',
