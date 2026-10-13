@@ -2,7 +2,7 @@ name: Source and JVM regression checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'integration/preview-13-prs-unverified-2026-10-13']
   pull_request:
     branches: [main]
   workflow_dispatch:
