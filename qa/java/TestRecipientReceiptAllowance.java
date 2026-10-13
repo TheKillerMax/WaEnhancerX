@@ -30,6 +30,12 @@ public final class TestRecipientReceiptAllowance {
         a.allow(alice, "M", 200);
         a.revoke(alice, "M");
         check(!a.isAllowed(alice, "M", 201), "rollback revokes a staged grant");
+        a.allow(alice, "duplicate", 300);
+        a.allow(alice, "duplicate", 301);
+        a.revoke(alice, "duplicate");
+        check(a.isAllowed(alice, "duplicate", 301), "failed duplicate must not revoke successful receipt");
+        a.revoke(alice, "duplicate");
+        check(!a.isAllowed(alice, "duplicate", 301), "last grant revoke must remove permission");
         a.allow(alice, "", 1);
         a.allow(alice, "x\u0000y", 1);
         a.allow(alice, "X".repeat(1025), 1);
