@@ -108,7 +108,7 @@ class CustomPrivacyHook(
                     }
                 })
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG Failed to hook class $className: ${t.message}")
+                XposedBridge.log("$TAG Failed to hook class $className: ${t.javaClass.simpleName}")
             }
         }
     }
@@ -142,7 +142,7 @@ class CustomPrivacyHook(
                     }
                 })
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG Failed to hook menu on $className: ${t.message}")
+                XposedBridge.log("$TAG Failed to hook menu on $className: ${t.javaClass.simpleName}")
             }
         }
     }
@@ -207,7 +207,7 @@ class CustomPrivacyHook(
                 targetContainer.addView(tile, 0)
             }
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Failed to inject tile: ${t.message}")
+            XposedBridge.log("$TAG Failed to inject tile: ${t.javaClass.simpleName}")
         }
     }
 
@@ -362,7 +362,7 @@ class CustomPrivacyHook(
 
                     Toast.makeText(activity, "Custom privacy saved", Toast.LENGTH_SHORT).show()
                 } catch (t: Throwable) {
-                    XposedBridge.log("$TAG Failed to save custom privacy: ${t.message}")
+                    XposedBridge.log("$TAG Failed to save custom privacy: ${t.javaClass.simpleName}")
                 }
                 dialog.dismiss()
             })
