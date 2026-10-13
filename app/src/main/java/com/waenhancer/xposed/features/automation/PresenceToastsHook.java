@@ -285,6 +285,11 @@ public class PresenceToastsHook extends BaseFeature {
     private static final java.util.Map<String, Long> LAST_TOAST_MAP = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.concurrent.atomic.AtomicInteger PRESENCE_DIAGNOSTICS = new java.util.concurrent.atomic.AtomicInteger();
     private static final long MIN_TOAST_INTERVAL_MS = 1500;
+    private static final ExecutorService DELETED_TOAST_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "WAEX-DeletedToast");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private void processReceiptItem(Object receiptObj, boolean statusToast, boolean msgToast) {
         if (receiptObj == null) return;
@@ -344,9 +349,9 @@ public class PresenceToastsHook extends BaseFeature {
         });
     }
 
-    public static void showDeletedMessageToast(Context context, String senderJid, Handler handler) {
-        if (context == null) return;
-        android.content.SharedPreferences prefs = context.getSharedPreferences("com.waenhancer_preferences", Context.MODE_PRIVATE);
+    public static void showDeletedMessageToast(Context context, SharedPreferences prefs,
+                                               String senderJid, Handler handler) {
+        if (context == null || prefs == null || handler == null) return;
         boolean enabled = prefs.getBoolean("toastdeleted", false);
         if (!enabled) return;
 
@@ -358,7 +363,7 @@ public class PresenceToastsHook extends BaseFeature {
         }
         LAST_TOAST_MAP.put(key, now);
 
-        Executors.newSingleThreadExecutor().execute(() -> {
+        DELETED_TOAST_EXECUTOR.execute(() -> {
             try {
                 String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : "A contact";
                 String text = name + " deleted a message";

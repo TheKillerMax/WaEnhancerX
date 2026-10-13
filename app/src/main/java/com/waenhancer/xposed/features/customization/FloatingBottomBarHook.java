@@ -302,6 +302,9 @@ public class FloatingBottomBarHook extends BaseFeature {
             );
             if (cls != null) return cls;
         } catch (Throwable ignored) {}
+        Class<?> currentHome = XposedHelpers.findClassIfExists(
+                "com.whatsapp.home.ui.HomeActivity", classLoader);
+        if (currentHome != null) return currentHome;
         return XposedHelpers.findClassIfExists("com.whatsapp.HomeActivity", classLoader);
     }
 

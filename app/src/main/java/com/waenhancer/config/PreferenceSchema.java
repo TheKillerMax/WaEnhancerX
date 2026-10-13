@@ -290,7 +290,7 @@ public final class PreferenceSchema {
         add(entries, "open_settings_mode", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "open_waex", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "waex_menu_style", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "pending_restart_changes", Type.STRING_SET, Sensitivity.RUNTIME, Store.PRIVATE);
+        add(entries, "pending_restart_changes", Type.STRING_SET, Sensitivity.RUNTIME, Store.PUBLIC);
         add(entries, "permission_onboarding_complete", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "pinnedlimit", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "pref_forward_batch_enabled", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
@@ -324,6 +324,7 @@ public final class PreferenceSchema {
         add(entries, "show_hidereceipt", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_home_menu", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_hook_toast", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "show_restart_sheet", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_name_home", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "show_status_menu", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "showbiohome", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
@@ -365,10 +366,10 @@ public final class PreferenceSchema {
         add(entries, "update_check_whatsapp_open", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "update_ignored_behavior", Type.STRING, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "update_last_check", Type.LONG, Sensitivity.RUNTIME, Store.PRIVATE);
-        add(entries, "available_update_version", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "available_update_tag", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "available_update_name", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "available_update_changelog", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "available_update_version", Type.STRING, Sensitivity.RUNTIME, Store.PUBLIC);
+        add(entries, "available_update_tag", Type.STRING, Sensitivity.RUNTIME, Store.PUBLIC);
+        add(entries, "available_update_name", Type.STRING, Sensitivity.RUNTIME, Store.PUBLIC);
+        add(entries, "available_update_changelog", Type.STRING, Sensitivity.RUNTIME, Store.PUBLIC);
         add(entries, "verify_blocked_contact", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "video_call_screen_rec", Type.BOOLEAN, Sensitivity.PRIVATE_SETTING, Store.PRIVATE);
         add(entries, "video_limit_size", Type.FLOAT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
