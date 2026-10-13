@@ -42,9 +42,12 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     str(src/'PendingReadReceiptStore.java'),
                     str(root/'qa/java/TestPendingReadReceiptStore.java'),
                     str(src/'BoundedReceiptAllowance.java'),
-                    str(root/'qa/java/TestBoundedReceiptAllowance.java')], check=True)
+                    str(root/'qa/java/TestBoundedReceiptAllowance.java'),
+                    str(root/'qa/java/TestReceiptPropertyStress.java')], check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestPendingReadReceiptStore'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestBoundedReceiptAllowance'],check=True)
+    subprocess.run(['java','-cp',dest,
+                    'com.waenhancer.xposed.features.privacy.TestReceiptPropertyStress'],check=True)
 print('PASS: exact-recipient, bounded queue, monotonic TTL and feature-retention invariants')
