@@ -92,6 +92,39 @@ private fun sample(e: PreferenceSchema.Entry,i:Int): Any = when(e.type){
  PreferenceSchema.Type.FLOAT -> i+0.25f
 }
 fun main(){
+ // Reflect the actual private codec resolver rather than emulating migrations.
+ val resolveMethod=SettingsBackupCodec::class.java.declaredMethods.single {
+   it.name == "resolveKey" && it.parameterCount == 2
+ }
+ resolveMethod.isAccessible = true
+ fun resolve(raw:String,legacy:Boolean):String? =
+   resolveMethod.invoke(SettingsBackupCodec,raw,legacy) as String?
+ val currentKeys=listOf(
+   "typing_online_toasts", "typing_privacy", "hide_seen_receipts", "hidereceipt",
+   "hide_delivery_receipts", "hide_read_receipts", "stealth_status_view",
+   "separate_groups_tabs", "bubble_colors", "channels_enhancements", "anti_revoke"
+ )
+ for(key in currentKeys) {
+   check(PreferenceSchema.entry(key)!=null){"Missing current schema key: $key"}
+   check(resolve(key,true)==key){"Legacy JSON redirected a live preference: $key"}
+   check(resolve(key,false)==key){"Versioned/binary backup redirected a live key: $key"}
+ }
+ val trueLegacy=mapOf(
+   "custom_theme" to "custom_css",
+   "custom_time_format" to "segundos",
+   "custom_view_dpi" to "change_dpi",
+   "hide_ui_tabs" to "hidetabs",
+   "chat_filters" to "chatfilter",
+   "quick_home_menu" to "show_home_menu"
+ )
+ for((raw,mapped) in trueLegacy) {
+   check(PreferenceSchema.entry(raw)==null){"Expected historical unknown alias: $raw"}
+   check(resolve(raw,true)==mapped){"Old JSON alias not migrated: $raw"}
+   check(resolve(raw,false)==null){"Unknown key accepted by versioned/binary backup: $raw"}
+ }
+ check(resolve("a_totally_unknown_setting",true)==null)
+ check(resolve("a_totally_unknown_setting",false)==null)
+ println("PASS: live Boolean privacy settings retained in legacy JSON; unknown old aliases migrated safely")
  val initial=TestContext()
  val expected=LinkedHashMap<String,Any>()
  PreferenceSchema.exportableKeys().sorted().forEachIndexed { i,key ->
