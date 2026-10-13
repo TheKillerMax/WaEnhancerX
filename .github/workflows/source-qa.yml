@@ -100,6 +100,7 @@ jobs:
             qa/test_style_non_boolean_guard.py \
             qa/test_private_hook_logs.py \
             qa/test_exception_message_privacy.py \
+            qa/test_call_privacy_logs.py \
             qa/test_blue_receipt_recipient_isolation.py \
             qa/test_manual_blue_tick_ui.py \
             qa/test_archived_chats_entry.py \
