@@ -3,6 +3,8 @@ package com.waenhancer.xposed;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.os.Handler;
+import android.os.Looper;
 import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
 import com.waenhancer.xposed.core.FeatureRegistry;
 import com.waenhancer.xposed.utils.ModuleStatus;
@@ -33,6 +35,11 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     private static XSharedPreferences sPrefs;
     private static volatile PreferenceBridgeClient sPreferenceBridge;
     private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
+    private static final AtomicBoolean HEARTBEAT_STARTED = new AtomicBoolean(false);
+    private static final long HEARTBEAT_INTERVAL_MS = 10_000L;
+    private static volatile String sRuntimeStatus = "INJECTED";
+    private static volatile String sBridgeStatus = "PENDING";
+    private static volatile String sRuntimeError;
     private String mModulePath;
 
     @Override
@@ -47,8 +54,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 candidate.reload();
                 sPrefs = candidate;
             } catch (Throwable t) {
-                // The provider bridge does not require a world-readable disk snapshot.
-                // Do not abandon all target hooks when old XSharedPreferences access fails.
+                // Provider-backed preferences can operate without the optional disk snapshot.
                 XposedBridge.log("[WAEX] Disk preference snapshot unavailable: "
                         + t.getClass().getSimpleName());
             }
@@ -90,6 +96,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     com.waenhancer.config.PreferenceStores.publicStore(context)
                                             .edit()
                                             .putInt("active_xposed_api_version", apiVersion)
+                                            .putString("active_xposed_framework", detectActiveFramework())
                                             .commit();
                                 } catch (Throwable t) {
                                     XposedBridge.log("[WAEX] Failed to save Xposed API version: " + t.getMessage());
@@ -143,13 +150,19 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
                                 Context context = (Context) param.thisObject;
-                                if (sPreferenceBridge == null) {
-                                    synchronized (MainHook.class) {
-                                        if (sPreferenceBridge == null) {
-                                            sPreferenceBridge = new PreferenceBridgeClient(
-                                                    context, preloadedPrefs, true);
+                                try {
+                                    if (sPreferenceBridge == null) {
+                                        synchronized (MainHook.class) {
+                                            if (sPreferenceBridge == null) {
+                                                sPreferenceBridge = new PreferenceBridgeClient(
+                                                        context, preloadedPrefs, true);
+                                            }
                                         }
                                     }
+                                } catch (Throwable t) {
+                                    // Application.onCreate can still build a provider-backed bridge.
+                                    XposedBridge.log("[WAEX] Early preference bridge unavailable: "
+                                            + t.getClass().getSimpleName());
                                 }
                             }
                         }
@@ -159,33 +172,28 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         + t.getMessage());
             }
 
-            // Reuse one initializer from both lifecycle entry points. Some custom
-            // Application subclasses override onCreate() without calling super.
+            // Reuse an initializer from the Application and Instrumentation entry points.
+            // Some WhatsApp/clone Application subclasses bypass superclass onCreate().
             XC_MethodHook applicationInitializer = new XC_MethodHook() {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
-                                // onCreate: thisObject is Application; Instrumentation: args[0].
-                                Object application = param.thisObject instanceof android.app.Application
+                                Object app = param.thisObject instanceof android.app.Application
                                         ? param.thisObject
                                         : (param.args != null && param.args.length == 1 ? param.args[0] : null);
-                                if (!(application instanceof android.app.Application)) return;
-                                Context appContext = (Context) application;
+                                if (!(app instanceof android.app.Application)) return;
+                                Context appContext = (Context) app;
                                 if (!TARGET_INITIALIZED.compareAndSet(false, true)) {
                                     return;
                                 }
-                                // Optional diagnostics and lifecycle tracking must not prevent
-                                // unrelated Xposed features from initializing.
-                                if (appContext instanceof android.app.Application) {
-                                    try {
-                                        com.waenhancer.xposed.utils.ActivityTracker.install(
-                                                (android.app.Application) appContext);
-                                    } catch (Throwable t) {
-                                        XposedBridge.log("[WAEX] ActivityTracker initialization failed: "
-                                                + t.getClass().getSimpleName());
-                                    }
+                                // Optional observers and reports may fail without disabling hooks.
+                                try {
+                                    com.waenhancer.xposed.utils.ActivityTracker.install(
+                                            (android.app.Application) appContext);
+                                } catch (Throwable t) {
+                                    XposedBridge.log("[WAEX] ActivityTracker initialization failed: "
+                                            + t.getClass().getSimpleName());
                                 }
 
-                                // Preserve current package reporting, but isolate its failures.
                                 try {
                                     com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(
                                             appContext, packageName);
@@ -193,6 +201,8 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     XposedBridge.log("[WAEX] Hooked-package reporting failed: "
                                             + t.getClass().getSimpleName());
                                 }
+                                reportTargetRuntime(
+                                        appContext, packageName, "INJECTED", "PENDING", null);
                                 try {
                                     appContext.getContentResolver().call(
                                             android.net.Uri.parse("content://com.waenhancer.hookprovider"),
@@ -228,6 +238,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         resolvedBridge.awaitInitialSync();
                                     }
                                     final PreferenceBridgeClient bridgeClient = resolvedBridge;
+                                    reportTargetRuntime(
+                                            appContext,
+                                            packageName,
+                                            "INITIALIZING",
+                                            bridgeClient.getLastSyncSource(),
+                                            bridgeClient.getLastSyncError());
                                     try {
                                         com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
                                     } catch (Throwable t) {
@@ -265,8 +281,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                                     if (isSupported) {
                                         try {
-                                            com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.init(
-                                                    bridgeClient);
+                                            com.waenhancer.xposed.features.updates.WhatsAppUpdateSheet.init(bridgeClient);
                                         } catch (Throwable t) {
                                             XposedBridge.log("[WAEX] WhatsApp update-sheet setup failed: "
                                                     + t.getClass().getSimpleName());
@@ -286,38 +301,132 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
                                         registry.initializeAll();
                                         registry.reportInjectedHooks(appContext, packageName);
+                                        reportTargetRuntime(
+                                                appContext,
+                                                packageName,
+                                                registry.hasFailures() ? "READY_WITH_ERRORS" : "READY",
+                                                bridgeClient.getLastSyncSource(),
+                                                bridgeClient.getLastSyncError());
                                     } else {
+                                        reportTargetRuntime(
+                                                appContext,
+                                                packageName,
+                                                "UNSUPPORTED_VERSION",
+                                                bridgeClient.getLastSyncSource(),
+                                                null);
                                         XposedBridge.log("[WAEX] Feature initialization halted due to unverified WhatsApp version.");
                                     }
                                 } catch (Throwable t) {
+                                    PreferenceBridgeClient bridge = sPreferenceBridge;
+                                    String bridgeStatus = bridge == null ? "FAILED" : bridge.getLastSyncSource();
+                                    String detail = t.getClass().getSimpleName() + ": "
+                                            + (t.getMessage() == null ? "No detail" : t.getMessage());
+                                    reportTargetRuntime(
+                                            appContext,
+                                            packageName,
+                                            "INITIALIZATION_FAILED",
+                                            bridgeStatus,
+                                            detail);
                                     XposedBridge.log("[WAEX] Error initializing FeatureRegistry: " + t.getMessage());
                                     showInjectionErrorSheet(t, packageName, lpparam.processName);
                                 }
                             }
                         };
 
-            // Keep the previous hook for compatible runtimes. Both callbacks are
-            // protected by TARGET_INITIALIZED.compareAndSet(false, true).
+            // Each lifecycle entry point may independently fail to register.
+            // TARGET_INITIALIZED guarantees initialization occurs at most once.
             try {
                 XposedHelpers.findAndHookMethod(
                         "android.app.Application", lpparam.classLoader,
                         "onCreate", applicationInitializer);
             } catch (Throwable t) {
-                XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
+                XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: "
+                        + t.getClass().getSimpleName());
             }
-
-            // Instrumentation normally invokes the actual Application.onCreate,
-            // including subclasses that bypass the superclass implementation.
-            // Hook registration is independent so either entry point can work.
             try {
                 XposedHelpers.findAndHookMethod(
                         "android.app.Instrumentation", lpparam.classLoader,
                         "callApplicationOnCreate", android.app.Application.class,
                         applicationInitializer);
             } catch (Throwable t) {
-                XposedBridge.log("[WAEX] Cannot hook Instrumentation.callApplicationOnCreate: " +
-                        t.getClass().getSimpleName());
+                XposedBridge.log("[WAEX] Cannot hook Instrumentation.callApplicationOnCreate: "
+                        + t.getClass().getSimpleName());
             }
+        }
+    }
+
+    private static void reportTargetRuntime(Context context, String packageName,
+                                            String runtimeStatus, String bridgeStatus,
+                                            String error) {
+        Context appContext = context.getApplicationContext() != null
+                ? context.getApplicationContext() : context;
+        sRuntimeStatus = runtimeStatus;
+        sBridgeStatus = bridgeStatus;
+        sRuntimeError = error;
+        com.waenhancer.utils.WhatsAppPackageDetector.reportRuntimeHealth(
+                appContext, packageName, runtimeStatus, bridgeStatus, error);
+
+        if (HEARTBEAT_STARTED.compareAndSet(false, true)) {
+            Handler handler = new Handler(Looper.getMainLooper());
+            Runnable heartbeat = new Runnable() {
+                @Override
+                public void run() {
+                    com.waenhancer.utils.WhatsAppPackageDetector.reportRuntimeHealth(
+                            appContext, packageName, sRuntimeStatus, sBridgeStatus, sRuntimeError);
+                    handler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
+                }
+            };
+            handler.postDelayed(heartbeat, HEARTBEAT_INTERVAL_MS);
+        }
+    }
+
+    /**
+     * Identifies the framework that actually loaded this module. Installed manager packages are
+     * deliberately not consulted here: more than one manager may remain installed while only one
+     * framework owns the current hooked process.
+     */
+    private static String detectActiveFramework() {
+        ClassLoader moduleLoader = MainHook.class.getClassLoader();
+        ClassLoader bridgeLoader = XposedBridge.class.getClassLoader();
+
+        if (classLoaderChainContains(moduleLoader, "matrix.vector")
+                || classLoaderChainContains(moduleLoader, "VectorModuleClassLoader")
+                || canLoad("org.matrix.vector.impl.di.VectorBootstrap", bridgeLoader)
+                || canLoad("org.matrix.vector.impl.utils.VectorModuleClassLoader", bridgeLoader)) {
+            return "Vector";
+        }
+
+        if (classLoaderChainContains(moduleLoader, "lsposed")
+                || classLoaderChainContains(moduleLoader, "LspModuleClassLoader")
+                || canLoad("org.lsposed.lspd.impl.LSPosedBridge", bridgeLoader)
+                || canLoad("org.lsposed.lspd.core.Startup", bridgeLoader)) {
+            return "LSPosed";
+        }
+
+        if (canLoad("com.elderdrivers.riru.edxp.core.Main", bridgeLoader)) {
+            return "EdXposed";
+        }
+
+        return "Xposed-compatible framework";
+    }
+
+    private static boolean classLoaderChainContains(ClassLoader loader, String marker) {
+        String expected = marker.toLowerCase(java.util.Locale.ROOT);
+        for (ClassLoader current = loader; current != null; current = current.getParent()) {
+            String identity = (current.getClass().getName() + " " + current)
+                    .toLowerCase(java.util.Locale.ROOT);
+            if (identity.contains(expected)) return true;
+        }
+        return false;
+    }
+
+    private static boolean canLoad(String className, ClassLoader loader) {
+        if (loader == null) return false;
+        try {
+            Class.forName(className, false, loader);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 

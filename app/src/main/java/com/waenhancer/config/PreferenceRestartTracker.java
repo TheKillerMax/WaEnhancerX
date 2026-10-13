@@ -43,6 +43,13 @@ public final class PreferenceRestartTracker {
     public static boolean requiresRestart(@Nullable String key) {
         if (key == null || NEED_RESTART.equals(key) || PENDING_CHANGES.equals(key)
                 || SHOW_RESTART_SHEET.equals(key)) return false;
+
+        // FeatureCatalog is the UI's source of truth. Consult it directly so newly cataloged
+        // features automatically participate in restart prompting even before they need an
+        // explicit schema entry. PreferenceSchema still covers subordinate feature settings
+        // such as colors, dimensions, counters, and modes that are not standalone catalog rows.
+        if (FeatureCatalog.findByKey(key) != null) return true;
+
         PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
         return entry != null
                 && entry.store == PreferenceSchema.Store.PUBLIC

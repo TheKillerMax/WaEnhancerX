@@ -40,6 +40,12 @@ import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import android.widget.Toast
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.alpha
@@ -94,41 +100,50 @@ fun MediaStatusHubScreen() {
         )
     }
 
-    val settingsState = remember {
-        mutableStateMapOf<String, Boolean>().apply {
-            mediaKeys.forEach { key ->
-                val defaultValue = if (key == "send_audio_as_voice_status") {
-                    preferenceManager.getBoolean("voice_status_enhancement", false)
-                } else false
-                put(key, preferenceManager.getBoolean(key, defaultValue))
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun readMediaKey(key: String): Boolean {
+        // The UI must reflect the settings consumed by hooks, not stale legacy aliases.
+        if (key == "call_recording" || key == "media_upload_quality") {
+            return MediaQuickSettingPolicy.isEnabled(key) { storedKey ->
+                preferenceManager.getBoolean(storedKey, false)
             }
         }
+        val fallback = if (key == "send_audio_as_voice_status") {
+            preferenceManager.getBoolean("voice_status_enhancement", false)
+        } else false
+        return preferenceManager.getBoolean(key, fallback)
+    }
+
+    val settingsState = remember(preferenceManager) {
+        mutableStateMapOf<String, Boolean>().apply {
+            mediaKeys.forEach { key -> put(key, readMediaKey(key)) }
+        }
+    }
+
+    // Refresh after returning from another settings screen (e.g. the Calls hub).
+    // Never auto-migrate a legacy call_recording=true value into the recorder key:
+    // that could enable audio recording without a new user action.
+    DisposableEffect(lifecycleOwner, preferenceManager) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                mediaKeys.forEach { key -> settingsState[key] = readMediaKey(key) }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val updatePreference: (String, Boolean) -> Unit = { key, value ->
-        settingsState[key] = value
-        preferenceManager.putBoolean(key, value)
-        if (key == "status_downloader" || key == "statusdowload") {
-            preferenceManager.putBoolean("statusdowload", value)
-            preferenceManager.putBoolean("status_downloader", value)
-            settingsState["statusdowload"] = value
-            settingsState["status_downloader"] = value
-        } else if (key == "download_view_once" || key == "downloadviewonce") {
-            preferenceManager.putBoolean("downloadviewonce", value)
-            preferenceManager.putBoolean("download_view_once", value)
-            settingsState["downloadviewonce"] = value
-            settingsState["download_view_once"] = value
-        } else if (key == "media_preview" || key == "enable_media_preview") {
-            preferenceManager.putBoolean("enable_media_preview", value)
-            preferenceManager.putBoolean("media_preview", value)
-            settingsState["enable_media_preview"] = value
-            settingsState["media_preview"] = value
-        } else if (key == "send_audio_as_voice_status") {
-            // Keep older installations compatible while the canonical key is migrated.
-            preferenceManager.putBoolean("voice_status_enhancement", value)
+        val changes = MediaQuickSettingPolicy.changesFor(key, value)
+        if (preferenceManager.putBooleans(changes)) {
+            // Read back committed canonical values. Both switches and row click
+            // handlers use settingsState, so never show a failed save as successful.
+            mediaKeys.forEach { mediaKey -> settingsState[mediaKey] = readMediaKey(mediaKey) }
+        } else {
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
         }
     }
-
 
     val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
     val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
