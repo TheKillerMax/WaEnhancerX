@@ -25,6 +25,11 @@ for consumer in (blue, receipts):
     assert 'prefs.getAll().get("seentick")' in consumer
 assert 'if (!isHideBlueTicksEnabled()) return false;' in blue
 assert '"hide_read_receipts"' in blue
+assert 'ConversationRecipientPolicy.resolve(candidates)' in blue
+assert 'extras.keySet()' not in blue
+assert 'extractRemoteJid(' not in blue
+assert 'Cannot verify chat recipient' in blue
+
 with tempfile.TemporaryDirectory() as tmp:
     subprocess.run(['javac', '--release', '17', '-d', tmp,
                     str(src / "ui/screens/settings/ManualSeenTickPreferencePolicy.java"),
