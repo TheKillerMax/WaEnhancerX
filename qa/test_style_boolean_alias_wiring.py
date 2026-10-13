@@ -15,7 +15,11 @@ for key in ('segundos', 'novaconfig', 'igstatus', 'verify_blocked_contact'):
     assert 'return "' + key + '";' in policy
 assert 'StyleBooleanAliasPolicy.canonicalKey(key)' in styles
 assert 'preferenceManager.getBoolean(canonicalKey, legacyDefault)' in styles
-assert 'preferenceManager.putBoolean(StyleBooleanAliasPolicy.canonicalKey(key), value)' in styles
+assert 'preferenceManager.putBooleans(changes)' in styles
+assert 'mapOf(canonicalKey to value, "voice_status_enhancement" to value)' in styles
+assert 'settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)' in styles
+assert 'Unable to save setting' in styles
+assert 'preferenceManager.putBoolean(StyleBooleanAliasPolicy.canonicalKey(key), value)' not in styles
 assert 'preferenceManager.putBoolean(key, value)' not in styles
 assert 'preferenceManager.getBoolean(key, defaultValue)' in styles
 with tempfile.TemporaryDirectory(prefix='waex_style_aliases_') as tmp:
