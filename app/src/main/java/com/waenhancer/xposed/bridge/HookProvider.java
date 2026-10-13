@@ -288,6 +288,10 @@ public class HookProvider extends ContentProvider {
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
+            // Known public keys must retain their declared schema types. Otherwise a
+            // string-encoded boolean could sidestep the following entitlement guard.
+            if (entry != null && !PreferenceWriteTypePolicy.accepts(entry.type.name(), type))
+                return writeResult(false);
             if (!("remove".equals(type) || "string".equals(type) || "string_set".equals(type)
                     || "boolean".equals(type) || "int".equals(type) || "long".equals(type)
                     || "float".equals(type))) return writeResult(false);
