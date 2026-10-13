@@ -110,7 +110,7 @@ object SettingsBackupCodec {
         val records = PreferenceSchema.exportableKeys().sorted().mapNotNull { key ->
             val value = PreferenceStores.read(context, key) ?: return@mapNotNull null
             val entry = PreferenceSchema.entry(key) ?: return@mapNotNull null
-            normalize(entry.type, value)?.let { Record(key, entry.type, it) }
+            normalizeForKey(key, entry.type, value)?.let { Record(key, entry.type, it) }
         }
 
         DataOutputStream(BufferedOutputStream(output)).use { out ->
@@ -209,7 +209,7 @@ object SettingsBackupCodec {
                     if (key != null) {
                         val schema = PreferenceSchema.entry(key)
                         if (schema != null && schema.isExportable()) {
-                            val normalized = normalize(schema.type, value)
+                            val normalized = normalizeForKey(key, schema.type, value)
                             if (normalized != null) {
                                 add(Record(key, schema.type, normalized))
                             }
@@ -247,7 +247,7 @@ object SettingsBackupCodec {
 
             val rawVal = source.opt(rawKey) ?: continue
             val decodedValue = decodeJsonValue(rawVal, legacy) ?: continue
-            val normalized = normalize(schema.type, decodedValue) ?: continue
+            val normalized = normalizeForKey(key, schema.type, decodedValue) ?: continue
             records.add(Record(key, schema.type, normalized))
         }
         return records
@@ -346,6 +346,18 @@ object SettingsBackupCodec {
         val size = input.readInt()
         require(size in 0..MAX_BYTES) { "Invalid settings value length" }
         return ByteArray(size).also(input::readFully).toString(Charsets.UTF_8)
+    }
+
+    /** Restore hex RGB/ARGB strings written by earlier UI versions for this INT key. */
+    private fun normalizeForKey(key: String, type: PreferenceSchema.Type, value: Any): Any? {
+        if (key == "deleted_message_color" && type == PreferenceSchema.Type.INT && value is String) {
+            val hex = value.trim()
+            if (hex.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))) {
+                val parsed = hex.substring(1).toLong(16)
+                return (if (hex.length == 7) parsed or 0xFF000000L else parsed).toInt()
+            }
+        }
+        return normalize(type, value)
     }
 
     private fun normalize(type: PreferenceSchema.Type, value: Any): Any? = when (type) {

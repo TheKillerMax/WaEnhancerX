@@ -111,6 +111,25 @@ fun main(){
   check(restored.get(store(schema),key)==value){"wrong restored key/type/value: $key"}
  }
  check(restored.count()==expected.size){"colliding aliases altered restored key count"}
+ // Older WAEX Privacy UI stored this INT preference as #RRGGBB / #AARRGGBB.
+ val legacyRgb=TestContext()
+ legacyRgb.seed("waex_prefs", "deleted_message_color", "#335577")
+ val legacyBytes=ByteArrayOutputStream()
+ check(SettingsBackupCodec.encode(legacyRgb,legacyBytes)==1){"RGB color lost from binary backup"}
+ val migratedRgb=TestContext()
+ check(SettingsBackupCodec.decode(migratedRgb,ByteArrayInputStream(legacyBytes.toByteArray()))==1)
+ check(migratedRgb.get("waex_prefs","deleted_message_color")==0xFF335577.toInt()){"RGB not converted to opaque ARGB"}
+ val legacyArgb=TestContext()
+ legacyArgb.seed("waex_prefs", "deleted_message_color", "#80223344")
+ val alphaBytes=ByteArrayOutputStream()
+ check(SettingsBackupCodec.encode(legacyArgb,alphaBytes)==1){"ARGB color lost from backup"}
+ val migratedArgb=TestContext()
+ check(SettingsBackupCodec.decode(migratedArgb,ByteArrayInputStream(alphaBytes.toByteArray()))==1)
+ check(migratedArgb.get("waex_prefs","deleted_message_color")==0x80223344.toInt()){"ARGB transparency lost"}
+ val invalidColor=TestContext()
+ invalidColor.seed("waex_prefs","deleted_message_color","#XYZXYZ")
+ check(SettingsBackupCodec.encode(invalidColor,ByteArrayOutputStream())==0){"Malformed color unexpectedly exported"}
+ println("PASS: legacy RGB/ARGB colors restored using the INT preference schema")
  println("PASS: $written current settings preserved by key/type/value in binary round-trip")
 }
 '''
