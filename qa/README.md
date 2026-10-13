@@ -8,6 +8,8 @@ These checks are **diagnostics**, not evidence that WhatsApp hooks are working. 
 | --- | --- | --- |
 | `audit_apks.py` | Python 3.10+ standard library; **locally supplied** manager and WhatsApp APKs | ZIP CRC, manifest presence, DEX headers and SHA-1/Adler-32, ABI directory summary, 18 sampled DEX string-pool literals |
 | `test_audit_apks.py` | Python 3.10+ | Synthetic malformed ZIP and DEX fixtures, correct multidex enumeration, CLI exit codes and JSON output |
+| `dex_source_anchor_inventory.py` | Python 3.10+; **locally supplied** WhatsApp APK | Generate a full, source-derived list of `addUsingString` literals and report which occur in DEX string tables. An absent anchor blocks **only that literal search**, not all feature implementations. |
+| `test_dex_source_anchor_inventory.py` | Python 3.10+ | Synthetic source/DEX fixtures for complete anchor discovery, strict exit status, malformed checksums and table-only matching |
 | `test_hook_return_types.py` | Python 3 and JDK | Hook return/parameter contract checks |
 | `test_host_class_relocations.py` | Python 3 and a **locally supplied** WhatsApp APK | Exact host class definitions for a known version (expected to change across WhatsApp releases) |
 | `test_monet_wiring.py` | Python 3 | Source-level dynamic-theme wiring, not UI instrumentation |
@@ -27,6 +29,20 @@ python3 -m unittest discover -s qa -p 'test_audit_apks.py' -v
 `--json` prints a structured report (schema version 1) with filename, SHA-256, ZIP/DEX counts, ABI folders and the sampled literal status. It intentionally does not output absolute local file paths. The APKs are only **read**, never modified or copied into the repository.
 
 Exit codes: **0** = archive/DEX checks passed; **2** = a malformed or unreadable APK; **3** = sampled strings absent with the optional `--strict-anchors` flag. Without `--strict-anchors`, missing literals are reported but do not fail the run, because they may legitimately change across WhatsApp versions.
+
+## Check all literal DexKit anchors from the current code
+
+```sh
+python3 qa/dex_source_anchor_inventory.py /path/to/WhatsApp.apk --source-root app/src/main/java
+python3 qa/dex_source_anchor_inventory.py /path/to/WhatsApp.apk --source-root app/src/main/java --json
+python3 -m unittest discover -s qa -p 'test_dex_source_anchor_inventory.py' -v
+```
+
+This second script inventories the current checked-out Java/Kotlin source, rather
+than relying on the **18 historical samples** in `audit_apks.py`. Different
+source revisions can have different numbers of anchors. It does not execute
+DexKit or prove that the host method's class, arguments, and return value match.
+Avoid claiming a feature is fixed from the presence of an anchor alone.
 
 ## What the report does *not* establish
 
