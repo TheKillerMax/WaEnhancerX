@@ -87,7 +87,6 @@ object SettingsBackupCodec {
         "anti_edit_messages" to "antieditmessages",
         "anti_revoke" to "antirevoke",
         "online_status_indicator" to "dotonline",
-        "typing_online_toasts" to "typing_privacy",
         "unlimited_pinned_chats" to "pinnedlimit",
         "chat_limits_bypass" to "removeforwardlimit",
         "unlimited_video_status" to "status_video_splitter",
@@ -96,7 +95,6 @@ object SettingsBackupCodec {
         "group_admin_tools" to "admin_grp",
         "hide_chats" to "lockedchats_enhancer",
         "hide_read_receipts" to "hideread",
-        "hide_seen_receipts" to "hidereceipt",
         "hide_delivery_receipts" to "hidereceipt_ios",
         "hide_forwarded_tag" to "hidetag",
         "tasker_integration" to "tasker",
@@ -240,6 +238,10 @@ object SettingsBackupCodec {
             val rawKey = keys.next()
             // Only unversioned v1 JSON files use the old alias migration rules.
             val key = resolveKey(rawKey, legacyJson = legacy) ?: continue
+            // A legacy alias must never overwrite a modern canonical setting
+            // when both are present in one unversioned JSON backup, regardless
+            // of the JSONObject key iteration order.
+            if (legacy && rawKey != key && source.has(key)) continue
             if (isSensitive(key)) continue
 
             val schema = PreferenceSchema.entry(key) ?: continue

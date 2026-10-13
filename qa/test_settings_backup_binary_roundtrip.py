@@ -66,14 +66,28 @@ public final class JSONArray {
  public String optString(int i){return "";}
 }''',
     'org/json/JSONObject.java': '''package org.json;
-import java.util.Collections; import java.util.Iterator;
+import java.util.*;
 public final class JSONObject {
- public JSONObject(String src){throw new JSONException("JSON is outside the binary fixture");}
- public boolean has(String key){return false;}
+ // Deliberately a miniature ordered fixture, NOT a general JSON parser.
+ // It only tests key reconciliation inside the real Kotlin codec.
+ private final Map<String,Object> data = new LinkedHashMap<>();
+ public JSONObject(String src){
+  if(!src.startsWith("LEGACY_TEST:")) throw new JSONException("Unsupported JSON fixture");
+  String body=src.substring("LEGACY_TEST:".length());
+  if(body.isEmpty()) return;
+  for(String part:body.split(";")){
+   int eq=part.indexOf('=');
+   if(eq<1) throw new JSONException("Malformed fixture entry");
+   String value=part.substring(eq+1);
+   data.put(part.substring(0,eq),"true".equals(value) ? Boolean.TRUE :
+      "false".equals(value) ? Boolean.FALSE : value);
+  }
+ }
+ public boolean has(String key){return data.containsKey(key);}
  public JSONObject optJSONObject(String key){return null;}
- public Object opt(String key){return null;}
- public String optString(String key,String fallback){return fallback;}
- public Iterator<String> keys(){return Collections.emptyIterator();}
+ public Object opt(String key){return data.get(key);}
+ public String optString(String key,String fallback){return data.containsKey(key)?String.valueOf(data.get(key)):fallback;}
+ public Iterator<String> keys(){return data.keySet().iterator();}
 }''',
 }
 KOTLIN_TEST = '''package com.waenhancer.core.preferences
@@ -162,6 +176,39 @@ fun main(){
  val invalidColor=TestContext()
  invalidColor.seed("waex_prefs","deleted_message_color","#XYZXYZ")
  check(SettingsBackupCodec.encode(invalidColor,ByteArrayOutputStream())==0){"Malformed color unexpectedly exported"}
+ // Minimal deterministic JSON fixture: canonical keys win regardless of
+ // iteration order. Android's real org.json parser is NOT under test here.
+ for (payload in listOf(
+   "LEGACY_TEST:custom_theme=obsolete;custom_css=current",
+   "LEGACY_TEST:custom_css=current;custom_theme=obsolete"
+ )) {
+   val target=TestContext()
+   check(SettingsBackupCodec.decode(target, ByteArrayInputStream(payload.toByteArray()))==1)
+   check(target.get("waex_prefs","custom_css")=="current"){"Alias overwrote canonical JSON value"}
+ }
+ val oldAlias=TestContext()
+ check(SettingsBackupCodec.decode(oldAlias,
+     ByteArrayInputStream("LEGACY_TEST:custom_theme=legacy_css".toByteArray()))==1)
+ check(oldAlias.get("waex_prefs","custom_css")=="legacy_css"){"Unknown legacy alias not migrated"}
+ for (fixture in listOf(
+   "LEGACY_TEST:typing_online_toasts=true;typing_privacy=false",
+   "LEGACY_TEST:typing_privacy=false;typing_online_toasts=true"
+ )) {
+   val target=TestContext()
+   check(SettingsBackupCodec.decode(target, ByteArrayInputStream(fixture.toByteArray()))==2)
+   check(target.get("waex_prefs","typing_online_toasts")==true){"Online toast unexpectedly lost"}
+   check(target.get("waex_prefs","typing_privacy")==false){"Typing suppression unexpectedly enabled"}
+ }
+ for (fixture in listOf(
+   "LEGACY_TEST:hide_seen_receipts=true;hidereceipt=false",
+   "LEGACY_TEST:hidereceipt=false;hide_seen_receipts=true"
+ )) {
+   val target=TestContext()
+   check(SettingsBackupCodec.decode(target, ByteArrayInputStream(fixture.toByteArray()))==2)
+   check(target.get("waex_prefs","hide_seen_receipts")==true){"Audio read privacy lost"}
+   check(target.get("waex_prefs","hidereceipt")==false){"Delivery suppression unexpectedly enabled"}
+ }
+ println("PASS: legacy JSON canonical precedence, alias fallback, typing/delivery privacy independence")
  println("PASS: legacy RGB/ARGB colors restored using the INT preference schema")
  println("PASS: $written current settings preserved by key/type/value in binary round-trip")
 }
