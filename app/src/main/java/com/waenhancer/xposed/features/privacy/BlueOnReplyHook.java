@@ -31,8 +31,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Blue on Reply Hook:
@@ -42,8 +40,6 @@ public class BlueOnReplyHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][BlueOnReply]";
     private static final String PREF_KEY = "blueonreply";
-    private static final Pattern JID_PATTERN = Pattern.compile(
-            "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
     // Bound retained constructor arguments and never route one chat's read receipts to another.
     private static final PendingReadReceiptStore<ReadJobRecipe> PENDING_JOBS =
             new PendingReadReceiptStore<>(128, 64);
@@ -454,9 +450,7 @@ public class BlueOnReplyHook extends BaseFeature {
     }
 
     private static String canonicalJid(String value) {
-        if (value == null) return null;
-        Matcher matcher = JID_PATTERN.matcher(value);
-        return matcher.find() ? matcher.group(1) + "@" + matcher.group(2) : null;
+        return ReceiptJidPolicy.canonical(value);
     }
 
     @NonNull
