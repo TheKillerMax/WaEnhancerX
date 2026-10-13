@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.settings
 
+import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.animation.animateColorAsState
@@ -45,6 +46,7 @@ fun StylesSettingsScreen() {
     var selectedTab by remember { mutableStateOf("appearance") } // "appearance" | "layout"
 
     val navController = LocalWaexNavController.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -114,10 +116,18 @@ fun StylesSettingsScreen() {
 
     val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
         if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
-        settingsState[key] = value
-        preferenceManager.putBoolean(StyleBooleanAliasPolicy.canonicalKey(key), value)
-        if (key == "send_audio_as_voice_status") {
-            preferenceManager.putBoolean("voice_status_enhancement", value)
+        val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+        val changes = if (key == "send_audio_as_voice_status") {
+            // Persist the visible setting and its linked hook key atomically.
+            mapOf(canonicalKey to value, "voice_status_enhancement" to value)
+        } else {
+            mapOf(canonicalKey to value)
+        }
+        if (preferenceManager.putBooleans(changes)) {
+            settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
+        } else {
+            // Failed commits must not appear as successful changes in the UI.
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
         }
     }
 

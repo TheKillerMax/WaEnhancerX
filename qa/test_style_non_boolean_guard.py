@@ -31,6 +31,8 @@ assert '.clickable(enabled = !needsTypedEditor)' in styles
 assert 'if (needsTypedEditor) {' in styles
 assert '"Needs typed editor"' in styles
 assert 'StitchSwitch(' in styles  # Existing Boolean controls are retained.
+assert 'preferenceManager.putBooleans(changes)' in styles
+assert 'Unable to save setting' in styles
 # Critical special-case behavior from PRs #34 and #35 may not be overwritten.
 if 'ManualSeenTickPreferencePolicy.isEnabled' in styles:
     assert 'preferenceManager.putString("seentick",' in styles
