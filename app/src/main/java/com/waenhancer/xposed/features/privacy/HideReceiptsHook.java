@@ -230,10 +230,17 @@ public class HideReceiptsHook extends BaseFeature {
                             } else if ((isEnabled("blueonreply", false)
                                     || isManualSeenTickEnabled())
                                     && !hasExplicitReceiptIds(param.args)) {
-                                String captureJid = jid != null ? jid
-                                        : findJidInArguments(param.args);
-                                BlueOnReplyHook.captureSuppressedReadJob(
-                                        captureJid, (Constructor<?>) param.method, param.args);
+                                String captureJid = jid != null ? jid : participant;
+                                if (captureJid == null) {
+                                    captureJid = findJidInObject(job);
+                                }
+                                if (captureJid == null) {
+                                    captureJid = findJidInArguments(param.args);
+                                }
+                                if (captureJid != null) {
+                                    BlueOnReplyHook.captureSuppressedReadJob(
+                                            captureJid, (Constructor<?>) param.method, param.args);
+                                }
                             }
                         } catch (Throwable ignored) {}
                     }
@@ -282,6 +289,26 @@ public class HideReceiptsHook extends BaseFeature {
                     && !"false".equalsIgnoreCase(text);
         }
         return false;
+    }
+
+    private static String findJidInObject(Object obj) {
+        if (obj == null) return null;
+        try {
+            Class<?> curr = obj.getClass();
+            while (curr != null && curr != Object.class) {
+                for (Field f : curr.getDeclaredFields()) {
+                    if (Modifier.isStatic(f.getModifiers())) continue;
+                    f.setAccessible(true);
+                    Object val = f.get(obj);
+                    if (val == null) continue;
+                    String s = val.toString();
+                    String jid = canonicalJid(s);
+                    if (jid != null) return jid;
+                }
+                curr = curr.getSuperclass();
+            }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     private static String findJidInArguments(Object[] arguments) {
