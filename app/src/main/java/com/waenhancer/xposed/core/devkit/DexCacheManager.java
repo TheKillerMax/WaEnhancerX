@@ -2,22 +2,21 @@ package com.waenhancer.xposed.core.devkit;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * High-performance, low-latency bytecode descriptor cache for DexKit-resolved methods, fields, and classes.
- * Replaces expensive runtime StackTraceElement inspection with explicit static keys and in-memory LRU indexing.
+ * Reflection descriptor cache for DexKit-resolved methods, fields and classes.
+ * Maintains positive in-memory and persisted results, with bounded negative-lookup cooldowns.
  */
 public final class DexCacheManager {
 
@@ -26,7 +25,12 @@ public final class DexCacheManager {
     private final Context mContext;
     private final SharedPreferences mPrefs;
     private final Map<String, Object> mMemoryCache = new ConcurrentHashMap<>();
-    private final Set<String> mFailedKeys = ConcurrentHashMap.newKeySet();
+    // A missing/temporarily unavailable DexKit match is not permanently negative.
+    // Suppress repeated attempts for 60 seconds per key/kind (not a single-flight lock).
+    private static final long FAILED_RETRY_MS = 60_000L;
+    private static final int MAX_FAILED_KEYS = 2048;
+    private final DexNegativeLookupCache mFailedKeys =
+            new DexNegativeLookupCache(FAILED_RETRY_MS, MAX_FAILED_KEYS);
 
     private DexCacheManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
@@ -56,6 +60,7 @@ public final class DexCacheManager {
                 XposedBridge.log("[WAEX] Host version changed (" + cachedHostVersion + " -> " + hostVersionCode + "). Invalidating Dex cache.");
                 mPrefs.edit().clear().putLong("host_version_code", hostVersionCode).apply();
                 mMemoryCache.clear();
+                mFailedKeys.clear();
             }
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] Error validating DexCache version: " + t.getMessage());
@@ -72,16 +77,17 @@ public final class DexCacheManager {
      */
     @Nullable
     public Class<?> getClass(@NonNull ClassLoader loader, @NonNull String key, @NonNull Resolver<Class<?>> resolver) {
-        if (mFailedKeys.contains(key)) return null;
-
         Object mem = mMemoryCache.get(key);
         if (mem instanceof Class<?>) return (Class<?>) mem;
+        if (mFailedKeys.shouldSkip(DexNegativeLookupCache.Kind.CLASS,
+                key, SystemClock.elapsedRealtime())) return null;
 
         String cachedName = mPrefs.getString(key, null);
         if (cachedName != null) {
             try {
                 Class<?> cls = XposedHelpers.findClass(cachedName, loader);
                 mMemoryCache.put(key, cls);
+                mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.CLASS, key);
                 return cls;
             } catch (Throwable ignored) {}
         }
@@ -91,13 +97,15 @@ public final class DexCacheManager {
             if (resolved != null) {
                 mPrefs.edit().putString(key, resolved.getName()).apply();
                 mMemoryCache.put(key, resolved);
+                mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.CLASS, key);
                 return resolved;
             }
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] Class resolution failed for [" + key + "]: " + t.getMessage());
         }
 
-        mFailedKeys.add(key);
+        mFailedKeys.recordFailure(DexNegativeLookupCache.Kind.CLASS,
+                key, SystemClock.elapsedRealtime());
         return null;
     }
 
@@ -106,10 +114,10 @@ public final class DexCacheManager {
      */
     @Nullable
     public Method getMethod(@NonNull ClassLoader loader, @NonNull String key, @NonNull Resolver<Method> resolver) {
-        if (mFailedKeys.contains(key)) return null;
-
         Object mem = mMemoryCache.get(key);
         if (mem instanceof Method) return (Method) mem;
+        if (mFailedKeys.shouldSkip(DexNegativeLookupCache.Kind.METHOD,
+                key, SystemClock.elapsedRealtime())) return null;
 
         String serialized = mPrefs.getString(key, null);
         if (serialized != null) {
@@ -117,6 +125,7 @@ public final class DexCacheManager {
                 Method method = deserializeMethod(loader, serialized);
                 if (method != null) {
                     mMemoryCache.put(key, method);
+                    mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.METHOD, key);
                     return method;
                 }
             } catch (Throwable ignored) {}
@@ -128,13 +137,15 @@ public final class DexCacheManager {
                 String encoded = serializeMethod(resolved);
                 mPrefs.edit().putString(key, encoded).apply();
                 mMemoryCache.put(key, resolved);
+                mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.METHOD, key);
                 return resolved;
             }
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] Method resolution failed for [" + key + "]: " + t.getMessage());
         }
 
-        mFailedKeys.add(key);
+        mFailedKeys.recordFailure(DexNegativeLookupCache.Kind.METHOD,
+                key, SystemClock.elapsedRealtime());
         return null;
     }
 
@@ -143,10 +154,10 @@ public final class DexCacheManager {
      */
     @Nullable
     public Field getField(@NonNull ClassLoader loader, @NonNull String key, @NonNull Resolver<Field> resolver) {
-        if (mFailedKeys.contains(key)) return null;
-
         Object mem = mMemoryCache.get(key);
         if (mem instanceof Field) return (Field) mem;
+        if (mFailedKeys.shouldSkip(DexNegativeLookupCache.Kind.FIELD,
+                key, SystemClock.elapsedRealtime())) return null;
 
         String serialized = mPrefs.getString(key, null);
         if (serialized != null) {
@@ -156,6 +167,7 @@ public final class DexCacheManager {
                 Field field = XposedHelpers.findField(cls, parts[1]);
                 if (field != null) {
                     mMemoryCache.put(key, field);
+                    mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.FIELD, key);
                     return field;
                 }
             } catch (Throwable ignored) {}
@@ -167,13 +179,15 @@ public final class DexCacheManager {
                 String encoded = resolved.getDeclaringClass().getName() + ":" + resolved.getName();
                 mPrefs.edit().putString(key, encoded).apply();
                 mMemoryCache.put(key, resolved);
+                mFailedKeys.clearFailure(DexNegativeLookupCache.Kind.FIELD, key);
                 return resolved;
             }
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] Field resolution failed for [" + key + "]: " + t.getMessage());
         }
 
-        mFailedKeys.add(key);
+        mFailedKeys.recordFailure(DexNegativeLookupCache.Kind.FIELD,
+                key, SystemClock.elapsedRealtime());
         return null;
     }
 
