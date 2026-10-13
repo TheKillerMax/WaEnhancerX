@@ -100,16 +100,36 @@ public final class WaexKotlinSyntaxRunner {
      * legacy constructor. An incompatible NEW factory fails closed.
      */
     private static CompilerConfiguration newConfiguration() throws ReflectiveOperationException {
+        // Kotlin 1.9 CompilerConfiguration is a Java class without Companion.
+        // Kotlin 2.4+ provides a companion extension factory initializing services.
+        Object companion;
         try {
-            Class<?> creator = Class.forName("org.jetbrains.kotlin.cli.CreateKt");
-            Object companion = CompilerConfiguration.class.getField("Companion").get(null);
-            java.lang.reflect.Method create = creator.getMethod("create", companion.getClass());
-            CompilerConfiguration config = (CompilerConfiguration) create.invoke(null, companion);
-            if (config == null) throw new IllegalStateException("Kotlin factory returned null configuration");
-            return config;
-        } catch (ClassNotFoundException | NoSuchFieldException olderCompiler) {
+            companion = CompilerConfiguration.class.getField("Companion").get(null);
+        } catch (NoSuchFieldException oldCompiler) {
             return new CompilerConfiguration();
         }
+
+        // File facade name has changed across Kotlin compiler distributions.
+        // Do not fall back to the bare constructor for a modern compiler.
+        String[] factories = {
+                "org.jetbrains.kotlin.cli.CompilerConfigurationCreationKt",
+                "org.jetbrains.kotlin.cli.CreateKt"
+        };
+        for (String className : factories) {
+            try {
+                Class<?> holder = Class.forName(className);
+                java.lang.reflect.Method create = holder.getMethod("create", companion.getClass());
+                CompilerConfiguration configured =
+                        (CompilerConfiguration) create.invoke(null, companion);
+                if (configured == null)
+                    throw new IllegalStateException("Kotlin compiler factory returned null");
+                return configured;
+            } catch (ClassNotFoundException | NoSuchMethodException absentVariant) {
+                // Continue to the next documented compiler facade.
+            }
+        }
+        throw new IllegalStateException(
+                "Kotlin companion configuration factory missing from supported compiler JARs");
     }
 
     public static void main(String[] paths) throws Exception {
