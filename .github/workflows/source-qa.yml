@@ -95,6 +95,7 @@ jobs:
             qa/test_backup_alias_policy.py \
             qa/test_settings_backup_binary_roundtrip.py \
             qa/test_feature_preference_schema_coverage.py \
+            qa/test_catalog_schema_alias_contract.py \
             qa/test_private_hook_logs.py \
             qa/test_blue_receipt_recipient_isolation.py \
             qa/test_manual_blue_tick_ui.py \
