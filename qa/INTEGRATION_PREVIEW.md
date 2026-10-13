@@ -26,7 +26,7 @@ Upstream `main` was not modified. Individual upstream PRs remain open.
 - #25: `d238a0f3b027403cdca69287f609c5bdc530049e`
 - #26: `bb125d4a85d0aa4a6d398632fa8746eb69e8776d`
 - #27: `7c27a4825b7f834f99f9d50de8aa13d82cde0ce5`
-- #32: `79b7f1442d67248edc7b808b14d9c6394a918673`
+- #32: `ee40876c2daa97ba7bc5cea077451ccf8623efc0`
 - #33: `a3a8b978fa8123032959560abeb5e472a6cca7d5`
 - #35: `b9a191839124569dc7135fc4f5c1873a4dcd6b4f`
 - #34: `4aa0bf9fb0ca8431da546e5e04bfb8f7c8f07c9a`
@@ -61,6 +61,17 @@ the hardened #35 implementation, plus the #17 asynchronous edit writer.
   emit exception class names rather than raw messages; the bridge runtime
   status no longer stores exception text. This is a targeted redaction, **not**
   proof that all module logging has been audited.
+- `fix/privacy-call-log-diagnostics-2026-10`, HEAD
+  `d56e1064e578d9250c617984852fdc4e8f2d6622`: 9 error reports
+  in `CallPrivacyHook.java` now record only the exception class, not
+  unbounded text that might include call JIDs or phone information.
+- PR #32 now keeps **all schema-known keys** untouched in old JSON backups,
+  prevents an old alias from overriding a present canonical key, and removes
+  two unrelated privacy migrations (`typing_online_toasts` to
+  `typing_privacy`, `hide_seen_receipts` to `hidereceipt`).
+  Executable Kotlin fixtures check both JSON orders, independent privacy
+  values and preservation of 293 exported binary settings. The fixture
+  uses a limited `JSONObject` substitute; it is not a parser conformance test.
 - These fork branches are **not automatically upstream PRs**. GitHub denied
   creating the Styles upstream draft via integration permissions (HTTP 403);
   the fork branches remain available for maintainer review.
@@ -83,6 +94,12 @@ the hardened #35 implementation, plus the #17 asynchronous edit writer.
   and authorized private `:licensing` module remain required.
 - The supplied WhatsApp APK has an Android Debug signing certificate and is
   **not** proof of official production-app compatibility.
+- Latest V10 green checks:
+  [#38484594137](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38484594137)
+  for Kotlin backup identity/JSON precedence and
+  [#38484907583](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38484907583)
+  for the same plus 9 call privacy diagnostics. Both are source/JVM
+  regressions, **not** Android builds.
 - **Real GitHub Actions source/JVM CI succeeded**, including
   [#38478229881](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38478229881),
   [#38478806496](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38478806496),
@@ -113,6 +130,9 @@ python3 qa/test_syntax_checker.py
 python3 qa/test_style_boolean_alias_wiring.py
 python3 qa/test_style_non_boolean_guard.py
 python3 qa/test_exception_message_privacy.py
+python3 qa/test_call_privacy_logs.py
+python3 qa/test_backup_alias_policy.py
+python3 qa/test_settings_backup_binary_roundtrip.py
 ```
 
 Then, with an authorized Android toolchain, run `assembleDebug` and
