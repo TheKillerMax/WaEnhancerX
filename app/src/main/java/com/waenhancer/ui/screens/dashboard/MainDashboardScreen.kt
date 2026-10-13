@@ -42,6 +42,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -79,6 +80,7 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.utils.HookedAppInfo
 import com.waenhancer.utils.InjectedHookItem
+import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
@@ -145,9 +147,7 @@ fun MainDashboardScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshTrigger++
-            }
+            if (event == Lifecycle.Event.ON_RESUME) refreshTrigger++
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
@@ -274,25 +274,50 @@ fun MainDashboardScreen(
                                     "Not Installed",
                                     colors.onSurfaceVariant
                                 )
-                                app.isHooked && isVersionSupported -> Triple(
+                                !isModuleActive -> Triple(
+                                    colors.error,
+                                    "Module inactive",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
+                                    colors.error,
+                                    "Injected • Initialization failed",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && !isVersionSupported -> Triple(
+                                    colors.error,
+                                    "Injected • Unsupported Version (Paused)",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "FAILED" -> Triple(
+                                    colors.error,
+                                    "Injected • Preference bridge unavailable",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Active • Using preference fallback",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Active • Some hooks failed",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT -> Triple(
                                     colors.primary,
                                     "Injected & Active",
                                     colors.primary
                                 )
-                                app.isHooked && !isVersionSupported -> Triple(
-                                    Color(0xFFEF4444),
-                                    "Injected • Unsupported Version (Paused)",
-                                    Color(0xFFEF4444)
-                                )
-                                !app.isHooked && !isVersionSupported -> Triple(
+                                app.scopeState == RuntimeScopeState.PREVIOUSLY_ACTIVE -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Scope Pending • Unsupported Version",
+                                    "Scope changed or unverified • Restart app to verify",
                                     Color(0xFFF59E0B)
                                 )
                                 else -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Scope Pending / Not Injected",
-                                    Color(0xFFF59E0B)
+                                    colors.error,
+                                    "Not active in module scope • Restart app to verify",
+                                    colors.error
                                 )
                             }
 
@@ -485,88 +510,13 @@ fun MainDashboardScreen(
                 }
             }
 
-            // System Information List Card
-            Surface(
-                shape = radius.cardShape,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "System Diagnostics",
-                        style = typography.bodyMd,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val diagnostics = systemDiagnostics
-                    val specs = listOf(
-                        "Device" to "${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}",
-                        "Android" to "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})",
-                        "Xposed Framework" to (diagnostics?.framework?.name ?: "Detecting…"),
-                        "Framework Version" to (diagnostics?.framework?.version ?: "Not available"),
-                        "Xposed API" to (diagnostics?.framework?.api?.toString() ?: "Not reported"),
-                        "Root Allowed" to when (diagnostics?.rootAllowed) {
-                            true -> "Yes"
-                            false -> "No"
-                            null -> "Checking…"
-                        },
-                        "SELinux" to (diagnostics?.selinux ?: "Checking…")
-                    )
-
-                    specs.forEachIndexed { index, (label, value) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = label,
-                                style = typography.bodyMd,
-                                color = colors.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = value,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.onSurface
-                            )
-                        }
-                        if (index < specs.lastIndex) {
-                            HorizontalDivider(
-                                thickness = 1.dp,
-                                color = colors.outlineVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(vertical = 10.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { navController.navigateTo(Screen.SupportedVersions) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Supported Versions Catalog",
-                            style = typography.bodyMd,
-                            color = colors.primary,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(
-                            imageVector = WaexIcons.ChevronRight,
-                            contentDescription = null,
-                            tint = colors.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
+            DashboardDiagnosticsCard(
+                diagnostics = systemDiagnostics,
+                hasUnsupportedTarget = hasUnsupportedActiveApp,
+                onRefresh = { refreshTrigger++ },
+                onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
+                onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) }
+            )
 
             // Quick Backup & Maintenance Row
             Surface(
@@ -681,6 +631,258 @@ fun MainDashboardScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DashboardDiagnosticsCard(
+    diagnostics: SystemDiagnostics?,
+    hasUnsupportedTarget: Boolean,
+    onRefresh: () -> Unit,
+    onViewDetails: () -> Unit,
+    onViewSupportedVersions: () -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+
+    Surface(
+        shape = radius.cardShape,
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(radius.defaultShape)
+                        .background(colors.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Security,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "System diagnostics",
+                        style = typography.titleMd,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface
+                    )
+                    Text(
+                        text = "Live health overview",
+                        style = typography.bodySm,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Refresh,
+                        contentDescription = "Refresh diagnostics",
+                        tint = colors.onSurfaceVariant,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            DashboardDiagnosticRow(
+                label = "Module",
+                value = when (diagnostics?.moduleActive) {
+                    true -> "Active"
+                    false -> "Inactive"
+                    null -> "Checking…"
+                },
+                healthy = diagnostics?.moduleActive
+            )
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+            DashboardDiagnosticRow(
+                label = "Framework",
+                value = diagnostics?.framework?.name ?: "Detecting…",
+                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
+            )
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+            DashboardDiagnosticRow(
+                label = "Target compatibility",
+                value = if (hasUnsupportedTarget) "Review required" else "Supported",
+                healthy = !hasUnsupportedTarget
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DiagnosticMetric(
+                    label = "Android",
+                    value = diagnostics?.let { "API ${it.sdk}" } ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+                DiagnosticMetric(
+                    label = "SELinux",
+                    value = diagnostics?.selinux ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+                DiagnosticMetric(
+                    label = "Root",
+                    value = diagnostics?.let { if (it.rootAllowed) "Allowed" else "Not allowed" } ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Checked locally on this device. No diagnostic data is uploaded.",
+                style = typography.labelSm,
+                color = colors.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onViewDetails,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = radius.defaultShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(
+                    text = "View diagnostic details",
+                    style = typography.bodyMd,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = WaexIcons.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(radius.defaultShape)
+                    .clickable(onClick = onViewSupportedVersions)
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Supported versions catalog",
+                    style = typography.bodyMd,
+                    color = colors.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = WaexIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardDiagnosticRow(
+    label: String,
+    value: String,
+    healthy: Boolean?
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val stateColor = when (healthy) {
+        true -> colors.primary
+        false -> colors.error
+        null -> colors.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(stateColor)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = label,
+            style = typography.bodyMd,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            style = typography.bodyMd,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DiagnosticMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+
+    Surface(
+        modifier = modifier,
+        shape = radius.smShape,
+        color = colors.surfaceDim,
+        border = BorderStroke(1.dp, colors.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = typography.labelSm,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = label,
+                style = typography.labelSm,
+                color = colors.onSurfaceVariant,
+                maxLines = 1
+            )
         }
     }
 }
