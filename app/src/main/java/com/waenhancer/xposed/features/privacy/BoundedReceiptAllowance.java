@@ -44,5 +44,9 @@ final class BoundedReceiptAllowance {
         return false;
     }
 
+    synchronized void revoke(String key) {
+        if (key != null) grants.remove(key);
+    }
+
     synchronized int countForTests() { return grants.size(); }
 }
