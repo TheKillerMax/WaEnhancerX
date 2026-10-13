@@ -286,6 +286,10 @@ public class HookProvider extends ContentProvider {
             String key = op.getString("key");
             String type = op.getString("type");
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
+            // Do not let a scoped target fabricate license/entitlement state or
+            // spoof hook telemetry through generic preference write operations.
+            // Dedicated, caller-validated reporting routes remain unchanged.
+            if (!ProviderDerivedKeyPolicy.allowsGenericWrite(key)) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
             // Known public keys must retain their declared schema types. Otherwise a
