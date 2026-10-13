@@ -47,7 +47,9 @@ assert 'isBlueReplyBypassed' not in hide
 assert 'allowBlueReplyReceipt' not in hide
 assert 'new RecipientReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096)' in hide
 assert 'EXPLICIT_RECEIPT_IDS.isAllowed(canonicalJid(recipient), messageId' in hide
-assert 'if (isExplicitReceiptAllowed(target, messageId)) return;' in hide
+assert 'if (isExplicitReceiptAllowed(target, messageId)) return;' not in hide
+assert 'ExplicitReadReceiptPolicy.maySend(type, target, messageId,' in hide
+assert 'hideDelivery, EXPLICIT_RECEIPT_IDS,' in hide
 assert 'hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)' in hide
 assert 'SystemClock.elapsedRealtime()' in hide
 assert 'EXPLICIT_RECEIPT_IDS.isAllowed(' in hide
@@ -64,6 +66,8 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     str(src/'BoundedReceiptAllowance.java'),
                     str(root/'qa/java/TestBoundedReceiptAllowance.java'),
                     str(src/'RecipientReceiptAllowance.java'),
+                    str(src/'ExplicitReadReceiptPolicy.java'),
+                    str(root/'qa/java/TestExplicitReadReceiptPolicy.java'),
                     str(root/'qa/java/TestRecipientReceiptAllowance.java'),
                     str(src/'ConversationRecipientPolicy.java'),
                     str(root/'qa/java/TestConversationRecipientPolicy.java'),
@@ -76,6 +80,8 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     'com.waenhancer.xposed.features.privacy.TestBoundedReceiptAllowance'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestRecipientReceiptAllowance'],check=True)
+    subprocess.run(['java','-cp',dest,
+                    'com.waenhancer.xposed.features.privacy.TestExplicitReadReceiptPolicy'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestConversationRecipientPolicy'],check=True)
     subprocess.run(['java','-cp',dest,
