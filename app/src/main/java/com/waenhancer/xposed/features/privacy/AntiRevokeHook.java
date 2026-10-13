@@ -881,11 +881,8 @@ public class AntiRevokeHook extends BaseFeature {
 
     // ─── Status Playback UI Hook ─────────────────────────────────────────
 
-    /**
-     * Thread-local map: records the most recently DB-read status keyId per thread.
-     * This allows reliable keyId lookup even when fragment field scanning fails.
-     */
-    private static final ThreadLocal<String> sStatusKeyByThread = new ThreadLocal<>();
+    // Status-key DB fallback is consumed exactly once through StatusKeyHandoff.
+    // This prevents reusing the same key on subsequent status views on one thread.
 
     private void hookStatusPlaybackUI() {
         try {
@@ -1088,7 +1085,7 @@ public class AntiRevokeHook extends BaseFeature {
 
     /**
      * Hook SQLiteDatabase.rawQuery to record the keyId of status rows being read.
-     * Called before any UI update, so sStatusKeyByThread will hold the right keyId.
+     * Opportunistic fallback only; cross-thread query/fragment identity is not guaranteed.
      */
     private void hookStatusDbQueryReads() {
         try {
@@ -1121,7 +1118,7 @@ public class AntiRevokeHook extends BaseFeature {
                         if (!cursor.isBeforeFirst() && !cursor.isAfterLast()) {
                             String keyId = cursor.getString(keyIdCol);
                             if (isLikelyStatusKeyId(keyId)) {
-                                sStatusKeyByThread.set(keyId);
+                                StatusKeyHandoff.record(keyId);
                             }
                         }
                     } catch (Throwable ignored) {}
@@ -1331,12 +1328,15 @@ public class AntiRevokeHook extends BaseFeature {
      */
     private void tryDecorateStatusFragment(Object fragment) {
         try {
+            // Consume the DB candidate even when the fragment has an exact key.
+            // Otherwise a previous status could be decorated using stale data.
+            String pendingDbKey = StatusKeyHandoff.consume();
             // Priority 1: extract from fragment fields (status-specific strict scan)
             String keyId = extractStatusKeyIdFromFragment(fragment);
 
-            // Priority 2: last DB-read keyId for this thread
+            // Priority 2: most recent unconsumed DB key from this thread
             if (keyId == null) {
-                keyId = sStatusKeyByThread.get();
+                keyId = pendingDbKey;
             }
 
             // Priority 3: fall back to general FMessage extraction
