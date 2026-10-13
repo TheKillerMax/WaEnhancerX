@@ -82,6 +82,59 @@ class DexFieldInventoryTests(unittest.TestCase):
         struct.pack_into('<I',raw,fieldid_off+4,0xffffffff)
         with self.assertRaises(module.MalformedDex):module.declared_fields(bytes(raw),OWNER)
 
+    def test_duplicate_class_definitions_are_rejected(self):
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'duplicate.apk'
+            with zipfile.ZipFile(path,'w') as z:
+                z.writestr('classes.dex',sample())
+                z.writestr('classes2.dex',sample())
+            with self.assertRaisesRegex(module.MalformedDex,'Duplicate host class'):
+                module.inspect_apk(path,OWNER,'jid')
+
+    def test_uncompressed_size_is_bounded(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'large.apk'
+            with zipfile.ZipFile(path,'w') as z:
+                z.writestr('classes.dex',sample())
+            with patch.object(module,'MAX_DEX_BYTES',len(sample())-1):
+                with self.assertRaisesRegex(module.MalformedDex,'maximum uncompressed'):
+                    module.inspect_apk(path,OWNER,'jid')
+
+    def test_archive_entry_count_is_bounded(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'many_entries.apk'
+            with zipfile.ZipFile(path,'w') as z:
+                z.writestr('classes.dex',sample())
+                for i in range(4):z.writestr('other'+str(i)+'.bin',b'x')
+            with patch.object(module,'MAX_ARCHIVE_ENTRIES',3):
+                with self.assertRaisesRegex(module.MalformedDex,'Too many APK ZIP entries'):
+                    module.inspect_apk(path,OWNER,'jid')
+
+    def test_duplicate_dex_names_are_rejected(self):
+        import warnings
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'duplicate_entries.apk'
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore',UserWarning)
+                with zipfile.ZipFile(path,'w') as z:
+                    z.writestr('classes.dex',sample())
+                    z.writestr('classes.dex',sample())
+            with self.assertRaisesRegex(module.MalformedDex,'Duplicate DEX entry'):
+                module.inspect_apk(path,OWNER,'jid')
+
+    def test_total_dex_size_is_bounded(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as dest:
+            path=Path(dest)/'total.apk'
+            with zipfile.ZipFile(path,'w') as z:
+                z.writestr('classes.dex',sample())
+                z.writestr('classes2.dex',sample())
+            with patch.object(module,'MAX_TOTAL_DEX_BYTES',len(sample())+2):
+                with self.assertRaisesRegex(module.MalformedDex,'Total DEX'):
+                    module.inspect_apk(path,OWNER,'jid')
+
     def test_cli_report_matches_expected_field(self):
         with tempfile.TemporaryDirectory() as dest:
             path=Path(dest)/'synthetic.apk'
