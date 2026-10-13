@@ -39,10 +39,10 @@ public class HideReceiptsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][HideReceipts]";
     private static final long BLUE_REPLY_WINDOW_MS = 120_000L;
-    private static final BoundedReceiptAllowance BLUE_REPLY_BYPASS =
-            new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048);
-    private static final BoundedReceiptAllowance EXPLICIT_RECEIPT_IDS =
-            new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096);
+    // Only an exact recipient + message ID may be exempted from read suppression.
+    // A 120-second JID-wide bypass would leak unrelated receipts and override Ghost Mode.
+    private static final RecipientReceiptAllowance EXPLICIT_RECEIPT_IDS =
+            new RecipientReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096);
 
     private Class<?> protocolTreeNodeClass;
     private Class<?> keyValueClass;
@@ -226,7 +226,7 @@ public class HideReceiptsHook extends BaseFeature {
                                 }
                             } else if ((isEnabled("blueonreply", false)
                                     || isManualSeenTickEnabled())
-                                    && !hasExplicitReceiptIds(param.args)) {
+                                    && !hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)) {
                                 String captureJid = jid != null ? jid : participant;
                                 if (captureJid == null) {
                                     captureJid = findJidInObject(job);
@@ -319,7 +319,7 @@ public class HideReceiptsHook extends BaseFeature {
         return null;
     }
 
-    private static boolean hasExplicitReceiptIds(Object[] constructorArguments) {
+    private static boolean hasExplicitReceiptIds(String recipient, Object[] constructorArguments) {
         if (constructorArguments == null) return false;
         boolean foundIds = false;
         for (Object argument : constructorArguments) {
@@ -328,7 +328,7 @@ public class HideReceiptsHook extends BaseFeature {
             if (ids.length == 0) continue;
             foundIds = true;
             for (String id : ids) {
-                if (!isExplicitReceiptAllowed(id)) return false;
+                if (!isExplicitReceiptAllowed(recipient, id)) return false;
             }
         }
         return foundIds;
@@ -378,10 +378,6 @@ public class HideReceiptsHook extends BaseFeature {
                         String type = getAttributeValue(node, "type");
                         String messageId = getAttributeValue(node, "id");
 
-                        // Manual/Blue-on-Reply jobs authorize exact message IDs. This survives
-                        // phone-JID/LID/device-JID differences between receive and send paths.
-                        if (isExplicitReceiptAllowed(messageId)) return;
-
                         boolean isStatusStanza = isStatusTarget(to, participant) || "readstatus".equals(type);
 
                         if (isStatusStanza) {
@@ -390,7 +386,10 @@ public class HideReceiptsHook extends BaseFeature {
                             return;
                         }
 
-                        String target = participant != null ? participant : to;
+                        // A receipt ID alone is insufficient: require the exact conversation,
+                        // including its JID namespace, and keep status suppression unchanged.
+                        String target = resolveConversationTarget(to, participant);
+                        if (isExplicitReceiptAllowed(target, messageId)) return;
                         boolean hideDelivery = shouldHideDeliveryReceipt(target);
                         boolean hideRead = shouldHideReadReceipt(target);
 
@@ -667,9 +666,6 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     private boolean shouldHideReadReceipt(String target) {
-        if (isBlueReplyBypassed(target)) {
-            return false;
-        }
         if (isGhostModeActive()) {
             return true;
         }
@@ -697,32 +693,38 @@ public class HideReceiptsHook extends BaseFeature {
         return globalEnabled;
     }
 
-    /** Temporarily permits an explicit read-receipt job created by Blue-on-Reply. */
-    public static void allowBlueReplyReceipt(String jid) {
-        String key = canonicalJid(jid);
-        if (key == null) return;
-        BLUE_REPLY_BYPASS.allow(key, SystemClock.elapsedRealtime());
-    }
-
-    public static void allowExplicitReceiptIds(Object[] constructorArguments) {
-        if (constructorArguments == null) return;
+    /**
+     * Stage exactly the message IDs scheduled for one recipient.
+     * Must be called before constructing the read job, because its constructor
+     * is hooked; failed enqueue attempts must revoke these tentative grants.
+     */
+    public static void allowExplicitReceiptIds(String recipient, Object[] constructorArguments) {
+        String key = canonicalJid(recipient);
+        if (key == null || constructorArguments == null) return;
         long now = SystemClock.elapsedRealtime();
         for (Object argument : constructorArguments) {
             if (!(argument instanceof String[])) continue;
             for (String messageId : (String[]) argument) {
-                if (messageId != null && !messageId.isEmpty()) {
-                    EXPLICIT_RECEIPT_IDS.allow(messageId, now);
-                }
+                EXPLICIT_RECEIPT_IDS.allow(key, messageId, now);
             }
         }
     }
 
-    private static boolean isExplicitReceiptAllowed(String messageId) {
-        return EXPLICIT_RECEIPT_IDS.isAllowed(messageId, SystemClock.elapsedRealtime());
+    /** Revoke tentative permissions when the explicit receipt could not be enqueued. */
+    public static void revokeExplicitReceiptIds(String recipient, Object[] constructorArguments) {
+        String key = canonicalJid(recipient);
+        if (key == null || constructorArguments == null) return;
+        for (Object argument : constructorArguments) {
+            if (!(argument instanceof String[])) continue;
+            for (String messageId : (String[]) argument) {
+                EXPLICIT_RECEIPT_IDS.revoke(key, messageId);
+            }
+        }
     }
 
-    private static boolean isBlueReplyBypassed(String jid) {
-        return BLUE_REPLY_BYPASS.isAllowed(canonicalJid(jid), SystemClock.elapsedRealtime());
+    private static boolean isExplicitReceiptAllowed(String recipient, String messageId) {
+        return EXPLICIT_RECEIPT_IDS.isAllowed(canonicalJid(recipient), messageId,
+                SystemClock.elapsedRealtime());
     }
 
     private static String canonicalJid(String value) {
