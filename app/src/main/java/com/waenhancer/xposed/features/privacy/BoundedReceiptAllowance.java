@@ -8,7 +8,13 @@ import java.util.Map;
 final class BoundedReceiptAllowance {
     private final long validForMillis;
     private final int maxKeys;
-    private final LinkedHashMap<String, Long> grants = new LinkedHashMap<>(32, 0.75f, true);
+    private static final class Grant {
+        long lastAllowed;
+        int references;
+        Grant(long time) { lastAllowed = time; references = 1; }
+    }
+
+    private final LinkedHashMap<String, Grant> grants = new LinkedHashMap<>(32, 0.75f, true);
 
     BoundedReceiptAllowance(long validForMillis, int maxKeys) {
         if (validForMillis <= 0 || maxKeys <= 0) throw new IllegalArgumentException("Invalid allowance policy");
@@ -18,13 +24,20 @@ final class BoundedReceiptAllowance {
 
     synchronized void allow(String key, long monotonicNowMillis) {
         if (key == null || key.isEmpty() || monotonicNowMillis < 0L) return;
-        grants.put(key, monotonicNowMillis);
+        Grant current = grants.get(key);
+        if (current != null && monotonicNowMillis >= current.lastAllowed
+                && monotonicNowMillis - current.lastAllowed <= validForMillis) {
+            if (current.references < Integer.MAX_VALUE) current.references++;
+            current.lastAllowed = monotonicNowMillis;
+        } else {
+            grants.put(key, new Grant(monotonicNowMillis));
+        }
         if (grants.size() > maxKeys) {
             // Opportunistically purge expired grants first; no map growth on stale IDs.
-            Iterator<Map.Entry<String, Long>> it = grants.entrySet().iterator();
+            Iterator<Map.Entry<String, Grant>> it = grants.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry<String, Long> entry = it.next();
-                long age = monotonicNowMillis - entry.getValue();
+                Map.Entry<String, Grant> entry = it.next();
+                long age = monotonicNowMillis - entry.getValue().lastAllowed;
                 if (age < 0 || age > validForMillis) it.remove();
             }
             while (grants.size() > maxKeys) {
@@ -36,16 +49,20 @@ final class BoundedReceiptAllowance {
 
     synchronized boolean isAllowed(String key, long monotonicNowMillis) {
         if (key == null || monotonicNowMillis < 0L) return false;
-        Long granted = grants.get(key);
+        Grant granted = grants.get(key);
         if (granted == null) return false;
-        long age = monotonicNowMillis - granted;
+        long age = monotonicNowMillis - granted.lastAllowed;
         if (age >= 0L && age <= validForMillis) return true;
         grants.remove(key);
         return false;
     }
 
     synchronized void revoke(String key) {
-        if (key != null) grants.remove(key);
+        if (key == null) return;
+        Grant current = grants.get(key);
+        if (current == null) return;
+        if (current.references <= 1) grants.remove(key);
+        else current.references--;
     }
 
     synchronized int countForTests() { return grants.size(); }
