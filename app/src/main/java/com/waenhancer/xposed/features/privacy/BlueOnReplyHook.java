@@ -225,17 +225,19 @@ public class BlueOnReplyHook extends BaseFeature {
             return 0;
         }
 
-        HideReceiptsHook.allowBlueReplyReceipt(key);
+        // Do not authorize an entire JID: only IDs from explicitly enqueued jobs.
         int sent = 0;
         for (ReadJobRecipe recipe : pending) {
             try {
-                HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments);
+                HideReceiptsHook.allowExplicitReceiptIds(key, recipe.arguments);
                 Object job = recipe.constructor.newInstance(recipe.arguments);
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
                 sent++;
                 XposedBridge.log(TAG + " Enqueued blue-on-reply receipt");
             } catch (Throwable t) {
+                // Constructor or dispatch failure must not leave a stale permission.
+                HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments);
                 XposedBridge.log(TAG + " Error enqueueing read receipt: "
                         + t.getClass().getSimpleName());
             }
