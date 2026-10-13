@@ -27,6 +27,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -262,38 +263,6 @@ public class BlueOnReplyHook extends BaseFeature {
         }
     }
 
-    private String extractRemoteJid(Object source) {
-        if (source == null) return null;
-        // SendE2EMessageJob deliberately keeps this serialized field name stable. This is the
-        // exact path used by Dev4Mod and avoids selecting participant/device JIDs from other fields.
-        try {
-            Object jid = XposedHelpers.getObjectField(source, "jid");
-            if (jid != null) {
-                String raw = jid.toString();
-                if (canonicalJid(raw) != null) return raw;
-            }
-        } catch (Throwable ignored) {
-        }
-        try {
-            Class<?> current = source.getClass();
-            while (current != null && current != Object.class) {
-                for (Field field : current.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers())) continue;
-                    field.setAccessible(true);
-                    Object value = field.get(source);
-                    if (value == null) continue;
-                    String raw = value.toString();
-                    if (raw.contains("@s.whatsapp.net") || raw.contains("@g.us")
-                            || raw.contains("@lid") || raw.contains("@broadcast")) {
-                        return raw;
-                    }
-                }
-                current = current.getSuperclass();
-            }
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
     private void hookConversationMenu() {
         try {
             Class<?> conversationClass = XposedHelpers.findClassIfExists(
@@ -377,7 +346,8 @@ public class BlueOnReplyHook extends BaseFeature {
             Context toastContext = conversation instanceof Context
                     ? (Context) conversation : context;
             Toast.makeText(toastContext,
-                    sent > 0 ? "Blue tick sent" : "No hidden read receipt to send",
+                    jid == null ? "Cannot verify chat recipient"
+                            : (sent > 0 ? "Blue tick sent" : "No hidden read receipt to send"),
                     Toast.LENGTH_SHORT).show();
             return true;
         });
@@ -412,45 +382,36 @@ public class BlueOnReplyHook extends BaseFeature {
         return isManualButtonEnabled() ? 1 : 0;
     }
 
+    /**
+     * For a manual user action, require an explicit and unambiguous chat address.
+     * Scanning the Activity's fields or arbitrary Intent extras risks selecting a
+     * different contact's pending receipt job, so unknown hosts fail closed.
+     */
     private String resolveConversationJid(Object conversation) {
-        String reflected = extractRemoteJid(conversation);
-        if (reflected != null) return reflected;
-        if (conversation instanceof Activity) {
-            try {
-                Intent intent = ((Activity) conversation).getIntent();
-                if (intent != null) {
-                    // Check intent URI or data
-                    if (intent.getData() != null) {
-                        String rawData = intent.getData().toString();
-                        String parsedData = canonicalJid(rawData);
-                        if (parsedData != null) return parsedData;
-                    }
-                    Bundle extras = intent.getExtras();
-                    if (extras != null) {
-                        // Common WhatsApp conversation intent keys
-                        String[] commonKeys = new String[]{"jid", "chat_jid", "remote_jid", "extra_chat_jid", "conversation_jid"};
-                        for (String key : commonKeys) {
-                            Object value = extras.get(key);
-                            if (value != null) {
-                                String parsed = extractJidString(value);
-                                if (parsed != null) return parsed;
-                            }
-                        }
-                        for (String key : extras.keySet()) {
-                            Object value = extras.get(key);
-                            if (value != null) {
-                                String parsed = extractJidString(value);
-                                if (parsed != null) return parsed;
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {
+        if (!(conversation instanceof Activity)) return null;
+        try {
+            Intent intent = ((Activity) conversation).getIntent();
+            if (intent == null) return null;
+            List<String> candidates = new ArrayList<>();
+            if (intent.getData() != null) {
+                String exactData = canonicalJid(intent.getData().toString());
+                if (exactData != null) candidates.add(exactData);
             }
+            Bundle extras = intent.getExtras();
+            if (extras != null) {
+                String[] keys = {"jid", "chat_jid", "remote_jid",
+                        "extra_chat_jid", "conversation_jid"};
+                for (String key : keys) {
+                    if (!extras.containsKey(key)) continue;
+                    String value = extractJidString(extras.get(key));
+                    if (value == null) return null;
+                    candidates.add(value);
+                }
+            }
+            return ConversationRecipientPolicy.resolve(candidates);
+        } catch (Throwable ignored) {
+            return null;
         }
-        // Do not guess from the last hidden chat when a menu recipient cannot be
-        // resolved: the user may now be in a different conversation.
-        return null;
     }
 
     private static String extractJidString(Object obj) {
