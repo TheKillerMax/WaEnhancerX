@@ -82,6 +82,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                     com.waenhancer.config.PreferenceStores.publicStore(context)
                                             .edit()
                                             .putInt("active_xposed_api_version", apiVersion)
+                                            .putString("active_xposed_framework", detectActiveFramework())
                                             .commit();
                                 } catch (Throwable t) {
                                     XposedBridge.log("[WAEX] Failed to save Xposed API version: " + t.getMessage());
@@ -260,6 +261,56 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (Throwable t) {
                 XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
             }
+        }
+    }
+
+    /**
+     * Identifies the framework that actually loaded this module. Installed manager packages are
+     * deliberately not consulted here: more than one manager may remain installed while only one
+     * framework owns the current hooked process.
+     */
+    private static String detectActiveFramework() {
+        ClassLoader moduleLoader = MainHook.class.getClassLoader();
+        ClassLoader bridgeLoader = XposedBridge.class.getClassLoader();
+
+        if (classLoaderChainContains(moduleLoader, "matrix.vector")
+                || classLoaderChainContains(moduleLoader, "VectorModuleClassLoader")
+                || canLoad("org.matrix.vector.impl.di.VectorBootstrap", bridgeLoader)
+                || canLoad("org.matrix.vector.impl.utils.VectorModuleClassLoader", bridgeLoader)) {
+            return "Vector";
+        }
+
+        if (classLoaderChainContains(moduleLoader, "lsposed")
+                || classLoaderChainContains(moduleLoader, "LspModuleClassLoader")
+                || canLoad("org.lsposed.lspd.impl.LSPosedBridge", bridgeLoader)
+                || canLoad("org.lsposed.lspd.core.Startup", bridgeLoader)) {
+            return "LSPosed";
+        }
+
+        if (canLoad("com.elderdrivers.riru.edxp.core.Main", bridgeLoader)) {
+            return "EdXposed";
+        }
+
+        return "Xposed-compatible framework";
+    }
+
+    private static boolean classLoaderChainContains(ClassLoader loader, String marker) {
+        String expected = marker.toLowerCase(java.util.Locale.ROOT);
+        for (ClassLoader current = loader; current != null; current = current.getParent()) {
+            String identity = (current.getClass().getName() + " " + current)
+                    .toLowerCase(java.util.Locale.ROOT);
+            if (identity.contains(expected)) return true;
+        }
+        return false;
+    }
+
+    private static boolean canLoad(String className, ClassLoader loader) {
+        if (loader == null) return false;
+        try {
+            Class.forName(className, false, loader);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 

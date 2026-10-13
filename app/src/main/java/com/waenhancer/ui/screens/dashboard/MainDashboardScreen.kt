@@ -612,6 +612,258 @@ fun MainDashboardScreen(
 }
 
 @Composable
+private fun DashboardDiagnosticsCard(
+    diagnostics: SystemDiagnostics?,
+    hasUnsupportedTarget: Boolean,
+    onRefresh: () -> Unit,
+    onViewDetails: () -> Unit,
+    onViewSupportedVersions: () -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+
+    Surface(
+        shape = radius.cardShape,
+        color = colors.surface,
+        border = BorderStroke(1.dp, colors.outline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(radius.defaultShape)
+                        .background(colors.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Security,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.size(21.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "System diagnostics",
+                        style = typography.titleMd,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface
+                    )
+                    Text(
+                        text = "Live health overview",
+                        style = typography.bodySm,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Refresh,
+                        contentDescription = "Refresh diagnostics",
+                        tint = colors.onSurfaceVariant,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            DashboardDiagnosticRow(
+                label = "Module",
+                value = when (diagnostics?.moduleActive) {
+                    true -> "Active"
+                    false -> "Inactive"
+                    null -> "Checking…"
+                },
+                healthy = diagnostics?.moduleActive
+            )
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+            DashboardDiagnosticRow(
+                label = "Framework",
+                value = diagnostics?.framework?.name ?: "Detecting…",
+                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
+            )
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+            DashboardDiagnosticRow(
+                label = "Target compatibility",
+                value = if (hasUnsupportedTarget) "Review required" else "Supported",
+                healthy = !hasUnsupportedTarget
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DiagnosticMetric(
+                    label = "Android",
+                    value = diagnostics?.let { "API ${it.sdk}" } ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+                DiagnosticMetric(
+                    label = "SELinux",
+                    value = diagnostics?.selinux ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+                DiagnosticMetric(
+                    label = "Root",
+                    value = diagnostics?.let { if (it.rootAllowed) "Allowed" else "Not allowed" } ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Checked locally on this device. No diagnostic data is uploaded.",
+                style = typography.labelSm,
+                color = colors.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onViewDetails,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = radius.defaultShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(
+                    text = "View diagnostic details",
+                    style = typography.bodyMd,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = WaexIcons.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(radius.defaultShape)
+                    .clickable(onClick = onViewSupportedVersions)
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Supported versions catalog",
+                    style = typography.bodyMd,
+                    color = colors.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = WaexIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardDiagnosticRow(
+    label: String,
+    value: String,
+    healthy: Boolean?
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val stateColor = when (healthy) {
+        true -> colors.primary
+        false -> colors.error
+        null -> colors.onSurfaceVariant
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(stateColor)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = label,
+            style = typography.bodyMd,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            style = typography.bodyMd,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DiagnosticMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+
+    Surface(
+        modifier = modifier,
+        shape = radius.smShape,
+        color = colors.surfaceDim,
+        border = BorderStroke(1.dp, colors.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = typography.labelSm,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = label,
+                style = typography.labelSm,
+                color = colors.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
 fun InjectedHookRow(hook: InjectedHookItem) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
