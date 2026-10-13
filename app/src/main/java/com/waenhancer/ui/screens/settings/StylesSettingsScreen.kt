@@ -96,18 +96,24 @@ fun StylesSettingsScreen() {
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             stylesKeys.forEach { key ->
-                val defaultValue = if (key == "send_audio_as_voice_status") {
-                    preferenceManager.getBoolean("voice_status_enhancement", false)
-                } else false
-                val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
-                val legacyDefault = if (canonicalKey == key) defaultValue
-                    else preferenceManager.getBoolean(key, defaultValue)
-                put(key, preferenceManager.getBoolean(canonicalKey, legacyDefault))
+                if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
+                    // Do not decode a STRING or STRING_SET using getBoolean().
+                    put(key, false)
+                } else {
+                    val defaultValue = if (key == "send_audio_as_voice_status") {
+                        preferenceManager.getBoolean("voice_status_enhancement", false)
+                    } else false
+                    val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+                    val legacyDefault = if (canonicalKey == key) defaultValue
+                        else preferenceManager.getBoolean(key, defaultValue)
+                    put(key, preferenceManager.getBoolean(canonicalKey, legacyDefault))
+                }
             }
         }
     }
 
-    val updatePreference: (String, Boolean) -> Unit = { key, value ->
+    val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
+        if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
         settingsState[key] = value
         preferenceManager.putBoolean(StyleBooleanAliasPolicy.canonicalKey(key), value)
         if (key == "send_audio_as_voice_status") {
@@ -290,6 +296,7 @@ fun StylesSettingsScreen() {
                     Column {
                         group.items.forEachIndexed { index, item ->
                             val isLocked = item.isPro && !isPro
+                            val needsTypedEditor = StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(item.key)
                             val isHighlighted = navController.highlightTargetKey == item.key
                             val highlightBgColor by animateColorAsState(
                                 targetValue = if (isHighlighted) colors.primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -304,7 +311,7 @@ fun StylesSettingsScreen() {
                                         val y = coordinates.positionInRoot().y - containerY + scrollState.value
                                         itemCoordinates[item.key] = y
                                     }
-                                    .clickable {
+                                    .clickable(enabled = !needsTypedEditor) {
                                         if (isLocked) {
                                             onActivatePro()
                                         } else {
@@ -331,7 +338,8 @@ fun StylesSettingsScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "${item.sublabel} • Requires a dedicated typed editor"
+                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -371,11 +379,20 @@ fun StylesSettingsScreen() {
                                                 )
                                             }
                                         }
-                                        StitchSwitch(
-                                            checked = if (isLocked) false else (settingsState[item.key] ?: false),
-                                            onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
-                                            enabled = !isLocked
-                                        )
+                                        if (needsTypedEditor) {
+                                            Text(
+                                                text = "Needs typed editor",
+                                                style = typography.labelSm,
+                                                color = colors.onSurfaceVariant,
+                                                fontSize = 12.sp
+                                            )
+                                        } else {
+                                            StitchSwitch(
+                                                checked = if (isLocked) false else (settingsState[item.key] ?: false),
+                                                onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
+                                                enabled = !isLocked
+                                            )
+                                        }
                                     }
                                 }
                                 if (item.isPro) {
