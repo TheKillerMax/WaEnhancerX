@@ -2,7 +2,7 @@
 - Restart required sheet in WhatsApp on updating a pref
 - Show message device source
 - Unlock WA Plus (Pro)
-- Optional Material You (Monet) theme on Android 12+
+- Optional Material You (Monet) theme in WaEnhancerX
 
 [Fixed]
 - Fixed update checker sheet
