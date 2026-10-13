@@ -12,6 +12,8 @@ src = root / 'app/src/main/java/com/waenhancer/xposed/features/privacy'
 blue = (src/'BlueOnReplyHook.java').read_text(encoding='utf-8')
 assert 'PendingReadReceiptStore<ReadJobRecipe>' in blue
 assert 'PENDING_JOBS.drain(key)' in blue
+# Both routing paths must parse only complete, unambiguous JIDs.
+assert 'ReceiptJidPolicy.canonical(value)' in blue
 assert 'if (key == null) return 0;' in blue
 assert 'sendPendingReadJobs(remoteJid)' in blue
 assert 'String receiptJid = remoteJid' not in blue
@@ -28,6 +30,11 @@ assert 'new PendingReadReceiptStore<>(128, 64)' in blue
 assert 't.getMessage()' not in blue
 assert blue.count('t.getClass().getSimpleName()') >= 4
 hide = (src/'HideReceiptsHook.java').read_text(encoding='utf-8')
+assert 'ReceiptJidPolicy.canonical(value)' in hide
+assert 'JID_PATTERN' not in hide
+assert 'JID_PATTERN' not in blue
+assert 'matcher.find()' not in hide
+assert 'matcher.find()' not in blue
 assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048)' in hide
 assert 'new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096)' in hide
 assert 'SystemClock.elapsedRealtime()' in hide
@@ -39,11 +46,15 @@ assert 't.getMessage()' not in hide
 
 with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
     subprocess.run(['javac','--release','17','-d',dest,
+                    str(src/'ReceiptJidPolicy.java'),
+                    str(root/'qa/java/TestReceiptJidPolicy.java'),
                     str(src/'PendingReadReceiptStore.java'),
                     str(root/'qa/java/TestPendingReadReceiptStore.java'),
                     str(src/'BoundedReceiptAllowance.java'),
                     str(root/'qa/java/TestBoundedReceiptAllowance.java'),
                     str(root/'qa/java/TestReceiptPropertyStress.java')], check=True)
+    subprocess.run(['java','-cp',dest,
+                    'com.waenhancer.xposed.features.privacy.TestReceiptJidPolicy'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestPendingReadReceiptStore'],check=True)
     subprocess.run(['java','-cp',dest,
