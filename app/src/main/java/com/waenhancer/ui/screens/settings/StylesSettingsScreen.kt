@@ -106,7 +106,10 @@ fun StylesSettingsScreen() {
                     val defaultValue = if (key == "send_audio_as_voice_status") {
                         preferenceManager.getBoolean("voice_status_enhancement", false)
                     } else false
-                    put(key, preferenceManager.getBoolean(key, defaultValue))
+                    val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+                    val legacyDefault = if (canonicalKey == key) defaultValue
+                        else preferenceManager.getBoolean(key, defaultValue)
+                    put(key, preferenceManager.getBoolean(canonicalKey, legacyDefault))
                 }
             }
         }
@@ -122,7 +125,7 @@ fun StylesSettingsScreen() {
                 preferenceManager.getString("seentick", "0"))
         } else {
             settingsState[key] = value
-            preferenceManager.putBoolean(key, value)
+            preferenceManager.putBoolean(StyleBooleanAliasPolicy.canonicalKey(key), value)
             if (key == "send_audio_as_voice_status") {
                 preferenceManager.putBoolean("voice_status_enhancement", value)
             }
