@@ -16,6 +16,9 @@ assert 'PENDING_JOBS.drain(key)' in blue
 assert 'ReceiptJidPolicy.canonical(value)' in blue
 assert 'if (key == null) return 0;' in blue
 assert 'sendPendingReadJobs(remoteJid)' in blue
+assert 'extractOutgoingJobJid(param.thisObject)' in blue
+assert 'XposedHelpers.getObjectField(job, "jid")' in blue
+assert 'extractRemoteJid(param.thisObject)' not in blue
 assert 'String receiptJid = remoteJid' not in blue
 assert 'lastHiddenConversationJid' not in blue
 assert 'getUserPart(' not in blue
