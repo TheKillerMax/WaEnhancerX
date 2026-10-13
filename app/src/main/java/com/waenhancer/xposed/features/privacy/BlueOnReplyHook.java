@@ -1,6 +1,7 @@
 package com.waenhancer.xposed.features.privacy;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.app.Activity;
 import android.os.Bundle;
@@ -50,6 +51,7 @@ public class BlueOnReplyHook extends BaseFeature {
             new ConcurrentHashMap<>();
     private static volatile Constructor<?> sendReadConstructor;
     private static volatile Method enqueueJobMethod;
+    private static volatile Class<?> managerClass;
     private static volatile Object jobManager;
     private static volatile String lastHiddenConversationJid;
     private static final int MENU_SEND_BLUE_TICK = 0x7EAE0012;
@@ -104,10 +106,11 @@ public class BlueOnReplyHook extends BaseFeature {
                     });
             if (anchor == null) return;
 
-            Class<?> managerClass = anchor.getDeclaringClass();
+            Class<?> declaringManagerClass = anchor.getDeclaringClass();
+            managerClass = declaringManagerClass;
             Class<?> baseJobClass = XposedHelpers.findClassIfExists(
                     "org.whispersystems.jobqueue.Job", classLoader);
-            for (Method method : managerClass.getDeclaredMethods()) {
+            for (Method method : declaringManagerClass.getDeclaredMethods()) {
                 if (method.getParameterCount() != 1) continue;
                 Class<?> parameter = method.getParameterTypes()[0];
                 boolean exactJobMethod = baseJobClass != null && parameter == baseJobClass;
@@ -121,7 +124,10 @@ public class BlueOnReplyHook extends BaseFeature {
             }
             if (enqueueJobMethod == null) return;
 
-            XposedBridge.hookAllConstructors(managerClass, new XC_MethodHook() {
+            // Try to find singleton instance if already created
+            getOrFindJobManager();
+
+            XposedBridge.hookAllConstructors(declaringManagerClass, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
                     jobManager = param.thisObject;
@@ -198,28 +204,89 @@ public class BlueOnReplyHook extends BaseFeature {
         XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")");
     }
 
+    private static Object getOrFindJobManager() {
+        if (jobManager != null) return jobManager;
+        if (managerClass != null) {
+            try {
+                for (Field field : managerClass.getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers()) && managerClass.isAssignableFrom(field.getType())) {
+                        field.setAccessible(true);
+                        Object instance = field.get(null);
+                        if (instance != null) {
+                            jobManager = instance;
+                            return jobManager;
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
     private static int sendPendingReadJobs(String jid) {
         String key = canonicalJid(jid);
         Method enqueue = enqueueJobMethod;
-        Object manager = jobManager;
-        if (key == null) return 0;
+        Object manager = getOrFindJobManager();
+
         if (enqueue == null || manager == null) {
-            XposedBridge.log(TAG + " Cannot dispatch read jobs: WaJobManager is not ready");
+            XposedBridge.log(TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready");
             return 0;
         }
 
-        List<ReadJobRecipe> pending = PENDING_JOBS.remove(key);
-        if ((pending == null || pending.isEmpty()) && lastHiddenConversationJid != null
-                && !lastHiddenConversationJid.equals(key)) {
-            String conversationKey = lastHiddenConversationJid;
-            pending = PENDING_JOBS.remove(conversationKey);
-            if (pending != null && !pending.isEmpty()) key = conversationKey;
+        List<ReadJobRecipe> pending = null;
+        String matchedKey = null;
+
+        if (key != null) {
+            pending = PENDING_JOBS.remove(key);
+            if (pending != null && !pending.isEmpty()) {
+                matchedKey = key;
+            } else {
+                // Match by user part / phone number prefix (e.g. 12345 in 12345@s.whatsapp.net or 12345@lid)
+                String userPart = getUserPart(key);
+                if (userPart != null && !userPart.isEmpty()) {
+                    for (String candidateKey : PENDING_JOBS.keySet()) {
+                        if (userPart.equals(getUserPart(candidateKey))) {
+                            pending = PENDING_JOBS.remove(candidateKey);
+                            if (pending != null && !pending.isEmpty()) {
+                                matchedKey = candidateKey;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
+
+        // Fallback to last hidden conversation JID if still empty
+        if ((pending == null || pending.isEmpty()) && lastHiddenConversationJid != null) {
+            pending = PENDING_JOBS.remove(lastHiddenConversationJid);
+            if (pending != null && !pending.isEmpty()) {
+                matchedKey = lastHiddenConversationJid;
+            }
+        }
+
+        // If still empty and there is exactly one pending conversation, drain it
+        if ((pending == null || pending.isEmpty()) && PENDING_JOBS.size() == 1) {
+            for (String singleKey : PENDING_JOBS.keySet()) {
+                pending = PENDING_JOBS.remove(singleKey);
+                if (pending != null && !pending.isEmpty()) {
+                    matchedKey = singleKey;
+                    break;
+                }
+            }
+        }
+
         if (pending == null || pending.isEmpty()) {
             XposedBridge.log(TAG + " No captured read jobs for reply");
             return 0;
         }
-        HideReceiptsHook.allowBlueReplyReceipt(key);
+
+        if (matchedKey != null) {
+            HideReceiptsHook.allowBlueReplyReceipt(matchedKey);
+        }
+        if (key != null && !key.equals(matchedKey)) {
+            HideReceiptsHook.allowBlueReplyReceipt(key);
+        }
 
         int sent = 0;
         for (ReadJobRecipe recipe : pending) {
@@ -235,6 +302,12 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         }
         return sent;
+    }
+
+    private static String getUserPart(String jid) {
+        if (jid == null) return null;
+        int atIdx = jid.indexOf('@');
+        return atIdx != -1 ? jid.substring(0, atIdx) : jid;
     }
 
     private String extractRemoteJid(Object source) {
@@ -392,12 +465,31 @@ public class BlueOnReplyHook extends BaseFeature {
         if (reflected != null) return reflected;
         if (conversation instanceof Activity) {
             try {
-                Bundle extras = ((Activity) conversation).getIntent().getExtras();
-                if (extras != null) {
-                    for (String key : extras.keySet()) {
-                        Object value = extras.get(key);
-                        if (value != null && canonicalJid(value.toString()) != null) {
-                            return value.toString();
+                Intent intent = ((Activity) conversation).getIntent();
+                if (intent != null) {
+                    // Check intent URI or data
+                    if (intent.getData() != null) {
+                        String rawData = intent.getData().toString();
+                        String parsedData = canonicalJid(rawData);
+                        if (parsedData != null) return parsedData;
+                    }
+                    Bundle extras = intent.getExtras();
+                    if (extras != null) {
+                        // Common WhatsApp conversation intent keys
+                        String[] commonKeys = new String[]{"jid", "chat_jid", "remote_jid", "extra_chat_jid", "conversation_jid"};
+                        for (String key : commonKeys) {
+                            Object value = extras.get(key);
+                            if (value != null) {
+                                String parsed = extractJidString(value);
+                                if (parsed != null) return parsed;
+                            }
+                        }
+                        for (String key : extras.keySet()) {
+                            Object value = extras.get(key);
+                            if (value != null) {
+                                String parsed = extractJidString(value);
+                                if (parsed != null) return parsed;
+                            }
                         }
                     }
                 }
@@ -405,6 +497,21 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         }
         return lastHiddenConversationJid;
+    }
+
+    private static String extractJidString(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof String) {
+            return canonicalJid((String) obj);
+        }
+        try {
+            Object raw = XposedHelpers.callMethod(obj, "getRawString");
+            if (raw != null) {
+                String c = canonicalJid(raw.toString());
+                if (c != null) return c;
+            }
+        } catch (Throwable ignored) {}
+        return canonicalJid(obj.toString());
     }
 
     private static String canonicalJid(String value) {

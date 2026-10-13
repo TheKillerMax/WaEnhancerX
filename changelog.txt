@@ -2,14 +2,23 @@
 - Restart required sheet in WhatsApp on updating a pref
 - Show message device source
 - Unlock WA Plus (Pro)
+- Optional Material You (Monet) theme in WaEnhancerX
 
 [Fixed]
 - Fixed update checker sheet
 - Fixed message edit history
 - Fixed toast on deleted message
+- Fixed hook return-type compatibility with newer WhatsApp versions
+- Fixed some media settings
 
 [Improvements]
 - Improved performance
-- Improved injection strategy
+- Improved hooks injection strategy
 - Hide blue ticks
 - Hide delivered
+- Improved update downloads with HTTPS enforcement & APK validation
+- Improved security when WhatsApp reads feature settings
+- Made restarting WhatsApp from the dashboard safer and more reliable
+
+[Community contribution]
+- Thanks to @TheKillerMax for contributions through PRs #10, #14, #16, #18, #19, #20, #21, and #24

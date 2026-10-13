@@ -115,10 +115,9 @@ public final class RestartPromptController {
         }
         List<String> sorted = new ArrayList<>();
         for (String change : changes) {
-            // New records contain stable preference keys. Preserve already-readable legacy
-            // records created by older versions so an in-flight prompt remains useful.
-            sorted.add(com.waenhancer.config.PreferenceSchema.isKnown(change)
-                    ? PreferenceRestartTracker.displayName(change) : change);
+            // Resolve catalog titles first and generate a readable label for subordinate or
+            // legacy preference keys. Catalog-only features must not leak raw keys to the UI.
+            sorted.add(PreferenceRestartTracker.displayName(change));
         }
         sorted.sort(String.CASE_INSENSITIVE_ORDER);
         StringBuilder message = new StringBuilder("Restart WhatsApp to apply:\n\n");

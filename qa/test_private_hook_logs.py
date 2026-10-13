@@ -128,7 +128,7 @@ preserve = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/conversatio
 edit = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt").read_text()
 store = (ROOT / "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt").read_text()
 assert 'XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")")' in blue
-assert 'XposedBridge.log(TAG + " Cannot dispatch read jobs: WaJobManager is not ready")' in blue
+assert 'XposedBridge.log(TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready")' in blue
 assert 'XposedBridge.log(TAG + " No captured read jobs for reply")' in blue
 assert 'XposedBridge.log(TAG + " Enqueued blue-on-reply receipt")' in blue
 assert 'XposedBridge.log(TAG + " Status root view still null after delay")' in anti
@@ -153,6 +153,9 @@ assert 'Presence request failed for $key' not in online_presence
 assert "PENDING_JOBS.computeIfAbsent(" in blue
 assert "HideReceiptsHook.allowBlueReplyReceipt(key)" in blue
 assert "HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)" in blue
+assert "getOrFindJobManager()" in blue
+assert "lastHiddenConversationJid" in blue
+assert "SendE2EMessageJob/onRun" in blue
 assert "doApplyStatusDecoration(r, keyId, ts)" in anti
 assert "decorateRevokedStatusTextView(target, ts)" in anti
 assert "DelMessageStore.getInstance(context).insertMessage(" in preserve

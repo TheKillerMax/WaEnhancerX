@@ -11,6 +11,18 @@ public class PreferenceRestartTrackerTest {
     public void publicFeatureSettingsRequireRestart() {
         assertTrue(PreferenceRestartTracker.requiresRestart("anti_revoke"));
         assertTrue(PreferenceRestartTracker.requiresRestart("floating_bottom_bar"));
+        assertTrue(PreferenceRestartTracker.requiresRestart("separate_groups_tabs"));
+    }
+
+    @Test
+    public void everyCatalogedFeatureAutomaticallyRequiresRestart() {
+        for (FeatureItem feature : FeatureCatalog.INSTANCE.getALL_FEATURES()) {
+            if (!PreferenceRestartTracker.SHOW_RESTART_SHEET.equals(feature.getKey())) {
+                assertTrue(
+                        "Cataloged feature was omitted from restart tracking: " + feature.getKey(),
+                        PreferenceRestartTracker.requiresRestart(feature.getKey()));
+            }
+        }
     }
 
     @Test
@@ -31,6 +43,8 @@ public class PreferenceRestartTrackerTest {
                 PreferenceRestartTracker.displayName("toastdeleted"));
         assertEquals("Floating Bottom Bar Radius",
                 PreferenceRestartTracker.displayName("floating_bottom_bar_radius"));
+        assertEquals("Separate Groups",
+                PreferenceRestartTracker.displayName("separate_groups_tabs"));
         assertEquals("DPI Mode", PreferenceRestartTracker.displayName("dpi_mode"));
     }
 }
