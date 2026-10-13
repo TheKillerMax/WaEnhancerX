@@ -96,19 +96,36 @@ fun StylesSettingsScreen() {
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             stylesKeys.forEach { key ->
-                val defaultValue = if (key == "send_audio_as_voice_status") {
-                    preferenceManager.getBoolean("voice_status_enhancement", false)
-                } else false
-                put(key, preferenceManager.getBoolean(key, defaultValue))
+                if (key == "seen_tick_customization") {
+                    // The receipt hooks read the canonical STRING 'seentick' (0/1/2),
+                    // not the old UI-only Boolean 'seen_tick_customization' flag.
+                    put(key, ManualSeenTickPreferencePolicy.isEnabled(
+                        preferenceManager.getString("seentick", "0")
+                    ))
+                } else {
+                    val defaultValue = if (key == "send_audio_as_voice_status") {
+                        preferenceManager.getBoolean("voice_status_enhancement", false)
+                    } else false
+                    put(key, preferenceManager.getBoolean(key, defaultValue))
+                }
             }
         }
     }
 
     val updatePreference: (String, Boolean) -> Unit = { key, value ->
-        settingsState[key] = value
-        preferenceManager.putBoolean(key, value)
-        if (key == "send_audio_as_voice_status") {
-            preferenceManager.putBoolean("voice_status_enhancement", value)
+        if (key == "seen_tick_customization") {
+            val currentPlacement = preferenceManager.getString("seentick", "0")
+            preferenceManager.putString("seentick",
+                ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement))
+            // Verify the persisted canonical setting instead of showing a failed save as ON.
+            settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(
+                preferenceManager.getString("seentick", "0"))
+        } else {
+            settingsState[key] = value
+            preferenceManager.putBoolean(key, value)
+            if (key == "send_audio_as_voice_status") {
+                preferenceManager.putBoolean("voice_status_enhancement", value)
+            }
         }
     }
 
@@ -126,7 +143,7 @@ fun StylesSettingsScreen() {
                 StyleItem("Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "custom_time_format"),
                 StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
                 StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
-                StyleItem("View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "seen_tick_customization"),
+                StyleItem("Manual Blue Tick Button", "When Hide Blue Ticks is enabled, show an action to send held read receipts", "seen_tick_customization"),
                 StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar"),
                 StyleItem("Unlock WA Plus", "Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.", "unlock_premium_customization", isPro = true),
                 StyleItem("Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs", "custom_filters")
