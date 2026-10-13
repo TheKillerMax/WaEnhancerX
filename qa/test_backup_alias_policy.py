@@ -23,6 +23,8 @@ assert 'return mappedKey.takeIf { PreferenceSchema.entry(it) != null }' in resol
 assert 'original == null || original.type == mapped.type' not in resolver
 assert 'val key = resolveKey(rawKey, legacyJson = false)' in codec
 assert 'val key = resolveKey(rawKey, legacyJson = legacy)' in codec
+assert 'if (legacy && rawKey != key && source.has(key)) continue' in codec, (
+    'Canonical JSON values could be overwritten by an older alias')
 assert 'val legacy = !root.has("schemaVersion")' in codec
 assert 'Record(key, entry.type, it)' in codec
 assert 'privateEditor.commit() && publicEditor.commit()' in codec
@@ -41,7 +43,8 @@ for original, incorrectly_redirected in {
     'hide_seen_receipts': 'hidereceipt',
 }.items():
     assert keys[original] == keys[incorrectly_redirected] == 'BOOLEAN'
-    assert aliases[original] == incorrectly_redirected
+    assert aliases.get(original) != incorrectly_redirected, (
+        f'Unsafe legacy alias redirected {original} into unrelated privacy control')
 
 hooks = root / 'xposed/features'
 toast = (hooks / 'automation/PresenceToastsHook.java').read_text()
