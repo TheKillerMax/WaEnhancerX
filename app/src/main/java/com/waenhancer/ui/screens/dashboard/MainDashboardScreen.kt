@@ -42,6 +42,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -485,88 +486,13 @@ fun MainDashboardScreen(
                 }
             }
 
-            // System Information List Card
-            Surface(
-                shape = radius.cardShape,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outline),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "System Diagnostics",
-                        style = typography.bodyMd,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val diagnostics = systemDiagnostics
-                    val specs = listOf(
-                        "Device" to "${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}",
-                        "Android" to "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})",
-                        "Xposed Framework" to (diagnostics?.framework?.name ?: "Detecting…"),
-                        "Framework Version" to (diagnostics?.framework?.version ?: "Not available"),
-                        "Xposed API" to (diagnostics?.framework?.api?.toString() ?: "Not reported"),
-                        "Root Allowed" to when (diagnostics?.rootAllowed) {
-                            true -> "Yes"
-                            false -> "No"
-                            null -> "Checking…"
-                        },
-                        "SELinux" to (diagnostics?.selinux ?: "Checking…")
-                    )
-
-                    specs.forEachIndexed { index, (label, value) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = label,
-                                style = typography.bodyMd,
-                                color = colors.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = value,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.onSurface
-                            )
-                        }
-                        if (index < specs.lastIndex) {
-                            HorizontalDivider(
-                                thickness = 1.dp,
-                                color = colors.outlineVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(vertical = 10.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { navController.navigateTo(Screen.SupportedVersions) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Supported Versions Catalog",
-                            style = typography.bodyMd,
-                            color = colors.primary,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(
-                            imageVector = WaexIcons.ChevronRight,
-                            contentDescription = null,
-                            tint = colors.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
+            DashboardDiagnosticsCard(
+                diagnostics = systemDiagnostics,
+                hasUnsupportedTarget = hasUnsupportedActiveApp,
+                onRefresh = { refreshTrigger++ },
+                onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
+                onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) }
+            )
 
             // Quick Backup & Maintenance Row
             Surface(
