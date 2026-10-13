@@ -114,6 +114,40 @@ class DexSourceAnchorTests(unittest.TestCase):
         with self.assertRaises(AuditError):
             source_anchors(self.root / 'absent-source')
 
+    def test_reject_malformed_unvisited_string_id(self):
+        # Once all anchors have matched, malformed remaining string_ids must
+        # still cause a fail-closed DEX error rather than silently succeeding.
+        strings = ['image/compress quality', 'shared anchor',
+                   'DeleteMessageForMeMutation', 'not relevant']
+        raw = bytearray(dex_with(strings))
+        struct.pack_into('<I', raw, 112 + 3 * 4, len(raw) + 100)
+        raw[12:32] = hashlib.sha1(raw[32:]).digest()
+        struct.pack_into('<I', raw, 8, zlib.adler32(raw[12:]))
+        with zipfile.ZipFile(self.apk, 'w') as z:
+            z.writestr('classes.dex', bytes(raw))
+        with self.assertRaisesRegex(AuditError, 'string-data offset'):
+            audit(self.apk, self.src)
+
+    def test_duplicate_dex_entries_rejected(self):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', UserWarning)
+            with zipfile.ZipFile(self.apk, 'w') as z:
+                z.writestr('classes.dex', dex_with(['shared anchor']))
+                z.writestr('classes.dex', dex_with(['shared anchor']))
+        with self.assertRaisesRegex(AuditError, 'Duplicate DEX'):
+            audit(self.apk, self.src)
+
+    def test_invalid_dex_version_rejected_even_if_hash_matches(self):
+        dex = bytearray(dex_with(['shared anchor']))
+        dex[4:7] = b'999'
+        dex[12:32] = hashlib.sha1(dex[32:]).digest()
+        struct.pack_into('<I', dex, 8, zlib.adler32(dex[12:]))
+        with zipfile.ZipFile(self.apk, 'w') as z:
+            z.writestr('classes.dex', dex)
+        with self.assertRaisesRegex(AuditError, 'Invalid DEX header'):
+            audit(self.apk, self.src)
+
     def test_unused_bytes_do_not_count_as_string_id(self):
         extra = dex_with(['valid only']) + b'DeleteMessageForMeMutation'
         # Extra bytes violate the DEX file_size header; reseal to keep the fixture valid.

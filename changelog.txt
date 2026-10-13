@@ -9,11 +9,11 @@
 - Fixed message edit history
 - Fixed toast on deleted message
 - Fixed hook return-type compatibility with newer WhatsApp versions
-- Fixed some media settings showing
+- Fixed some media settings
 
 [Improvements]
 - Improved performance
-- Improved injection strategy
+- Improved hooks injection strategy
 - Hide blue ticks
 - Hide delivered
 - Improved update downloads with HTTPS enforcement & APK validation

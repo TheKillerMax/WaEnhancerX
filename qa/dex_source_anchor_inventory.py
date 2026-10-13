@@ -75,12 +75,18 @@ def scan_apk(apk: Path, literals: list[str]):
             dex_files = [e for e in all_entries if DEX_NAME.fullmatch(e.filename)]
             if not dex_files or not any(e.filename == 'classes.dex' for e in dex_files):
                 raise AuditError("Missing primary classes.dex")
+            if len({item.filename for item in dex_files}) != len(dex_files):
+                raise AuditError("Duplicate DEX archive member")
             for item in dex_files:
                 if item.file_size > MAX_DEX:
                     raise AuditError("DEX file exceeds size limit")
                 dex = archive.read(item)  # zipfile verifies each DEX member CRC.
-                if len(dex) < 112 or dex[:4] != b'dex\n':
+                if (len(dex) < 112 or dex[:4] != b'dex\n'
+                        or dex[4:7] not in (b'035', b'037', b'038', b'039', b'040', b'041')
+                        or dex[7] != 0):
                     raise AuditError("Invalid DEX header")
+                if struct.unpack_from('<I', dex, 0x24)[0] not in (112, 120):
+                    raise AuditError("Invalid DEX header size")
                 if struct.unpack_from('<I', dex, 0x20)[0] != len(dex):
                     raise AuditError("DEX length mismatch")
                 if hashlib.sha1(dex[32:]).digest() != dex[12:32]:
@@ -94,8 +100,9 @@ def scan_apk(apk: Path, literals: list[str]):
                 # containing the requested literal, not just the first hit.
                 needed = dict(needles)
                 for (string_offset,) in struct.iter_unpack('<I', memoryview(dex)[offset:offset+count*4]):
-                    if not needed:
-                        break
+                    # Validate *all* strings even after every requested anchor
+                    # is found; an early break would silently accept malformed
+                    # later string IDs in an otherwise correctly hashed DEX.
                     if string_offset >= len(dex):
                         raise AuditError("Invalid DEX string-data offset")
                     begin = uleb_end(dex, string_offset)
