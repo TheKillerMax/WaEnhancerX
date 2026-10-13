@@ -14,6 +14,10 @@ import zipfile
 from pathlib import Path
 
 DEX_NAME = re.compile(r'classes(?:[2-9]|[1-9][0-9]+)?\.dex\Z')
+MAX_ARCHIVE_ENTRIES = 100_000
+MAX_DEX_FILES = 64
+MAX_DEX_BYTES = 192 * 1024 * 1024
+MAX_TOTAL_DEX_BYTES = 768 * 1024 * 1024
 
 class MalformedDex(ValueError):
     pass
@@ -114,14 +118,35 @@ def inspect_apk(apk: Path, class_descriptor: str, expected_field: str) -> dict:
         raise ValueError('Class must use DEX descriptor format, e.g. Lcom/whatsapp/Foo;')
     matches=[];scanned=0
     with zipfile.ZipFile(apk) as z:
-        entries=[x for x in z.namelist() if DEX_NAME.fullmatch(x)]
-        if not entries:
+        info = z.infolist()
+        if len(info) > MAX_ARCHIVE_ENTRIES:
+            raise MalformedDex('Too many APK ZIP entries')
+        dex_entries=[entry for entry in info if DEX_NAME.fullmatch(entry.filename)]
+        if not dex_entries:
             raise MalformedDex('No classes*.dex in APK')
-        for name in sorted(entries):
+        if len(dex_entries) > MAX_DEX_FILES:
+            raise MalformedDex('Too many DEX entries')
+        names=[entry.filename for entry in dex_entries]
+        if len(set(names)) != len(names):
+            raise MalformedDex('Duplicate DEX entry name')
+        total=0
+        for entry in dex_entries:
+            if entry.file_size > MAX_DEX_BYTES:
+                raise MalformedDex('DEX exceeds maximum uncompressed input size')
+            total += entry.file_size
+            if total > MAX_TOTAL_DEX_BYTES:
+                raise MalformedDex('Total DEX uncompressed bytes exceed limit')
+        for entry in sorted(dex_entries,key=lambda item: item.filename):
             scanned+=1
-            result=declared_fields(z.read(name),class_descriptor)
+            with z.open(entry) as reader:
+                dex_bytes=reader.read(entry.file_size + 1)
+            if len(dex_bytes) != entry.file_size:
+                raise MalformedDex('DEX decompressed size differs from ZIP metadata')
+            result=declared_fields(dex_bytes,class_descriptor)
             if result is not None:
-                matches.append({'dex':name,'fields':result})
+                matches.append({'dex':entry.filename,'fields':result})
+                if len(matches) > 1:
+                    raise MalformedDex('Duplicate host class definitions across DEX entries')
     fields=[f for match in matches for f in match['fields']]
     has=any(f['name']==expected_field for f in fields)
     return {'apk':apk.name,'class':class_descriptor,'expected_field':expected_field,
