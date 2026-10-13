@@ -390,6 +390,27 @@ public final class PreferenceSchema {
         add(entries, "wallpaper_alpha_toolbar", Type.FLOAT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "wallpaper_file", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
 
+        // Existing UI and hook settings previously persisted as unknown public keys.
+        // Declaring their true types makes them eligible for settings backups and
+        // preserves the same public-store routing as older installations.
+        add(entries, "anti_revoke_color_enabled", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "bubble_colors", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "bubble_incoming_color", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "bubble_outgoing_color", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "call_privacy_enabled", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "call_recording", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "channels_enhancements", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "dndmode", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "download_view_once", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "enable_media_preview", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "hide_recording", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "hide_typing", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "media_upload_quality", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "open_wae", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "separate_groups_tabs", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "statusdowload", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "video_preview_muted", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+
         ENTRIES = Collections.unmodifiableMap(entries);
 
         Set<String> exportable = new LinkedHashSet<>();

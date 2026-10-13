@@ -110,7 +110,7 @@ object SettingsBackupCodec {
         val records = PreferenceSchema.exportableKeys().sorted().mapNotNull { key ->
             val value = PreferenceStores.read(context, key) ?: return@mapNotNull null
             val entry = PreferenceSchema.entry(key) ?: return@mapNotNull null
-            normalize(entry.type, value)?.let { Record(key, entry.type, it) }
+            normalizeForKey(key, entry.type, value)?.let { Record(key, entry.type, it) }
         }
 
         DataOutputStream(BufferedOutputStream(output)).use { out ->
@@ -186,7 +186,9 @@ object SettingsBackupCodec {
             buildList(count) {
                 repeat(count) {
                     val rawKey = readText(source)
-                    val key = resolveKey(rawKey)
+                    // Binary WAEX backups already contain canonical schema keys.
+                    // Never reinterpret a valid key through a legacy JSON alias.
+                    val key = resolveKey(rawKey, legacyJson = false)
                     val typeOrdinal = source.readUnsignedByte()
                     val type = PreferenceSchema.Type.entries.getOrNull(typeOrdinal)
                         ?: throw IllegalArgumentException("Unknown settings value type")
@@ -207,7 +209,7 @@ object SettingsBackupCodec {
                     if (key != null) {
                         val schema = PreferenceSchema.entry(key)
                         if (schema != null && schema.isExportable()) {
-                            val normalized = normalize(schema.type, value)
+                            val normalized = normalizeForKey(key, schema.type, value)
                             if (normalized != null) {
                                 add(Record(key, schema.type, normalized))
                             }
@@ -236,7 +238,8 @@ object SettingsBackupCodec {
         val keys = source.keys()
         while (keys.hasNext()) {
             val rawKey = keys.next()
-            val key = resolveKey(rawKey) ?: continue
+            // Only unversioned v1 JSON files use the old alias migration rules.
+            val key = resolveKey(rawKey, legacyJson = legacy) ?: continue
             if (isSensitive(key)) continue
 
             val schema = PreferenceSchema.entry(key) ?: continue
@@ -244,7 +247,7 @@ object SettingsBackupCodec {
 
             val rawVal = source.opt(rawKey) ?: continue
             val decodedValue = decodeJsonValue(rawVal, legacy) ?: continue
-            val normalized = normalize(schema.type, decodedValue) ?: continue
+            val normalized = normalizeForKey(key, schema.type, decodedValue) ?: continue
             records.add(Record(key, schema.type, normalized))
         }
         return records
@@ -299,11 +302,20 @@ object SettingsBackupCodec {
         }
     }
 
-    private fun resolveKey(originalKey: String): String? {
-        val mapped = LEGACY_ALIASES.getOrDefault(originalKey, originalKey)
-        if (PreferenceSchema.isKnown(mapped)) return mapped
-        if (PreferenceSchema.isKnown(originalKey)) return originalKey
-        return null
+    private fun resolveKey(originalKey: String, legacyJson: Boolean): String? {
+        val original = PreferenceSchema.entry(originalKey)
+        // Binary backups and versioned JSON contain canonical names. A current
+        // preference must never be silently rewritten into another setting.
+        if (!legacyJson && original != null) return originalKey
+
+        // Preserve legacy JSON mappings where the old and new schema types are
+        // compatible. Do not turn a Boolean into a String/Float or lose its value.
+        val mappedKey = LEGACY_ALIASES[originalKey]
+        val mapped = mappedKey?.let(PreferenceSchema::entry)
+        if (mapped != null && (original == null || original.type == mapped.type)) {
+            return mappedKey
+        }
+        return if (original != null) originalKey else null
     }
 
     private fun isSensitive(key: String?): Boolean {
@@ -334,6 +346,18 @@ object SettingsBackupCodec {
         val size = input.readInt()
         require(size in 0..MAX_BYTES) { "Invalid settings value length" }
         return ByteArray(size).also(input::readFully).toString(Charsets.UTF_8)
+    }
+
+    /** Restore hex RGB/ARGB strings written by earlier UI versions for this INT key. */
+    private fun normalizeForKey(key: String, type: PreferenceSchema.Type, value: Any): Any? {
+        if (key == "deleted_message_color" && type == PreferenceSchema.Type.INT && value is String) {
+            val hex = value.trim()
+            if (hex.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))) {
+                val parsed = hex.substring(1).toLong(16)
+                return (if (hex.length == 7) parsed or 0xFF000000L else parsed).toInt()
+            }
+        }
+        return normalize(type, value)
     }
 
     private fun normalize(type: PreferenceSchema.Type, value: Any): Any? = when (type) {
