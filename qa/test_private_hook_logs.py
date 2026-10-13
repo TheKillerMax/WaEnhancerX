@@ -178,7 +178,10 @@ assert "doApplyStatusDecoration(r, keyId, ts)" in anti
 assert "decorateRevokedStatusTextView(target, ts)" in anti
 assert "DelMessageStore.getInstance(context).insertMessage(" in preserve
 assert "dispatchToManagerApp(" in preserve
-assert "editStore.recordEdit(" in edit
+assert ("editStore.recordEdit(" in edit or
+        "editStore.recordTransitionAsync(" in edit), "Anti-edit history writer removed"
+if "editStore.recordTransitionAsync(" in edit:
+    assert "fun recordTransitionAsync(" in store, "Async transition storage unavailable"
 assert "getMessages(" in store
 
 print(f"PASS: {total} sensitive-feature log callsites checked across "
