@@ -113,7 +113,7 @@ def declared_fields(dex: bytes, owner: str) -> list[dict] | None:
     return result
 
 
-def inspect_apk(apk: Path, class_descriptor: str, expected_field: str) -> dict:
+def inspect_apk(apk: Path, class_descriptor: str, expected_field: str, expected_type: str | None = None) -> dict:
     if not class_descriptor.startswith('L') or not class_descriptor.endswith(';'):
         raise ValueError('Class must use DEX descriptor format, e.g. Lcom/whatsapp/Foo;')
     matches=[];scanned=0
@@ -148,12 +148,16 @@ def inspect_apk(apk: Path, class_descriptor: str, expected_field: str) -> dict:
                 if len(matches) > 1:
                     raise MalformedDex('Duplicate host class definitions across DEX entries')
     fields=[f for match in matches for f in match['fields']]
-    has=any(f['name']==expected_field for f in fields)
+    field_types=sorted({f['type'] for f in fields if f['name']==expected_field})
+    has=bool(field_types)
+    compatible=has and (expected_type is None or expected_type in field_types)
     return {'apk':apk.name,'class':class_descriptor,'expected_field':expected_field,
+            'expected_type':expected_type,'found_field_types':field_types,
+            'type_compatible':compatible,
             'dex_count':scanned,'defined_in':[m['dex'] for m in matches],
             'field_count':len(fields),'expected_field_declared':has,
             'jid_typed_fields':[f for f in fields if 'Jid;' in f['type']],
-            'status':'PRESENT' if has else ('MISSING_FIELD' if matches else 'MISSING_CLASS'),
+            'status':'PRESENT' if compatible else ('INCOMPATIBLE_TYPE' if has else ('MISSING_FIELD' if matches else 'MISSING_CLASS')),
             'scope':'DEX declared field names/types only, not receiver identity semantics or runtime hook success'}
 
 
@@ -162,13 +166,14 @@ def main(argv=None)->int:
     parser.add_argument('apk', type=Path)
     parser.add_argument('--class-descriptor',required=True)
     parser.add_argument('--expected-field',default='jid')
+    parser.add_argument('--expected-type',default=None,help='Optional required DEX field type descriptor')
     parser.add_argument('--fail-on-missing', action='store_true')
     args=parser.parse_args(argv)
     try:
-        out=inspect_apk(args.apk,args.class_descriptor,args.expected_field)
+        out=inspect_apk(args.apk,args.class_descriptor,args.expected_field,args.expected_type)
     except (OSError, zipfile.BadZipFile, MalformedDex, ValueError) as exc:
         print(json.dumps({'status':'ERROR','detail':str(exc)}));return 2
     print(json.dumps(out,indent=2))
-    return 1 if args.fail_on_missing and not out['expected_field_declared'] else 0
+    return 1 if args.fail_on_missing and out['status'] != 'PRESENT' else 0
 
 if __name__=='__main__':raise SystemExit(main())
