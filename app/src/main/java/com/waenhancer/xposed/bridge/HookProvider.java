@@ -238,20 +238,15 @@ public class HookProvider extends ContentProvider {
     }
 
     private boolean isTrustedCaller(@NonNull Context context, int uid) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] packages = context.getPackageManager().getPackagesForUid(uid);
-        if (packages == null) return false;
-        Set<String> supported = WhatsAppPackageDetector.getSupportedPackages(context);
-        for (String packageName : packages) {
-            if (supported.contains(packageName)) return true;
-        }
-        return false;
+        // Keep the Binder caller check before clearCallingIdentity().
+        return CallerScopePolicy.isTrusted(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid),
+                WhatsAppPackageDetector.getSupportedPackages(context));
     }
 
     private boolean callerOwnsPackage(@NonNull Context context, int uid, @NonNull String pkg) {
-        if (uid == context.getApplicationInfo().uid) return true;
-        String[] owned = context.getPackageManager().getPackagesForUid(uid);
-        return owned != null && Arrays.asList(owned).contains(pkg);
+        return CallerScopePolicy.ownsPackage(uid, context.getApplicationInfo().uid,
+                context.getPackageManager().getPackagesForUid(uid), pkg);
     }
 
     private Bundle encodePreferences(Map<String, Object> source) {
@@ -293,6 +288,10 @@ public class HookProvider extends ContentProvider {
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
+            // Known public keys must retain their declared schema types. Otherwise a
+            // string-encoded boolean could sidestep the following entitlement guard.
+            if (entry != null && !PreferenceWriteTypePolicy.accepts(entry.type.name(), type))
+                return writeResult(false);
             if (!("remove".equals(type) || "string".equals(type) || "string_set".equals(type)
                     || "boolean".equals(type) || "int".equals(type) || "long".equals(type)
                     || "float".equals(type))) return writeResult(false);
