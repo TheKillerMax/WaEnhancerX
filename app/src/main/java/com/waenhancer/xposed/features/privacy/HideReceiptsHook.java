@@ -3,6 +3,7 @@ package com.waenhancer.xposed.features.privacy;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Message;
+import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
@@ -26,8 +27,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,8 +43,10 @@ public class HideReceiptsHook extends BaseFeature {
     private static final long BLUE_REPLY_WINDOW_MS = 120_000L;
     private static final Pattern JID_PATTERN = Pattern.compile(
             "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
-    private static final Map<String, Long> BLUE_REPLY_BYPASS = new ConcurrentHashMap<>();
-    private static final Map<String, Long> EXPLICIT_RECEIPT_IDS = new ConcurrentHashMap<>();
+    private static final BoundedReceiptAllowance BLUE_REPLY_BYPASS =
+            new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 2048);
+    private static final BoundedReceiptAllowance EXPLICIT_RECEIPT_IDS =
+            new BoundedReceiptAllowance(BLUE_REPLY_WINDOW_MS, 4096);
 
     private Class<?> protocolTreeNodeClass;
     private Class<?> keyValueClass;
@@ -127,7 +128,7 @@ public class HideReceiptsHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error initializing ProtocolTree reflection: " + t.getMessage());
+            XposedBridge.log(TAG + " Error initializing ProtocolTree reflection: " + t.getClass().getSimpleName());
         }
     }
 
@@ -174,13 +175,13 @@ public class HideReceiptsHook extends BaseFeature {
                             // path may combine delivery and read acknowledgement generation. The
                             // ProtocolTreeNode hook below downgrades only type=read, preserving the
                             // sender's ordinary delivered (double-tick) acknowledgement.
-                            XposedBridge.log(TAG + " EnforceHiding: Downgrading read receipt for " + target);
+                            XposedBridge.log(TAG + " EnforceHiding: Downgrading read receipt");
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking enforce hiding: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking enforce hiding: " + t.getClass().getSimpleName());
         }
     }
 
@@ -274,7 +275,7 @@ public class HideReceiptsHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getClass().getSimpleName());
         }
     }
 
@@ -406,7 +407,7 @@ public class HideReceiptsHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking receipt method: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking receipt method: " + t.getClass().getSimpleName());
         }
     }
 
@@ -445,7 +446,7 @@ public class HideReceiptsHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking delivery dispatchers: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking delivery dispatchers: " + t.getClass().getSimpleName());
         }
     }
 
@@ -489,7 +490,7 @@ public class HideReceiptsHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking onDispatchMessage: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking onDispatchMessage: " + t.getClass().getSimpleName());
         }
     }
 
@@ -532,7 +533,7 @@ public class HideReceiptsHook extends BaseFeature {
             }
             fieldAttributes.set(node, newArray);
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error applying hide delivery: " + t.getMessage());
+            XposedBridge.log(TAG + " Error applying hide delivery: " + t.getClass().getSimpleName());
         }
     }
 
@@ -571,7 +572,7 @@ public class HideReceiptsHook extends BaseFeature {
                 fieldAttributes.set(node, newArray);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error applying hide read: " + t.getMessage());
+            XposedBridge.log(TAG + " Error applying hide read: " + t.getClass().getSimpleName());
         }
     }
 
@@ -704,39 +705,28 @@ public class HideReceiptsHook extends BaseFeature {
     public static void allowBlueReplyReceipt(String jid) {
         String key = canonicalJid(jid);
         if (key == null) return;
-        BLUE_REPLY_BYPASS.put(key, System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS);
+        BLUE_REPLY_BYPASS.allow(key, SystemClock.elapsedRealtime());
     }
 
     public static void allowExplicitReceiptIds(Object[] constructorArguments) {
         if (constructorArguments == null) return;
-        long expiresAt = System.currentTimeMillis() + BLUE_REPLY_WINDOW_MS;
+        long now = SystemClock.elapsedRealtime();
         for (Object argument : constructorArguments) {
             if (!(argument instanceof String[])) continue;
             for (String messageId : (String[]) argument) {
                 if (messageId != null && !messageId.isEmpty()) {
-                    EXPLICIT_RECEIPT_IDS.put(messageId, expiresAt);
+                    EXPLICIT_RECEIPT_IDS.allow(messageId, now);
                 }
             }
         }
     }
 
     private static boolean isExplicitReceiptAllowed(String messageId) {
-        if (messageId == null) return false;
-        Long expiresAt = EXPLICIT_RECEIPT_IDS.get(messageId);
-        if (expiresAt == null) return false;
-        if (expiresAt >= System.currentTimeMillis()) return true;
-        EXPLICIT_RECEIPT_IDS.remove(messageId, expiresAt);
-        return false;
+        return EXPLICIT_RECEIPT_IDS.isAllowed(messageId, SystemClock.elapsedRealtime());
     }
 
     private static boolean isBlueReplyBypassed(String jid) {
-        String key = canonicalJid(jid);
-        if (key == null) return false;
-        Long expiresAt = BLUE_REPLY_BYPASS.get(key);
-        if (expiresAt == null) return false;
-        if (expiresAt >= System.currentTimeMillis()) return true;
-        BLUE_REPLY_BYPASS.remove(key, expiresAt);
-        return false;
+        return BLUE_REPLY_BYPASS.isAllowed(canonicalJid(jid), SystemClock.elapsedRealtime());
     }
 
     private static String canonicalJid(String value) {
@@ -820,7 +810,7 @@ public class HideReceiptsHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking sender played: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking sender played: " + t.getClass().getSimpleName());
         }
     }
 
