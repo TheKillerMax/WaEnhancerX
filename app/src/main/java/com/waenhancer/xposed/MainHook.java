@@ -3,6 +3,8 @@ package com.waenhancer.xposed;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.os.Handler;
+import android.os.Looper;
 import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
 import com.waenhancer.xposed.core.FeatureRegistry;
 import com.waenhancer.xposed.utils.ModuleStatus;
@@ -33,6 +35,11 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     private static XSharedPreferences sPrefs;
     private static volatile PreferenceBridgeClient sPreferenceBridge;
     private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
+    private static final AtomicBoolean HEARTBEAT_STARTED = new AtomicBoolean(false);
+    private static final long HEARTBEAT_INTERVAL_MS = 10_000L;
+    private static volatile String sRuntimeStatus = "INJECTED";
+    private static volatile String sBridgeStatus = "PENDING";
+    private static volatile String sRuntimeError;
     private String mModulePath;
 
     @Override
@@ -171,6 +178,8 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                                 // Register this package as active hooked package for the dashboard
                                 com.waenhancer.utils.WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
+                                reportTargetRuntime(
+                                        appContext, packageName, "INJECTED", "PENDING", null);
                                 try {
                                     appContext.getContentResolver().call(
                                             android.net.Uri.parse("content://com.waenhancer.hookprovider"),
@@ -206,6 +215,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         resolvedBridge.awaitInitialSync();
                                     }
                                     final PreferenceBridgeClient bridgeClient = resolvedBridge;
+                                    reportTargetRuntime(
+                                            appContext,
+                                            packageName,
+                                            "INITIALIZING",
+                                            bridgeClient.getLastSyncSource(),
+                                            bridgeClient.getLastSyncError());
                                     com.waenhancer.xposed.core.RestartPromptController.initialize(bridgeClient);
                                     try {
                                         android.content.IntentFilter prefsFilter = new android.content.IntentFilter(
@@ -248,10 +263,32 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
                                         registry.initializeAll();
                                         registry.reportInjectedHooks(appContext, packageName);
+                                        reportTargetRuntime(
+                                                appContext,
+                                                packageName,
+                                                registry.hasFailures() ? "READY_WITH_ERRORS" : "READY",
+                                                bridgeClient.getLastSyncSource(),
+                                                bridgeClient.getLastSyncError());
                                     } else {
+                                        reportTargetRuntime(
+                                                appContext,
+                                                packageName,
+                                                "UNSUPPORTED_VERSION",
+                                                bridgeClient.getLastSyncSource(),
+                                                null);
                                         XposedBridge.log("[WAEX] Feature initialization halted due to unverified WhatsApp version.");
                                     }
                                 } catch (Throwable t) {
+                                    PreferenceBridgeClient bridge = sPreferenceBridge;
+                                    String bridgeStatus = bridge == null ? "FAILED" : bridge.getLastSyncSource();
+                                    String detail = t.getClass().getSimpleName() + ": "
+                                            + (t.getMessage() == null ? "No detail" : t.getMessage());
+                                    reportTargetRuntime(
+                                            appContext,
+                                            packageName,
+                                            "INITIALIZATION_FAILED",
+                                            bridgeStatus,
+                                            detail);
                                     XposedBridge.log("[WAEX] Error initializing FeatureRegistry: " + t.getMessage());
                                     showInjectionErrorSheet(t, packageName, lpparam.processName);
                                 }
@@ -261,6 +298,31 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
             } catch (Throwable t) {
                 XposedBridge.log("[WAEX] Error hooking Application.onCreate in target: " + t.getMessage());
             }
+        }
+    }
+
+    private static void reportTargetRuntime(Context context, String packageName,
+                                            String runtimeStatus, String bridgeStatus,
+                                            String error) {
+        Context appContext = context.getApplicationContext() != null
+                ? context.getApplicationContext() : context;
+        sRuntimeStatus = runtimeStatus;
+        sBridgeStatus = bridgeStatus;
+        sRuntimeError = error;
+        com.waenhancer.utils.WhatsAppPackageDetector.reportRuntimeHealth(
+                appContext, packageName, runtimeStatus, bridgeStatus, error);
+
+        if (HEARTBEAT_STARTED.compareAndSet(false, true)) {
+            Handler handler = new Handler(Looper.getMainLooper());
+            Runnable heartbeat = new Runnable() {
+                @Override
+                public void run() {
+                    com.waenhancer.utils.WhatsAppPackageDetector.reportRuntimeHealth(
+                            appContext, packageName, sRuntimeStatus, sBridgeStatus, sRuntimeError);
+                    handler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
+                }
+            };
+            handler.postDelayed(heartbeat, HEARTBEAT_INTERVAL_MS);
         }
     }
 

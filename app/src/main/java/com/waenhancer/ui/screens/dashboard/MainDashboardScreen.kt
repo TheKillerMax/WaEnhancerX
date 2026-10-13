@@ -80,6 +80,7 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.utils.HookedAppInfo
 import com.waenhancer.utils.InjectedHookItem
+import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
@@ -146,9 +147,7 @@ fun MainDashboardScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshTrigger++
-            }
+            if (event == Lifecycle.Event.ON_RESUME) refreshTrigger++
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
@@ -275,25 +274,50 @@ fun MainDashboardScreen(
                                     "Not Installed",
                                     colors.onSurfaceVariant
                                 )
-                                app.isHooked && isVersionSupported -> Triple(
+                                !isModuleActive -> Triple(
+                                    colors.error,
+                                    "Module inactive",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
+                                    colors.error,
+                                    "Injected • Initialization failed",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && !isVersionSupported -> Triple(
+                                    colors.error,
+                                    "Injected • Unsupported Version (Paused)",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "FAILED" -> Triple(
+                                    colors.error,
+                                    "Injected • Preference bridge unavailable",
+                                    colors.error
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Active • Using preference fallback",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Active • Some hooks failed",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT -> Triple(
                                     colors.primary,
                                     "Injected & Active",
                                     colors.primary
                                 )
-                                app.isHooked && !isVersionSupported -> Triple(
-                                    Color(0xFFEF4444),
-                                    "Injected • Unsupported Version (Paused)",
-                                    Color(0xFFEF4444)
-                                )
-                                !app.isHooked && !isVersionSupported -> Triple(
+                                app.scopeState == RuntimeScopeState.PREVIOUSLY_ACTIVE -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Scope Pending • Unsupported Version",
+                                    "Scope changed or unverified • Restart app to verify",
                                     Color(0xFFF59E0B)
                                 )
                                 else -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Scope Pending / Not Injected",
-                                    Color(0xFFF59E0B)
+                                    colors.error,
+                                    "Not active in module scope • Restart app to verify",
+                                    colors.error
                                 )
                             }
 
