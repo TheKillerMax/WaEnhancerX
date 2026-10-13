@@ -83,6 +83,25 @@ This is a literal-source review only: dynamic keys, indirect write helpers,
 private licensing code and legacy fallback semantics cannot be proven by
 matching method calls alone.
 
+## Inspect declared DEX fields without guessing obfuscated names
+
+For a locally supplied, authorized WhatsApp APK, inspect field declarations in
+SendE2EMessageJob and check whether its jid field actually exists:
+
+    python3 qa/dex_field_inventory.py /path/to/WhatsApp.apk --class-descriptor 'Lcom/whatsapp/jobqueue/job/SendE2EMessageJob;' --expected-field jid
+    python3 qa/dex_field_inventory.py /path/to/WhatsApp.apk --class-descriptor 'Lcom/whatsapp/jobqueue/job/SendE2EMessageJob;' --expected-field jid --fail-on-missing
+    python3 qa/test_dex_field_inventory.py
+
+The tool reads the DEX class_defs, class_data_item, and encoded field tables
+(not just string matches). On the user-supplied WhatsApp 2.26.39.79 APK,
+SendE2EMessageJob declares a jid string field and also has obfuscated
+typed JID fields. The latter **do not** establish which field represents the
+outgoing conversation; do not infer it from name or field order.
+
+This is structural metadata verification only. It neither validates the value
+read at runtime nor proves the intended receipt is released. Do not redistribute
+the host APK, and test any hook behavior separately on a verified device.
+
 ## What the report does *not* establish
 
 - **DEX strings are not hooks.** The 18 literals are a historical sample, not a complete list of hooks or the result of executing DexKit's method-matcher predicates. A present string can refer to the wrong code; an absent string may have alternate resolution paths.
