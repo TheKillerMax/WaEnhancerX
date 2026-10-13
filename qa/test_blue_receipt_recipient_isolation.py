@@ -18,7 +18,10 @@ assert 'if (key == null) return 0;' in blue
 assert 'sendPendingReadJobs(remoteJid)' in blue
 assert 'extractOutgoingJobJid(param.thisObject)' in blue
 assert 'XposedHelpers.getObjectField(job, "jid")' in blue
-assert 'extractRemoteJid(param.thisObject)' not in blue
+assert 'extractRemoteJid(' not in blue
+assert 'extras.keySet()' not in blue
+assert 'ConversationRecipientPolicy.resolve(candidates)' in blue
+assert 'Cannot verify chat recipient' in blue
 assert 'String receiptJid = remoteJid' not in blue
 assert 'lastHiddenConversationJid' not in blue
 assert 'getUserPart(' not in blue
@@ -48,7 +51,6 @@ assert 'if (isExplicitReceiptAllowed(target, messageId)) return;' in hide
 assert 'hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)' in hide
 assert 'SystemClock.elapsedRealtime()' in hide
 assert 'EXPLICIT_RECEIPT_IDS.isAllowed(' in hide
-assert 'BLUE_REPLY_BYPASS.isAllowed(' in hide
 assert 'new ConcurrentHashMap<>()' not in hide
 assert '" EnforceHiding: Downgrading read receipt"' in hide
 assert 't.getMessage()' not in hide
@@ -63,6 +65,8 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     str(root/'qa/java/TestBoundedReceiptAllowance.java'),
                     str(src/'RecipientReceiptAllowance.java'),
                     str(root/'qa/java/TestRecipientReceiptAllowance.java'),
+                    str(src/'ConversationRecipientPolicy.java'),
+                    str(root/'qa/java/TestConversationRecipientPolicy.java'),
                     str(root/'qa/java/TestReceiptPropertyStress.java')], check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestReceiptJidPolicy'],check=True)
@@ -72,6 +76,8 @@ with tempfile.TemporaryDirectory(prefix='waex_exact_receipts_') as dest:
                     'com.waenhancer.xposed.features.privacy.TestBoundedReceiptAllowance'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestRecipientReceiptAllowance'],check=True)
+    subprocess.run(['java','-cp',dest,
+                    'com.waenhancer.xposed.features.privacy.TestConversationRecipientPolicy'],check=True)
     subprocess.run(['java','-cp',dest,
                     'com.waenhancer.xposed.features.privacy.TestReceiptPropertyStress'],check=True)
 print('PASS: recipient+message exact permissions, fail-closed routing and bounded storage invariants')
