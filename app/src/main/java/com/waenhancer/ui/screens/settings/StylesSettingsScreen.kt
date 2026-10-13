@@ -96,7 +96,10 @@ fun StylesSettingsScreen() {
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             stylesKeys.forEach { key ->
-                if (key == "seen_tick_customization") {
+                if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
+                    // STRING / STRING_SET settings cannot be read through getBoolean().
+                    put(key, false)
+                } else if (key == "seen_tick_customization") {
                     // The receipt hooks read the canonical STRING 'seentick' (0/1/2),
                     // not the old UI-only Boolean 'seen_tick_customization' flag.
                     put(key, ManualSeenTickPreferencePolicy.isEnabled(
@@ -115,7 +118,8 @@ fun StylesSettingsScreen() {
         }
     }
 
-    val updatePreference: (String, Boolean) -> Unit = { key, value ->
+    val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
+        if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
         if (key == "seen_tick_customization") {
             val currentPlacement = preferenceManager.getString("seentick", "0")
             preferenceManager.putString("seentick",
@@ -307,6 +311,7 @@ fun StylesSettingsScreen() {
                     Column {
                         group.items.forEachIndexed { index, item ->
                             val isLocked = item.isPro && !isPro
+                            val needsTypedEditor = StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(item.key)
                             val isHighlighted = navController.highlightTargetKey == item.key
                             val highlightBgColor by animateColorAsState(
                                 targetValue = if (isHighlighted) colors.primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -321,7 +326,7 @@ fun StylesSettingsScreen() {
                                         val y = coordinates.positionInRoot().y - containerY + scrollState.value
                                         itemCoordinates[item.key] = y
                                     }
-                                    .clickable {
+                                    .clickable(enabled = !needsTypedEditor) {
                                         if (isLocked) {
                                             onActivatePro()
                                         } else {
@@ -348,7 +353,8 @@ fun StylesSettingsScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "${item.sublabel} • Requires a dedicated typed editor"
+                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -388,11 +394,20 @@ fun StylesSettingsScreen() {
                                                 )
                                             }
                                         }
-                                        StitchSwitch(
-                                            checked = if (isLocked) false else (settingsState[item.key] ?: false),
-                                            onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
-                                            enabled = !isLocked
-                                        )
+                                        if (needsTypedEditor) {
+                                            Text(
+                                                text = "Needs typed editor",
+                                                style = typography.labelSm,
+                                                color = colors.onSurfaceVariant,
+                                                fontSize = 12.sp
+                                            )
+                                        } else {
+                                            StitchSwitch(
+                                                checked = if (isLocked) false else (settingsState[item.key] ?: false),
+                                                onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
+                                                enabled = !isLocked
+                                            )
+                                        }
                                     }
                                 }
                                 if (item.isPro) {
