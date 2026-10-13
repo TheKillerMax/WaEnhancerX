@@ -42,8 +42,16 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     public static synchronized XSharedPreferences getPrefs() {
         if (sPrefs == null) {
-            sPrefs = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
-            sPrefs.reload();
+            try {
+                XSharedPreferences candidate = new XSharedPreferences(PACKAGE_MANAGER, "waex_prefs");
+                candidate.reload();
+                sPrefs = candidate;
+            } catch (Throwable t) {
+                // The provider bridge does not require a world-readable disk snapshot.
+                // Do not abandon all target hooks when old XSharedPreferences access fails.
+                XposedBridge.log("[WAEX] Disk preference snapshot unavailable: "
+                        + t.getClass().getSimpleName());
+            }
         }
         return sPrefs;
     }

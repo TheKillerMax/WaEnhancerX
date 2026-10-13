@@ -22,6 +22,11 @@ checks = {
     "Instrumentation supplies Application from argument": "param.args[0]" in main and
          "application instanceof android.app.Application" in main,
     "startup preference preload retained": "sPreferenceBridge = new PreferenceBridgeClient(" in main,
+    "disk snapshot failure isolated": "Disk preference snapshot unavailable:" in main,
+    "disk snapshot uses local candidate": "XSharedPreferences candidate = new XSharedPreferences(" in main
+         and "candidate.reload();" in main and "sPrefs = candidate;" in main,
+    "nullable disk snapshot accepted by provider bridge": "preloadedPrefs, true" in main
+         and "new PreferenceBridgeClient(appContext, preloadedPrefs)" in main,
     "initial provider sync before hook decisions": "resolvedBridge.awaitInitialSync();" in main,
     "hooked-package report retained": "WhatsAppPackageDetector.registerHookedPackage(" in main,
     "hooked-package report failures isolated": "Hooked-package reporting failed:" in main,
@@ -57,6 +62,14 @@ checks = {
 for label, passed in checks.items():
     if not passed:
         raise AssertionError("Startup reconciliation regression: " + label)
+
+# Disk snapshot loading is non-fatal: provider-backed preferences must be allowed
+# even when the optional world-readable XSharedPreferences constructor/reload fails.
+loader = main[main.index("public static synchronized XSharedPreferences getPrefs()"):
+              main.index("@SuppressLint", main.index("public static synchronized XSharedPreferences getPrefs()"))]
+assert "try {" in loader and "catch (Throwable t)" in loader and "return sPrefs;" in loader
+assert "Disk preference snapshot unavailable:" in loader
+assert "this.diskPrefs = diskPrefs;" in (SRC / "bridge/client/PreferenceBridgeClient.java").read_text(encoding="utf-8")
 
 # Every optional setup that occurs before feature initialization must have
 # its own failure-handler context. Checking the nearest meaningful surrounding
