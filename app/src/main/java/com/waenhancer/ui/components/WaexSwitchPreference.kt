@@ -1,7 +1,8 @@
 package com.waenhancer.ui.components
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,10 +30,14 @@ fun StitchSwitch(
     val trackHeight = 20.dp
     val thumbSize = 16.dp
 
-    // Smooth animation for thumb movement
+    // A non-bouncy spring matches Android's direct, physical switch response while preserving
+    // the custom WAEX control's exact resting appearance.
     val thumbOffset by animateDpAsState(
         targetValue = if (checked) 16.dp else 0.dp,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "switch_thumb"
     )
 

@@ -60,6 +60,36 @@ public final class WaexPreferenceManager {
         }
     }
 
+    /**
+     * Persist related public Boolean settings as a single transaction and notify
+     * injected processes once. Reject invalid/private keys before any mutation.
+     * A false result means the caller must not optimistically update the UI.
+     */
+    public boolean putBooleans(java.util.Map<String, Boolean> values) {
+        if (values == null) return false;
+        try {
+            // Snapshot once: validation and commit must see the same set of keys.
+            java.util.Map<String, Boolean> batch = new java.util.LinkedHashMap<>(values);
+            if (batch.isEmpty()) return false;
+            for (java.util.Map.Entry<String, Boolean> change : batch.entrySet()) {
+                String key = change.getKey();
+                if (key == null || key.isEmpty() || change.getValue() == null) return false;
+                PreferenceSchema.Entry definition = PreferenceSchema.entry(key);
+                if (definition != null && (definition.type != PreferenceSchema.Type.BOOLEAN
+                        || definition.store != PreferenceSchema.Store.PUBLIC)) return false;
+            }
+            SharedPreferences.Editor editor = PreferenceStores.publicStore(context).edit();
+            for (java.util.Map.Entry<String, Boolean> change : batch.entrySet()) {
+                editor.putBoolean(change.getKey(), change.getValue());
+            }
+            if (!editor.commit()) return false;
+            notifyChange();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
     public String getString(String key, String defaultValue) {
         try {
             return getStore(key).getString(key, defaultValue);

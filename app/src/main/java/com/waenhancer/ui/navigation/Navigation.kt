@@ -692,8 +692,8 @@ fun MainContainerScreen() {
                             val animatedOffset by animateDpAsState(
                                 targetValue = targetOffset,
                                 animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessLow
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
                                 ),
                                 label = "tab_highlighter_offset"
                             )
@@ -793,20 +793,28 @@ fun MainContainerScreen() {
                     transitionSpec = {
                         if (isForward) {
                             slideInHorizontally(
-                                initialOffsetX = { it },
-                                animationSpec = tween(durationMillis = 300)
-                            ) togetherWith slideOutHorizontally(
-                                targetOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                                initialOffsetX = { it / 10 },
+                                animationSpec = tween(durationMillis = 240)
+                            ) + fadeIn(
+                                animationSpec = tween(durationMillis = 180)
+                            ) togetherWith (slideOutHorizontally(
+                                targetOffsetX = { -it / 10 },
+                                animationSpec = tween(durationMillis = 240)
+                            ) + fadeOut(
+                                animationSpec = tween(durationMillis = 120)
+                            ))
                         } else {
                             slideInHorizontally(
-                                initialOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 300)
-                            ) togetherWith slideOutHorizontally(
-                                targetOffsetX = { it },
-                                animationSpec = tween(durationMillis = 300)
-                            )
+                                initialOffsetX = { -it / 10 },
+                                animationSpec = tween(durationMillis = 240)
+                            ) + fadeIn(
+                                animationSpec = tween(durationMillis = 180)
+                            ) togetherWith (slideOutHorizontally(
+                                targetOffsetX = { it / 10 },
+                                animationSpec = tween(durationMillis = 240)
+                            ) + fadeOut(
+                                animationSpec = tween(durationMillis = 120)
+                            ))
                         }
                     },
                     label = "screen_transition",
