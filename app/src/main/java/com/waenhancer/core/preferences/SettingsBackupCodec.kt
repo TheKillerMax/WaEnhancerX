@@ -303,19 +303,18 @@ object SettingsBackupCodec {
     }
 
     private fun resolveKey(originalKey: String, legacyJson: Boolean): String? {
-        val original = PreferenceSchema.entry(originalKey)
-        // Binary backups and versioned JSON contain canonical names. A current
-        // preference must never be silently rewritten into another setting.
-        if (!legacyJson && original != null) return originalKey
+        // Every key already present in the schema retains its OWN meaning, even
+        // in old unversioned JSON backups. Same-type legacy aliases can denote
+        // unrelated features (e.g. typing_online_toasts vs typing_privacy, or
+        // hide_seen_receipts vs hidereceipt). Rewriting them changes privacy
+        // settings without the user's intention.
+        if (PreferenceSchema.entry(originalKey) != null) return originalKey
 
-        // Preserve legacy JSON mappings where the old and new schema types are
-        // compatible. Do not turn a Boolean into a String/Float or lose its value.
-        val mappedKey = LEGACY_ALIASES[originalKey]
-        val mapped = mappedKey?.let(PreferenceSchema::entry)
-        if (mapped != null && (original == null || original.type == mapped.type)) {
-            return mappedKey
-        }
-        return if (original != null) originalKey else null
+        // Only truly unknown old keys may migrate, and only from legacy JSON.
+        // New binary/JSON backup formats must never guess missing key names.
+        if (!legacyJson) return null
+        val mappedKey = LEGACY_ALIASES[originalKey] ?: return null
+        return mappedKey.takeIf { PreferenceSchema.entry(it) != null }
     }
 
     private fun isSensitive(key: String?): Boolean {
