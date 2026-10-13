@@ -68,7 +68,8 @@ fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismis
                 }
             }
         })
-        onDispose { }
+        // Cancel network work when the sheet is dismissed or recomposed for a new URL.
+        onDispose { call?.cancel() }
     }
 
     ModalBottomSheet(

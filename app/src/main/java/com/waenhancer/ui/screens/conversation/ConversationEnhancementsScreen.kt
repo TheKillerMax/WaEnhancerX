@@ -70,7 +70,7 @@ fun ConversationEnhancementsScreen() {
 
     val convKeys = remember {
         listOf(
-            "message_bomber", "anti_edit_messages", "preserve_delete_for_me", "preserve_own_revoke", "revokeallmessages", "hide_forwarded_tag",
+            "message_bomber", "anti_edit_messages", "message_device_source", "preserve_delete_for_me", "preserve_own_revoke", "revokeallmessages", "hide_forwarded_tag",
             "removeforwardlimit", "sticker_confirm_alert", "removeseemore", "stamp_copied_message", "doubletap2like",
             "jump_to_first_message", "unlimited_pinned_chats", "broadcast_tag", "direct_chat_dialer",
             "inline_translation", "copy_status_text", "animation_emojis", "disable_defemojis"
@@ -158,6 +158,26 @@ fun ConversationEnhancementsScreen() {
                             .onGloballyPositioned { coordinates ->
                                 val y = coordinates.positionInRoot().y - containerY + scrollState.value
                                 itemCoordinates["anti_edit_messages"] = y
+                            }
+                    )
+                    val mdsHighlighted = navController.highlightTargetKey == "message_device_source"
+                    val mdsHighlightBg by animateColorAsState(
+                        targetValue = if (mdsHighlighted) colors.primary.copy(alpha = 0.15f) else Color.Transparent,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "mds_highlight_bg"
+                    )
+                    WaexSwitchPreference(
+                        title = "Show Message Device Source",
+                        description = "Shows whether a message was sent from the primary device or a linked device",
+                        checked = stateMap["message_device_source"] ?: false,
+                        onCheckedChange = { onToggle("message_device_source", it) },
+                        icon = WaexIcons.Extension,
+                        showDivider = true,
+                        modifier = Modifier
+                            .background(mdsHighlightBg)
+                            .onGloballyPositioned { coordinates ->
+                                val y = coordinates.positionInRoot().y - containerY + scrollState.value
+                                itemCoordinates["message_device_source"] = y
                             }
                     )
                     WaexSwitchPreference(

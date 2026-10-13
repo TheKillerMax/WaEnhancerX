@@ -124,8 +124,11 @@ checks = {
     "reject non-Boolean or private schema": 'definition.type != PreferenceSchema.Type.BOOLEAN' in manager and
         'definition.store != PreferenceSchema.Store.PUBLIC' in manager,
     "notify after successful commit": manager.index('if (!editor.commit()) return false;') <
-        manager.index('fixFilePermissions();', manager.index('public boolean putBooleans(')) <
         manager.index('notifyChange();', manager.index('public boolean putBooleans(')),
+    "no world-readable data directory permission regression":
+        "fixFilePermissions" not in manager and
+        ".setReadable(true, false)" not in manager and
+        ".setExecutable(true, false)" not in manager,
 }
 for label, passed in checks.items():
     if not passed:

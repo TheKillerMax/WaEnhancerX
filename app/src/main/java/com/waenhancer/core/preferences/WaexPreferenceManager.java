@@ -56,7 +56,6 @@ public final class WaexPreferenceManager {
     public void putBoolean(String key, boolean value) {
         getStore(key).edit().putBoolean(key, value).commit();
         if (isPublicStore(key)) {
-            fixFilePermissions();
             notifyChange();
         }
     }
@@ -84,7 +83,6 @@ public final class WaexPreferenceManager {
                 editor.putBoolean(change.getKey(), change.getValue());
             }
             if (!editor.commit()) return false;
-            fixFilePermissions();
             notifyChange();
             return true;
         } catch (RuntimeException ignored) {
@@ -108,7 +106,6 @@ public final class WaexPreferenceManager {
     public void putString(String key, String value) {
         getStore(key).edit().putString(key, value).commit();
         if (isPublicStore(key)) {
-            fixFilePermissions();
             notifyChange();
         }
     }
@@ -120,7 +117,6 @@ public final class WaexPreferenceManager {
     public void putInt(String key, int value) {
         getStore(key).edit().putInt(key, value).commit();
         if (isPublicStore(key)) {
-            fixFilePermissions();
             notifyChange();
         }
     }
@@ -132,7 +128,6 @@ public final class WaexPreferenceManager {
     public void putFloat(String key, float value) {
         getStore(key).edit().putFloat(key, value).commit();
         if (isPublicStore(key)) {
-            fixFilePermissions();
             notifyChange();
         }
     }
@@ -140,7 +135,6 @@ public final class WaexPreferenceManager {
     public void remove(String key) {
         getStore(key).edit().remove(key).commit();
         if (isPublicStore(key)) {
-            fixFilePermissions();
             notifyChange();
         }
     }
@@ -159,7 +153,6 @@ public final class WaexPreferenceManager {
         InputStream input = context.getContentResolver().openInputStream(source);
         if (input == null) throw new java.io.IOException("Could not open backup file");
         int count = SettingsBackupCodec.INSTANCE.decode(context, input);
-        fixFilePermissions();
         notifyChange();
         return count;
     }
@@ -170,19 +163,4 @@ public final class WaexPreferenceManager {
         } catch (Throwable ignored) {}
     }
 
-    private void fixFilePermissions() {
-        try {
-            java.io.File dataDir = new java.io.File(context.getApplicationInfo().dataDir);
-            java.io.File prefsDir = new java.io.File(dataDir, "shared_prefs");
-            java.io.File prefsFile = new java.io.File(prefsDir, PreferenceStores.PUBLIC_NAME + ".xml");
-
-            dataDir.setExecutable(true, false);
-            dataDir.setReadable(true, false);
-
-            prefsDir.setExecutable(true, false);
-            prefsDir.setReadable(true, false);
-
-            prefsFile.setReadable(true, false);
-        } catch (Throwable ignored) {}
-    }
 }
