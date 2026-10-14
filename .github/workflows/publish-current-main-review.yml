@@ -1,0 +1,62 @@
+name: Validate and publish reviewed current-main corrections
+
+on:
+  push:
+    branches: ['test/publish-current-main-2026-10-14']
+    paths:
+      - '.github/workflows/publish-current-main-review.yml'
+      - 'qa/continuation_2026_10_14/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: waex-validated-publication-2026-10-14
+  cancel-in-progress: false
+
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Require actual source parsing tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          command -v kotlinc
+          kotlinc -version
+          python3 -m py_compile qa/continuation_2026_10_14/*.py
+      - name: Reconstruct exact reviewed trees and run source/JVM regressions without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/continuation_2026_10_14/publisher.py prepare
+      - name: Publish four whitelisted fork refs atomically without rewriting history
+        shell: bash
+        env:
+          PUBLISH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 qa/continuation_2026_10_14/publisher.py publish
+      - name: Preserve text-only validation and publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-validated-publication-2026-10-14
+          path: ${{ runner.temp }}/waex-publication-evidence
+          if-no-files-found: error
+          retention-days: 14
