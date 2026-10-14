@@ -36,6 +36,9 @@ class PresenceRowRenderingTest {
             if (value is MutableSet<*>) value.clear()
         }
         app = RuntimeEnvironment.getApplication()
+        // Config.NONE has no manifest: explicitly enable the RTL fixture contract.
+        app.applicationInfo.flags = app.applicationInfo.flags or android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL
+        app.applicationInfo.targetSdkVersion = 28
         h = RendererHarness(app)
         val companion = RendererHarness::class.java.getDeclaredField("identityAliases")
         companion.isAccessible = true; (companion.get(null) as MutableMap<*,*>).clear()
@@ -114,6 +117,7 @@ class PresenceRowRenderingTest {
     }
     @Test fun rtlFollowsHostDirection() {
         val r = row(); r.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        assertEquals("fixture host must support RTL", View.LAYOUT_DIRECTION_RTL, r.layoutDirection)
         PresenceStateStore.update(a, true); h.bind(r, a); pump()
         assertEquals(View.LAYOUT_DIRECTION_RTL, h.overlay(r)!!.layoutDirection)
         assertTrue("START dot must be on right in RTL", h.dot(r)!!.left > r.width / 2)
