@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.settings
 
+import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.animation.animateColorAsState
@@ -45,6 +46,7 @@ fun StylesSettingsScreen() {
     var selectedTab by remember { mutableStateOf("appearance") } // "appearance" | "layout"
 
     val navController = LocalWaexNavController.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -96,19 +98,36 @@ fun StylesSettingsScreen() {
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             stylesKeys.forEach { key ->
-                val defaultValue = if (key == "send_audio_as_voice_status") {
-                    preferenceManager.getBoolean("voice_status_enhancement", false)
-                } else false
-                put(key, preferenceManager.getBoolean(key, defaultValue))
+                if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
+                    // Do not decode a STRING or STRING_SET using getBoolean().
+                    put(key, false)
+                } else {
+                    val defaultValue = if (key == "send_audio_as_voice_status") {
+                        preferenceManager.getBoolean("voice_status_enhancement", false)
+                    } else false
+                    val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+                    val legacyDefault = if (canonicalKey == key) defaultValue
+                        else preferenceManager.getBoolean(key, defaultValue)
+                    put(key, preferenceManager.getBoolean(canonicalKey, legacyDefault))
+                }
             }
         }
     }
 
-    val updatePreference: (String, Boolean) -> Unit = { key, value ->
-        settingsState[key] = value
-        preferenceManager.putBoolean(key, value)
-        if (key == "send_audio_as_voice_status") {
-            preferenceManager.putBoolean("voice_status_enhancement", value)
+    val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
+        if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
+        val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+        val changes = if (key == "send_audio_as_voice_status") {
+            // Persist the visible setting and its linked hook key atomically.
+            mapOf(canonicalKey to value, "voice_status_enhancement" to value)
+        } else {
+            mapOf(canonicalKey to value)
+        }
+        if (preferenceManager.putBooleans(changes)) {
+            settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
+        } else {
+            // Failed commits must not appear as successful changes in the UI.
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -287,6 +306,7 @@ fun StylesSettingsScreen() {
                     Column {
                         group.items.forEachIndexed { index, item ->
                             val isLocked = item.isPro && !isPro
+                            val needsTypedEditor = StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(item.key)
                             val isHighlighted = navController.highlightTargetKey == item.key
                             val highlightBgColor by animateColorAsState(
                                 targetValue = if (isHighlighted) colors.primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -301,7 +321,7 @@ fun StylesSettingsScreen() {
                                         val y = coordinates.positionInRoot().y - containerY + scrollState.value
                                         itemCoordinates[item.key] = y
                                     }
-                                    .clickable {
+                                    .clickable(enabled = !needsTypedEditor) {
                                         if (isLocked) {
                                             onActivatePro()
                                         } else {
@@ -328,7 +348,8 @@ fun StylesSettingsScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "${item.sublabel} • Requires a dedicated typed editor"
+                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -368,11 +389,20 @@ fun StylesSettingsScreen() {
                                                 )
                                             }
                                         }
-                                        StitchSwitch(
-                                            checked = if (isLocked) false else (settingsState[item.key] ?: false),
-                                            onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
-                                            enabled = !isLocked
-                                        )
+                                        if (needsTypedEditor) {
+                                            Text(
+                                                text = "Needs typed editor",
+                                                style = typography.labelSm,
+                                                color = colors.onSurfaceVariant,
+                                                fontSize = 12.sp
+                                            )
+                                        } else {
+                                            StitchSwitch(
+                                                checked = if (isLocked) false else (settingsState[item.key] ?: false),
+                                                onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
+                                                enabled = !isLocked
+                                            )
+                                        }
                                     }
                                 }
                                 if (item.isPro) {
