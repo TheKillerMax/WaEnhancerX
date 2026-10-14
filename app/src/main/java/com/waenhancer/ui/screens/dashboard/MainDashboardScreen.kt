@@ -137,7 +137,9 @@ fun MainDashboardScreen(
     }
 
     var refreshTrigger by remember { mutableIntStateOf(0) }
-    var systemDiagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var systemDiagnostics by remember {
+        mutableStateOf(SystemDiagnosticsReader.cached())
+    }
 
     LaunchedEffect(refreshTrigger) {
         systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }

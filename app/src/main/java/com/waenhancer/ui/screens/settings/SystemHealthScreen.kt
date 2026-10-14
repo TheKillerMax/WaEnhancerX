@@ -52,7 +52,9 @@ fun SystemHealthScreen() {
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    var diagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var diagnostics by remember {
+        mutableStateOf(SystemDiagnosticsReader.cached())
+    }
     var refreshTrigger by remember { mutableIntStateOf(0) }
     var showHookToast by remember {
         mutableStateOf(preferences.getBoolean("show_hook_toast", true))
