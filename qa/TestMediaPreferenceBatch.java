@@ -24,6 +24,8 @@ public final class TestMediaPreferenceBatch {
         int commits;
         boolean failCommit;
         boolean throwCommit;
+        boolean applyBeforeFailure;
+        boolean throwEdit;
 
         @Override public boolean getBoolean(String key, boolean fallback) {
             Object value = values.get(key);
@@ -35,6 +37,13 @@ public final class TestMediaPreferenceBatch {
             Object v = values.get(key);
             return v == null ? fallback : (String) v;
         }
+        @Override @SuppressWarnings("unchecked")
+        public java.util.Set<String> getStringSet(String key, java.util.Set<String> fallback) {
+            Object value = values.get(key);
+            if (value == null) return fallback;
+            if (!(value instanceof java.util.Set)) throw new ClassCastException();
+            return (java.util.Set<String>) value;
+        }
         @Override public int getInt(String key, int fallback) {
             Object v = values.get(key);
             return v == null ? fallback : (Integer) v;
@@ -44,24 +53,31 @@ public final class TestMediaPreferenceBatch {
             return v == null ? fallback : (Float) v;
         }
         @Override public Map<String, ?> getAll() { return Collections.unmodifiableMap(new HashMap<>(values)); }
-        @Override public SharedPreferences.Editor edit() { return new Batch(); }
+        @Override public SharedPreferences.Editor edit() {
+            if (throwEdit) throw new IllegalStateException("Editor unavailable");
+            return new Batch();
+        }
 
         private final class Batch implements Editor {
             private final Map<String, Object> adds = new HashMap<>();
             @Override public Editor putBoolean(String key, boolean value) { adds.put(key, value); return this; }
             @Override public Editor putString(String key, String value) { adds.put(key, value); return this; }
+            @Override public Editor putStringSet(String key, java.util.Set<String> value) {
+                // Retain the reference deliberately: the manager must snapshot its input.
+                adds.put(key, value); return this;
+            }
             @Override public Editor putInt(String key, int value) { adds.put(key, value); return this; }
             @Override public Editor putFloat(String key, float value) { adds.put(key, value); return this; }
             @Override public Editor remove(String key) { adds.put(key, null); return this; }
             @Override public boolean commit() {
                 commits++;
                 if (throwCommit) throw new IllegalStateException("Storage unavailable");
-                if (failCommit) return false;
+                if (failCommit && !applyBeforeFailure) return false;
                 for (Map.Entry<String, Object> entry : adds.entrySet()) {
                     if (entry.getValue() == null) values.remove(entry.getKey());
                     else values.put(entry.getKey(), entry.getValue());
                 }
-                return true;
+                return !failCommit;
             }
         }
     }
@@ -81,6 +97,66 @@ public final class TestMediaPreferenceBatch {
         }
         @Override public ContentResolver getContentResolver() { return resolver; }
         @Override public ApplicationInfo getApplicationInfo() { return info; }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void testTypedWrites() {
+        FakeContext c = new FakeContext();
+        WaexPreferenceManager m = new WaexPreferenceManager(c);
+        String[][] inputs = {{"css_theme", "#title {color: #112233;}"},
+                {"change_dpi", "320"}, {"chatfilter", "1"}, {"waex_menu_style", "icons"}};
+        for (String[] input : inputs) {
+            int commits = c.publicStore.commits, notifications = c.resolver.notifications;
+            check(m.putPublicString(input[0], input[1]), "valid typed string rejected");
+            check(input[1].equals(m.getString(input[0], "")), "typed string not persisted");
+            check(c.publicStore.commits == commits + 1, "typed string commits exactly once");
+            check(c.resolver.notifications == notifications + 1, "typed string notification");
+        }
+        java.util.Set<String> tabs = new java.util.LinkedHashSet<>(java.util.Arrays.asList("300", "600"));
+        check(m.putPublicStringSet("hidetabs", tabs), "valid typed set rejected");
+        tabs.add("400");
+        check(!m.getStringSet("hidetabs", Collections.emptySet()).contains("400"), "caller mutated stored set");
+        java.util.Set<String> read = m.getStringSet("hidetabs", Collections.emptySet());
+        read.clear();
+        check(m.getStringSet("hidetabs", Collections.emptySet()).size() == 2, "read leaked mutable storage");
+        check(m.putPublicStringSet("hidetabs", Collections.emptySet()), "empty typed set rejected");
+        check(m.getStringSet("hidetabs", tabs).isEmpty(), "empty set did not reset tabs");
+        check(m.putPublicString("css_theme", ""), "empty CSS reset rejected");
+        int commits = c.publicStore.commits, notifications = c.resolver.notifications;
+        for (String key : new String[]{null, "", "unknown_typed_setting", "imagequality", "hidetabs", "app_theme_mode"}) {
+            check(!m.putPublicString(key, "invalid"), "unknown, private or wrong-type string accepted: " + key);
+        }
+        check(!m.putPublicString("css_theme", null), "null string accepted");
+        for (String key : new String[]{null, "", "unknown_typed_setting", "css_theme", "imagequality", "app_theme_mode"}) {
+            check(!m.putPublicStringSet(key, tabs), "unknown, private or wrong-type set accepted: " + key);
+        }
+        check(!m.putPublicStringSet("hidetabs", null), "null set accepted");
+        check(!m.putPublicStringSet("hidetabs", new java.util.HashSet<>(java.util.Arrays.asList("300", null))), "null element accepted");
+        java.util.Set raw = new java.util.HashSet(); raw.add(Integer.valueOf(300));
+        check(!m.putPublicStringSet("hidetabs", raw), "non-string element accepted");
+        check(c.publicStore.commits == commits, "rejected data reached storage");
+        check(c.privateStore.commits == 0, "typed writer reached private store");
+        check(c.resolver.notifications == notifications, "rejected input notified");
+        for (boolean mutateMemory : new boolean[]{false, true}) {
+            c.publicStore.failCommit = true; c.publicStore.applyBeforeFailure = mutateMemory;
+            check(!m.putPublicString("css_theme", "failed-save"), "failed string commit reported success");
+            check(!m.putPublicStringSet("hidetabs", tabs), "failed set commit reported success");
+            check(c.resolver.notifications == notifications, "failed commit notified");
+            if (mutateMemory) check("failed-save".equals(m.getString("css_theme", "")),
+                    "test must model Android memory-before-disk failure; rollback is not guaranteed");
+        }
+        c.publicStore.failCommit = false; c.publicStore.applyBeforeFailure = false;
+        c.publicStore.throwCommit = true;
+        check(!m.putPublicString("css_theme", "error"), "commit exception escaped string writer");
+        check(!m.putPublicStringSet("hidetabs", tabs), "commit exception escaped set writer");
+        c.publicStore.throwCommit = false; c.publicStore.throwEdit = true;
+        check(!m.putPublicString("css_theme", "error"), "editor exception escaped string writer");
+        check(!m.putPublicStringSet("hidetabs", tabs), "editor exception escaped set writer");
+        check(c.resolver.notifications == notifications, "exception triggered notification");
+        c.publicStore.throwEdit = false;
+        check(m.putPublicString("css_theme", "retry"), "string retry failed");
+        check(m.putPublicStringSet("hidetabs", tabs), "set retry failed");
+        check(c.resolver.notifications == notifications + 2, "successful retries not notified");
     }
 
     public static void main(String[] args) {
@@ -139,6 +215,7 @@ public final class TestMediaPreferenceBatch {
         check(!manager.getBoolean("imagequality", true), "image hook was not disabled");
         check(!manager.getBoolean("video_maxfps", true), "fps hook was not disabled");
         check(context.resolver.notifications == 3, "valid update not notified");
-        System.out.println("PASS: " + checks + " production manager atomicity, schema and failure checks");
+        testTypedWrites();
+        System.out.println("PASS: " + checks + " production manager/schema/failure checks (Android doubles)");
     }
 }

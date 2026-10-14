@@ -110,6 +110,49 @@ public final class WaexPreferenceManager {
         }
     }
 
+    /**
+     * Commit a schema-declared public STRING and report persistence failure.
+     * Existing void setters keep their contract. A false result is not a disk or
+     * in-memory rollback guarantee: SharedPreferences may update memory first.
+     */
+    public boolean putPublicString(String key, String value) {
+        if (value == null || !isPublicType(key, PreferenceSchema.Type.STRING)) return false;
+        try {
+            if (!PreferenceStores.publicStore(context).edit().putString(key, value).commit()) {
+                return false;
+            }
+            notifyChange();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    /** Commit a defensive snapshot of a public STRING_SET, notifying only on success. */
+    public boolean putPublicStringSet(String key, java.util.Set<String> value) {
+        if (value == null || !isPublicType(key, PreferenceSchema.Type.STRING_SET)) return false;
+        try {
+            java.util.Set<String> snapshot = new java.util.LinkedHashSet<>();
+            for (Object element : value) {
+                if (!(element instanceof String)) return false;
+                snapshot.add((String) element);
+            }
+            if (!PreferenceStores.publicStore(context).edit().putStringSet(key, snapshot).commit()) {
+                return false;
+            }
+            notifyChange();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isPublicType(String key, PreferenceSchema.Type type) {
+        if (key == null || key.isEmpty()) return false;
+        PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
+        return entry != null && entry.type == type && entry.store == PreferenceSchema.Store.PUBLIC;
+    }
+
     public java.util.Set<String> getStringSet(String key, java.util.Set<String> defaultValue) {
         try {
             java.util.Set<String> value = getStore(key).getStringSet(key, defaultValue);

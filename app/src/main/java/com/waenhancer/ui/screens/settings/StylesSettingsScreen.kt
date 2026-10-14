@@ -462,6 +462,15 @@ private fun TypedStyleEditorDialog(
     onDismiss: () -> Unit,
     onSaved: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val completeSave: (Boolean) -> Unit = { saved ->
+        if (saved) {
+            onSaved()
+        } else {
+            // Keep the editor and its input open so the user can retry.
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+        }
+    }
     when (key) {
         "custom_theme" -> TextValueEditorDialog(
             title = "Custom Theme CSS",
@@ -470,7 +479,7 @@ private fun TypedStyleEditorDialog(
             singleLine = false,
             placeholder = "/* Your CSS rules */",
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("css_theme", it.trim()); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("css_theme", it.trim())) }
         )
         "custom_view_dpi" -> TextValueEditorDialog(
             title = "Default DPI",
@@ -483,14 +492,14 @@ private fun TypedStyleEditorDialog(
             },
             errorMessage = "Enter 0 or a number from 120 to 1000",
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("change_dpi", it.trim()); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("change_dpi", it.trim())) }
         )
         "chat_filters" -> ChoiceValueEditorDialog(
             title = "Chat filter display",
             selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
             choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("chatfilter", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("chatfilter", it)) }
         )
         "quick_home_menu" -> ChoiceValueEditorDialog(
             title = "Quick Action Home Menu",
@@ -501,7 +510,7 @@ private fun TypedStyleEditorDialog(
                 "icons" to "Toolbar icons"
             ),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("waex_menu_style", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("waex_menu_style", it)) }
         )
         "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
             title = "Hide home tabs",
@@ -513,7 +522,7 @@ private fun TypedStyleEditorDialog(
                 "700" to "Tools"
             ),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putStringSet("hidetabs", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicStringSet("hidetabs", it)) }
         )
         else -> onDismiss()
     }
