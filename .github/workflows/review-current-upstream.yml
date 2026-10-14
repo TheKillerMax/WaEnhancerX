@@ -1,0 +1,69 @@
+name: Read-only upstream integration review
+
+on:
+  push:
+    branches: ['qa/review-current-upstream-2026-10-14']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-and-merge-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout public source only
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Capture exact source trees and attempt a read-only merge
+        shell: bash
+        env:
+          PREVIEW: 2fffbf9d966436e014df1eaee2bb1fd0304d206e
+          UPSTREAM: 4bbe5cb02ce2fe924136a9579d2582c1a4818643
+          BASE: 6a34158ff8f1dcad346e34fec6db67dc79cc1e8f
+        run: |
+          set -euo pipefail
+          git config core.hooksPath /dev/null
+          git fetch --no-tags https://github.com/WaEnhancerX/WaEnhancerX.git "$UPSTREAM"
+          mkdir -p review-artifacts
+          for pair in "preview:$PREVIEW" "upstream:$UPSTREAM" "base:$BASE"; do
+            label="${pair%%:*}"
+            revision="${pair#*:}"
+            test "$(git rev-parse "$revision^{commit}")" = "$revision"
+            git archive --format=zip --output="review-artifacts/$label.zip" "$revision"
+            git ls-tree -r "$revision" > "review-artifacts/$label-tree.txt"
+          done
+          git merge-base "$PREVIEW" "$UPSTREAM" > review-artifacts/merge-base.txt
+          git log --format='%H %s' "$BASE..$UPSTREAM" > review-artifacts/upstream-history.txt
+          git diff --stat "$BASE" "$UPSTREAM" > review-artifacts/upstream-diff-stat.txt
+          set +e
+          git merge-tree --write-tree --messages "$PREVIEW" "$UPSTREAM" > review-artifacts/merge-tree.txt 2>review-artifacts/merge-tree-stderr.txt
+          result=$?
+          set -e
+          printf '%s\n' "$result" > review-artifacts/merge-exit-code.txt
+          if [[ "$result" != 0 && "$result" != 1 ]]; then
+            cat review-artifacts/merge-tree-stderr.txt
+            exit "$result"
+          fi
+          tentative_tree="$(head -n 1 review-artifacts/merge-tree.txt)"
+          test "$(git cat-file -t "$tentative_tree")" = tree
+          git archive --format=zip --output=review-artifacts/tentative-merge.zip "$tentative_tree"
+          git ls-tree -r "$tentative_tree" > review-artifacts/tentative-merge-tree.txt
+          printf 'PREVIEW=%s\nUPSTREAM=%s\nBASE=%s\nMERGE_EXIT=%s\n' "$PREVIEW" "$UPSTREAM" "$BASE" "$result" > review-artifacts/provenance.txt
+          echo 'Read-only source composition report. No branch merge, tests, APK build or device validation is claimed.' > review-artifacts/SCOPE.txt
+          (cd review-artifacts && sha256sum *.zip > SHA256SUMS)
+          cat review-artifacts/provenance.txt
+          cat review-artifacts/merge-tree.txt
+      - name: Retain public source and merge diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: waex-review-inputs-${{ github.run_id }}
+          path: review-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
