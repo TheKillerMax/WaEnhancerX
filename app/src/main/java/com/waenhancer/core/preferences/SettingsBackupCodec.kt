@@ -8,6 +8,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.InputStream
@@ -136,10 +137,37 @@ object SettingsBackupCodec {
         return records.size
     }
 
+    /**
+     * Avoid InputStream.readBytes(): an oversized/malicious backup could exhaust
+     * process memory *before* the post-read MAX_BYTES check. Read at most one
+     * byte beyond the declared limit to distinguish exact-size EOF from overflow.
+     */
+    private fun readBoundedBackup(input: InputStream): ByteArray = input.use { stream ->
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var consumed = 0
+        while (true) {
+            val allowed = minOf(buffer.size, MAX_BYTES + 1 - consumed)
+            val count = stream.read(buffer, 0, allowed)
+            if (count < 0) break
+            if (count == 0) {
+                // An unusual InputStream may make no progress on bulk reads.
+                val single = stream.read()
+                if (single < 0) break
+                output.write(single)
+                consumed++
+            } else {
+                output.write(buffer, 0, count)
+                consumed += count
+            }
+            require(consumed <= MAX_BYTES) { "Backup exceeds the allowed size limit" }
+        }
+        output.toByteArray()
+    }
+
     fun decode(context: Context, input: InputStream): Int {
-        val bytes = input.use { it.readBytes() }
+        val bytes = readBoundedBackup(input)
         require(bytes.isNotEmpty()) { "Backup is empty" }
-        require(bytes.size <= MAX_BYTES) { "Backup exceeds the allowed size limit" }
 
         val records = if (bytes.size >= magic.size && bytes.take(magic.size).toByteArray().contentEquals(magic)) {
             decodeBinary(bytes)
