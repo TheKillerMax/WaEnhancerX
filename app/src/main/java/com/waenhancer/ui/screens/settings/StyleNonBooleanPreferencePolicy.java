@@ -3,7 +3,7 @@ package com.waenhancer.ui.screens.settings;
 /**
  * These catalog entries describe typed configuration values, not Boolean flags.
  * Do not allow the general Styles switch to read or write their UI alias keys.
- * The actual value must eventually be set through a dedicated typed editor.
+ * StylesSettingsScreen routes these entries to dedicated typed editors.
  */
 public final class StyleNonBooleanPreferencePolicy {
     public enum Kind { NONE, STRING, STRING_SET }

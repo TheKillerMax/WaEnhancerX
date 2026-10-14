@@ -44,6 +44,8 @@ fun StylesSettingsScreen() {
     val radius = WaexTheme.radius
 
     var selectedTab by remember { mutableStateOf("appearance") } // "appearance" | "layout"
+    var typedEditorKey by remember { mutableStateOf<String?>(null) }
+    var typedValueRevision by remember { mutableIntStateOf(0) }
 
     val navController = LocalWaexNavController.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -321,9 +323,11 @@ fun StylesSettingsScreen() {
                                         val y = coordinates.positionInRoot().y - containerY + scrollState.value
                                         itemCoordinates[item.key] = y
                                     }
-                                    .clickable(enabled = !needsTypedEditor) {
+                                    .clickable {
                                         if (isLocked) {
                                             onActivatePro()
+                                        } else if (needsTypedEditor) {
+                                            typedEditorKey = item.key
                                         } else {
                                             val currentVal = settingsState[item.key] ?: false
                                             updatePreference(item.key, !currentVal)
@@ -348,7 +352,7 @@ fun StylesSettingsScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (needsTypedEditor) "${item.sublabel} • Requires a dedicated typed editor"
+                                            text = if (needsTypedEditor) "${item.sublabel} • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
                                                 else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
@@ -390,11 +394,11 @@ fun StylesSettingsScreen() {
                                             }
                                         }
                                         if (needsTypedEditor) {
-                                            Text(
-                                                text = "Needs typed editor",
-                                                style = typography.labelSm,
-                                                color = colors.onSurfaceVariant,
-                                                fontSize = 12.sp
+                                            Icon(
+                                                imageVector = WaexIcons.ChevronRight,
+                                                contentDescription = "Configure ${item.label}",
+                                                tint = colors.primary,
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         } else {
                                             StitchSwitch(
@@ -423,6 +427,200 @@ fun StylesSettingsScreen() {
         Spacer(modifier = Modifier.height(100.dp))
     }
 
+    typedEditorKey?.let { key ->
+        TypedStyleEditorDialog(
+            key = key,
+            preferenceManager = preferenceManager,
+            onDismiss = { typedEditorKey = null },
+            onSaved = {
+                typedValueRevision++
+                typedEditorKey = null
+            }
+        )
+    }
+
+}
+
+@Composable
+private fun TypedStyleEditorDialog(
+    key: String,
+    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    onDismiss: () -> Unit,
+    onSaved: () -> Unit
+) {
+    when (key) {
+        "custom_theme" -> TextValueEditorDialog(
+            title = "Custom Theme CSS",
+            description = "Enter CSS rules to apply to supported WhatsApp views.",
+            initialValue = preferenceManager.getString("css_theme", "") ?: "",
+            singleLine = false,
+            placeholder = "/* Your CSS rules */",
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("css_theme", it.trim()); onSaved() }
+        )
+        "custom_view_dpi" -> TextValueEditorDialog(
+            title = "Default DPI",
+            description = "Enter 0 to use the device default, or a DPI value from 120 to 1000.",
+            initialValue = preferenceManager.getString("change_dpi", "0") ?: "0",
+            singleLine = true,
+            placeholder = "0",
+            validator = { value ->
+                value.toIntOrNull()?.let { it == 0 || it in 120..1000 } == true
+            },
+            errorMessage = "Enter 0 or a number from 120 to 1000",
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("change_dpi", it.trim()); onSaved() }
+        )
+        "chat_filters" -> ChoiceValueEditorDialog(
+            title = "Chat filter display",
+            selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
+            choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("chatfilter", it); onSaved() }
+        )
+        "quick_home_menu" -> ChoiceValueEditorDialog(
+            title = "Quick Action Home Menu",
+            selectedValue = preferenceManager.getString("waex_menu_style", "grouped") ?: "grouped",
+            choices = listOf(
+                "grouped" to "Grouped under WAEX",
+                "separate" to "Separate menu items",
+                "icons" to "Toolbar icons"
+            ),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("waex_menu_style", it); onSaved() }
+        )
+        "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
+            title = "Hide home tabs",
+            selectedValues = preferenceManager.getStringSet("hidetabs", emptySet()) ?: emptySet(),
+            choices = listOf(
+                "300" to "Updates",
+                "600" to "Communities",
+                "400" to "Calls",
+                "700" to "Tools"
+            ),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putStringSet("hidetabs", it); onSaved() }
+        )
+        else -> onDismiss()
+    }
+}
+
+@Composable
+private fun TextValueEditorDialog(
+    title: String,
+    description: String,
+    initialValue: String,
+    singleLine: Boolean,
+    placeholder: String,
+    validator: (String) -> Boolean = { true },
+    errorMessage: String = "Invalid value",
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var value by remember(title, initialValue) { mutableStateOf(initialValue) }
+    val valid = validator(value.trim())
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(description, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
+                    singleLine = singleLine,
+                    placeholder = { Text(placeholder) },
+                    isError = !valid,
+                    supportingText = if (!valid) ({ Text(errorMessage) }) else null
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(value) }, enabled = valid) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun ChoiceValueEditorDialog(
+    title: String,
+    selectedValue: String,
+    choices: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var selected by remember(title, selectedValue) { mutableStateOf(selectedValue) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                choices.forEach { (value, label) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { selected = value }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = selected == value, onClick = { selected = value })
+                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(selected) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun MultiChoiceValueEditorDialog(
+    title: String,
+    selectedValues: Set<String>,
+    choices: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit
+) {
+    val selected = remember(title, selectedValues) { mutableStateListOf<String>().apply { addAll(selectedValues) } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                choices.forEach { (value, label) ->
+                    val checked = value in selected
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            if (checked) selected.remove(value) else selected.add(value)
+                        }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = { enabled ->
+                                if (enabled) { if (value !in selected) selected.add(value) }
+                                else selected.remove(value)
+                            }
+                        )
+                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(selected.toSet()) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+private fun typedStyleSummary(
+    key: String,
+    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    @Suppress("UNUSED_PARAMETER") revision: Int
+): String = when (key) {
+    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"
+    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") "Device default" else "$it DPI" } ?: "Device default"
+    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> "Search hidden"; "1" -> "Search icon"; else -> "Search bar" }
+    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) "No tabs hidden" else "${it.size} hidden" } ?: "No tabs hidden"
+    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> "Separate items"; "icons" -> "Toolbar icons"; else -> "Grouped" }
+    else -> "Configure"
 }
 
 private data class StyleGroup(

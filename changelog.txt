@@ -3,9 +3,11 @@
 - Fixed Seconds on Timestamp, New Settings Style, IGStatus, and Contact Added Status switches not saving correctly
 - Fixed Audio to Voice Status related settings becoming out of sync
 - Custom Theme, DPI, chat filters, hidden tabs, and quick actions now clearly show when dedicated setup is required
+- Fixed hooks injected repeated toasts
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
+- Improved startup of module and performance
 
 [Notes]
 - WAEnhancerX now requires a rooted device for reliable compatibility and to protect the module's integrity.

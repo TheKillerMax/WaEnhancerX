@@ -314,7 +314,7 @@ public class BlueOnReplyHook extends BaseFeature {
     private String extractRemoteJid(Object source) {
         if (source == null) return null;
         // SendE2EMessageJob deliberately keeps this serialized field name stable. This is the
-        // exact path used by Dev4Mod and avoids selecting participant/device JIDs from other fields.
+        // This exact field path avoids selecting participant/device JIDs from other fields.
         try {
             Object jid = XposedHelpers.getObjectField(source, "jid");
             if (jid != null) {

@@ -133,7 +133,12 @@ object FeatureCatalog {
         "downloadstatus" to "status_downloader",
         "downloadviewonce" to "download_view_once",
         "custom_css" to "custom_theme",
+        "css_theme" to "custom_theme",
         "change_dpi" to "custom_view_dpi",
+        "chatfilter" to "chat_filters",
+        "hidetabs" to "hide_ui_tabs",
+        "show_home_menu" to "quick_home_menu",
+        "waex_menu_style" to "quick_home_menu",
         "open_waex" to "open_wae",
         // Historical Styles toggle key did not connect to the sensor hook.
         // Keep navigation/search compatible without silently enabling sensor changes.
