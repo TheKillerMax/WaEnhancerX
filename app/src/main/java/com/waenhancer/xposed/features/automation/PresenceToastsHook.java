@@ -20,6 +20,7 @@ import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
+import org.luckypray.dexkit.result.MethodDataList;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -64,144 +65,74 @@ public class PresenceToastsHook extends BaseFeature {
     private void hookIncomingPresence() {
         try {
             Method presenceMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context,
-                    classLoader,
-                    "wpp_presence_incoming_update_v2",
+                    context, classLoader, "wpp_presence_message_handler_v3",
                     (bridge, loader) -> {
-                        MethodData md = bridge.findMethod(FindMethod.create()
+                        // The old available literal belongs to a multiplexed Runnable.
+                        // Match the Handler envelope instead, including both event branches.
+                        MethodDataList matches = bridge.findMethod(FindMethod.create()
                                 .matcher(MethodMatcher.create()
-                                        .addUsingString("app/xmpp/recv/handle_available", StringMatchType.Contains)
-                                )
-                        ).firstOrNull();
-                        if (md == null) {
-                            md = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                                    .addUsingString("MessageHandler/handleConnectionThreadReady connectionready", StringMatchType.Contains)))
-                                    .firstOrNull();
-                        }
-                        if (md == null) {
-                            md = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                                    .addUsingString("PresenceManager/onPresenceReceived", StringMatchType.Contains)))
-                                    .firstOrNull();
-                        }
-                        return md != null ? md.getMethodInstance(loader) : null;
-                    }
-            );
-
-            if (presenceMethod != null) {
-                XposedBridge.hookMethod(presenceMethod, new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
-                        PresenceEvent event = decodePresenceEvent(param.args, param.thisObject);
-                        if (event == null) {
-                            if (PRESENCE_DIAGNOSTICS.getAndIncrement() < 5) {
-                                XposedBridge.log(TAG + " Presence callback could not be decoded: receiver="
-                                        + (param.thisObject == null ? "static" : param.thisObject.getClass().getName())
-                                        + ", args=" + (param.args == null ? 0 : param.args.length));
-                            }
-                            return;
-                        }
-                        if (PRESENCE_DIAGNOSTICS.getAndIncrement() < 5) {
-                        }
-                        boolean transition = PresenceStateStore.update(event.jid, event.online);
-                        if (transition && event.online && isOnlineToastEnabled()) {
-                            asyncExecutor.execute(() -> {
-                                String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
-                                showToastSafely(name + " is online");
-                            });
-                        }
-                    }
-                });
+                                        .name("handleMessage")
+                                        .paramTypes("android.os.Message")
+                                        .returnType("void")
+                                        .addUsingString("MessageHandler/handleConnectionThreadReady connectionready",
+                                                StringMatchType.Equals)
+                                        .addUsingString("lastSeen", StringMatchType.Equals)
+                                        .addUsingString("presence", StringMatchType.Equals)));
+                        if (matches.size() != 1) return null;
+                        Method candidate = matches.get(0).getMethodInstance(loader);
+                        return isPresenceHandler(candidate) ? candidate : null;
+                    });
+            if (!isPresenceHandler(presenceMethod)) {
+                XposedBridge.log(TAG + " Presence handler contract unavailable; online notifications not installed");
+                return;
             }
+            XposedBridge.hookMethod(presenceMethod, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    // Observe only successfully handled host events. Never cancel/mutate them.
+                    if (param.hasThrowable()) return;
+                    PresenceEventPolicy.Event event = decodePresenceEvent(param.args);
+                    if (event == null) return;
+                    boolean transition = PresenceStateStore.update(event.jid, event.online);
+                    if (transition && event.online && isOnlineToastEnabled()) {
+                        asyncExecutor.execute(() -> {
+                            String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
+                            showToastSafely(name + " is online");
+                        });
+                    }
+                }
+            });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking presence toasts: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking presence toasts: " + t.getClass().getSimpleName());
         }
     }
 
-    private static PresenceEvent decodePresenceEvent(Object[] args, Object receiver) {
-        Message message = null;
-        if (args != null) {
-            for (Object arg : args) {
-                if (arg instanceof Message) { message = (Message) arg; break; }
-            }
-        }
-        if (message == null) message = findCapturedMessage(receiver);
-        if (message != null) {
-            Bundle data = message.getData();
-            String jid = data != null ? firstJid(data) : null;
-            if (jid == null && message.obj instanceof BaseBundle) jid = firstJid((BaseBundle) message.obj);
-            if (jid == null) return null;
-            // WhatsApp's available event is code 5. Other presence callbacks for the same JID
-            // represent the transition away from available and become the last-seen timestamp.
-            return new PresenceEvent(jid, message.arg1 == 5);
-        }
-        String capturedJid = findCapturedJid(receiver, 4,
-                java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-        if (capturedJid != null) return new PresenceEvent(capturedJid, true);
-        return null;
+    private static boolean isPresenceHandler(Method method) {
+        if (method == null || !Handler.class.isAssignableFrom(method.getDeclaringClass())) return false;
+        int flags = method.getModifiers();
+        Class<?>[] parameters = method.getParameterTypes();
+        return java.lang.reflect.Modifier.isPublic(flags)
+                && !java.lang.reflect.Modifier.isStatic(flags)
+                && !java.lang.reflect.Modifier.isAbstract(flags)
+                && !java.lang.reflect.Modifier.isNative(flags)
+                && !method.isBridge() && !method.isSynthetic()
+                && "handleMessage".equals(method.getName()) && method.getReturnType() == void.class
+                && parameters.length == 1 && parameters[0] == Message.class;
     }
 
-    private static String findCapturedJid(Object value, int depth, java.util.Set<Object> seen) {
-        if (value == null || depth < 0 || !seen.add(value)) return null;
+    private static PresenceEventPolicy.Event decodePresenceEvent(Object[] args) {
+        if (args == null || args.length != 1 || !(args[0] instanceof Message)) return null;
+        Message message = (Message) args[0];
+        if (message.what != PresenceEventPolicy.EVENT_FAMILY
+                || !PresenceEventPolicy.isPresenceCode(message.arg1)
+                || !(message.obj instanceof BaseBundle)) return null;
         try {
-            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
-                    "[+0-9A-Za-z._:-]+@lid|[+0-9A-Za-z._:-]+@(s\\.)?whatsapp\\.net")
-                    .matcher(value.toString());
-            if (matcher.find()) return matcher.group();
-        } catch (Throwable ignored) {}
-        Class<?> type = value.getClass();
-        while (type != null && !type.getName().startsWith("java.")
-                && !type.getName().startsWith("android.")) {
-            for (Field field : type.getDeclaredFields()) {
-                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
-                try {
-                    field.setAccessible(true);
-                    String jid = findCapturedJid(field.get(value), depth - 1, seen);
-                    if (jid != null) return jid;
-                } catch (Throwable ignored) {}
-            }
-            type = type.getSuperclass();
+            BaseBundle payload = (BaseBundle) message.obj;
+            return PresenceEventPolicy.decode(message.what, message.arg1,
+                    payload.get("jid"), payload.get("presence"));
+        } catch (RuntimeException unreadablePayload) {
+            return null;
         }
-        return null;
-    }
-
-    private static Message findCapturedMessage(Object receiver) {
-        return findCapturedMessage(receiver, 4, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-    }
-
-    private static Message findCapturedMessage(Object receiver, int depth, java.util.Set<Object> seen) {
-        if (receiver == null || depth < 0 || !seen.add(receiver)) return null;
-        if (receiver instanceof Message) return (Message) receiver;
-        Class<?> type = receiver.getClass();
-        while (type != null && !type.getName().startsWith("java.")) {
-            for (Field field : type.getDeclaredFields()) {
-                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
-                try {
-                    field.setAccessible(true);
-                    Object value = field.get(receiver);
-                    if (value instanceof Message) return (Message) value;
-                    Message nested = findCapturedMessage(value, depth - 1, seen);
-                    if (nested != null) return nested;
-                } catch (Throwable ignored) {}
-            }
-            type = type.getSuperclass();
-        }
-        return null;
-    }
-
-    private static String firstJid(BaseBundle bundle) {
-        for (String key : new String[]{"jid", "user_jid", "participant", "from"}) {
-            try {
-                Object value = bundle.get(key);
-                if (value != null && value.toString().contains("@")) return value.toString();
-            } catch (Throwable ignored) {}
-        }
-        return null;
-    }
-
-    private static final class PresenceEvent {
-        final String jid;
-        final boolean online;
-        PresenceEvent(String jid, boolean online) { this.jid = jid; this.online = online; }
     }
 
     /**
@@ -294,7 +225,6 @@ public class PresenceToastsHook extends BaseFeature {
     }
 
     private static final ToastThrottle TOAST_THROTTLE = new ToastThrottle(1500L, 2048);
-    private static final java.util.concurrent.atomic.AtomicInteger PRESENCE_DIAGNOSTICS = new java.util.concurrent.atomic.AtomicInteger();
 
     private void processReceiptItem(Object receiptObj, boolean statusToast, boolean msgToast) {
         if (receiptObj == null) return;
