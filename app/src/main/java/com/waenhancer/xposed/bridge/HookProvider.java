@@ -241,12 +241,12 @@ public class HookProvider extends ContentProvider {
             if ("put_preference".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = new ArrayList<>();
                 operations.add(extras);
-                return applyPreferenceChanges(context, prefs, false, operations);
+                return applyPreferenceChanges(context, prefs, callerUid, false, operations);
             }
 
             if ("apply_preferences".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = extras.getParcelableArrayList("operations");
-                return applyPreferenceChanges(context, prefs,
+                return applyPreferenceChanges(context, prefs, callerUid,
                         extras.getBoolean("clear", false), operations);
             }
 
@@ -335,13 +335,18 @@ public class HookProvider extends ContentProvider {
     }
 
     private Bundle applyPreferenceChanges(Context context, SharedPreferences prefs,
-                                          boolean clear, @Nullable ArrayList<Bundle> operations) {
+                                          int callerUid, boolean clear, @Nullable ArrayList<Bundle> operations) {
+        // Bulk clear must be restricted to the module itself. Scoped host UIDs
+        // may update allowed settings but must not erase the module's state.
+        if (clear && !ProviderDerivedKeyPolicy.mayClearPreferences(
+                callerUid, context.getApplicationInfo().uid)) return writeResult(false);
         if (operations == null || operations.size() > 128) return writeResult(false);
         for (Bundle op : operations) {
             if (op == null) return writeResult(false);
             String key = op.getString("key");
             String type = op.getString("type");
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
+            if (!ProviderDerivedKeyPolicy.allowsGenericWrite(key)) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
             // Known public keys must retain their declared schema types. Otherwise a
