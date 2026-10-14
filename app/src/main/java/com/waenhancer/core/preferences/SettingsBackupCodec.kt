@@ -6,6 +6,7 @@ import com.waenhancer.config.PreferenceStores
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import org.json.JSONTokener
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -13,6 +14,9 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.math.BigDecimal
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.LinkedHashSet
@@ -29,6 +33,7 @@ object SettingsBackupCodec {
     private const val VERSION = 1
     private const val MAX_ENTRIES = 10_000
     private const val MAX_BYTES = 8 * 1024 * 1024
+    private const val MAX_JSON_DEPTH = 64
 
     private val BLOCKED_KEYS = Collections.unmodifiableSet(
         hashSetOf(
@@ -105,14 +110,16 @@ object SettingsBackupCodec {
         "call_recording_enable" to "call_recording_enabled"
     )
 
-    fun encode(context: Context, output: OutputStream): Int {
-        val records = PreferenceSchema.exportableKeys().sorted().mapNotNull { key ->
-            val value = PreferenceStores.read(context, key) ?: return@mapNotNull null
-            val entry = PreferenceSchema.entry(key) ?: return@mapNotNull null
-            normalizeForKey(key, entry.type, value)?.let { Record(key, entry.type, it) }
-        }
-
+    fun encode(context: Context, output: OutputStream): Int =
         DataOutputStream(BufferedOutputStream(output)).use { out ->
+            val records = PreferenceSchema.exportableKeys().sorted().mapNotNull { key ->
+                val value = PreferenceStores.read(context, key) ?: return@mapNotNull null
+                val entry = PreferenceSchema.entry(key) ?: return@mapNotNull null
+                normalizeForKey(key, entry.type, value)?.let { Record(key, entry.type, it) }
+            }
+            // Validate the complete container before emitting a header. Otherwise
+            // encode() could succeed with a file decode() necessarily rejects.
+            validateEncodedSize(records)
             out.write(magic)
             out.writeInt(VERSION)
             out.writeLong(System.currentTimeMillis())
@@ -133,9 +140,8 @@ object SettingsBackupCodec {
                     PreferenceSchema.Type.FLOAT -> out.writeFloat((record.value as Number).toFloat())
                 }
             }
+            records.size
         }
-        return records.size
-    }
 
     /**
      * Avoid InputStream.readBytes(): an oversized/malicious backup could exhaust
@@ -279,9 +285,11 @@ object SettingsBackupCodec {
             source.readLong() // creation time
             val count = source.readInt()
             require(count in 0..MAX_ENTRIES) { "Invalid settings record count" }
-            buildList(count) {
+            val seenKeys = HashSet<String>()
+            val records = buildList(count) {
                 repeat(count) {
                     val rawKey = readText(source)
+                    require(seenKeys.add(rawKey)) { "Duplicate settings record key" }
                     // Binary WAEX backups already contain canonical schema keys.
                     // Never reinterpret a valid key through a legacy JSON alias.
                     val key = resolveKey(rawKey, legacyJson = false)
@@ -290,7 +298,11 @@ object SettingsBackupCodec {
                         ?: throw IllegalArgumentException("Unknown settings value type")
 
                     val value: Any = when (type) {
-                        PreferenceSchema.Type.BOOLEAN -> source.readBoolean()
+                        PreferenceSchema.Type.BOOLEAN -> {
+                            val value = source.readUnsignedByte()
+                            require(value in 0..1) { "Invalid Boolean settings value" }
+                            value == 1
+                        }
                         PreferenceSchema.Type.STRING -> readText(source)
                         PreferenceSchema.Type.STRING_SET -> {
                             val size = source.readInt()
@@ -313,12 +325,20 @@ object SettingsBackupCodec {
                     }
                 }
             }
+            require(source.read() == -1) { "Unexpected data after settings records" }
+            records
         }
     }
 
     private fun decodeJson(bytes: ByteArray): List<Record> {
+        val text = decodeUtf8(bytes)
+        checkJsonNesting(text)
         val root = try {
-            JSONObject(String(bytes, StandardCharsets.UTF_8))
+            val parser = JSONTokener(text)
+            val value = parser.nextValue()
+            require(value is JSONObject) { "Backup JSON root must be an object" }
+            require(parser.nextClean() == '\u0000') { "Unexpected data after backup JSON" }
+            value
         } catch (e: JSONException) {
             throw IllegalArgumentException("Backup is neither a valid WAEX binary nor a valid JSON backup file", e)
         }
@@ -327,8 +347,13 @@ object SettingsBackupCodec {
         val source: JSONObject = if (legacy) {
             root
         } else {
+            val version = root.opt("schemaVersion")
+            require((version is Int || version is Long) && (version as Number).toLong() == VERSION.toLong()) {
+                "Unsupported backup JSON schema version"
+            }
             root.optJSONObject("settings") ?: throw IllegalArgumentException("Backup JSON does not contain settings object")
         }
+        require(source.length() <= MAX_ENTRIES) { "Invalid settings record count" }
 
         val records = mutableListOf<Record>()
         val keys = source.keys()
@@ -354,51 +379,77 @@ object SettingsBackupCodec {
     }
 
     private fun decodeJsonValue(raw: Any, legacy: Boolean): Any? {
+        if (raw === JSONObject.NULL) return null
         if (raw is JSONObject) {
             val type = raw.optString("type", "").lowercase(Locale.ROOT)
             val value = raw.opt("value") ?: return null
+            if (value === JSONObject.NULL) return null
             return when (type) {
-                "boolean" -> (value as? Boolean) ?: (value.toString() == "true")
-                "integer", "int" -> asNumber(value)?.toInt()
-                "long" -> asNumber(value)?.toLong()
-                "double", "float" -> asNumber(value)?.toFloat()
+                "boolean" -> normalize(PreferenceSchema.Type.BOOLEAN, value)
+                "integer", "int" -> normalize(PreferenceSchema.Type.INT, value)
+                "long" -> normalize(PreferenceSchema.Type.LONG, value)
+                "double", "float" -> normalize(PreferenceSchema.Type.FLOAT, value)
                 "hashset", "string_set", "jsonarray" -> toStringSet(value)
-                "string" -> value.toString()
-                else -> value
+                "string" -> value as? String
+                else -> null
             }
         }
-        return if (legacy) {
-            when (raw) {
-                is JSONArray -> toStringSet(raw)
-                is Boolean, is Number, is String -> raw
-                else -> raw.toString()
-            }
-        } else {
-            raw
-        }
-    }
-
-    private fun asNumber(value: Any): Number? {
-        if (value is Number) return value
-        return try {
-            value.toString().toDoubleOrNull()
-        } catch (e: Exception) {
-            null
+        // Android's NULL sentinel and containers must not become literal strings
+        // or false Booleans. Arrays are valid sets in both JSON formats.
+        return when (raw) {
+            is JSONArray -> toStringSet(raw)
+            is Boolean, is Number, is String -> raw
+            else -> null
         }
     }
 
     private fun toStringSet(value: Any): Set<String>? {
-        return when (value) {
+        val items: List<*> = when (value) {
             is JSONArray -> {
-                val set = LinkedHashSet<String>()
-                for (i in 0 until value.length()) {
-                    set.add(value.optString(i))
-                }
-                set
+                require(value.length() <= MAX_ENTRIES) { "Invalid string-set size" }
+                List(value.length()) { value.opt(it) }
             }
-            is Set<*> -> value.filterIsInstance<String>().toSet()
-            is List<*> -> value.filterIsInstance<String>().toSet()
-            else -> null
+            is Set<*> -> value.toList()
+            is List<*> -> value
+            is String -> if (value.isEmpty()) emptyList() else value.split(",").map { it.trim() }
+            else -> return null
+        }
+        require(items.size <= MAX_ENTRIES) { "Invalid string-set size" }
+        if (items.any { it !is String }) return null
+        return items.filterIsInstance<String>().toCollection(LinkedHashSet())
+    }
+
+    /** A bounded lexical preflight, not a replacement JSON parser. */
+    private fun checkJsonNesting(text: String) {
+        require('\u0000' !in text) { "Unexpected NUL in backup JSON" }
+        var depth = 0
+        var quote = '\u0000'
+        var lineComment = false
+        var blockComment = false
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            val next = text.getOrNull(i + 1)
+            if (lineComment) {
+                if (c == '\n' || c == '\r') lineComment = false
+            } else if (blockComment) {
+                if (c == '*' && next == '/') { blockComment = false; i++ }
+            } else if (quote != '\u0000') {
+                if (c == '\\') i++ else if (c == quote) quote = '\u0000'
+            } else {
+                when {
+                    c == '"' || c == '\'' -> quote = c
+                    c == '#' -> lineComment = true
+                    c == '/' && next == '/' -> { lineComment = true; i++ }
+                    c == '/' && next == '*' -> { blockComment = true; i++ }
+                    c == '{' || c == '[' -> {
+                        depth++
+                        require(depth <= MAX_JSON_DEPTH) { "Backup JSON nesting is too deep" }
+                    }
+                    c == '}' || c == ']' -> depth--
+                }
+            }
+            i++
         }
     }
 
@@ -435,7 +486,7 @@ object SettingsBackupCodec {
     }
 
     private fun writeText(out: DataOutputStream, value: String) {
-        val bytes = value.toByteArray(Charsets.UTF_8)
+        val bytes = encodeUtf8(value)
         require(bytes.size <= MAX_BYTES) { "Settings value is too large" }
         out.writeInt(bytes.size)
         out.write(bytes)
@@ -444,7 +495,7 @@ object SettingsBackupCodec {
     private fun readText(input: DataInputStream): String {
         val size = input.readInt()
         require(size in 0..MAX_BYTES) { "Invalid settings value length" }
-        return ByteArray(size).also(input::readFully).toString(Charsets.UTF_8)
+        return decodeUtf8(ByteArray(size).also(input::readFully))
     }
 
     /** Restore hex RGB/ARGB strings written by earlier UI versions for this INT key. */
@@ -462,34 +513,72 @@ object SettingsBackupCodec {
     private fun normalize(type: PreferenceSchema.Type, value: Any): Any? = when (type) {
         PreferenceSchema.Type.BOOLEAN -> when (value) {
             is Boolean -> value
-            is Number -> value.toInt() != 0
-            is String -> value == "1" || value.equals("true", ignoreCase = true)
+            is Number -> when (exactLong(value)) { 0L -> false; 1L -> true; else -> null }
+            is String -> when (value.trim().lowercase(Locale.ROOT)) {
+                "true", "1" -> true
+                "false", "0" -> false
+                else -> null
+            }
             else -> null
         }
-        PreferenceSchema.Type.STRING -> when (value) {
-            is Set<*> -> value.filterIsInstance<String>().joinToString(",")
-            else -> value.toString()
-        }
-        PreferenceSchema.Type.STRING_SET -> when (value) {
-            is Set<*> -> value.filterIsInstance<String>().toSet()
-            is List<*> -> value.filterIsInstance<String>().toSet()
-            is String -> if (value.isEmpty()) emptySet() else value.split(",").map { it.trim() }.toSet()
-            else -> null
-        }
-        PreferenceSchema.Type.INT -> when (value) {
-            is Number -> value.toInt()
-            is String -> value.toIntOrNull() ?: value.toFloatOrNull()?.toInt()
-            else -> null
-        }
-        PreferenceSchema.Type.LONG -> when (value) {
-            is Number -> value.toLong()
-            is String -> value.toLongOrNull() ?: value.toFloatOrNull()?.toLong()
-            else -> null
-        }
+        PreferenceSchema.Type.STRING -> value as? String
+        PreferenceSchema.Type.STRING_SET -> toStringSet(value)
+        PreferenceSchema.Type.INT -> exactLong(value)?.takeIf {
+            it in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()
+        }?.toInt()
+        PreferenceSchema.Type.LONG -> exactLong(value)
         PreferenceSchema.Type.FLOAT -> when (value) {
-            is Number -> value.toFloat()
-            is String -> value.toFloatOrNull()
+            is Number -> value.toFloat().takeIf { it.isFinite() }
+            is String -> value.toFloatOrNull()?.takeIf { it.isFinite() }
             else -> null
+        }
+    }
+
+    /** Never truncate fractional integers, wrap overflow, or round Long via Double. */
+    private fun exactLong(value: Any): Long? {
+        if (value !is Number && value !is String) return null
+        val text = value.toString().trim()
+        if (text.length > 128) return null
+        return try {
+            BigDecimal(text).longValueExact()
+        } catch (invalid: NumberFormatException) {
+            null
+        } catch (outOfRange: ArithmeticException) {
+            null
+        }
+    }
+
+    private fun encodeUtf8(value: String): ByteArray {
+        val bytes = StandardCharsets.UTF_8.newEncoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .encode(java.nio.CharBuffer.wrap(value))
+        return ByteArray(bytes.remaining()).also { bytes.get(it) }
+    }
+
+    private fun decodeUtf8(bytes: ByteArray): String = StandardCharsets.UTF_8.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT)
+        .decode(ByteBuffer.wrap(bytes)).toString()
+
+    private fun validateEncodedSize(records: List<Record>) {
+        require(records.size <= MAX_ENTRIES) { "Invalid settings record count" }
+        var total = magic.size.toLong() + 4 + 8 + 4
+        fun textSize(value: String): Long = 4L + encodeUtf8(value).size
+        for (record in records) {
+            total += textSize(record.key) + 1
+            total += when (record.type) {
+                PreferenceSchema.Type.BOOLEAN -> 1L
+                PreferenceSchema.Type.STRING -> textSize(record.value as String)
+                PreferenceSchema.Type.STRING_SET -> {
+                    val values = record.value as Set<*>
+                    require(values.size <= MAX_ENTRIES) { "Invalid string-set size" }
+                    4L + values.sumOf { textSize(it as String) }
+                }
+                PreferenceSchema.Type.INT, PreferenceSchema.Type.FLOAT -> 4L
+                PreferenceSchema.Type.LONG -> 8L
+            }
+            require(total <= MAX_BYTES) { "Backup exceeds the allowed size limit" }
         }
     }
 
