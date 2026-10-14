@@ -1,0 +1,40 @@
+--- a/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+@@ -398,6 +398,7 @@
+         identityAliases.compute(alias) { _, previous ->
+             if (previous == null || previous == jid) jid else ""
+         }
++        queuePresenceRefresh()
+     }
+ 
+     companion object {
+--- a/qa/fixtures/PresenceRowRenderingTest.kt
++++ b/qa/fixtures/PresenceRowRenderingTest.kt
+@@ -100,6 +100,14 @@
+         h.alias(lid, a); h.alias(lid, b); h.alias(lid, b)
+         h.bind(ra, a); h.bind(rb, b); pump(); assertFalse(visible(ra)); assertFalse(visible(rb))
+     }
++    @Test fun lateAliasRegistrationRepaintsAlreadyBoundRow() {
++        val r = row(); PresenceStateStore.update(lid, true); h.bind(r, a); pump()
++        assertFalse(visible(r)); h.alias(lid, a); pump(); assertTrue(visible(r))
++    }
++    @Test fun conflictingAliasClearsPreviouslyVisibleRow() {
++        val r = row(); PresenceStateStore.update(lid, true); h.alias(lid, a); h.bind(r, a); pump()
++        assertTrue(visible(r)); h.alias(lid, b); pump(); assertFalse(visible(r))
++    }
+     @Test fun namespaceOrPrefixSimilarityDoesNotCreateAliases() {
+         val r = row(); PresenceStateStore.update("910001@lid", true)
+         h.bind(r, a); pump(); assertFalse(visible(r))
+--- a/qa/android_presence_row_test.py
++++ b/qa/android_presence_row_test.py
+@@ -108,8 +108,8 @@
+     if baseline:
+         if result == 0 or 'AssertionError' not in log or 'Tests run: 6,  Failures: 6' not in log:
+             raise RuntimeError('Baseline must fail all 6 assertions, not fail to compile/load/run')
+-    elif 'OK (51 tests)' not in log:
+-        raise RuntimeError('Expected all 17 scenarios on 3 Android API levels')
++    elif 'OK (57 tests)' not in log:
++        raise RuntimeError('Expected all 19 scenarios on 3 Android API levels')
+     return {'source_root':str(root),'baseline':baseline,'exit_code':result,
+             'renderer_sha256':hashlib.sha256((root/RENDERER).read_bytes()).hexdigest(),
+             'store_sha256':hashlib.sha256((root/STORE).read_bytes()).hexdigest()}
