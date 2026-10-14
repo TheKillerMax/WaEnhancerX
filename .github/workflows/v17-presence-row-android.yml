@@ -2,7 +2,7 @@ name: V17 Android presence row regression
 on:
   push:
     branches: ['test/presence-row-review-v17-2026-10-14']
-    paths: ['qa/android_presence_row_test.py', 'qa/fixtures/PresenceRowRenderingTest.kt', 'qa/v17-renderer.patch', '.github/workflows/v17-presence-row-android.yml']
+    paths: ['qa/android_presence_row_test.py', 'qa/fixtures/PresenceRowRenderingTest.kt', 'qa/v17-renderer.patch', 'qa/v17-alias-refinement.patch', 'qa/mutate_presence_rows.py', 'qa/test_presence_state_replay.py', '.github/workflows/v17-presence-row-android.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +27,8 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/waex-v16-baseline" e5ee3d87d56d7694528e3a1ed3d999e22c8a4aee
           git apply --check qa/v17-renderer.patch
           git apply qa/v17-renderer.patch
+          git apply --check qa/v17-alias-refinement.patch
+          git apply qa/v17-alias-refinement.patch
           git diff --check
           java -version
           javac -version
@@ -37,6 +39,32 @@ jobs:
         run: |
           set -euo pipefail
           python3 qa/android_presence_row_test.py --out "$RUNNER_TEMP/waex-v17-ui" --baseline-root "$RUNNER_TEMP/waex-v16-baseline"
+      - name: Reject twelve deliberately unsafe variants by Android assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/mutate_presence_rows.py "$RUNNER_TEMP/waex-v17-ui/mutations" "$RUNNER_TEMP/waex-v17-ui/deps"
+      - name: Run all APK-independent integrated source and JVM regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waex-v17-ui/source"
+          python3 qa/check_syntax.py --root app/src/main/java > "$RUNNER_TEMP/waex-v17-ui/source/production-syntax.log" 2>&1
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, os, subprocess
+          out=Path(os.environ['RUNNER_TEMP'])/'waex-v17-ui/source'
+          results=[]
+          for test in sorted(Path('qa').glob('test_*.py')):
+              if test.name=='test_host_class_relocations.py': continue
+              with (out/(test.stem+'.log')).open('w') as log:
+                  result=subprocess.run(['python3',str(test)],stdout=log,stderr=subprocess.STDOUT,timeout=120)
+              results.append({'test':str(test),'exit':result.returncode})
+              print(results[-1],flush=True)
+          (out/'source-results.json').write_text(json.dumps(results,indent=2))
+          assert len(results)==41, 'Unexpected suite inventory requires explicit review'
+          assert all(item['exit']==0 for item in results), 'Source/JVM regression failed'
+          PY
       - name: Preserve text-only results, source and dependency identities
         if: always()
         uses: actions/upload-artifact@v4
@@ -46,6 +74,8 @@ jobs:
             ${{ runner.temp }}/waex-v17-ui/*.log
             ${{ runner.temp }}/waex-v17-ui/*.json
             ${{ runner.temp }}/waex-v17-ui/*/*.log
+            ${{ runner.temp }}/waex-v17-ui/*/*.json
             ${{ runner.temp }}/waex-v17-ui/*/*.kt
+            ${{ runner.temp }}/waex-v17-ui/mutations/*/*.log
           retention-days: 14
           if-no-files-found: warn
