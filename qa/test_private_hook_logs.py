@@ -186,3 +186,15 @@ assert "getMessages(" in store
 
 print(f"PASS: {total} sensitive-feature log callsites checked across "
       f"{len(FILES)} production files; unsafe and safe fixtures verified")
+
+# PR #25 now includes three other independently fixture-tested log sources.
+# Keep this historical entrypoint comprehensive even if PR #27's optional
+# workflow has not yet merged. The scripts fail closed on missing source files.
+import runpy
+for regression in (
+    "qa/test_exception_message_privacy.py",
+    "qa/test_call_privacy_logs.py",
+    "qa/test_database_dialog_status_log_privacy.py",
+):
+    runpy.run_path(str(ROOT / regression), run_name="__main__")
+
