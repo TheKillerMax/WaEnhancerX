@@ -1,0 +1,59 @@
+name: Validate and publish reviewed backup parser corrections
+on:
+  push:
+    branches: [test/backup-parser-validation-2026-10-14]
+    paths:
+      - '.qa_reviews/backup-v14.patch.xz.b64'
+      - '.qa_reviews/publish_backup_v14.py'
+      - '.github/workflows/publish-backup-v14.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: waex-reviewed-backup-v14-publication
+  cancel-in-progress: false
+jobs:
+  validate-and-publish:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check required parsing and execution tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          command -v kotlinc
+          command -v kotlin
+          kotlinc -version
+      - name: Validate reviewed standalone and integrated trees without publication credentials
+        shell: bash
+        run: python3 .qa_reviews/publish_backup_v14.py validate
+      - name: Publish only the two reviewed fork refs atomically without force
+        shell: bash
+        env:
+          WAEX_PUBLICATION_TOKEN: ${{ github.token }}
+        run: python3 .qa_reviews/publish_backup_v14.py publish
+      - name: Preserve text-only validation and publication results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-backup-validation-v14
+          path: evidence-v14/
+          retention-days: 14
+          if-no-files-found: warn
