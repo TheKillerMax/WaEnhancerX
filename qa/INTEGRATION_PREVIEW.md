@@ -23,9 +23,9 @@ Upstream `main` was not modified. Individual upstream PRs remain open.
 
 - Upstream `main` at composition time: `6a34158ff8f1dcad346e34fec6db67dc79cc1e8f`
 - #17: `48893573cc009bd6398fe0d7d3ce126e450d62b9`
-- #25: `d238a0f3b027403cdca69287f609c5bdc530049e`
+- #25: `32aa6b25d7875ff9444f5d3d40244f9d0b2753d6`
 - #26: `bb125d4a85d0aa4a6d398632fa8746eb69e8776d`
-- #27: `7c27a4825b7f834f99f9d50de8aa13d82cde0ce5`
+- #27: `e53f7b92f033a61b1a25a084c5651ff5b0bf3188`
 - #32: `4cbfb68227eef4ecdc0001911cb8f2f2722dda7f`
 - #33: `a3a8b978fa8123032959560abeb5e472a6cca7d5`
 - #35: `b9a191839124569dc7135fc4f5c1873a4dcd6b4f`
@@ -75,6 +75,18 @@ the hardened #35 implementation, plus the #17 asynchronous edit writer.
 - These fork branches are **not automatically upstream PRs**. GitHub denied
   creating the Styles upstream draft via integration permissions (HTTP 403);
   the fork branches remain available for maintainer review.
+
+## PR #25 and #27 consolidation
+
+The three former fork-only logging fixes are now **part of PR #25**
+(commit `32aa6b25d7875ff9444f5d3d40244f9d0b2753d6`), including ten source-matched files and their independent
+regressions. `qa/test_private_hook_logs.py` runs all three supplemental checks.
+See [the expanded review scope](PR25_EXTENDED_SCOPE.md). These changes were
+committed to #25's existing branch, **not merged into upstream main**.
+
+PR #27's source workflow now lists the added regression scripts separately,
+when present, and remains safe to merge before #25. At this point, the
+combined test runner still needs to be run on the updated preview head.
 
 ## QA evidence and limitations
 
