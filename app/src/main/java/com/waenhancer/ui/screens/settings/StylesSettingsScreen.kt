@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.settings
 
+import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.animation.animateColorAsState
@@ -43,8 +44,11 @@ fun StylesSettingsScreen() {
     val radius = WaexTheme.radius
 
     var selectedTab by remember { mutableStateOf("appearance") } // "appearance" | "layout"
+    var typedEditorKey by remember { mutableStateOf<String?>(null) }
+    var typedValueRevision by remember { mutableIntStateOf(0) }
 
     val navController = LocalWaexNavController.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -89,14 +93,17 @@ fun StylesSettingsScreen() {
             "channels_enhancements", "chat_filters", "hide_ui_tabs",
             "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
             "contact_blocked_verify",
-            "send_audio_as_voice_status", "miscellaneous_enhancements"
+            "send_audio_as_voice_status", "disable_sensor_proximity"
         )
     }
 
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             stylesKeys.forEach { key ->
-                if (key == "seen_tick_customization") {
+                if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
+                    // Do not decode a STRING or STRING_SET using getBoolean().
+                    put(key, false)
+                } else if (key == "seen_tick_customization") {
                     // The receipt hooks read the canonical STRING 'seentick' (0/1/2),
                     // not the old UI-only Boolean 'seen_tick_customization' flag.
                     put(key, ManualSeenTickPreferencePolicy.isEnabled(
@@ -106,26 +113,37 @@ fun StylesSettingsScreen() {
                     val defaultValue = if (key == "send_audio_as_voice_status") {
                         preferenceManager.getBoolean("voice_status_enhancement", false)
                     } else false
-                    put(key, preferenceManager.getBoolean(key, defaultValue))
+                    val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+                    val legacyDefault = if (canonicalKey == key) defaultValue
+                        else preferenceManager.getBoolean(key, defaultValue)
+                    put(key, preferenceManager.getBoolean(canonicalKey, legacyDefault))
                 }
             }
         }
     }
 
-    val updatePreference: (String, Boolean) -> Unit = { key, value ->
+    val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
+        if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
         if (key == "seen_tick_customization") {
             val currentPlacement = preferenceManager.getString("seentick", "0")
             preferenceManager.putString("seentick",
                 ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement))
-            // Verify the persisted canonical setting instead of showing a failed save as ON.
             settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(
                 preferenceManager.getString("seentick", "0"))
+            return@update
+        }
+        val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
+        val changes = if (key == "send_audio_as_voice_status") {
+            // Persist the visible setting and its linked hook key atomically.
+            mapOf(canonicalKey to value, "voice_status_enhancement" to value)
         } else {
-            settingsState[key] = value
-            preferenceManager.putBoolean(key, value)
-            if (key == "send_audio_as_voice_status") {
-                preferenceManager.putBoolean("voice_status_enhancement", value)
-            }
+            mapOf(canonicalKey to value)
+        }
+        if (preferenceManager.putBooleans(changes)) {
+            settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
+        } else {
+            // Failed commits must not appear as successful changes in the UI.
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -179,7 +197,7 @@ fun StylesSettingsScreen() {
             listOf(
                 StyleItem("Show Contact Added Status in Conversation", "This option verifies whether the contact added you or has a public profile photo", "contact_blocked_verify"),
                 StyleItem("Audio to Voice Status", "Pick a local audio file and publish it as a voice status", "send_audio_as_voice_status", isPro = true),
-                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "miscellaneous_enhancements")
+                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "disable_sensor_proximity")
             )
         )
     )
@@ -304,6 +322,7 @@ fun StylesSettingsScreen() {
                     Column {
                         group.items.forEachIndexed { index, item ->
                             val isLocked = item.isPro && !isPro
+                            val needsTypedEditor = StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(item.key)
                             val isHighlighted = navController.highlightTargetKey == item.key
                             val highlightBgColor by animateColorAsState(
                                 targetValue = if (isHighlighted) colors.primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -321,6 +340,8 @@ fun StylesSettingsScreen() {
                                     .clickable {
                                         if (isLocked) {
                                             onActivatePro()
+                                        } else if (needsTypedEditor) {
+                                            typedEditorKey = item.key
                                         } else {
                                             val currentVal = settingsState[item.key] ?: false
                                             updatePreference(item.key, !currentVal)
@@ -345,7 +366,8 @@ fun StylesSettingsScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "${item.sublabel} • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
+                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -385,11 +407,20 @@ fun StylesSettingsScreen() {
                                                 )
                                             }
                                         }
-                                        StitchSwitch(
-                                            checked = if (isLocked) false else (settingsState[item.key] ?: false),
-                                            onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
-                                            enabled = !isLocked
-                                        )
+                                        if (needsTypedEditor) {
+                                            Icon(
+                                                imageVector = WaexIcons.ChevronRight,
+                                                contentDescription = "Configure ${item.label}",
+                                                tint = colors.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        } else {
+                                            StitchSwitch(
+                                                checked = if (isLocked) false else (settingsState[item.key] ?: false),
+                                                onCheckedChange = if (isLocked) null else { isChecked -> updatePreference(item.key, isChecked) },
+                                                enabled = !isLocked
+                                            )
+                                        }
                                     }
                                 }
                                 if (item.isPro) {
@@ -410,6 +441,393 @@ fun StylesSettingsScreen() {
         Spacer(modifier = Modifier.height(100.dp))
     }
 
+    typedEditorKey?.let { key ->
+        TypedStyleEditorDialog(
+            key = key,
+            preferenceManager = preferenceManager,
+            onDismiss = { typedEditorKey = null },
+            onSaved = {
+                typedValueRevision++
+                typedEditorKey = null
+            }
+        )
+    }
+
+}
+
+@Composable
+private fun TypedStyleEditorDialog(
+    key: String,
+    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    onDismiss: () -> Unit,
+    onSaved: () -> Unit
+) {
+    when (key) {
+        "custom_theme" -> TextValueEditorDialog(
+            title = "Custom Theme CSS",
+            description = "Enter CSS rules to apply to supported WhatsApp views.",
+            initialValue = preferenceManager.getString("css_theme", "") ?: "",
+            singleLine = false,
+            placeholder = "/* Your CSS rules */",
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("css_theme", it.trim()); onSaved() }
+        )
+        "custom_view_dpi" -> TextValueEditorDialog(
+            title = "Default DPI",
+            description = "Enter 0 to use the device default, or a DPI value from 120 to 1000.",
+            initialValue = preferenceManager.getString("change_dpi", "0") ?: "0",
+            singleLine = true,
+            placeholder = "0",
+            validator = { value ->
+                value.toIntOrNull()?.let { it == 0 || it in 120..1000 } == true
+            },
+            errorMessage = "Enter 0 or a number from 120 to 1000",
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("change_dpi", it.trim()); onSaved() }
+        )
+        "chat_filters" -> ChoiceValueEditorDialog(
+            title = "Chat filter display",
+            selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
+            choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("chatfilter", it); onSaved() }
+        )
+        "quick_home_menu" -> ChoiceValueEditorDialog(
+            title = "Quick Action Home Menu",
+            selectedValue = preferenceManager.getString("waex_menu_style", "grouped") ?: "grouped",
+            choices = listOf(
+                "grouped" to "Grouped under WAEX",
+                "separate" to "Separate menu items",
+                "icons" to "Toolbar icons"
+            ),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putString("waex_menu_style", it); onSaved() }
+        )
+        "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
+            title = "Hide home tabs",
+            selectedValues = preferenceManager.getStringSet("hidetabs", emptySet()) ?: emptySet(),
+            choices = listOf(
+                "300" to "Updates",
+                "600" to "Communities",
+                "400" to "Calls",
+                "700" to "Tools"
+            ),
+            onDismiss = onDismiss,
+            onSave = { preferenceManager.putStringSet("hidetabs", it); onSaved() }
+        )
+        else -> onDismiss()
+    }
+}
+
+@Composable
+private fun TextValueEditorDialog(
+    title: String,
+    description: String,
+    initialValue: String,
+    singleLine: Boolean,
+    placeholder: String,
+    validator: (String) -> Boolean = { true },
+    errorMessage: String = "Invalid value",
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var value by remember(title, initialValue) { mutableStateOf(initialValue) }
+    val valid = validator(value.trim())
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(description, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
+                    singleLine = singleLine,
+                    placeholder = { Text(placeholder) },
+                    isError = !valid,
+                    supportingText = if (!valid) ({ Text(errorMessage) }) else null
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(value) }, enabled = valid) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoiceValueEditorDialog(
+    title: String,
+    selectedValue: String,
+    choices: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+    var selected by remember(title, selectedValue) { mutableStateOf(selectedValue) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 6.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant.copy(alpha = 0.6f))
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            // Title
+            Text(
+                text = title,
+                style = typography.headlineMd,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Radio options
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                choices.forEachIndexed { index, (value, label) ->
+                    val isSelected = selected == value
+                    val bgColor by animateColorAsState(
+                        targetValue = if (isSelected) colors.primary.copy(alpha = 0.10f) else Color.Transparent,
+                        animationSpec = tween(200),
+                        label = "choice_bg_$index"
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .clickable { selected = value }
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { selected = value },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = colors.primary
+                            )
+                        )
+                        Text(
+                            text = label,
+                            style = typography.bodyLg,
+                            color = if (isSelected) colors.primary else colors.onSurface,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    if (index < choices.lastIndex) {
+                        HorizontalDivider(
+                            thickness = 1.dp,
+                            color = colors.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(start = 56.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Confirm button
+            Button(
+                onClick = { onSave(selected) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.fullShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cancel
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = radius.fullShape
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MultiChoiceValueEditorDialog(
+    title: String,
+    selectedValues: Set<String>,
+    choices: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+    val selected = remember(title, selectedValues) { mutableStateListOf<String>().apply { addAll(selectedValues) } }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 6.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant.copy(alpha = 0.6f))
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            // Title
+            Text(
+                text = title,
+                style = typography.headlineMd,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Checkbox options
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                choices.forEachIndexed { index, (value, label) ->
+                    val checked = value in selected
+                    val bgColor by animateColorAsState(
+                        targetValue = if (checked) colors.primary.copy(alpha = 0.10f) else Color.Transparent,
+                        animationSpec = tween(200),
+                        label = "multi_choice_bg_$index"
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .clickable {
+                                if (checked) selected.remove(value) else selected.add(value)
+                            }
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = { enabled ->
+                                if (enabled) { if (value !in selected) selected.add(value) }
+                                else selected.remove(value)
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = colors.primary,
+                                uncheckedColor = colors.onSurfaceVariant
+                            )
+                        )
+                        Text(
+                            text = label,
+                            style = typography.bodyLg,
+                            color = if (checked) colors.primary else colors.onSurface,
+                            fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    if (index < choices.lastIndex) {
+                        HorizontalDivider(
+                            thickness = 1.dp,
+                            color = colors.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(start = 56.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Confirm button
+            Button(
+                onClick = { onSave(selected.toSet()) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.fullShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cancel
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = radius.fullShape
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+private fun typedStyleSummary(
+    key: String,
+    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    @Suppress("UNUSED_PARAMETER") revision: Int
+): String = when (key) {
+    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"
+    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") "Device default" else "$it DPI" } ?: "Device default"
+    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> "Search hidden"; "1" -> "Search icon"; else -> "Search bar" }
+    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) "No tabs hidden" else "${it.size} hidden" } ?: "No tabs hidden"
+    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> "Separate items"; "icons" -> "Toolbar icons"; else -> "Grouped" }
+    else -> "Configure"
 }
 
 private data class StyleGroup(

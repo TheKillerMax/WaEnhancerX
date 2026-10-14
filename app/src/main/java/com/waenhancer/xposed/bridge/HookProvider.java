@@ -51,6 +51,7 @@ public class HookProvider extends ContentProvider {
     @Override
     public Bundle call(@NonNull String method, @Nullable String arg, @Nullable Bundle extras) {
         int callerUid = Binder.getCallingUid();
+        int callerPid = Binder.getCallingPid();
         Context context = getContext();
         if (context == null) return null;
         if (!isTrustedCaller(context, callerUid)) {
@@ -116,6 +117,7 @@ public class HookProvider extends ContentProvider {
                     editor.putLong("last_active_" + pkg, System.currentTimeMillis());
                     editor.putInt("runtime_boot_" + pkg,
                             extras != null ? extras.getInt("boot_count", -1) : -1);
+                    editor.putInt("runtime_pid_" + pkg, callerPid);
                     editor.putString("runtime_status_" + pkg, "INJECTED");
                     editor.commit();
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
@@ -140,6 +142,7 @@ public class HookProvider extends ContentProvider {
                             .putStringSet("hooked_whatsapp_packages", currentSet)
                             .putLong("last_active_" + pkg, timestamp)
                             .putInt("runtime_boot_" + pkg, extras.getInt("boot_count", -1))
+                            .putInt("runtime_pid_" + pkg, callerPid)
                             .putString("runtime_status_" + pkg, runtimeStatus)
                             .putString("bridge_status_" + pkg, bridgeStatus);
                     if (error == null) editor.remove("runtime_error_" + pkg);
@@ -169,6 +172,7 @@ public class HookProvider extends ContentProvider {
                     editor.putString("injected_hooks_" + pkg, hooksJson);
                     editor.putLong("injected_hooks_time_" + pkg, timestamp);
                     editor.putLong("last_active_" + pkg, timestamp);
+                    editor.putInt("runtime_pid_" + pkg, callerPid);
                     editor.commit();
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/injected_hooks"), null);
                     context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
@@ -241,12 +245,12 @@ public class HookProvider extends ContentProvider {
             if ("put_preference".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = new ArrayList<>();
                 operations.add(extras);
-                return applyPreferenceChanges(context, prefs, false, operations);
+                return applyPreferenceChanges(context, prefs, callerUid, false, operations);
             }
 
             if ("apply_preferences".equals(method) && extras != null) {
                 ArrayList<Bundle> operations = extras.getParcelableArrayList("operations");
-                return applyPreferenceChanges(context, prefs,
+                return applyPreferenceChanges(context, prefs, callerUid,
                         extras.getBoolean("clear", false), operations);
             }
 
@@ -335,13 +339,18 @@ public class HookProvider extends ContentProvider {
     }
 
     private Bundle applyPreferenceChanges(Context context, SharedPreferences prefs,
-                                          boolean clear, @Nullable ArrayList<Bundle> operations) {
+                                          int callerUid, boolean clear, @Nullable ArrayList<Bundle> operations) {
+        // Bulk clear must be restricted to the module itself. Scoped host UIDs
+        // may update allowed settings but must not erase the module's state.
+        if (clear && !ProviderDerivedKeyPolicy.mayClearPreferences(
+                callerUid, context.getApplicationInfo().uid)) return writeResult(false);
         if (operations == null || operations.size() > 128) return writeResult(false);
         for (Bundle op : operations) {
             if (op == null) return writeResult(false);
             String key = op.getString("key");
             String type = op.getString("type");
             if (key == null || key.isEmpty() || key.length() > 200 || type == null) return writeResult(false);
+            if (!ProviderDerivedKeyPolicy.allowsGenericWrite(key)) return writeResult(false);
             PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
             if (entry != null && entry.store == PreferenceSchema.Store.PRIVATE) return writeResult(false);
             // Known public keys must retain their declared schema types. Otherwise a

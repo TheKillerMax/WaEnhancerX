@@ -215,9 +215,13 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     /**
      * Icons mode: each enabled WAEX item shown as an individual action bar icon
      * with filled/unfilled states for toggleable features.
+     *
+     * SHOW_AS_ACTION_ALWAYS is required here — IF_ROOM causes items added later
+     * (e.g. Restart, Settings) to fall into the 3-dots overflow when the toolbar
+     * is already occupied by WhatsApp's own native icons.
      */
     private void addItemsWithIcons(Menu menu, Activity activity) {
-        appendWaexItems(menu, activity, MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        appendWaexItems(menu, activity, MenuItem.SHOW_AS_ACTION_ALWAYS);
         attachIconsToItems(menu);
     }
 
@@ -435,6 +439,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("ghostmode_active", true).apply();
                         Toast.makeText(activity, "Ghost Mode Activated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -448,6 +453,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("ghostmode_active", false).apply();
                         Toast.makeText(activity, "Ghost Mode Deactivated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -466,6 +472,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
                         Toast.makeText(activity, "Last Seen Frozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -479,6 +486,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
                         Toast.makeText(activity, "Last Seen Unfrozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())

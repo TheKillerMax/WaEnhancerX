@@ -27,11 +27,17 @@ data class SystemDiagnostics(
 )
 
 object SystemDiagnosticsReader {
+    @Volatile
+    private var cachedDiagnostics: SystemDiagnostics? = null
+
     private val knownManagers = listOf(
         "org.lsposed.manager", "io.github.lsposed.manager",
         "org.meowcat.edxposed.manager", "com.solohsu.android.edxp.manager",
         "de.robv.android.xposed.installer", "me.weishu.exp"
     )
+
+    /** Last successfully collected snapshot for screens recreated during this app process. */
+    fun cached(): SystemDiagnostics? = cachedDiagnostics
 
     fun read(context: Context): SystemDiagnostics {
         val pm = context.packageManager
@@ -69,7 +75,7 @@ object SystemDiagnosticsReader {
             kernel = System.getProperty("os.version").orEmpty().ifBlank { "Unknown" },
             selinux = readSelinuxState(rootAllowed),
             hookedTargets = hooked.sorted().joinToString().ifBlank { "None reported" }
-        )
+        ).also { cachedDiagnostics = it }
     }
 
     /**

@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.waenhancer.ui.components.WaexTopBar
@@ -38,8 +42,9 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
-import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.WhatsAppPackageDetector
+import com.waenhancer.utils.XposedRuntimeInspector
+import com.waenhancer.utils.XposedRuntimeSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -52,8 +57,13 @@ fun SystemHealthScreen() {
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    var diagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var diagnostics by remember {
+        mutableStateOf(SystemDiagnosticsReader.cached())
+    }
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    var runtimeSnapshot by remember {
+        mutableStateOf(XposedRuntimeInspector.cached())
+    }
     var showHookToast by remember {
         mutableStateOf(preferences.getBoolean("show_hook_toast", true))
     }
@@ -62,6 +72,24 @@ fun SystemHealthScreen() {
     }
     LaunchedEffect(refreshTrigger) {
         diagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
+    }
+    LaunchedEffect(refreshTrigger) {
+        val packages = withContext(Dispatchers.IO) {
+            WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
+                .filter { it.isInstalled }.map { it.packageName }
+        }
+        val refreshed = withContext(Dispatchers.IO) {
+            XposedRuntimeInspector.inspect(packages)
+        }
+        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshTrigger++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(
@@ -86,8 +114,9 @@ fun SystemHealthScreen() {
         if (data == null) {
             Column(Modifier.fillMaxSize().padding(insets), Arrangement.Center, Alignment.CenterHorizontally) { CircularProgressIndicator(color = colors.primary) }
         } else {
-            val targetApps = remember(data) {
-                WhatsAppPackageDetector.detectWhatsAppApps(context).filter { it.isInstalled }
+            val targetApps = remember(data, refreshTrigger, runtimeSnapshot) {
+                WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
+                    .filter { it.isInstalled }
             }
             Column(
                 Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState()).padding(horizontal = spacing.pageMargin, vertical = 20.dp),
@@ -118,11 +147,7 @@ fun SystemHealthScreen() {
                         add("Manager process hooked" to if (data.moduleActive) "Yes" else "No")
                         add("Runtime API captured" to if (data.framework.api != null) "Yes" else "No")
                         targetApps.forEach { app ->
-                            add("${app.appName} scope" to when (app.scopeState) {
-                                RuntimeScopeState.ACTIVE_THIS_BOOT -> "Active this boot"
-                                RuntimeScopeState.PREVIOUSLY_ACTIVE -> "Scope changed or unverified; restart app"
-                                RuntimeScopeState.NOT_DETECTED -> "Not detected; restart app to verify"
-                            })
+                            add("${app.appName} hooks" to if (app.isHooked) "Injected" else "Not injected")
                             add("${app.appName} preference bridge" to when (app.bridgeStatus) {
                                 "PROVIDER" -> "Connected directly"
                                 "DISK_FALLBACK" -> "Using disk fallback"

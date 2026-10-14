@@ -143,165 +143,166 @@ fun InjectedHooksScreen(
             }
         )
 
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = spacing.pageMargin, vertical = 12.dp)
+                .padding(horizontal = spacing.pageMargin),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
         ) {
             // Target App Subtitle Info Card
-            Surface(
-                shape = radius.defaultShape,
-                color = colors.surface,
-                border = BorderStroke(1.dp, colors.outlineVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            item(key = "app_info") {
+                Surface(
+                    shape = radius.defaultShape,
+                    color = colors.surface,
+                    border = BorderStroke(1.dp, colors.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = appName,
-                            style = typography.bodyMd,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.onSurface
-                        )
-                        Text(
-                            text = packageName,
-                            style = typography.labelSm,
-                            color = colors.onSurfaceVariant,
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(colors.surfaceDim)
-                            .border(1.dp, colors.outlineVariant, CircleShape)
-                            .clickable { refreshTrigger++ },
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = WaexIcons.Refresh,
-                            contentDescription = "Refresh Hooks",
-                            tint = colors.onSurfaceVariant,
-                            modifier = Modifier.size(15.dp)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = appName,
+                                style = typography.bodyMd,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.onSurface
+                            )
+                            Text(
+                                text = packageName,
+                                style = typography.labelSm,
+                                color = colors.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.surfaceDim)
+                                .border(1.dp, colors.outlineVariant, CircleShape)
+                                .clickable { refreshTrigger++ },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = WaexIcons.Refresh,
+                                contentDescription = "Refresh hooks",
+                                tint = colors.onSurfaceVariant,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        text = "Search injected hooks & classes...",
-                        style = typography.bodyMd,
-                        color = colors.onSurfaceVariant
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = WaexIcons.Search,
-                        contentDescription = null,
-                        tint = colors.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        Icon(
-                            imageVector = WaexIcons.Clear,
-                            contentDescription = "Clear",
-                            tint = colors.onSurfaceVariant,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clickable { searchQuery = "" }
+            item(key = "search") {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            text = "Search injected hooks & classes...",
+                            style = typography.bodyMd,
+                            color = colors.onSurfaceVariant
                         )
-                    }
-                },
-                singleLine = true,
-                shape = radius.defaultShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = colors.surfaceDim,
-                    unfocusedContainerColor = colors.surfaceDim,
-                    focusedBorderColor = colors.primary,
-                    unfocusedBorderColor = colors.outlineVariant
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = WaexIcons.Search,
+                            contentDescription = null,
+                            tint = colors.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            Icon(
+                                imageVector = WaexIcons.Clear,
+                                contentDescription = "Clear search",
+                                tint = colors.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable { searchQuery = "" }
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    shape = radius.defaultShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = colors.surfaceDim,
+                        unfocusedContainerColor = colors.surfaceDim,
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.outlineVariant
+                    )
                 )
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
+            }
 
             // Category Filter Chips
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(categories) { category ->
-                    val isSelected = (selectedCategory == category)
-                    Box(
-                        modifier = Modifier
-                            .clip(radius.smShape)
-                            .background(if (isSelected) colors.primary else colors.surfaceDim)
-                            .border(
-                                1.dp,
-                                if (isSelected) colors.primary else colors.outlineVariant,
-                                radius.smShape
+            item(key = "categories") {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(categories) { category ->
+                        val isSelected = (selectedCategory == category)
+                        Box(
+                            modifier = Modifier
+                                .clip(radius.smShape)
+                                .background(if (isSelected) colors.primary else colors.surfaceDim)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) colors.primary else colors.outlineVariant,
+                                    radius.smShape
+                                )
+                                .clickable { selectedCategory = category }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = category,
+                                style = typography.labelSm,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) colors.onPrimary else colors.onSurface,
+                                fontSize = 12.sp
                             )
-                            .clickable { selectedCategory = category }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = category,
-                            style = typography.labelSm,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) colors.onPrimary else colors.onSurface,
-                            fontSize = 12.sp
-                        )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
-            Spacer(modifier = Modifier.height(10.dp))
+            item(key = "divider") {
+                HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
+            }
 
             // Hooks List
             if (filteredHooks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (hooksList.isEmpty()) "No active hooks reported by WhatsApp process.\nEnsure WhatsApp is running." else "No injected hooks matching filter",
-                        style = typography.bodyMd,
-                        color = colors.onSurfaceVariant
-                    )
+                item(key = "empty") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (hooksList.isEmpty()) "No active hooks reported by WhatsApp process.\nEnsure WhatsApp is running." else "No injected hooks matching filter",
+                            style = typography.bodyMd,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    items(filteredHooks) { hook ->
-                        InjectedHookRow(hook = hook)
-                    }
+                items(
+                    items = filteredHooks,
+                    key = { hook -> "${hook.className}:${hook.name}:${hook.category}" }
+                ) { hook ->
+                    InjectedHookRow(hook = hook)
                 }
             }
         }

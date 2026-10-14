@@ -2,6 +2,9 @@
 
 **UI customization, automation, and privacy tools for WhatsApp on Android**
 
+
+[![Telegram](https://telegram-badge.pages.dev/api/telegram-badge?channelId=@waenhancerx&label=Channel&showOnline=true)](https://t.me/waenhancerx)
+[![Telegram](https://telegram-badge.pages.dev/api/telegram-badge?channelId=@waenhancerxhub&label=Community&showOnline=true)](https://t.me/waenhancerxhub)
 ![Platform](https://img.shields.io/badge/Platform-Android-green.svg)
 ![Framework](https://img.shields.io/badge/Framework-LSPosed%20%7C%20Zygisk-orange.svg)
 [![WaEnhancerX Downloads](https://img.shields.io/github/downloads/WaEnhancerX/WaEnhancerX/total.svg?label=WaEnhancerX%20Downloads)](https://github.com/WaEnhancerX/WaEnhancerX/releases)
