@@ -1,0 +1,64 @@
+name: V16 pinned contract review inputs
+on:
+  push:
+    branches: [test/receipt-presence-contracts-v16-2026-10-14]
+    paths: [.github/workflows/v16-contract-tools.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inputs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3e905763cff99331d5cce5857e5889716d4947ad
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Download fixed-version public DEX tools and verify Maven digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/v16-inputs/tools"
+          cd "$RUNNER_TEMP/v16-inputs/tools"
+          python3 - <<'PY'
+          import hashlib, pathlib, urllib.request
+          paths = [
+            'org/smali/baksmali/2.5.2/baksmali-2.5.2.jar',
+            'org/smali/dexlib2/2.5.2/dexlib2-2.5.2.jar',
+            'org/smali/util/2.5.2/util-2.5.2.jar',
+            'com/google/guava/guava/27.1-android/guava-27.1-android.jar',
+            'com/beust/jcommander/1.64/jcommander-1.64.jar',
+            'com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar',
+          ]
+          records = []
+          for path in paths:
+            url = 'https://repo.maven.apache.org/maven2/' + path
+            with urllib.request.urlopen(url, timeout=45) as r: data = r.read()
+            with urllib.request.urlopen(url + '.sha1', timeout=45) as r: expected = r.read().decode().strip().split()[0]
+            assert hashlib.sha1(data).hexdigest() == expected, path
+            name = path.rsplit('/', 1)[1]
+            pathlib.Path(name).write_bytes(data)
+            records.append(hashlib.sha256(data).hexdigest() + '  ' + name)
+          pathlib.Path('SHA256SUMS').write_text('\n'.join(records) + '\n')
+          pathlib.Path('ORIGIN.txt').write_text('Pinned Maven Central artifacts over HTTPS; Maven SHA-1 checked and SHA-256 recorded. No proprietary APK is transferred.\n' + '\n'.join(paths) + '\n')
+          PY
+          java -cp '*' org.jf.baksmali.Main --version
+      - name: Capture exact public source and read-only Git metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/v16-inputs/source"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/v16-inputs/source"
+          git rev-parse HEAD HEAD^{tree} > "$RUNNER_TEMP/v16-inputs/source-identity.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v16-contract-inputs
+          path: ${{ runner.temp }}/v16-inputs
+          include-hidden-files: true
+          retention-days: 7
