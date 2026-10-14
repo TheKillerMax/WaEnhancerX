@@ -32,7 +32,7 @@ class NativeWhatsAppDialog(private val context: Context) {
             try {
                 nativeBuilderInstance = sBuilderMethod!!.invoke(null, context)
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG Failed to instantiate native dialog builder: ${t.message}")
+                XposedBridge.log("$TAG Failed to instantiate native dialog builder: ${t.javaClass.simpleName}")
                 fallbackSystemBuilder = AlertDialog.Builder(context)
             }
         } else {
@@ -46,7 +46,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                 XposedHelpers.callMethod(nativeBuilderInstance, "setTitle", title)
                 return this
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG setTitle error: ${t.message}")
+                XposedBridge.log("$TAG setTitle error: ${t.javaClass.simpleName}")
             }
         }
         fallbackSystemBuilder?.setTitle(title)
@@ -59,7 +59,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                 sSetMessageMethod!!.invoke(nativeBuilderInstance, message)
                 return this
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG setMessage error: ${t.message}")
+                XposedBridge.log("$TAG setMessage error: ${t.javaClass.simpleName}")
             }
         }
         fallbackSystemBuilder?.setMessage(message)
@@ -72,7 +72,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                 XposedHelpers.callMethod(nativeBuilderInstance, "setView", view)
                 return this
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG setView error: ${t.message}")
+                XposedBridge.log("$TAG setView error: ${t.javaClass.simpleName}")
             }
         }
         fallbackSystemBuilder?.setView(view)
@@ -85,7 +85,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                 sPositiveButtonMethod!!.invoke(nativeBuilderInstance, listener, text)
                 return this
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG setPositiveButton error: ${t.message}")
+                XposedBridge.log("$TAG setPositiveButton error: ${t.javaClass.simpleName}")
             }
         }
         fallbackSystemBuilder?.setPositiveButton(text, listener)
@@ -98,7 +98,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                 sNegativeButtonMethod!!.invoke(nativeBuilderInstance, listener, text)
                 return this
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG setNegativeButton error: ${t.message}")
+                XposedBridge.log("$TAG setNegativeButton error: ${t.javaClass.simpleName}")
             }
         }
         fallbackSystemBuilder?.setNegativeButton(text, listener)
@@ -132,7 +132,7 @@ class NativeWhatsAppDialog(private val context: Context) {
         try {
             dialog.show()
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Error showing dialog: ${t.message}")
+            XposedBridge.log("$TAG Error showing dialog: ${t.javaClass.simpleName}")
         }
         return dialog
     }
@@ -209,7 +209,7 @@ class NativeWhatsAppDialog(private val context: Context) {
                     }
                 }
             } catch (t: Throwable) {
-                XposedBridge.log("$TAG Could not initialize native dialog: ${t.message}")
+                XposedBridge.log("$TAG Could not initialize native dialog: ${t.javaClass.simpleName}")
             } finally {
                 sInitialized = true
             }
