@@ -42,9 +42,9 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
-import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.WhatsAppPackageDetector
 import com.waenhancer.utils.XposedRuntimeInspector
+import com.waenhancer.utils.XposedRuntimeSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -79,13 +79,9 @@ fun SystemHealthScreen() {
                 .filter { it.isInstalled }.map { it.packageName }
         }
         val refreshed = withContext(Dispatchers.IO) {
-            XposedRuntimeInspector.inspect(
-                context,
-                packages,
-                android.os.Process.myUid() / 100_000
-            )
+            XposedRuntimeInspector.inspect(packages)
         }
-        if (refreshed != null) runtimeSnapshot = refreshed
+        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -151,11 +147,6 @@ fun SystemHealthScreen() {
                         add("Manager process hooked" to if (data.moduleActive) "Yes" else "No")
                         add("Runtime API captured" to if (data.framework.api != null) "Yes" else "No")
                         targetApps.forEach { app ->
-                            add("${app.appName} scope" to when (app.scopeState) {
-                                RuntimeScopeState.IN_SCOPE -> "In scope"
-                                RuntimeScopeState.NOT_IN_SCOPE -> "Not in scope"
-                                RuntimeScopeState.UNAVAILABLE -> "Unavailable"
-                            })
                             add("${app.appName} hooks" to if (app.isHooked) "Injected" else "Not injected")
                             add("${app.appName} preference bridge" to when (app.bridgeStatus) {
                                 "PROVIDER" -> "Connected directly"

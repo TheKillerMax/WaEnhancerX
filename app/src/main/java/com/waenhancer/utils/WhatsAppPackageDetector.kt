@@ -33,7 +33,6 @@ data class HookedAppInfo(
     val isHooked: Boolean,
     val injectedHooks: List<InjectedHookItem> = emptyList(),
     val lastActiveTime: Long = 0L,
-    val scopeState: RuntimeScopeState = RuntimeScopeState.UNAVAILABLE,
     val runtimeStatus: String = "NOT_DETECTED",
     val bridgeStatus: String = "NOT_REPORTED",
     val initializationError: String? = null
@@ -48,8 +47,8 @@ internal fun hasCurrentInjection(
     lastActiveTime: Long,
     now: Long
 ): Boolean = isModuleActive && currentBoot != -1 && recordedBoot == currentBoot &&
-        reportedPid > 0 && (reportedPid in runningPids ||
-        (lastActiveTime > 0L && now - lastActiveTime in 0L..25_000L))
+        reportedPid > 0 && reportedPid in runningPids &&
+        lastActiveTime > 0L && now - lastActiveTime in 0L..25_000L
 
 object WhatsAppPackageDetector {
 
@@ -343,7 +342,6 @@ object WhatsAppPackageDetector {
                         isHooked = isInjected,
                         injectedHooks = injectedHooks,
                         lastActiveTime = lastActiveTime,
-                        scopeState = runtimeSnapshot?.scopeState(pkg) ?: RuntimeScopeState.UNAVAILABLE,
                         runtimeStatus = prefs.getString("runtime_status_$pkg", "NOT_DETECTED") ?: "NOT_DETECTED",
                         bridgeStatus = prefs.getString("bridge_status_$pkg", "NOT_REPORTED") ?: "NOT_REPORTED",
                         initializationError = prefs.getString("runtime_error_$pkg", null)
@@ -375,14 +373,6 @@ object WhatsAppPackageDetector {
         } else {
             result
         }
-        return visible.sortedWith(
-            compareBy<HookedAppInfo> {
-                when (it.scopeState) {
-                    RuntimeScopeState.IN_SCOPE -> 0
-                    RuntimeScopeState.NOT_IN_SCOPE -> 1
-                    RuntimeScopeState.UNAVAILABLE -> 2
-                }
-            }.thenBy { it.appName.lowercase() }
-        )
+        return visible.sortedBy { it.appName.lowercase() }
     }
 }

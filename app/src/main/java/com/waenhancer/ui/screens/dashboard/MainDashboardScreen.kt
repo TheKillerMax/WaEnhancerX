@@ -80,12 +80,12 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.utils.HookedAppInfo
 import com.waenhancer.utils.InjectedHookItem
-import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.utils.WhatsAppPackageDetector
 import com.waenhancer.utils.XposedRuntimeInspector
+import com.waenhancer.utils.XposedRuntimeSnapshot
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
 import kotlinx.coroutines.Dispatchers
@@ -155,13 +155,9 @@ fun MainDashboardScreen(
                 .filter { it.isInstalled }.map { it.packageName }
         }
         val refreshed = withContext(Dispatchers.IO) {
-            XposedRuntimeInspector.inspect(
-                context,
-                packages,
-                android.os.Process.myUid() / 100_000
-            )
+            XposedRuntimeInspector.inspect(packages)
         }
-        if (refreshed != null) runtimeSnapshot = refreshed
+        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -300,59 +296,39 @@ fun MainDashboardScreen(
                                     "Module inactive",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
+                                app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
                                     colors.error,
-                                    "In scope • Injection failed",
+                                    "Injected • Initialization failed",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && !isVersionSupported -> Triple(
+                                app.isHooked && !isVersionSupported -> Triple(
                                     colors.error,
-                                    "In scope • Injected • Unsupported version",
+                                    "Injected • Unsupported version",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
+                                app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
                                     colors.error,
-                                    "In scope • Injected • Bridge unavailable",
+                                    "Injected • Settings connection unavailable",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
+                                app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "In scope • Injected • Using fallback",
+                                    "Injected • Using settings fallback",
                                     Color(0xFFF59E0B)
                                 )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
+                                app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "In scope • Injected • Some hooks failed",
+                                    "Injected • Some features failed",
                                     Color(0xFFF59E0B)
-                                )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked -> Triple(
-                                    colors.primary,
-                                    "In scope • Injected hooks",
-                                    colors.primary
-                                )
-                                app.scopeState == RuntimeScopeState.IN_SCOPE -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "In scope • Hooks not injected",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.scopeState == RuntimeScopeState.NOT_IN_SCOPE && app.isHooked -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Not in scope • Hooks still injected",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.scopeState == RuntimeScopeState.NOT_IN_SCOPE -> Triple(
-                                    colors.error,
-                                    "Not in scope • Hooks not injected",
-                                    colors.error
                                 )
                                 app.isHooked -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Scope unavailable • Injected hooks",
-                                    Color(0xFFF59E0B)
+                                    colors.primary,
+                                    "Hooks injected",
+                                    colors.primary
                                 )
                                 else -> Triple(
                                     colors.onSurfaceVariant,
-                                    "Scope unavailable • Hooks not injected",
+                                    "Hooks not injected",
                                     colors.onSurfaceVariant
                                 )
                             }

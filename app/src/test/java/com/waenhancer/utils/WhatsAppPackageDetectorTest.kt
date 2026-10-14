@@ -7,50 +7,11 @@ import org.junit.Test
 class WhatsAppPackageDetectorTest {
 
     @Test
-    fun `scope and injection remain independent signals`() {
-        val snapshot = XposedRuntimeSnapshot(
-            scopeAvailable = true,
-            scopedPackages = setOf("com.whatsapp"),
-            runningPids = mapOf("com.whatsapp" to setOf(1234))
-        )
-        assertTrue(snapshot.scopeState("com.whatsapp") == RuntimeScopeState.IN_SCOPE)
-        assertTrue(snapshot.scopeState("com.whatsapp.w4b") == RuntimeScopeState.NOT_IN_SCOPE)
-    }
-
-    @Test
-    fun `runtime inspection output keeps scope and pids separate`() {
+    fun `runtime inspection reads live process ids`() {
         val snapshot = parseXposedRuntimeSnapshot(
-            "SCOPE|com.whatsapp\nSCOPE_STATUS|AVAILABLE\nPID|com.whatsapp|123 456\n",
-            userId = 0
+            "PID|com.whatsapp|123 456\n"
         )
-        assertTrue(snapshot.scopeAvailable)
-        assertTrue(snapshot.scopeState("com.whatsapp") == RuntimeScopeState.IN_SCOPE)
-        assertTrue(snapshot.scopeState("com.whatsapp.w4b") == RuntimeScopeState.NOT_IN_SCOPE)
         assertTrue(snapshot.runningPids["com.whatsapp"] == setOf(123, 456))
-    }
-
-    @Test
-    fun `failed scope lookup remains unavailable rather than out of scope`() {
-        val snapshot = parseXposedRuntimeSnapshot(
-            "SCOPE_STATUS|UNAVAILABLE\nPID|com.whatsapp|123\n",
-            userId = 0
-        )
-        assertFalse(snapshot.scopeAvailable)
-        assertTrue(snapshot.scopeState("com.whatsapp") == RuntimeScopeState.UNAVAILABLE)
-    }
-
-    @Test
-    fun `Vector CLI scope output is filtered to current Android user`() {
-        val output = """
-            VECTOR_JSON_BEGIN
-            {"success":true,"data":[{"APP_PACKAGE":"com.whatsapp","USER_ID":0},{"APP_PACKAGE":"com.whatsapp.w4b","USER_ID":10}]}
-            VECTOR_JSON_END
-            PID|com.whatsapp|123
-        """.trimIndent()
-        val snapshot = parseXposedRuntimeSnapshot(output, userId = 0)
-        assertTrue(snapshot.scopeAvailable)
-        assertTrue(snapshot.scopeState("com.whatsapp") == RuntimeScopeState.IN_SCOPE)
-        assertTrue(snapshot.scopeState("com.whatsapp.w4b") == RuntimeScopeState.NOT_IN_SCOPE)
     }
 
     @Test
@@ -114,8 +75,8 @@ class WhatsAppPackageDetectorTest {
     }
 
     @Test
-    fun `fresh authenticated heartbeat confirms injection without root pid output`() {
-        assertTrue(
+    fun `fresh heartbeat without a running process is not injected`() {
+        assertFalse(
             hasCurrentInjection(
                 isModuleActive = true,
                 recordedBoot = 42,
@@ -137,6 +98,21 @@ class WhatsAppPackageDetectorTest {
                 currentBoot = 42,
                 reportedPid = 1234,
                 runningPids = emptySet(),
+                lastActiveTime = 10_000L,
+                now = 40_001L
+            )
+        )
+    }
+
+    @Test
+    fun `running process with a stale heartbeat is not injected`() {
+        assertFalse(
+            hasCurrentInjection(
+                isModuleActive = true,
+                recordedBoot = 42,
+                currentBoot = 42,
+                reportedPid = 1234,
+                runningPids = setOf(1234),
                 lastActiveTime = 10_000L,
                 now = 40_001L
             )
