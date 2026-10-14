@@ -26,7 +26,7 @@ Upstream `main` was not modified. Individual upstream PRs remain open.
 - #25: `d238a0f3b027403cdca69287f609c5bdc530049e`
 - #26: `bb125d4a85d0aa4a6d398632fa8746eb69e8776d`
 - #27: `7c27a4825b7f834f99f9d50de8aa13d82cde0ce5`
-- #32: `ee40876c2daa97ba7bc5cea077451ccf8623efc0`
+- #32: `4cbfb68227eef4ecdc0001911cb8f2f2722dda7f`
 - #33: `a3a8b978fa8123032959560abeb5e472a6cca7d5`
 - #35: `b9a191839124569dc7135fc4f5c1873a4dcd6b4f`
 - #34: `4aa0bf9fb0ca8431da546e5e04bfb8f7c8f07c9a`
@@ -112,6 +112,35 @@ the hardened #35 implementation, plus the #17 asynchronous edit writer.
   parsing/JVM contracts only; Gradle APK and LSPosed/device checks remain
   entirely unverified.
 
+## V11 verification — bounded imports, failure compensation and safer logs
+
+- **Backup restore failure compensation**, PR #32 at
+  `4cbfb68227eef4ecdc0001911cb8f2f2722dda7f`: before touching
+  `private_config` or `waex_prefs`, the codec snapshots the touched
+  preference keys and their original runtime types. If either store commit
+  fails, it attempts restoration in both files and clearly reports when the
+  compensation itself is incomplete. **This is best effort, NOT a true
+  atomic multi-file transaction**; simultaneous writers and persistent disk
+  errors remain device-level risks.
+- The same PR now **reads imported settings with an active 8 MiB cap**,
+  reading no further than the first overflow byte. A synthetic >9 MiB
+  stream, exactly-limit invalid data, zero-progress reads and stream-closing
+  behavior are covered by executable Kotlin fixtures.
+- Fork branch `fix/privacy-redact-db-dialog-status-logs-2026-10`,
+  `29ce617c43b217536596b4680ba5470301567eab`: 18 exception
+  log callsites in `MessageStore.kt`, `NativeWhatsAppDialog.kt`, and
+  `StatusDownloadHook.java` now log only exception classes.
+  User-facing status download error toasts were retained.
+- **Actual green GitHub Actions runs**:
+  [#38487490242](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38487490242)
+  (rollback failure injection),
+  [#38487898243](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38487898243)
+  (18 log callsites), and
+  [#38488123042](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/38488123042)
+  (streaming import cap). The latest workflow confirms **105 Java + 104
+  Kotlin syntax parses**, 293 exportable preference round-trips, and all
+  selected JVM/source regressions. It does **not** build a new APK.
+
 ## Recommended checks on an authorized development system
 
 Run the read-only/source-level QA scripts, especially:
@@ -131,6 +160,7 @@ python3 qa/test_style_boolean_alias_wiring.py
 python3 qa/test_style_non_boolean_guard.py
 python3 qa/test_exception_message_privacy.py
 python3 qa/test_call_privacy_logs.py
+python3 qa/test_database_dialog_status_log_privacy.py
 python3 qa/test_backup_alias_policy.py
 python3 qa/test_settings_backup_binary_roundtrip.py
 ```
