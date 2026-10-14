@@ -215,9 +215,13 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     /**
      * Icons mode: each enabled WAEX item shown as an individual action bar icon
      * with filled/unfilled states for toggleable features.
+     *
+     * SHOW_AS_ACTION_ALWAYS is required here — IF_ROOM causes items added later
+     * (e.g. Restart, Settings) to fall into the 3-dots overflow when the toolbar
+     * is already occupied by WhatsApp's own native icons.
      */
     private void addItemsWithIcons(Menu menu, Activity activity) {
-        appendWaexItems(menu, activity, MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        appendWaexItems(menu, activity, MenuItem.SHOW_AS_ACTION_ALWAYS);
         attachIconsToItems(menu);
     }
 
