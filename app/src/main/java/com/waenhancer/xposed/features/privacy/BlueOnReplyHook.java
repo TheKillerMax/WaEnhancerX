@@ -134,7 +134,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 }
             });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getMessage());
+            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getClass().getSimpleName());
         }
     }
 
@@ -176,7 +176,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getClass().getSimpleName());
         }
     }
 
@@ -201,8 +201,7 @@ public class BlueOnReplyHook extends BaseFeature {
         constructor.setAccessible(true);
         pending.add(new ReadJobRecipe(constructor, copy));
         lastHiddenConversationJid = key;
-        XposedBridge.log(TAG + " Captured hidden read job for " + key
-                + " (pending=" + pending.size() + ")");
+        XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")");
     }
 
     private static Object getOrFindJobManager() {
@@ -278,7 +277,7 @@ public class BlueOnReplyHook extends BaseFeature {
         }
 
         if (pending == null || pending.isEmpty()) {
-            XposedBridge.log(TAG + " No captured read jobs for " + (key != null ? key : "null"));
+            XposedBridge.log(TAG + " No captured read jobs for reply");
             return 0;
         }
 
@@ -297,9 +296,9 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
                 sent++;
-                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt for " + (matchedKey != null ? matchedKey : key));
+                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt");
             } catch (Throwable t) {
-                XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getMessage());
+                XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getClass().getSimpleName());
             }
         }
         return sent;
@@ -397,7 +396,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedBridge.log(TAG + " Hooked Conversation menu method: " + menuMethod);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getMessage());
+            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getClass().getSimpleName());
         }
     }
 
