@@ -1,0 +1,59 @@
+name: Validate and publish reviewed receipt and presence contracts
+on:
+  push:
+    branches: [test/receipt-presence-contracts-v16-2026-10-14]
+    paths: [.github/workflows/publish-contracts-v16.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: waex-v16-contract-publication
+  cancel-in-progress: false
+jobs:
+  validate-and-publish:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Require real parsers and compilers
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          command -v kotlinc
+          kotlinc -version
+          python3 -m py_compile qa/v16_publish.py qa/v16_contract_transform.py
+      - name: Reconstruct pinned reviewed source and execute standalone and integrated regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/v16_publish.py prepare
+      - name: Atomically publish only four whitelisted fork refs without rewriting history
+        shell: bash
+        env:
+          WAEX_PUBLISH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 qa/v16_publish.py publish
+      - name: Preserve text-only validation and publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v16-contract-validation
+          path: ${{ runner.temp }}/waex-v16-publication
+          retention-days: 14
+          if-no-files-found: warn
