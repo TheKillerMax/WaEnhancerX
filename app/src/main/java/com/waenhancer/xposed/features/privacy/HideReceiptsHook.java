@@ -246,36 +246,61 @@ public class HideReceiptsHook extends BaseFeature {
                     }
                 });
 
-                // Hook all methods on SendReadReceiptJob to cancel execution when tagged
-                for (Method m : sendJobClass.getDeclaredMethods()) {
-                    if (Modifier.isStatic(m.getModifiers())) continue;
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
-                            Object job = param.thisObject;
-                            if (job == null) return;
-
-                            Boolean hideStatus = (Boolean) XposedHelpers.getAdditionalInstanceField(job, "waex_hide_status_view");
-                            if (hideStatus != null && hideStatus) {
-                                param.setResult(null);
-                                return;
-                            }
-
-                            String jid = extractJidString(job, "jid");
-                            String participant = extractJidString(job, "participant");
-                            if (isStatusTarget(jid, participant)) {
-                                String target = (participant != null && !participant.contains("@broadcast")) ? participant : jid;
-                                if (shouldHideStatusView(target)) {
-                                    param.setResult(null);
-                                }
-                            }
-                        }
-                    });
+                // A job also declares retry, initialization and serialization methods.
+                // Suppress only its uniquely identified execution body, never every method.
+                final Class<?> resolvedJobClass = sendJobClass;
+                final Method executionMethod = resolveReadReceiptExecution(resolvedJobClass);
+                if (executionMethod == null) {
+                    XposedBridge.log(TAG + " Status receipt execution contract unavailable; job privacy coverage incomplete");
+                    return;
                 }
+                XposedBridge.hookMethod(executionMethod, new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (!ReceiptJobExecutionPolicy.isExecutionCall(
+                                resolvedJobClass, executionMethod, param.method,
+                                param.thisObject, param.args)) return;
+                        Object job = param.thisObject;
+                        if (Boolean.TRUE.equals(XposedHelpers.getAdditionalInstanceField(
+                                job, "waex_hide_status_view"))) {
+                            param.setResult(null);
+                            return;
+                        }
+                        String jid = extractJidString(job, "jid");
+                        String participant = extractJidString(job, "participant");
+                        if (isStatusTarget(jid, participant)) {
+                            String target = participant != null && !participant.contains("@broadcast")
+                                    ? participant : jid;
+                            if (shouldHideStatusView(target)) param.setResult(null);
+                        }
+                    }
+                });
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
         }
+    }
+
+    private Method resolveReadReceiptExecution(final Class<?> jobClass) {
+        Method method = DexSearchEngine.getInstance().findMethodWithCache(
+                context, classLoader, "wpp_send_read_receipt_execution_v1",
+                (bridge, loader) -> {
+                    // The reviewed 2.26.39.79 body builds a "receipt" stanza and
+                    // handles receiptClass="status". No obfuscated method name is pinned.
+                    MethodDataList matches = bridge.findMethod(FindMethod.create()
+                            .matcher(MethodMatcher.create()
+                                    .declaredClass(jobClass.getName())
+                                    .paramCount(0)
+                                    .returnType("void")
+                                    .addUsingString("receipt", StringMatchType.Equals)
+                                    .addUsingString("status", StringMatchType.Equals)));
+                    if (matches.size() != 1) return null;
+                    Method candidate = matches.get(0).getMethodInstance(loader);
+                    return ReceiptJobExecutionPolicy.isExecutionMethod(jobClass, candidate)
+                            ? candidate : null;
+                });
+        // Revalidate descriptors restored from the positive cache as well.
+        return ReceiptJobExecutionPolicy.isExecutionMethod(jobClass, method) ? method : null;
     }
 
     private boolean isManualSeenTickEnabled() {
