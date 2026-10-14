@@ -2,8 +2,12 @@
 - Fixed the Disable Screen Off on Proximity Sensor option not working correctly
 - Fixed Seconds on Timestamp, New Settings Style, IGStatus, and Contact Added Status switches not saving correctly
 - Fixed Audio to Voice Status related settings becoming out of sync
-- Custom Theme, DPI, chat filters, hidden tabs, and quick actions now clearly show when dedicated setup is required
 - Fixed hooks injected repeated toasts
+- Fixed Quick Actions
+- Fixed Hide Tabs on Home
+- Fixed Chat Filters
+- Fixed Custom Theme
+- Fixed Custom DPI
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings

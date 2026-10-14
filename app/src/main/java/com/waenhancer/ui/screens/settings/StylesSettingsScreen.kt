@@ -541,6 +541,7 @@ private fun TextValueEditorDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChoiceValueEditorDialog(
     title: String,
@@ -549,28 +550,126 @@ private fun ChoiceValueEditorDialog(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
     var selected by remember(title, selectedValue) { mutableStateOf(selectedValue) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                choices.forEach { (value, label) ->
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 6.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant.copy(alpha = 0.6f))
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            // Title
+            Text(
+                text = title,
+                style = typography.headlineMd,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Radio options
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                choices.forEachIndexed { index, (value, label) ->
+                    val isSelected = selected == value
+                    val bgColor by animateColorAsState(
+                        targetValue = if (isSelected) colors.primary.copy(alpha = 0.10f) else Color.Transparent,
+                        animationSpec = tween(200),
+                        label = "choice_bg_$index"
+                    )
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { selected = value }.padding(vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .clickable { selected = value }
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = selected == value, onClick = { selected = value })
-                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { selected = value },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = colors.primary
+                            )
+                        )
+                        Text(
+                            text = label,
+                            style = typography.bodyLg,
+                            color = if (isSelected) colors.primary else colors.onSurface,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    if (index < choices.lastIndex) {
+                        HorizontalDivider(
+                            thickness = 1.dp,
+                            color = colors.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(start = 56.dp)
+                        )
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = { onSave(selected) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Confirm button
+            Button(
+                onClick = { onSave(selected) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.fullShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cancel
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = radius.fullShape
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MultiChoiceValueEditorDialog(
     title: String,
@@ -579,18 +678,66 @@ private fun MultiChoiceValueEditorDialog(
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit
 ) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
     val selected = remember(title, selectedValues) { mutableStateListOf<String>().apply { addAll(selectedValues) } }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                choices.forEach { (value, label) ->
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 6.dp)
+                    .size(width = 36.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant.copy(alpha = 0.6f))
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            // Title
+            Text(
+                text = title,
+                style = typography.headlineMd,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Checkbox options
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                choices.forEachIndexed { index, (value, label) ->
                     val checked = value in selected
+                    val bgColor by animateColorAsState(
+                        targetValue = if (checked) colors.primary.copy(alpha = 0.10f) else Color.Transparent,
+                        animationSpec = tween(200),
+                        label = "multi_choice_bg_$index"
+                    )
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            if (checked) selected.remove(value) else selected.add(value)
-                        }.padding(vertical = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .clickable {
+                                if (checked) selected.remove(value) else selected.add(value)
+                            }
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -598,16 +745,62 @@ private fun MultiChoiceValueEditorDialog(
                             onCheckedChange = { enabled ->
                                 if (enabled) { if (value !in selected) selected.add(value) }
                                 else selected.remove(value)
-                            }
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = colors.primary,
+                                uncheckedColor = colors.onSurfaceVariant
+                            )
                         )
-                        Text(label, modifier = Modifier.padding(start = 8.dp))
+                        Text(
+                            text = label,
+                            style = typography.bodyLg,
+                            color = if (checked) colors.primary else colors.onSurface,
+                            fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                    if (index < choices.lastIndex) {
+                        HorizontalDivider(
+                            thickness = 1.dp,
+                            color = colors.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(start = 56.dp)
+                        )
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = { onSave(selected.toSet()) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Confirm button
+            Button(
+                onClick = { onSave(selected.toSet()) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.fullShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                )
+            ) {
+                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Cancel
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = radius.fullShape
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
 }
 
 private fun typedStyleSummary(
