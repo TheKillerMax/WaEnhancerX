@@ -94,6 +94,7 @@ jobs:
             qa/test_provider_derived_keys.py \
             qa/test_backup_alias_policy.py \
             qa/test_settings_backup_binary_roundtrip.py \
+            qa/test_settings_backup_json.py \
             qa/test_feature_preference_schema_coverage.py \
             qa/test_catalog_schema_alias_contract.py \
             qa/test_style_boolean_alias_wiring.py \
