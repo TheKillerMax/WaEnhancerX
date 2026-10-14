@@ -24,7 +24,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Presence & Activity Toasts Hook:
@@ -37,7 +39,16 @@ public class PresenceToastsHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][PresenceToasts]";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
+    // Bound asynchronous name lookups rather than allowing unbounded queued tasks.
+    private static final ExecutorService TOAST_EXECUTOR = new ThreadPoolExecutor(
+            0, 1, 30L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(96),
+            task -> {
+                Thread thread = new Thread(task, "WAEX-toast-lookup");
+                thread.setDaemon(true);
+                return thread;
+            },
+            new ThreadPoolExecutor.DiscardOldestPolicy());
+    private final ExecutorService asyncExecutor = TOAST_EXECUTOR;
 
     public PresenceToastsHook(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
         super(context, classLoader, prefs);
@@ -282,14 +293,8 @@ public class PresenceToastsHook extends BaseFeature {
         }
     }
 
-    private static final java.util.Map<String, Long> LAST_TOAST_MAP = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ToastThrottle TOAST_THROTTLE = new ToastThrottle(1500L, 2048);
     private static final java.util.concurrent.atomic.AtomicInteger PRESENCE_DIAGNOSTICS = new java.util.concurrent.atomic.AtomicInteger();
-    private static final long MIN_TOAST_INTERVAL_MS = 1500;
-    private static final ExecutorService DELETED_TOAST_EXECUTOR = Executors.newSingleThreadExecutor(r -> {
-        Thread thread = new Thread(r, "WAEX-DeletedToast");
-        thread.setDaemon(true);
-        return thread;
-    });
 
     private void processReceiptItem(Object receiptObj, boolean statusToast, boolean msgToast) {
         if (receiptObj == null) return;
@@ -333,11 +338,7 @@ public class PresenceToastsHook extends BaseFeature {
     private void emitToastWithThrottle(String rawJid, String actionKey, java.util.concurrent.Callable<String> messageBuilder) {
         String key = rawJid + "_" + actionKey;
         long now = System.currentTimeMillis();
-        Long lastTime = LAST_TOAST_MAP.get(key);
-        if (lastTime != null && (now - lastTime) < MIN_TOAST_INTERVAL_MS) {
-            return;
-        }
-        LAST_TOAST_MAP.put(key, now);
+        if (!TOAST_THROTTLE.shouldEmit(key, now)) return;
 
         asyncExecutor.execute(() -> {
             try {
@@ -357,13 +358,9 @@ public class PresenceToastsHook extends BaseFeature {
 
         String key = (senderJid != null ? senderJid : "unknown") + "_deleted";
         long now = System.currentTimeMillis();
-        Long lastTime = LAST_TOAST_MAP.get(key);
-        if (lastTime != null && (now - lastTime) < MIN_TOAST_INTERVAL_MS) {
-            return;
-        }
-        LAST_TOAST_MAP.put(key, now);
+        if (!TOAST_THROTTLE.shouldEmit(key, now)) return;
 
-        DELETED_TOAST_EXECUTOR.execute(() -> {
+        TOAST_EXECUTOR.execute(() -> {
             try {
                 String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : "A contact";
                 String text = name + " deleted a message";
