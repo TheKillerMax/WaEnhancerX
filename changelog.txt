@@ -1,24 +1,11 @@
-[Added]
-- Restart required sheet in WhatsApp on updating a pref
-- Show message device source
-- Unlock WA Plus (Pro)
-- Optional Material You (Monet) theme in WaEnhancerX
-
 [Fixed]
-- Fixed update checker sheet
-- Fixed message edit history
-- Fixed toast on deleted message
-- Fixed hook return-type compatibility with newer WhatsApp versions
-- Fixed some media settings
+- Fixed the Disable Screen Off on Proximity Sensor option not working correctly
+- Fixed Seconds on Timestamp, New Settings Style, IGStatus, and Contact Added Status switches not saving correctly
+- Fixed Audio to Voice Status related settings becoming out of sync
+- Custom Theme, DPI, chat filters, hidden tabs, and quick actions now clearly show when dedicated setup is required
 
 [Improvements]
-- Improved performance
-- Improved hooks injection strategy
-- Hide blue ticks
-- Hide delivered
-- Improved update downloads with HTTPS enforcement & APK validation
-- Improved security when WhatsApp reads feature settings
-- Made restarting WhatsApp from the dashboard safer and more reliable
+- Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
 
 [Community contribution]
-- Thanks to @TheKillerMax for contributions through PRs #10, #14, #16, #18, #19, #20, #21, and #24
+- Thanks to @TheKillerMax for contributions through PRs #33, #34, and #37
