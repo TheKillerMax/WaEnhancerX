@@ -439,6 +439,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("ghostmode_active", true).apply();
                         Toast.makeText(activity, "Ghost Mode Activated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -452,6 +453,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("ghostmode_active", false).apply();
                         Toast.makeText(activity, "Ghost Mode Deactivated", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -470,6 +472,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
                         Toast.makeText(activity, "Last Seen Frozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
@@ -483,6 +486,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
                         Toast.makeText(activity, "Last Seen Unfrozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
+                        d.dismiss();
                         forceRestartWhatsApp(activity);
                     })
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
