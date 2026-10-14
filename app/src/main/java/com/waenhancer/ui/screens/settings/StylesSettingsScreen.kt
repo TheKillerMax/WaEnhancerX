@@ -89,7 +89,7 @@ fun StylesSettingsScreen() {
             "channels_enhancements", "chat_filters", "hide_ui_tabs",
             "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
             "contact_blocked_verify",
-            "send_audio_as_voice_status", "miscellaneous_enhancements"
+            "send_audio_as_voice_status", "disable_sensor_proximity"
         )
     }
 
@@ -162,7 +162,7 @@ fun StylesSettingsScreen() {
             listOf(
                 StyleItem("Show Contact Added Status in Conversation", "This option verifies whether the contact added you or has a public profile photo", "contact_blocked_verify"),
                 StyleItem("Audio to Voice Status", "Pick a local audio file and publish it as a voice status", "send_audio_as_voice_status", isPro = true),
-                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "miscellaneous_enhancements")
+                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "disable_sensor_proximity")
             )
         )
     )
