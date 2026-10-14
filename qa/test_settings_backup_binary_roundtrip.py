@@ -277,6 +277,58 @@ fun main(){
  check(incomplete!=null && incomplete.message?.contains("rollback could not")==true){
    "Incomplete compensation was not surfaced explicitly"
  }
+ // The import must reject more than 8 MiB BEFORE materializing the
+ // entire untrusted InputStream. This synthetic stream advertises >9 MiB but
+ // must not be read past the first 8 MiB + one detection byte.
+ val excessive = object : java.io.InputStream() {
+   var served = 0
+   var closed = false
+   private val total = 9 * 1024 * 1024
+   override fun read(): Int {
+     if (served >= total) return -1
+     served++
+     return 65
+   }
+   override fun read(b:ByteArray, off:Int, len:Int): Int {
+     if (served >= total) return -1
+     val n=minOf(len,total-served)
+     java.util.Arrays.fill(b,off,off+n,65.toByte())
+     served+=n
+     return n
+   }
+   override fun close() { closed=true }
+ }
+ val overError=runCatching {
+   SettingsBackupCodec.decode(TestContext(),excessive)
+ }.exceptionOrNull()
+ check(overError is IllegalArgumentException &&
+       overError.message?.contains("size limit")==true){"Oversized backup was not blocked"}
+ check(excessive.served==8*1024*1024+1){"Read past first overflow byte"}
+ check(excessive.closed){"Oversized input was not closed"}
+ // Exactly 8 MiB is permitted by the length preflight. Parsing invalid
+ // contents can still fail, but *not* for exceeding the input-size limit.
+ val atLimit=ByteArray(8*1024*1024)
+ val limitErr=runCatching {
+   SettingsBackupCodec.decode(TestContext(),ByteArrayInputStream(atLimit))
+ }.exceptionOrNull()
+ check(limitErr!=null && limitErr.message?.contains("size limit")!=true){
+   "Exactly MAX_BYTES was rejected for the wrong reason"
+ }
+ // read(byte[], ...) may legally return zero; progress via read() must work.
+ val slow=object : java.io.InputStream() {
+   var first=true
+   private val delegate=ByteArrayInputStream("LEGACY_TEST:always_online=true".toByteArray())
+   override fun read():Int=delegate.read()
+   override fun read(b:ByteArray,off:Int,len:Int):Int {
+     if(first){ first=false; return 0 }
+     return delegate.read(b,off,len)
+   }
+   override fun close(){delegate.close()}
+ }
+ val slowTarget=TestContext()
+ check(SettingsBackupCodec.decode(slowTarget,slow)==1)
+ check(slowTarget.get("waex_prefs","always_online")==true)
+ println("PASS: streaming 8 MiB import bound, first overflow byte, close on failure and zero-progress reads")
  println("PASS: mixed-store import, four failure permutations, typed rollback and incomplete-rollback reporting")
  println("PASS: legacy JSON canonical precedence, alias fallback, typing/delivery privacy independence")
  println("PASS: legacy RGB/ARGB colors restored using the INT preference schema")
