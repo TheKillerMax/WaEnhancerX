@@ -1,0 +1,111 @@
+name: Pinned source review and merge diagnostics
+
+on:
+  push:
+    branches: ['test/review-current-main-2026-10-14']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4bbe5cb02ce2fe924136a9579d2582c1a4818643
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Capture public sources without binaries, private submodules or signing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import collections, hashlib, json, os, pathlib, re, subprocess, urllib.request
+          BASE = '4bbe5cb02ce2fe924136a9579d2582c1a4818643'
+          PREVIEW = '2fffbf9d966436e014df1eaee2bb1fd0304d206e'
+          OUT = pathlib.Path(os.environ['RUNNER_TEMP']) / 'waex-source-review'
+          OUT.mkdir()
+          def git(*args, ok=(0,)):
+              p = subprocess.run(['git', *args], capture_output=True, timeout=180)
+              if p.returncode not in ok:
+                  raise RuntimeError(p.stderr.decode('utf-8', 'replace'))
+              return p
+          def api(suffix):
+              url = 'https://api.github.com/repos/WaEnhancerX/WaEnhancerX/' + suffix
+              req = urllib.request.Request(url, headers={'Accept':'application/vnd.github+json', 'User-Agent':'waex-public-source-review'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.load(r)
+          def save(name, obj):
+              (OUT / name).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
+          def export(ref, label):
+              target = OUT / 'sources' / label
+              target.mkdir(parents=True)
+              inventory = []
+              for record in git('ls-tree', '-rz', ref).stdout.split(b'\0'):
+                  if not record: continue
+                  meta, raw_path = record.split(b'\t', 1)
+                  mode, kind, sha = meta.decode().split()
+                  path = raw_path.decode('utf-8')
+                  pp = pathlib.PurePosixPath(path)
+                  if kind != 'blob' or mode == '120000' or pp.is_absolute() or '..' in pp.parts:
+                      continue
+                  if path.startswith('licensing/') or any(x in path.lower() for x in ('.jks', '.keystore', 'local.properties', 'signing.properties')):
+                      continue
+                  if pp.suffix not in {'.java','.kt','.kts','.py','.xml','.yml','.yaml','.md','.txt','.toml','.pro','.properties'} and path not in {'gradlew','.gitmodules'}:
+                      continue
+                  data = git('cat-file','blob',sha).stdout
+                  try: data.decode('utf-8')
+                  except UnicodeDecodeError: continue
+                  file = target / path
+                  file.parent.mkdir(parents=True, exist_ok=True)
+                  file.write_bytes(data)
+                  inventory.append({'path':path,'mode':mode,'blob':sha,'sha256':hashlib.sha256(data).hexdigest()})
+              save(label + '-inventory.json', inventory)
+          assert git('rev-parse','HEAD').stdout.decode().strip() == BASE
+          prs = api('pulls?state=open&per_page=100')
+          assert len(prs) < 100, 'Pagination required; refusing an incomplete PR inventory'
+          issues = api('issues?state=all&per_page=100')
+          assert len(issues) < 100, 'Pagination required; refusing an incomplete issue inventory'
+          save('open-prs.json', prs)
+          save('issues.json', [x for x in issues if 'pull_request' not in x])
+          save('latest-release.json', api('releases/latest'))
+          save('current-main.json', api('branches/main'))
+          git('remote','add','upstream','https://github.com/WaEnhancerX/WaEnhancerX.git')
+          git('fetch','--no-tags','upstream','+refs/heads/main:refs/remotes/upstream/main')
+          export(BASE, 'main')
+          diagnostics = []
+          for pr in prs:
+              number, head = pr['number'], pr['head']['sha']
+              assert isinstance(number,int) and re.fullmatch('[0-9a-f]{40}',head)
+              git('fetch','--no-tags','upstream',f'+refs/pull/{number}/head:refs/remotes/review/pr-{number}')
+              assert git('rev-parse',f'refs/remotes/review/pr-{number}').stdout.decode().strip() == head, 'PR moved during capture'
+              base = git('merge-base', BASE, head).stdout.decode().strip()
+              export(head, f'pr-{number}')
+              export(base, f'base-{number}')
+              diff = git('diff','--binary',base,head).stdout
+              (OUT / f'pr-{number}.patch').write_bytes(diff)
+              merged = git('merge-tree','--write-tree','--messages',BASE,head,ok=(0,1))
+              text = merged.stdout.decode('utf-8')
+              (OUT / f'merge-{number}.txt').write_text(text)
+              tree = text.splitlines()[0]
+              assert re.fullmatch('[0-9a-f]{40}',tree)
+              export(tree, f'merge-{number}')
+              paths = git('diff','--name-only',base,head).stdout.decode().splitlines()
+              diagnostics.append({'pr':number,'head':head,'merge_base':base,'merge_exit':merged.returncode,'merge_tree':tree,'paths':paths})
+          git('fetch','--no-tags','origin',PREVIEW)
+          export(PREVIEW, 'historical-preview')
+          save('merge-diagnostics.json', diagnostics)
+          print(json.dumps({'base':BASE,'open_prs':len(prs),'individually_clean':[x['pr'] for x in diagnostics if x['merge_exit']==0],'conflicted':[x['pr'] for x in diagnostics if x['merge_exit']!=0]},indent=2))
+          print('This is source capture and non-mutating merge-tree analysis, not an Android build or upstream merge.')
+          PY
+      - name: Upload text-only review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-source-review-2026-10-14
+          path: ${{ runner.temp }}/waex-source-review
+          if-no-files-found: error
+          retention-days: 7
