@@ -33,6 +33,10 @@ assert 'restoreTouchedKeys(publicStore, publicBefore, publicKeys)' in codec
 assert 'restoreTouchedKeys(privateStore, privateBefore, privateKeys)' in codec
 assert 'Backup restore failed and rollback could not restore all preferences' in codec
 assert 'snapshotForRollback' in codec
+assert 'input.use { it.readBytes() }' not in codec
+assert 'private fun readBoundedBackup(input: InputStream)' in codec
+assert 'MAX_BYTES + 1 - consumed' in codec
+assert 'require(consumed <= MAX_BYTES)' in codec
 assert 'original.containsKey(key)' in codec
 colliding = [(a, b) for a, b in aliases.items() if a in keys and b in keys]
 incompatible = [(a, b) for a, b in colliding if keys[a] != keys[b]]
