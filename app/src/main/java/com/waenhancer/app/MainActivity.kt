@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private var currentNavController: WaexNavController? = null
     private var rootCheckAttempt by mutableIntStateOf(0)
     private var rootState by mutableStateOf(RootAccessState.Checking)
+    private var hasGrantedRootThisSession by mutableStateOf(false)
     private var hasStartedOnce = false
 
     override fun onStart() {
@@ -101,46 +103,55 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
+                        val navController = remember {
+                            val controller = WaexNavController()
+                            currentNavController = controller
+                            val releaseTag = releaseTagFrom(intent)
+                            if (releaseTag != null) {
+                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+                            } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
+                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+                            }
+                            controller
+                        }
+
                         LaunchedEffect(rootCheckAttempt) {
                             rootState = RootAccessState.Checking
-                            rootState = if (withContext(Dispatchers.IO) {
-                                    UpdateDownloader.hasRootAccess()
-                                }) {
+                            val hasRoot = withContext(Dispatchers.IO) {
+                                UpdateDownloader.hasRootAccess()
+                            }
+                            rootState = if (hasRoot) {
+                                hasGrantedRootThisSession = true
                                 RootAccessState.Granted
                             } else {
                                 RootAccessState.Required
                             }
                         }
 
-                        if (rootState != RootAccessState.Granted) {
-                            RootAccessRequirementScreen(
-                                state = rootState,
-                                onRetry = { rootCheckAttempt++ },
-                                onExit = { finishAndRemoveTask() }
-                            )
-                        } else {
-                            LaunchedEffect(Unit) {
+                        LaunchedEffect(hasGrantedRootThisSession) {
+                            if (hasGrantedRootThisSession) {
                                 UpdateCheckCoordinator.request(
                                     this@MainActivity,
                                     UpdateCheckCoordinator.TRIGGER_MODULE
                                 )
                             }
-                            val navController = remember {
-                                val controller = WaexNavController()
-                                currentNavController = controller
-                                val releaseTag = releaseTagFrom(intent)
-                                if (releaseTag != null) {
-                                    controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
-                                } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
-                                    controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
-                                }
-                                controller
-                            }
+                        }
+
+                        Box(modifier = Modifier.fillMaxSize()) {
                             CompositionLocalProvider(
                                 LocalWaexNavController provides navController,
                                 LocalWaexPreferenceManager provides preferenceManager
                             ) {
-                                MainContainerScreen()
+                                if (hasGrantedRootThisSession) {
+                                    MainContainerScreen()
+                                }
+                            }
+                            if (rootState != RootAccessState.Granted) {
+                                RootAccessRequirementScreen(
+                                    state = rootState,
+                                    onRetry = { rootCheckAttempt++ },
+                                    onExit = { finishAndRemoveTask() }
+                                )
                             }
                         }
                     }
