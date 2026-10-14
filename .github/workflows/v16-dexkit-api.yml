@@ -1,0 +1,47 @@
+name: V16 declared DexKit API evidence
+on:
+  push:
+    branches: [test/receipt-presence-contracts-v16-2026-10-14]
+    paths: [.github/workflows/v16-dexkit-api.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Fetch fixed dependency and compile both query contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          cd evidence
+          curl --fail --location --max-time 60 -o dexkit-2.2.0.aar https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar
+          curl --fail --location --max-time 30 -o dexkit.sha1 https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar.sha1
+          printf '%s  dexkit-2.2.0.aar\n' "$(cat dexkit.sha1)" | sha1sum -c -
+          unzip -p dexkit-2.2.0.aar classes.jar > dexkit-2.2.0.jar
+          cat > MatcherContract.java <<'JAVA'
+          import org.luckypray.dexkit.query.FindMethod;
+          import org.luckypray.dexkit.query.enums.StringMatchType;
+          import org.luckypray.dexkit.query.matchers.MethodMatcher;
+          public final class MatcherContract {
+            public static void main(String[] args) {
+              FindMethod.create().matcher(MethodMatcher.create().declaredClass("example.Job").paramCount(0).returnType("void").addUsingString("receipt", StringMatchType.Equals).addUsingString("status", StringMatchType.Equals));
+              FindMethod.create().matcher(MethodMatcher.create().name("handleMessage").paramTypes("android.os.Message").returnType("void").addUsingString("MessageHandler/handleConnectionThreadReady connectionready", StringMatchType.Equals).addUsingString("lastSeen", StringMatchType.Equals).addUsingString("presence", StringMatchType.Equals));
+              System.out.println("PASS: both query builders compile and instantiate against declared DexKit 2.2.0; no native scan or Android build claimed");
+            }
+          }
+          KOTLIN_LIB="$(dirname "$(readlink -f "$(command -v kotlinc)")")/../lib"
+          javac --release 17 -cp "dexkit-2.2.0.jar:$KOTLIN_LIB/*" MatcherContract.java
+          java -cp ".:dexkit-2.2.0.jar:$KOTLIN_LIB/*" MatcherContract | tee result.txt
+          sha256sum dexkit-2.2.0.aar dexkit-2.2.0.jar > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v16-dexkit-api
+          path: evidence
+          retention-days: 7
