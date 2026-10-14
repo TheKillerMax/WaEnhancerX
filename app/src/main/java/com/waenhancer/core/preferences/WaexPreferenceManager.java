@@ -110,6 +110,22 @@ public final class WaexPreferenceManager {
         }
     }
 
+    public java.util.Set<String> getStringSet(String key, java.util.Set<String> defaultValue) {
+        try {
+            java.util.Set<String> value = getStore(key).getStringSet(key, defaultValue);
+            return value == null ? defaultValue : new java.util.LinkedHashSet<>(value);
+        } catch (ClassCastException ignored) {
+            return defaultValue;
+        }
+    }
+
+    public void putStringSet(String key, java.util.Set<String> value) {
+        getStore(key).edit().putStringSet(key, new java.util.LinkedHashSet<>(value)).commit();
+        if (isPublicStore(key)) {
+            notifyChange();
+        }
+    }
+
     public int getInt(String key, int defaultValue) {
         return getStore(key).getInt(key, defaultValue);
     }

@@ -36,6 +36,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     private static volatile PreferenceBridgeClient sPreferenceBridge;
     private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
     private static final AtomicBoolean HEARTBEAT_STARTED = new AtomicBoolean(false);
+    private static final AtomicBoolean INJECTION_TOAST_SHOWN = new AtomicBoolean(false);
     private static final long HEARTBEAT_INTERVAL_MS = 10_000L;
     private static volatile String sRuntimeStatus = "INJECTED";
     private static volatile String sBridgeStatus = "PENDING";
@@ -288,11 +289,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         }
                                         if (showHookToast) {
                                             try {
-                                                android.widget.Toast.makeText(
-                                                    appContext,
-                                                    "Injecting WAEX hooks into WhatsApp...",
-                                                    android.widget.Toast.LENGTH_SHORT
-                                                ).show();
+                                                showInjectionToastOnFirstVisibleActivity();
                                             } catch (Throwable t) {
                                                 XposedBridge.log("[WAEX] Injection toast unavailable: "
                                                         + t.getClass().getSimpleName());
@@ -353,6 +350,28 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         + t.getClass().getSimpleName());
             }
         }
+    }
+
+    /**
+     * A target process may be created for background work without the user opening WhatsApp.
+     * Only acknowledge injection when its first Activity becomes visible, and only once for the
+     * lifetime of that process. A force-stop/process death resets these in-memory guards.
+     */
+    private static void showInjectionToastOnFirstVisibleActivity() {
+        com.waenhancer.xposed.utils.ActivityTracker.ActivityListener listener =
+                new com.waenhancer.xposed.utils.ActivityTracker.ActivityListener() {
+                    @Override
+                    public void onActivityResumed(android.app.Activity activity) {
+                        com.waenhancer.xposed.utils.ActivityTracker.removeListener(this);
+                        if (!INJECTION_TOAST_SHOWN.compareAndSet(false, true)) return;
+                        activity.runOnUiThread(() -> android.widget.Toast.makeText(
+                                activity,
+                                "WAEX hooks injected",
+                                android.widget.Toast.LENGTH_SHORT
+                        ).show());
+                    }
+                };
+        com.waenhancer.xposed.utils.ActivityTracker.addListener(listener);
     }
 
     private static void reportTargetRuntime(Context context, String packageName,

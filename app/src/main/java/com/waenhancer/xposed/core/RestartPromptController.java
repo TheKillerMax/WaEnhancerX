@@ -94,8 +94,10 @@ public final class RestartPromptController {
                     .asBottomSheet()
                     .setTitle("Restart required")
                     .setMessage(message)
-                    .setPositiveButton("Restart WhatsApp",
-                            (ignored, which) -> WhatsAppProcessRestarter.restart(activity))
+                    .setPositiveButton("Restart WhatsApp", (d, which) -> {
+                        if (d != null) d.dismiss();
+                        WhatsAppProcessRestarter.restart(activity);
+                    })
                     .setNegativeButton("Later", null)
                     .show();
             if (dialog == null) {

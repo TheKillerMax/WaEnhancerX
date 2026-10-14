@@ -36,7 +36,11 @@ C={
  'live preferences': 'com.waenhancer.action.PREFERENCES_CHANGED' in main and 'bridgeClient.syncPreferences();' in main,
  'restart prompt isolated': 'RestartPromptController.initialize(bridgeClient);' in main and 'Restart prompt setup failed:' in main,
  'update sheet isolated': 'WhatsAppUpdateSheet.init(bridgeClient);' in main and 'WhatsApp update-sheet setup failed:' in main,
- 'injection toast isolated': 'Injecting WAEX hooks into WhatsApp...' in main and 'Injection toast unavailable:' in main,
+ 'injection toast isolated': 'showInjectionToastOnFirstVisibleActivity();' in main and 'Injection toast unavailable:' in main,
+ 'visible-activity toast retained': 'public void onActivityResumed(android.app.Activity activity)' in main and '"WAEX hooks injected"' in main,
+ 'toast listener removed': 'ActivityTracker.removeListener(this);' in main,
+ 'toast per-process bound': 'INJECTION_TOAST_SHOWN.compareAndSet(false, true)' in main,
+ 'typed styles registry retained': all(name in registry for name in ('CustomDpiHook.class', 'ChatFilterDisplayHook.class', 'HideHomeTabsHook.class', 'CssThemeHook.class')),
  'registry installed': 'FeatureRegistry registry =' in main and 'registry.initializeAll();' in main,
  'registry health reporting': 'registry.hasFailures()' in main and 'registry.reportInjectedHooks(appContext, packageName)' in main,
  'failure diagnostics': 'showInjectionErrorSheet(t, packageName, lpparam.processName)' in main,
@@ -55,7 +59,7 @@ for operation, logline in [
  ('WhatsAppPackageDetector.registerHookedPackage(', 'Hooked-package reporting failed:'),
  ('RestartPromptController.initialize(', 'Restart prompt setup failed:'),
  ('WhatsAppUpdateSheet.init(', 'WhatsApp update-sheet setup failed:'),
- ('Injecting WAEX hooks into WhatsApp...', 'Injection toast unavailable:'),
+ ('showInjectionToastOnFirstVisibleActivity();', 'Injection toast unavailable:'),
 ]:
  assert 0 < main.index(logline)-main.index(operation) < 1100, f'No local catch for {operation}'
 print(f'PASS: {len(C)} current startup, health, diagnostics and version guard invariants')

@@ -80,11 +80,12 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.utils.HookedAppInfo
 import com.waenhancer.utils.InjectedHookItem
-import com.waenhancer.utils.RuntimeScopeState
 import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.utils.WhatsAppPackageDetector
+import com.waenhancer.utils.XposedRuntimeInspector
+import com.waenhancer.utils.XposedRuntimeSnapshot
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
 import kotlinx.coroutines.Dispatchers
@@ -137,10 +138,26 @@ fun MainDashboardScreen(
     }
 
     var refreshTrigger by remember { mutableIntStateOf(0) }
-    var systemDiagnostics by remember { mutableStateOf<SystemDiagnostics?>(null) }
+    var runtimeSnapshot by remember {
+        mutableStateOf(XposedRuntimeInspector.cached())
+    }
+    var systemDiagnostics by remember {
+        mutableStateOf(SystemDiagnosticsReader.cached())
+    }
 
     LaunchedEffect(refreshTrigger) {
         systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
+    }
+
+    LaunchedEffect(refreshTrigger) {
+        val packages = withContext(Dispatchers.IO) {
+            WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
+                .filter { it.isInstalled }.map { it.packageName }
+        }
+        val refreshed = withContext(Dispatchers.IO) {
+            XposedRuntimeInspector.inspect(packages)
+        }
+        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -172,8 +189,8 @@ fun MainDashboardScreen(
     }
 
     // Dynamic WhatsApp Packages & Clones Detector
-    val detectedApps = remember(refreshTrigger) {
-        WhatsAppPackageDetector.detectWhatsAppApps(context)
+    val detectedApps = remember(refreshTrigger, runtimeSnapshot) {
+        WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
     }
 
     val prefs = remember(context) { PreferenceStores.publicStore(context) }
@@ -279,45 +296,40 @@ fun MainDashboardScreen(
                                     "Module inactive",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
+                                app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
                                     colors.error,
                                     "Injected • Initialization failed",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && !isVersionSupported -> Triple(
+                                app.isHooked && !isVersionSupported -> Triple(
                                     colors.error,
-                                    "Injected • Unsupported Version (Paused)",
+                                    "Injected • Unsupported version",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "FAILED" -> Triple(
+                                app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
                                     colors.error,
-                                    "Injected • Preference bridge unavailable",
+                                    "Injected • Settings connection unavailable",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
+                                app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Active • Using preference fallback",
+                                    "Injected • Using settings fallback",
                                     Color(0xFFF59E0B)
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
+                                app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Active • Some hooks failed",
+                                    "Injected • Some features failed",
                                     Color(0xFFF59E0B)
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT -> Triple(
+                                app.isHooked -> Triple(
                                     colors.primary,
-                                    "Injected & Active",
+                                    "Hooks injected",
                                     colors.primary
                                 )
-                                app.scopeState == RuntimeScopeState.PREVIOUSLY_ACTIVE -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Scope changed or unverified • Restart app to verify",
-                                    Color(0xFFF59E0B)
-                                )
                                 else -> Triple(
-                                    colors.error,
-                                    "Not active in module scope • Restart app to verify",
-                                    colors.error
+                                    colors.onSurfaceVariant,
+                                    "Hooks not injected",
+                                    colors.onSurfaceVariant
                                 )
                             }
 
