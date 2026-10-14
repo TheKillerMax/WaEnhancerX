@@ -1,0 +1,257 @@
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java b/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java
+index cf76c13..c4522b0 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java
+@@ -9,14 +9,17 @@ import java.util.concurrent.CopyOnWriteArraySet;
+ /** Process-local presence state shared by the receiver hook and visible conversation rows. */
+ public final class PresenceStateStore {
+     private static final int MAX_STATES = 2048;
++    private static long nextRevision;
+     public interface Listener { void onPresenceChanged(String jid, State state); }
+ 
+     public static final class State {
+         public final boolean online;
+         public final long changedAtMillis;
+-        private State(boolean online, long changedAtMillis) {
++        public final long revision;
++        private State(boolean online, long changedAtMillis, long revision) {
+             this.online = online;
+             this.changedAtMillis = changedAtMillis;
++            this.revision = revision;
+         }
+     }
+ 
+@@ -31,6 +34,21 @@ public final class PresenceStateStore {
+     private PresenceStateStore() {}
+ 
+     public static State get(String jid) { return jid == null ? null : STATES.get(normalize(jid)); }
++    /** Atomic read of explicitly equivalent identities; never guesses namespace aliases. */
++    public static State getLatest(Iterable<String> identities) {
++        if (identities == null) return null;
++        synchronized (STATES) {
++            State latest = null;
++            for (String identity : identities) {
++                State candidate = identity == null ? null : STATES.get(normalize(identity));
++                if (candidate != null && (latest == null || candidate.revision > latest.revision)) {
++                    latest = candidate;
++                }
++            }
++            return latest;
++        }
++    }
++
+     static int stateCount() { return STATES.size(); }
+     public static void addListener(Listener listener) { if (listener != null) LISTENERS.add(listener); }
+     public static void removeListener(Listener listener) { LISTENERS.remove(listener); }
+@@ -39,17 +57,21 @@ public final class PresenceStateStore {
+         String key = normalize(jid);
+         if (key.isEmpty() || key.contains("@g.us")) return false;
+         State state;
++        boolean transition;
+         synchronized (STATES) {
+             State old = STATES.get(key);
+-            if (old != null && old.online == online) return false;
+-            state = new State(online, System.currentTimeMillis());
++            transition = old == null || old.online != online;
++            long changedAt = transition ? System.currentTimeMillis() : old.changedAtMillis;
++            state = new State(online, changedAt, ++nextRevision);
+             STATES.put(key, state);
+         }
++        // Listeners repaint observations; the return value still suppresses duplicate toasts.
++        // Sequence numbers, rather than wall-clock timestamps, order queued/alias observations.
+         for (Listener listener : LISTENERS) {
+             try { listener.onPresenceChanged(key, state); }
+             catch (RuntimeException | LinkageError ignored) { /* Isolate incompatible listeners. */ }
+         }
+-        return true;
++        return transition;
+     }
+ 
+     public static String normalize(String jid) {
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt b/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+index 425756d..41e7763 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+@@ -20,11 +20,13 @@ import de.robv.android.xposed.XposedBridge
+ import org.luckypray.dexkit.query.FindMethod
+ import org.luckypray.dexkit.query.enums.StringMatchType
+ import org.luckypray.dexkit.query.matchers.MethodMatcher
++import java.lang.ref.WeakReference
+ import java.lang.reflect.Modifier
+ import java.lang.reflect.Method
+ import java.util.Collections
+ import java.util.WeakHashMap
+ import java.util.concurrent.ConcurrentHashMap
++import java.util.concurrent.atomic.AtomicBoolean
+ import java.util.concurrent.atomic.AtomicInteger
+ 
+ /** Renders process-local presence events on currently bound conversation rows. */
+@@ -36,7 +38,10 @@ class OnlinePresenceIndicatorsHook(
+ 
+     private val mainHandler = Handler(Looper.getMainLooper())
+     private val visibleRows = Collections.synchronizedMap(WeakHashMap<View, String>())
+-    private val rowOverlays = Collections.synchronizedMap(WeakHashMap<View, FrameLayout>())
++    // Weak values matter: an overlay's parent retains its host row on Android.
++    private val rowOverlays = Collections.synchronizedMap(WeakHashMap<View, WeakReference<FrameLayout>>())
++    private val pendingBindings = Collections.synchronizedMap(WeakHashMap<View, Any>())
++    private val refreshPending = AtomicBoolean()
+     private val showDot = isEnabled("dotonline", false)
+     private val showText = isEnabled("showonlinetext", false)
+     @Volatile private var subscriptionReceiver: Any? = null
+@@ -90,8 +95,11 @@ class OnlinePresenceIndicatorsHook(
+                         val hasContactId = jid != null
+                         XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, contactIdResolved=$hasContactId, args=${param.args?.size ?: 0}")
+                     }
+-                    if (row == null || jid == null) return
+-                    if (jid.contains("@g.us")) return
++                    if (row == null) return
++                    if (param.hasThrowable() || jid == null || jid.contains("@g.us")) {
++                        queueBindRow(row, null)
++                        return
++                    }
+                     val contact = param.args?.firstOrNull()
+                     subscriptionMethod?.let { method ->
+                         if (contact != null && method.parameterTypes.size == 4) {
+@@ -104,28 +112,71 @@ class OnlinePresenceIndicatorsHook(
+                         }
+                     }
+                     requestPresence(contact)
+-                    row.post { bindRow(row, PresenceStateStore.normalize(jid)) }
++                    queueBindRow(row, PresenceStateStore.normalize(jid))
+                 }
+             })
+-            PresenceStateStore.addListener { jid, state ->
+-                mainHandler.post {
+-                    val snapshot = synchronized(visibleRows) { visibleRows.entries.toList() }
+-                    snapshot.forEach { (row, boundJid) ->
+-                        if (boundJid == jid || identityAliases[jid] == boundJid) render(row, state)
+-                    }
+-                }
+-            }
++            PresenceStateStore.addListener { _, _ -> queuePresenceRefresh() }
+         } catch (t: Throwable) {
+             XposedBridge.log("[WAEX][OnlinePresence] Setup failed: ${t.javaClass.simpleName}")
+         }
+     }
+ 
++    private fun queuePresenceRefresh() {
++        // A burst of repeated observations needs one repaint, not an unbounded Handler queue.
++        if (!refreshPending.compareAndSet(false, true)) return
++        if (!mainHandler.post {
++            refreshPending.set(false)
++            val snapshot = synchronized(visibleRows) {
++                visibleRows.entries.map { it.key to it.value }
++            }
++            snapshot.forEach { (row, boundJid) ->
++                if (visibleRows[row] == boundJid && row.getTag(TAG_BOUND_JID) == boundJid) {
++                    render(row, stateForRow(boundJid))
++                }
++            }
++        }) refreshPending.set(false)
++    }
++
++    private fun queueBindRow(row: View, jid: String?) {
++        val token = Any()
++        synchronized(pendingBindings) {
++            pendingBindings[row] = token
++            // Invalidate before a queued observation can reuse the previous contact's row.
++            visibleRows.remove(row)
++        }
++        val weakRow = WeakReference(row)
++        mainHandler.post {
++            val current = weakRow.get() ?: return@post
++            synchronized(pendingBindings) {
++                if (pendingBindings[current] !== token) return@post
++                pendingBindings.remove(current)
++                if (jid == null || jid.isEmpty()) clearRow(current) else bindRow(current, jid)
++            }
++        }
++    }
++
++    private fun clearRow(row: View) {
++        visibleRows.remove(row)
++        row.setTag(TAG_BOUND_JID, null)
++        render(row, null)
++    }
++
++    private fun stateForRow(jid: String): PresenceStateStore.State? {
++        // These are only explicit identity links recorded from the existing host path.
++        // Never infer a phone/LID mapping by stripping a suffix or comparing prefixes.
++        val keys = linkedSetOf(jid)
++        identityAliases.entries.forEach { (alias, canonical) ->
++            if (canonical == jid) keys.add(alias)
++        }
++        return PresenceStateStore.getLatest(keys)
++    }
++
+     private fun bindRow(row: View, jid: String) {
+         val group = row as? ViewGroup ?: return
+-        val overlay = ensureOverlay(group)
++        ensureOverlay(group)
+         visibleRows[row] = jid
+         row.setTag(TAG_BOUND_JID, jid)
+-        render(row, PresenceStateStore.get(jid))
++        render(row, stateForRow(jid))
+     }
+ 
+     private fun requestPresence(contact: Any?) {
+@@ -186,7 +237,7 @@ class OnlinePresenceIndicatorsHook(
+     }
+ 
+     private fun ensureOverlay(row: ViewGroup): FrameLayout {
+-        rowOverlays[row]?.let { return it }
++        rowOverlays[row]?.get()?.let { return it }
+         val overlay = FrameLayout(row.context).apply {
+             id = ID_OVERLAY
+             isClickable = false
+@@ -221,16 +272,27 @@ class OnlinePresenceIndicatorsHook(
+         }
+         row.overlay.add(overlay)
+         val updateBounds = {
+-            overlay.layout(0, 0, row.width, row.height)
++            layoutOverlay(row, overlay)
+         }
+         row.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateBounds() }
+         row.post { updateBounds() }
+-        rowOverlays[row] = overlay
++        rowOverlays[row] = WeakReference(overlay)
+         return overlay
+     }
+ 
++    private fun layoutOverlay(row: View, overlay: FrameLayout) {
++        // ViewGroupOverlay does not perform the normal measurement/layout pass for us.
++        overlay.layoutDirection = row.layoutDirection
++        overlay.measure(
++            View.MeasureSpec.makeMeasureSpec(row.width.coerceAtLeast(0), View.MeasureSpec.EXACTLY),
++            View.MeasureSpec.makeMeasureSpec(row.height.coerceAtLeast(0), View.MeasureSpec.EXACTLY)
++        )
++        overlay.layout(0, 0, row.width, row.height)
++        overlay.invalidate()
++    }
++
+     private fun render(row: View, state: PresenceStateStore.State?) {
+-        val overlay = rowOverlays[row] ?: return
++        val overlay = rowOverlays[row]?.get() ?: return
+         overlay.findViewById<View>(ID_DOT)?.visibility = if (state?.online == true) View.VISIBLE else View.GONE
+         overlay.findViewById<TextView>(ID_TEXT)?.let { text ->
+             when {
+@@ -243,6 +305,7 @@ class OnlinePresenceIndicatorsHook(
+                 }
+             }
+         }
++        layoutOverlay(row, overlay)
+     }
+ 
+     /** Finds the bound conversation row rather than whichever View happens to be the first
+@@ -331,7 +394,10 @@ class OnlinePresenceIndicatorsHook(
+         if (identityAliases.size >= MAX_TRACKED_IDENTITIES && !identityAliases.containsKey(alias)) {
+             identityAliases.clear()
+         }
+-        identityAliases[alias] = jid
++        // A conflicting link is not evidence that two different rows are one contact.
++        identityAliases.compute(alias) { _, previous ->
++            if (previous == null || previous == jid) jid else ""
++        }
+     }
+ 
+     companion object {
