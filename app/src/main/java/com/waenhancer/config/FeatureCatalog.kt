@@ -93,7 +93,7 @@ object FeatureCatalog {
         FeatureItem("custom_time_format", "Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "Visual Styles", 4, "appearance", "Styles"),
         FeatureItem("custom_toolbar", "New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "Visual Styles", 4, "appearance", "Styles"),
         FeatureItem("custom_view_dpi", "Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "Visual Styles", 4, "appearance", "Styles"),
-        FeatureItem("seen_tick_customization", "View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "Visual Styles", 4, "appearance", "Styles"),
+        FeatureItem("seen_tick_customization", "Manual Blue Tick Button", "When Hide Blue Ticks is enabled, show an action to send held read receipts", "Visual Styles", 4, "appearance", "Styles"),
         FeatureItem("floating_bottom_bar", "Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "Visual Styles", 4, "appearance", "Styles"),
         FeatureItem("unlock_premium_customization", "Unlock WA Plus", "Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.", "Visual Styles", 4, "appearance", "Styles"),
         FeatureItem("filter_items", "Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs (Gone, Change Color, Opacity, Resize)", "Visual Styles", 4, "appearance", "Styles"),

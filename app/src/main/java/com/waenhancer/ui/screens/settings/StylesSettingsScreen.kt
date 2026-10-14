@@ -103,6 +103,12 @@ fun StylesSettingsScreen() {
                 if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
                     // Do not decode a STRING or STRING_SET using getBoolean().
                     put(key, false)
+                } else if (key == "seen_tick_customization") {
+                    // The receipt hooks read the canonical STRING 'seentick' (0/1/2),
+                    // not the old UI-only Boolean 'seen_tick_customization' flag.
+                    put(key, ManualSeenTickPreferencePolicy.isEnabled(
+                        preferenceManager.getString("seentick", "0")
+                    ))
                 } else {
                     val defaultValue = if (key == "send_audio_as_voice_status") {
                         preferenceManager.getBoolean("voice_status_enhancement", false)
@@ -118,6 +124,14 @@ fun StylesSettingsScreen() {
 
     val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
         if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
+        if (key == "seen_tick_customization") {
+            val currentPlacement = preferenceManager.getString("seentick", "0")
+            preferenceManager.putString("seentick",
+                ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement))
+            settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(
+                preferenceManager.getString("seentick", "0"))
+            return@update
+        }
         val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
         val changes = if (key == "send_audio_as_voice_status") {
             // Persist the visible setting and its linked hook key atomically.
@@ -147,7 +161,7 @@ fun StylesSettingsScreen() {
                 StyleItem("Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "custom_time_format"),
                 StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
                 StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
-                StyleItem("View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "seen_tick_customization"),
+                StyleItem("Manual Blue Tick Button", "When Hide Blue Ticks is enabled, show an action to send held read receipts", "seen_tick_customization"),
                 StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar"),
                 StyleItem("Unlock WA Plus", "Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.", "unlock_premium_customization", isPro = true),
                 StyleItem("Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs", "custom_filters")
