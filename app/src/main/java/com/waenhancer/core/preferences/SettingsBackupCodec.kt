@@ -8,6 +8,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.InputStream
@@ -87,7 +88,6 @@ object SettingsBackupCodec {
         "anti_edit_messages" to "antieditmessages",
         "anti_revoke" to "antirevoke",
         "online_status_indicator" to "dotonline",
-        "typing_online_toasts" to "typing_privacy",
         "unlimited_pinned_chats" to "pinnedlimit",
         "chat_limits_bypass" to "removeforwardlimit",
         "unlimited_video_status" to "status_video_splitter",
@@ -96,7 +96,6 @@ object SettingsBackupCodec {
         "group_admin_tools" to "admin_grp",
         "hide_chats" to "lockedchats_enhancer",
         "hide_read_receipts" to "hideread",
-        "hide_seen_receipts" to "hidereceipt",
         "hide_delivery_receipts" to "hidereceipt_ios",
         "hide_forwarded_tag" to "hidetag",
         "tasker_integration" to "tasker",
@@ -110,7 +109,7 @@ object SettingsBackupCodec {
         val records = PreferenceSchema.exportableKeys().sorted().mapNotNull { key ->
             val value = PreferenceStores.read(context, key) ?: return@mapNotNull null
             val entry = PreferenceSchema.entry(key) ?: return@mapNotNull null
-            normalize(entry.type, value)?.let { Record(key, entry.type, it) }
+            normalizeForKey(key, entry.type, value)?.let { Record(key, entry.type, it) }
         }
 
         DataOutputStream(BufferedOutputStream(output)).use { out ->
@@ -138,10 +137,37 @@ object SettingsBackupCodec {
         return records.size
     }
 
+    /**
+     * Avoid InputStream.readBytes(): an oversized/malicious backup could exhaust
+     * process memory *before* the post-read MAX_BYTES check. Read at most one
+     * byte beyond the declared limit to distinguish exact-size EOF from overflow.
+     */
+    private fun readBoundedBackup(input: InputStream): ByteArray = input.use { stream ->
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var consumed = 0
+        while (true) {
+            val allowed = minOf(buffer.size, MAX_BYTES + 1 - consumed)
+            val count = stream.read(buffer, 0, allowed)
+            if (count < 0) break
+            if (count == 0) {
+                // An unusual InputStream may make no progress on bulk reads.
+                val single = stream.read()
+                if (single < 0) break
+                output.write(single)
+                consumed++
+            } else {
+                output.write(buffer, 0, count)
+                consumed += count
+            }
+            require(consumed <= MAX_BYTES) { "Backup exceeds the allowed size limit" }
+        }
+        output.toByteArray()
+    }
+
     fun decode(context: Context, input: InputStream): Int {
-        val bytes = input.use { it.readBytes() }
+        val bytes = readBoundedBackup(input)
         require(bytes.isNotEmpty()) { "Backup is empty" }
-        require(bytes.size <= MAX_BYTES) { "Backup exceeds the allowed size limit" }
 
         val records = if (bytes.size >= magic.size && bytes.take(magic.size).toByteArray().contentEquals(magic)) {
             decodeBinary(bytes)
@@ -151,11 +177,22 @@ object SettingsBackupCodec {
 
         require(records.isNotEmpty()) { "No valid settings found in backup" }
 
-        val publicEditor = PreferenceStores.publicStore(context).edit()
-        val privateEditor = PreferenceStores.privateStore(context).edit()
+        val publicStore = PreferenceStores.publicStore(context)
+        val privateStore = PreferenceStores.privateStore(context)
+        // Preserve original *runtime* types, including legacy wrong-typed
+        // entries. Capture only touched keys and clone string sets so changes
+        // during the import cannot silently mutate our rollback snapshots.
+        val publicBefore = snapshotForRollback(publicStore.all)
+        val privateBefore = snapshotForRollback(privateStore.all)
+        val publicKeys = LinkedHashSet<String>()
+        val privateKeys = LinkedHashSet<String>()
+        val publicEditor = publicStore.edit()
+        val privateEditor = privateStore.edit()
         records.forEach { record ->
             val schema = PreferenceSchema.entry(record.key)!!
-            val editor = if (schema.store == PreferenceSchema.Store.PRIVATE) privateEditor else publicEditor
+            val isPrivate = schema.store == PreferenceSchema.Store.PRIVATE
+            val editor = if (isPrivate) privateEditor else publicEditor
+            if (isPrivate) privateKeys.add(record.key) else publicKeys.add(record.key)
             when (record.type) {
                 PreferenceSchema.Type.BOOLEAN -> editor.putBoolean(record.key, record.value as Boolean)
                 PreferenceSchema.Type.STRING -> editor.putString(record.key, record.value as String)
@@ -166,8 +203,67 @@ object SettingsBackupCodec {
                 PreferenceSchema.Type.FLOAT -> editor.putFloat(record.key, record.value as Float)
             }
         }
-        check(privateEditor.commit() && publicEditor.commit()) { "Could not save imported settings" }
+
+        // SharedPreferences has no atomic multi-file commit. When either
+        // commit fails, attempt to restore the keys written to BOTH stores.
+        // Never report a successful import after a partially committed backup.
+        var privateAttempted = false
+        var publicAttempted = false
+        try {
+            if (privateKeys.isNotEmpty()) {
+                privateAttempted = true
+                check(privateEditor.commit()) { "Could not save imported private settings" }
+            }
+            if (publicKeys.isNotEmpty()) {
+                publicAttempted = true
+                check(publicEditor.commit()) { "Could not save imported public settings" }
+            }
+        } catch (failure: Exception) {
+            val publicRecovered = !publicAttempted ||
+                    restoreTouchedKeys(publicStore, publicBefore, publicKeys)
+            val privateRecovered = !privateAttempted ||
+                    restoreTouchedKeys(privateStore, privateBefore, privateKeys)
+            check(publicRecovered && privateRecovered) {
+                "Backup restore failed and rollback could not restore all preferences"
+            }
+            throw IllegalStateException("Backup restore failed; previous preferences restored", failure)
+        }
         return records.size
+    }
+
+    private fun snapshotForRollback(values: Map<String, *>): Map<String, Any?> =
+        values.mapValues { (_, value) ->
+            if (value is Set<*>) value.filterIsInstance<String>().toSet() else value
+        }
+
+    /** Best-effort compensation for a failed multi-store commit, limited to touched keys. */
+    private fun restoreTouchedKeys(
+        store: android.content.SharedPreferences,
+        original: Map<String, Any?>,
+        touched: Set<String>
+    ): Boolean {
+        if (touched.isEmpty()) return true
+        return try {
+            val editor = store.edit()
+            for (key in touched) {
+                if (!original.containsKey(key)) {
+                    editor.remove(key)
+                    continue
+                }
+                when (val value = original[key]) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is String -> editor.putString(key, value)
+                    is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    else -> return false
+                }
+            }
+            editor.commit()
+        } catch (ignored: Exception) {
+            false
+        }
     }
 
     private fun decodeBinary(bytes: java.io.ByteArrayInputStream.() -> Unit = {}): List<Record> {
@@ -186,7 +282,9 @@ object SettingsBackupCodec {
             buildList(count) {
                 repeat(count) {
                     val rawKey = readText(source)
-                    val key = resolveKey(rawKey)
+                    // Binary WAEX backups already contain canonical schema keys.
+                    // Never reinterpret a valid key through a legacy JSON alias.
+                    val key = resolveKey(rawKey, legacyJson = false)
                     val typeOrdinal = source.readUnsignedByte()
                     val type = PreferenceSchema.Type.entries.getOrNull(typeOrdinal)
                         ?: throw IllegalArgumentException("Unknown settings value type")
@@ -207,7 +305,7 @@ object SettingsBackupCodec {
                     if (key != null) {
                         val schema = PreferenceSchema.entry(key)
                         if (schema != null && schema.isExportable()) {
-                            val normalized = normalize(schema.type, value)
+                            val normalized = normalizeForKey(key, schema.type, value)
                             if (normalized != null) {
                                 add(Record(key, schema.type, normalized))
                             }
@@ -236,7 +334,12 @@ object SettingsBackupCodec {
         val keys = source.keys()
         while (keys.hasNext()) {
             val rawKey = keys.next()
-            val key = resolveKey(rawKey) ?: continue
+            // Only unversioned v1 JSON files use the old alias migration rules.
+            val key = resolveKey(rawKey, legacyJson = legacy) ?: continue
+            // A legacy alias must never overwrite a modern canonical setting
+            // when both are present in one unversioned JSON backup, regardless
+            // of the JSONObject key iteration order.
+            if (legacy && rawKey != key && source.has(key)) continue
             if (isSensitive(key)) continue
 
             val schema = PreferenceSchema.entry(key) ?: continue
@@ -244,7 +347,7 @@ object SettingsBackupCodec {
 
             val rawVal = source.opt(rawKey) ?: continue
             val decodedValue = decodeJsonValue(rawVal, legacy) ?: continue
-            val normalized = normalize(schema.type, decodedValue) ?: continue
+            val normalized = normalizeForKey(key, schema.type, decodedValue) ?: continue
             records.add(Record(key, schema.type, normalized))
         }
         return records
@@ -299,11 +402,19 @@ object SettingsBackupCodec {
         }
     }
 
-    private fun resolveKey(originalKey: String): String? {
-        val mapped = LEGACY_ALIASES.getOrDefault(originalKey, originalKey)
-        if (PreferenceSchema.isKnown(mapped)) return mapped
-        if (PreferenceSchema.isKnown(originalKey)) return originalKey
-        return null
+    private fun resolveKey(originalKey: String, legacyJson: Boolean): String? {
+        // Every key already present in the schema retains its OWN meaning, even
+        // in old unversioned JSON backups. Same-type legacy aliases can denote
+        // unrelated features (e.g. typing_online_toasts vs typing_privacy, or
+        // hide_seen_receipts vs hidereceipt). Rewriting them changes privacy
+        // settings without the user's intention.
+        if (PreferenceSchema.entry(originalKey) != null) return originalKey
+
+        // Only truly unknown old keys may migrate, and only from legacy JSON.
+        // New binary/JSON backup formats must never guess missing key names.
+        if (!legacyJson) return null
+        val mappedKey = LEGACY_ALIASES[originalKey] ?: return null
+        return mappedKey.takeIf { PreferenceSchema.entry(it) != null }
     }
 
     private fun isSensitive(key: String?): Boolean {
@@ -334,6 +445,18 @@ object SettingsBackupCodec {
         val size = input.readInt()
         require(size in 0..MAX_BYTES) { "Invalid settings value length" }
         return ByteArray(size).also(input::readFully).toString(Charsets.UTF_8)
+    }
+
+    /** Restore hex RGB/ARGB strings written by earlier UI versions for this INT key. */
+    private fun normalizeForKey(key: String, type: PreferenceSchema.Type, value: Any): Any? {
+        if (key == "deleted_message_color" && type == PreferenceSchema.Type.INT && value is String) {
+            val hex = value.trim()
+            if (hex.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))) {
+                val parsed = hex.substring(1).toLong(16)
+                return (if (hex.length == 7) parsed or 0xFF000000L else parsed).toInt()
+            }
+        }
+        return normalize(type, value)
     }
 
     private fun normalize(type: PreferenceSchema.Type, value: Any): Any? = when (type) {
