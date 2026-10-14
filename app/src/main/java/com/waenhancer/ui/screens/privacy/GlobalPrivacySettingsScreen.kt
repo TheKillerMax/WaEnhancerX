@@ -160,12 +160,17 @@ fun GlobalPrivacySettingsScreen(
         if (key == "seentick") {
             seenTickPlacement = if (value) "1" else "0"
             preferenceManager.putString("seentick", seenTickPlacement)
+        } else if (key == "typearchive") {
+            // typearchive is STRING in PreferenceSchema. Never first write
+            // a transient Boolean under the same key and notify observers.
+            preferenceManager.putString("typearchive", if (value) "1" else "0")
+        } else if (key == "antirevokestatus") {
+            // The status Anti-Revoke setting is declared STRING and accepts 1/0.
+            preferenceManager.putString("antirevokestatus", if (value) "1" else "0")
         } else {
             preferenceManager.putBoolean(key, value)
         }
-        if (key == "typearchive") {
-            preferenceManager.putString("typearchive", if (value) "1" else "0")
-        } else if (key == "locked_chats_enhancer") {
+        if (key == "locked_chats_enhancer") {
             preferenceManager.putBoolean("lockedchats_enhancer", value)
         }
         if (key == "hide_read_receipts" && !value) {
@@ -178,8 +183,13 @@ fun GlobalPrivacySettingsScreen(
     }
 
     var showColorPickerDialog by remember { mutableStateOf(false) }
-    var deletedMessageColor by remember {
-        mutableStateOf(preferenceManager.getString("deleted_message_color", "#EF4444"))
+    var deletedMessageColor by remember(preferenceManager) {
+        // The persisted preference has schema type INT; older releases wrote hex text.
+        mutableStateOf(
+            com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(
+                preferenceManager.getAll()["deleted_message_color"]
+            )
+        )
     }
 
     val privacyGroups = listOf(
@@ -235,7 +245,7 @@ fun GlobalPrivacySettingsScreen(
             "Security & Vault",
             listOf(
                 SettingItem("Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "locked_chats_enhancer"),
-                SettingItem("Hide Archived Chats", "Hide archived chats, to access click 5 times or hold on the \"WhatsApp\" title", "typearchive"),
+                SettingItem("Hide Archived Chats", "Hide the archive shortcut; open archived chats from the WAEX menu", "typearchive"),
                 SettingItem("DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "dnd_mode"),
                 SettingItem("Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "hide_chats")
             )
@@ -708,7 +718,7 @@ fun GlobalPrivacySettingsScreen(
                                                             .clip(RoundedCornerShape(8.dp))
                                                             .background(if (isSelected) colors.primary else Color.Transparent)
                                                             .clickable {
-                                                                preferenceManager.putString("anti_revoke_indicator", valKey)
+                                                                preferenceManager.putInt("anti_revoke_indicator", valKey.toInt())
                                                                 settingsState["anti_revoke_indicator_dummy"] = !(settingsState["anti_revoke_indicator_dummy"] ?: false)
                                                              }
                                                             .padding(vertical = 8.dp),
@@ -1015,9 +1025,13 @@ fun GlobalPrivacySettingsScreen(
         com.waenhancer.ui.components.WaexColorPickerDialog(
             initialColorHex = deletedMessageColor,
             onColorSelected = { selectedHex ->
-                deletedMessageColor = selectedHex
-                preferenceManager.putString("deleted_message_color", selectedHex)
-                settingsState["anti_revoke_indicator_dummy"] = !(settingsState["anti_revoke_indicator_dummy"] ?: false)
+                val colorInt = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toArgbOrNull(selectedHex)
+                if (colorInt != null) {
+                    // Store the schema's INT ARGB form; do not strand hex strings on disk.
+                    preferenceManager.putInt("deleted_message_color", colorInt)
+                    deletedMessageColor = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(colorInt)
+                    settingsState["anti_revoke_indicator_dummy"] = !(settingsState["anti_revoke_indicator_dummy"] ?: false)
+                }
             },
             onDismiss = { showColorPickerDialog = false }
         )
