@@ -73,6 +73,13 @@ public final class TestContext extends Context {
   }
  }
 }''',
+    'org/json/JSONTokener.java': '''package org.json;
+public final class JSONTokener {
+ private final String src;
+ public JSONTokener(String src){this.src=src;}
+ public Object nextValue(){return new JSONObject(src);}
+ public char nextClean(){return 0;}
+}''',
     'org/json/JSONException.java': '''package org.json;
 public final class JSONException extends RuntimeException {
  public JSONException(String text){super(text);}
@@ -80,11 +87,14 @@ public final class JSONException extends RuntimeException {
     'org/json/JSONArray.java': '''package org.json;
 public final class JSONArray {
  public int length(){return 0;}
+ public Object opt(int i){return null;}
  public String optString(int i){return "";}
 }''',
     'org/json/JSONObject.java': '''package org.json;
 import java.util.*;
 public final class JSONObject {
+ public static final Object NULL = new Object();
+ public int length(){return data.size();}
  // Deliberately a miniature ordered fixture, NOT a general JSON parser.
  // It only tests key reconciliation inside the real Kotlin codec.
  private final Map<String,Object> data = new LinkedHashMap<>();
