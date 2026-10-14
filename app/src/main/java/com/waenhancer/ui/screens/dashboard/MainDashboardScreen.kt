@@ -85,6 +85,7 @@ import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.utils.WhatsAppPackageDetector
+import com.waenhancer.utils.XposedRuntimeInspector
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
 import kotlinx.coroutines.Dispatchers
@@ -137,12 +138,30 @@ fun MainDashboardScreen(
     }
 
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    var runtimeSnapshot by remember {
+        mutableStateOf(XposedRuntimeInspector.cached())
+    }
     var systemDiagnostics by remember {
         mutableStateOf(SystemDiagnosticsReader.cached())
     }
 
     LaunchedEffect(refreshTrigger) {
         systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
+    }
+
+    LaunchedEffect(refreshTrigger) {
+        val packages = withContext(Dispatchers.IO) {
+            WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
+                .filter { it.isInstalled }.map { it.packageName }
+        }
+        val refreshed = withContext(Dispatchers.IO) {
+            XposedRuntimeInspector.inspect(
+                context,
+                packages,
+                android.os.Process.myUid() / 100_000
+            )
+        }
+        if (refreshed != null) runtimeSnapshot = refreshed
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -174,8 +193,8 @@ fun MainDashboardScreen(
     }
 
     // Dynamic WhatsApp Packages & Clones Detector
-    val detectedApps = remember(refreshTrigger) {
-        WhatsAppPackageDetector.detectWhatsAppApps(context)
+    val detectedApps = remember(refreshTrigger, runtimeSnapshot) {
+        WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
     }
 
     val prefs = remember(context) { PreferenceStores.publicStore(context) }
@@ -281,45 +300,60 @@ fun MainDashboardScreen(
                                     "Module inactive",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
                                     colors.error,
-                                    "Injected • Initialization failed",
+                                    "In scope • Injection failed",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && !isVersionSupported -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && !isVersionSupported -> Triple(
                                     colors.error,
-                                    "Injected • Unsupported Version (Paused)",
+                                    "In scope • Injected • Unsupported version",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "FAILED" -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
                                     colors.error,
-                                    "Injected • Preference bridge unavailable",
+                                    "In scope • Injected • Bridge unavailable",
                                     colors.error
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Active • Using preference fallback",
+                                    "In scope • Injected • Using fallback",
                                     Color(0xFFF59E0B)
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Active • Some hooks failed",
+                                    "In scope • Injected • Some hooks failed",
                                     Color(0xFFF59E0B)
                                 )
-                                app.scopeState == RuntimeScopeState.ACTIVE_THIS_BOOT -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE && app.isHooked -> Triple(
                                     colors.primary,
-                                    "Injected & Active",
+                                    "In scope • Injected hooks",
                                     colors.primary
                                 )
-                                app.scopeState == RuntimeScopeState.PREVIOUSLY_ACTIVE -> Triple(
+                                app.scopeState == RuntimeScopeState.IN_SCOPE -> Triple(
                                     Color(0xFFF59E0B),
-                                    "Scope changed or unverified • Restart app to verify",
+                                    "In scope • Hooks not injected",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.NOT_IN_SCOPE && app.isHooked -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Not in scope • Hooks still injected",
+                                    Color(0xFFF59E0B)
+                                )
+                                app.scopeState == RuntimeScopeState.NOT_IN_SCOPE -> Triple(
+                                    colors.error,
+                                    "Not in scope • Hooks not injected",
+                                    colors.error
+                                )
+                                app.isHooked -> Triple(
+                                    Color(0xFFF59E0B),
+                                    "Scope unavailable • Injected hooks",
                                     Color(0xFFF59E0B)
                                 )
                                 else -> Triple(
-                                    colors.error,
-                                    "Not active in module scope • Restart app to verify",
-                                    colors.error
+                                    colors.onSurfaceVariant,
+                                    "Scope unavailable • Hooks not injected",
+                                    colors.onSurfaceVariant
                                 )
                             }
 

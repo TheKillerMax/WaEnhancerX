@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,8 +27,10 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.MainContainerScreen
 import com.waenhancer.ui.navigation.WaexNavController
 import com.waenhancer.update.UpdateCheckCoordinator
-import com.waenhancer.utils.WhatsAppPackageDetector
+import com.waenhancer.update.UpdateDownloader
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -34,8 +38,20 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var preferenceManager: WaexPreferenceManager
 
-
     private var currentNavController: WaexNavController? = null
+    private var rootCheckAttempt by mutableIntStateOf(0)
+    private var rootState by mutableStateOf(RootAccessState.Checking)
+    private var hasStartedOnce = false
+
+    override fun onStart() {
+        super.onStart()
+        if (hasStartedOnce) {
+            rootState = RootAccessState.Checking
+            rootCheckAttempt++
+        } else {
+            hasStartedOnce = true
+        }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -62,15 +78,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onStop() {
-        WhatsAppPackageDetector.startNewScopeVerification()
-        super.onStop()
-    }
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        UpdateCheckCoordinator.request(this, UpdateCheckCoordinator.TRIGGER_MODULE)
         enableEdgeToEdge()
         setContent {
             val initialTheme = remember { preferenceManager.getString("app_theme_mode", "System") }
@@ -92,25 +101,48 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val navController = remember {
-                            val controller = WaexNavController()
-                            currentNavController = controller
-                            val releaseTag = releaseTagFrom(intent)
-                            if (releaseTag != null) {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
-                            } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+                        LaunchedEffect(rootCheckAttempt) {
+                            rootState = RootAccessState.Checking
+                            rootState = if (withContext(Dispatchers.IO) {
+                                    UpdateDownloader.hasRootAccess()
+                                }) {
+                                RootAccessState.Granted
+                            } else {
+                                RootAccessState.Required
                             }
-                            controller
-                        }
-                        CompositionLocalProvider(
-                            LocalWaexNavController provides navController,
-                            LocalWaexPreferenceManager provides preferenceManager
-                        ) {
-                            MainContainerScreen()
                         }
 
-
+                        if (rootState != RootAccessState.Granted) {
+                            RootAccessRequirementScreen(
+                                state = rootState,
+                                onRetry = { rootCheckAttempt++ },
+                                onExit = { finishAndRemoveTask() }
+                            )
+                        } else {
+                            LaunchedEffect(Unit) {
+                                UpdateCheckCoordinator.request(
+                                    this@MainActivity,
+                                    UpdateCheckCoordinator.TRIGGER_MODULE
+                                )
+                            }
+                            val navController = remember {
+                                val controller = WaexNavController()
+                                currentNavController = controller
+                                val releaseTag = releaseTagFrom(intent)
+                                if (releaseTag != null) {
+                                    controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+                                } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
+                                    controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+                                }
+                                controller
+                            }
+                            CompositionLocalProvider(
+                                LocalWaexNavController provides navController,
+                                LocalWaexPreferenceManager provides preferenceManager
+                            ) {
+                                MainContainerScreen()
+                            }
+                        }
                     }
                 }
             }
