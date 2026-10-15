@@ -304,7 +304,8 @@ fun MediaStatusHubScreen() {
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "$locDesc • Requires Pro" else locDesc,
+                                            val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
+                                            text = if (isLocked) "$locDesc • $reqPro" else locDesc,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp

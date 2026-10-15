@@ -315,9 +315,15 @@ fun CallsHubScreen() {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
+                    val configsLabel = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_call_configurations)
+                    val recordingsLabel = if (recordingsList.isNotEmpty()) {
+                        "${androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_call_recordings)} (${recordingsList.size})"
+                    } else {
+                        androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_call_recordings)
+                    }
                     listOf(
-                        "configs" to "Call Configurations",
-                        "recordings" to if (recordingsList.isNotEmpty()) "Recordings (${recordingsList.size})" else "Recordings"
+                        "configs" to configsLabel,
+                        "recordings" to recordingsLabel
                     ).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(

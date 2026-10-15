@@ -315,13 +315,13 @@ fun MainContainerScreen() {
 
     val title = when (currentScreen) {
         Screen.MainDashboard -> "WaEnhancerX"
-        Screen.SystemHealth -> "System Health"
-        Screen.BootloaderSpoofer -> "Bootloader Spoofer"
-        Screen.GlobalPrivacySettings -> "Controls"
-        Screen.MediaStatusHub -> "Media & Status"
-        Screen.AutomationTasker -> "Automation"
-        Screen.StylesSettings -> "Styles"
-        Screen.PerContactPrivacyList -> "Per Contact Rules"
+        Screen.SystemHealth -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_system_health)
+        Screen.BootloaderSpoofer -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_bootloader_spoofer)
+        Screen.GlobalPrivacySettings -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_controls)
+        Screen.MediaStatusHub -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_media)
+        Screen.AutomationTasker -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_automation)
+        Screen.StylesSettings -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_styles)
+        Screen.PerContactPrivacyList -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_per_contact_privacy)
         else -> "WaEnhancerX"
     }
 
