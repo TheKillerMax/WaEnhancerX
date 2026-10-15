@@ -1,0 +1,11 @@
+--- a/qa/mutate_presence_rows.py
++++ b/qa/mutate_presence_rows.py
+@@ -49,7 +49,7 @@
+   try:qa.execute(candidate,folder,deps,False)
+   except RuntimeError:
+    log=(folder/'junit.log').read_text() if (folder/'junit.log').is_file() else ''
+-   if 'java.lang.AssertionError' not in log or 'Tests run: 25,' not in log or 'initializationError' in log:
++   if not any(kind in log for kind in ('java.lang.AssertionError', 'org.junit.ComparisonFailure')) or 'Tests run: 25,' not in log or 'initializationError' in log:
+     raise AssertionError('Fault was not rejected by Android assertions: '+name)
+   else:raise AssertionError('Fault survived: '+name)
+   results.append({'mutation':name,'rejected_by_behavior':True,'android_api':34})
