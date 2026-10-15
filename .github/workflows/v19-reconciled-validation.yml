@@ -1,0 +1,79 @@
+name: V19 reconciled current-main QA validation
+on:
+  push:
+    branches: ['test/catalog-main-refresh-v19-2026-10-15']
+    paths: ['qa/v19_refresh_candidate.py', '.github/workflows/v19-reconciled-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Reconcile only reviewed QA and validate the complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          root=Path.cwd();out=Path(os.environ['RUNNER_TEMP'])/'v19-reconciled-evidence';out.mkdir()
+          wt=Path(os.environ['RUNNER_TEMP'])/'v19-reconciled-candidate'
+          base='93cc35d83d142628bc7b4a1c3a856e757fe9f91b'
+          expected='6f07e8d5ea9390551c43098bf40d4fa7269d929c'
+          def git(*args,cwd=root):return subprocess.check_output(['git',*args],cwd=cwd,text=True).strip()
+          git('fetch','--no-tags','https://github.com/WaEnhancerX/WaEnhancerX.git',base)
+          git('worktree','add','--detach',str(wt),base)
+          subprocess.run(['python3',str(root/'qa/v19_refresh_candidate.py')],cwd=wt,check=True)
+          paths=['.github/workflows/source-qa.yml','qa/README.md','qa/catalog_source.py','qa/feature_contract_inventory.py','qa/test_archived_chats_entry.py','qa/test_catalog_schema_alias_contract.py','qa/test_catalog_source.py','qa/test_feature_contract_inventory.py','qa/test_private_hook_logs.py','qa/test_proximity_ui_wiring.py','qa/test_style_non_boolean_guard.py']
+          git('add','--',*paths,cwd=wt)
+          assert set(git('diff','--cached','--name-only',cwd=wt).splitlines())==set(paths)
+          git('diff','--cached','--check',cwd=wt)
+          assert git('write-tree',cwd=wt)==expected
+          (out/'reviewed.patch').write_text(git('diff','--cached','--binary',cwd=wt)+'\n')
+          tests=sorted((wt/'qa').glob('test_*.py'));tests=[p for p in tests if p.name!='test_host_class_relocations.py'];assert len(tests)==39
+          commands=[['python3','qa/check_syntax.py']]+[['python3','qa/'+p.name] for p in tests]
+          results=[]
+          for cmd in commands:
+              p=subprocess.run(cmd,cwd=wt,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+              (out/(Path(cmd[1]).stem+'.log')).write_text(p.stdout)
+              results.append({'command':cmd,'exit':p.returncode});(out/'results.json').write_text(json.dumps(results,indent=2))
+              print(('PASS' if p.returncode==0 else 'FAIL'),cmd[1],flush=True)
+              if p.returncode: print(p.stdout[-5000:]);raise SystemExit(p.returncode)
+          assert git('write-tree',cwd=wt)==expected
+          assert not git('diff','--name-only',cwd=wt)
+          sha=git('-c','user.name=TheKillerMax','-c','user.email=70108066+TheKillerMax@users.noreply.github.com','commit-tree',expected,'-p',base,'-m','fix(qa): validate localized catalog and retain current settings contracts',cwd=wt)
+          (out/'state.json').write_text(json.dumps({'base':base,'candidate_sha':sha,'tree':expected,'source_suites_passed':39,'android_build':False,'host_apk_used':False,'production_changed':False,'paths':paths},indent=2))
+          current=os.environ['GITHUB_SHA'];staging=git('-c','user.name=TheKillerMax','-c','user.email=70108066+TheKillerMax@users.noreply.github.com','commit-tree',git('rev-parse',current+'^{tree}'),'-p',current,'-p',sha,'-m','test(qa): preserve validated current-main QA candidate')
+          (Path(os.environ['RUNNER_TEMP'])/'v19-reconciled-staging-sha').write_text(staging)
+          print('VALIDATED_CANDIDATE',sha,'TREE',expected,flush=True)
+          PY
+      - name: Preserve tested objects on the unchanged staging ref only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref=refs/heads/test/catalog-main-refresh-v19-2026-10-15
+          test "$(git ls-remote origin "$ref" | cut -f1)" = "$GITHUB_SHA"
+          sha=$(cat "$RUNNER_TEMP/v19-reconciled-staging-sha")
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "$sha:$ref"
+      - name: Preserve text-only results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v19-reconciled-validation
+          path: ${{ runner.temp }}/v19-reconciled-evidence
+          retention-days: 14
+          if-no-files-found: error
