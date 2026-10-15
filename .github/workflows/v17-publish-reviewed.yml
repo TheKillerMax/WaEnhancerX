@@ -1,0 +1,55 @@
+name: V17 reviewed PR follow-up validation
+on:
+  push:
+    branches: ['test/presence-row-review-v17-2026-10-14']
+    paths: ['qa/v17_prepare_publish.py', '.github/workflows/v17-publish-reviewed.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require compilers and validate preparation script
+        shell: bash
+        run: |
+          set -euo pipefail
+          javac -version
+          kotlinc -version
+          mvn -version
+          python3 -m py_compile qa/v17_prepare_publish.py
+      - name: Validate independent PRs, declared DexKit API and combined source with Android rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/v17_prepare_publish.py prepare
+      - name: Preserve validated commit objects on the one staging ref only
+        shell: bash
+        env:
+          WAEX_STAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 qa/v17_prepare_publish.py preserve
+      - name: Preserve text-only evidence without dependencies or APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v17-reviewed-publication
+          path: |
+            ${{ runner.temp }}/waex-v17-publication/*.log
+            ${{ runner.temp }}/waex-v17-publication/*.json
+            ${{ runner.temp }}/waex-v17-publication/api/*.java
+            ${{ runner.temp }}/waex-v17-publication/android-final/*.json
+            ${{ runner.temp }}/waex-v17-publication/android-final/*/*.log
+            ${{ runner.temp }}/waex-v17-publication/android-final/*/*.kt
+          retention-days: 14
+          if-no-files-found: warn
