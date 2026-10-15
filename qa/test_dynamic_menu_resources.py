@@ -32,6 +32,8 @@ def validate(root):
     res = root / 'app/src/main/res'
     keep, discard = [], []
     for p in (res / 'raw').glob('*.xml'):
+        if not re.fullmatch(r'[a-z][a-z0-9_]*\.xml', p.name):
+            raise ValueError('Invalid file-based resource name: ' + p.name)
         node = ET.parse(p).getroot()
         keep.extend(s.strip() for s in node.get(TOOLS + 'keep', '').split(',') if s.strip())
         discard.extend(s.strip() for s in node.get(TOOLS + 'discard', '').split(',') if s.strip())
@@ -58,7 +60,7 @@ class DynamicMenuResourceTests(unittest.TestCase):
         (res / 'drawable').mkdir(parents=True); (res / 'raw').mkdir()
         for name in ['ic_waex_ghost_on', 'ic_deleted']:
             (res / 'drawable' / (name + '.xml')).write_text('<vector/>')
-        (res / 'raw/fixture.keep.xml').write_text(f'<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="{keep}" tools:discard="{discard}"/>')
+        (res / 'raw/fixture_keep.xml').write_text(f'<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="{keep}" tools:discard="{discard}"/>')
         return root
 
     def test_complete_rules(self):
@@ -79,6 +81,13 @@ class DynamicMenuResourceTests(unittest.TestCase):
     def test_discard_conflict_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(ValueError): validate(self.fixture(td, discard='@drawable/ic_deleted'))
+
+    def test_invalid_raw_filename_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = self.fixture(td)
+            raw = root / 'app/src/main/res/raw'
+            (raw / 'fixture_keep.xml').rename(raw / 'fixture.keep.xml')
+            with self.assertRaises(ValueError): validate(root)
 
     def test_comments_do_not_create_dependencies(self):
         with tempfile.TemporaryDirectory() as td:
