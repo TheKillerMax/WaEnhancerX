@@ -1,0 +1,55 @@
+name: V19 upstream refresh evidence
+on:
+  push:
+    branches: ['test/catalog-main-refresh-v19-2026-10-15']
+    paths: ['.github/workflows/v19-upstream-refresh.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Preserve exact public upstream snapshot and fresh baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'v19-refresh';out.mkdir()
+          base='93cc35d83d142628bc7b4a1c3a856e757fe9f91b'
+          subprocess.run(['git','fetch','--no-tags','https://github.com/WaEnhancerX/WaEnhancerX.git',base],check=True)
+          wt=Path(os.environ['RUNNER_TEMP'])/'v19-current-main'
+          subprocess.run(['git','worktree','add','--detach',str(wt),base],check=True)
+          def git(*args):return subprocess.check_output(['git',*args],cwd=wt,text=True).strip()
+          archive=out/'upstream-public-source.zip'
+          subprocess.run(['git','archive','--format=zip','-o',str(archive),base],cwd=wt,check=True)
+          (out/'identity.json').write_text(json.dumps({'sha':base,'tree':git('rev-parse','HEAD^{tree}'),'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest()},indent=2))
+          (out/'changes.txt').write_text(git('diff','--stat','bf1252c355b5155f064cd5de7d8e2f98ae001c40',base))
+          tests=['qa/check_syntax.py','qa/test_archived_chats_entry.py','qa/test_catalog_schema_alias_contract.py','qa/test_feature_contract_inventory.py','qa/test_monet_wiring.py','qa/test_proximity_ui_wiring.py','qa/test_style_non_boolean_guard.py']
+          results=[]
+          for test in tests:
+              p=subprocess.run(['python3',test],cwd=wt,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+              (out/(Path(test).stem+'.log')).write_text(p.stdout)
+              results.append({'test':test,'exit':p.returncode})
+              print(test,p.returncode)
+          (out/'baseline.json').write_text(json.dumps(results,indent=2))
+          print('Snapshot job reports failures as evidence; it is not a passing product validation.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v19-upstream-refresh
+          path: ${{ runner.temp }}/v19-refresh
+          retention-days: 14
+          if-no-files-found: error
