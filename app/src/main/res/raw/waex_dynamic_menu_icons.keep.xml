@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MenuIconLoader resolves these drawables by name in the hooked process.
+     Keep the bounded WAEX icon family and the anti-revoke indicator in optimized
+     builds; this complements, rather than replaces, catalog string retention. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_waex_*,@drawable/ic_deleted" />
