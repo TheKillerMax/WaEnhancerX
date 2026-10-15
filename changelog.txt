@@ -1,6 +1,6 @@
 [Fixed]
 - Fixed the Disable Screen Off on Proximity Sensor option not working correctly
-- Fixed Seconds on Timestamp, New Settings Style, IGStatus, and Contact Added Status switches not saving correctly
+- Fixed Seconds on Timestamp
 - Fixed Audio to Voice Status related settings becoming out of sync
 - Fixed hooks injected repeated toasts
 - Fixed Quick Actions
@@ -11,6 +11,7 @@
 - Fixed Hide Archived Chats
 - Fixed Hide Locked Chats
 - Fixed New Settings Style
+- Fixed IGStatus style stories 
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings

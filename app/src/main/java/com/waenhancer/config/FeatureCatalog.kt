@@ -142,7 +142,11 @@ object FeatureCatalog {
         "open_waex" to "open_wae",
         // Historical Styles toggle key did not connect to the sensor hook.
         // Keep navigation/search compatible without silently enabling sensor changes.
-        "miscellaneous_enhancements" to "disable_sensor_proximity"
+        "miscellaneous_enhancements" to "disable_sensor_proximity",
+        "novaconfig" to "custom_toolbar",
+        "segundos" to "custom_time_format",
+        "igstatus" to "instagram_status_layout",
+        "verify_blocked_contact" to "contact_blocked_verify"
     )
 
     @JvmStatic

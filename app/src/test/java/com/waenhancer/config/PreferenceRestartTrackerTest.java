@@ -45,6 +45,8 @@ public class PreferenceRestartTrackerTest {
                 PreferenceRestartTracker.displayName("floating_bottom_bar_radius"));
         assertEquals("Separate Groups",
                 PreferenceRestartTracker.displayName("separate_groups_tabs"));
+        assertEquals("New Settings Style",
+                PreferenceRestartTracker.displayName("novaconfig"));
         assertEquals("DPI Mode", PreferenceRestartTracker.displayName("dpi_mode"));
     }
 }
