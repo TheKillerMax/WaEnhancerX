@@ -15,6 +15,7 @@
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
 - Improved startup of module and performance
 - Improved Delete For Me messages
+- Improved Tasker (Not tested yet)
 
 [Notes]
 - WAEnhancerX now requires a rooted device for reliable compatibility and to protect the module's integrity.
