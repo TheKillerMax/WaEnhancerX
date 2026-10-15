@@ -63,6 +63,7 @@ public class TestPresenceEventContract {
  static String TAG="test";Object context=new Object();ClassLoader classLoader=getClass().getClassLoader();
  static List<String> toasts=new ArrayList<>();Executor asyncExecutor=Runnable::run;
  boolean isOnlineToastEnabled(){return true;}void showToastSafely(String s){toasts.add(s);}
+ void showToastSafely(String s,java.util.function.BooleanSupplier valid){if(valid.getAsBoolean())toasts.add(s);}
  static class ContactNameResolver {static ContactNameResolver INSTANCE=new ContactNameResolver();String resolveName(Object a,String b,Object c,Object d){return "test contact";}}
  static class BaseBundle {Map<String,Object> values=new HashMap<>();Object get(String key){return values.get(key);}}
  static class ThrowingBundle extends BaseBundle {Object get(String key){throw new IllegalStateException("synthetic");}}
@@ -81,9 +82,10 @@ public class TestPresenceEventContract {
  static class XposedBridge {static XC_MethodHook hook;static Method selected;static void hookMethod(Method m,XC_MethodHook h){selected=m;hook=h;}static void log(String s){}}
  enum StringMatchType {Equals}
  static class MethodMatcher {
-  String name,returns;String[] params;Map<String,StringMatchType> anchors=new HashMap<>();
+  String name,returns;String[] params;MethodMatcher invokes;int count=-1;Map<String,StringMatchType> anchors=new HashMap<>();
   static MethodMatcher create(){return new MethodMatcher();}
   MethodMatcher name(String n){name=n;return this;}MethodMatcher returnType(String n){returns=n;return this;}
+  MethodMatcher addInvoke(MethodMatcher m){invokes=m;return this;} MethodMatcher paramCount(int n){count=n;return this;}
   MethodMatcher paramTypes(String...p){params=p;return this;}
   MethodMatcher addUsingString(String s,StringMatchType t){anchors.put(s,t);return this;}
  }
@@ -99,6 +101,8 @@ public class TestPresenceEventContract {
    check(m.anchors.size()==3&&m.anchors.containsKey("MessageHandler/handleConnectionThreadReady connectionready")
       &&m.anchors.containsKey("lastSeen")&&m.anchors.containsKey("presence"),"Resolver requires all three handler anchors");
    for(StringMatchType match:m.anchors.values())check(match==StringMatchType.Equals,"Resolver literal is exact");
+   check(m.invokes!=null&&m.invokes.count==3&&"void".equals(m.invokes.returns)
+      &&m.invokes.anchors.get("MessageHandler/handleDisconnected error=")==StringMatchType.Equals,"Resolver verifies lifecycle call edge");
    MethodDataList out=new MethodDataList();for(Method method:candidates)out.add(new MethodData(method));return out;
   }
  }
@@ -127,10 +131,12 @@ public class TestPresenceEventContract {
   badPayload.obj=new ThrowingBundle();check(decode(badPayload)==null,"Unreadable bundle ignored without callback failure");
   BaseBundle alias=new BaseBundle();alias.values.put("from",jid);badPayload.obj=alias;
   check(decode(badPayload)==null,"Unverified alias keys do not supply identity");
-  for(Object presence:new Object[]{"deny","available","unavailable","",new Trap()}){
+  for(Object presence:new Object[]{"available","unavailable","",new Trap()}){
    check(decode(message(5,64,jid,presence))==null,"Denied/unknown presence is not an offline timestamp");
    check(decode(message(5,5,jid,presence))==null,"Unexpected available payload ignored");
   }
+  check(!decode(message(5,64,jid,"deny")).known,"Verified deny is unknown, not offline");
+  check(decode(message(5,5,jid,"deny"))==null,"Deny is not an available envelope");
   for(int code:new int[]{Integer.MIN_VALUE,-1,0,1,4,6,12,20,21,63,65,158,237,271,272,Integer.MAX_VALUE})
    check(decode(message(5,code,jid,null))==null,"Unknown code ignored: "+code);
   for(int family:new int[]{Integer.MIN_VALUE,-1,0,1,4,6,64,Integer.MAX_VALUE})
@@ -156,8 +162,8 @@ public class TestPresenceEventContract {
   event(online,false);event(online,false);check(toasts.size()==1,"Repeated available event emits one toast");
   check(online.obj==payload&&online.what==5&&online.arg1==5,"Host Message preserved");
   event(message(5,999,jid,null),false);check(PresenceStateStore.get(jid).online,"Unknown event cannot set contact offline");
-  event(message(5,64,jid,"deny"),false);check(PresenceStateStore.get(jid).online,"Denied presence is not fabricated offline");
   event(message(5,64,jid,null),true);check(PresenceStateStore.get(jid).online,"Failed original method does not update state");
+  event(message(5,64,jid,"deny"),false);check(!PresenceStateStore.get(jid).known && PresenceStateStore.get(jid).changedAtMillis==0L,"Denied presence invalidates without a fabricated timestamp");
   event(message(5,64,jid,null),false);check(!PresenceStateStore.get(jid).online,"Verified unavailable transition retained");
   event(online,false);check(toasts.size()==2,"Online-offline-online cycle emits second online toast");
   event(message(0,5,"2@lid",null),false);check(PresenceStateStore.get("2@lid")==null,"Connection-ready envelope cannot synthesize contact state");

@@ -18,8 +18,15 @@ public final class PresenceEventPolicy {
     public static final class Event {
         public final String jid;
         public final boolean online;
-        private Event(String jid, boolean online) { this.jid = jid; this.online = online; }
+        public final boolean known;
+        private Event(String jid, boolean online, boolean known) {
+            this.jid = jid; this.online = online; this.known = known;
+        }
     }
+
+    /** Observed in the reviewed handler: onConnecting -> 1, handleDisconnected -> 4.
+     * These codes require independent validation for each other host version. */
+    public static boolean isTransportInvalidation(int what) { return what == 1 || what == 4; }
 
     public static boolean isPresenceCode(int code) {
         return code == AVAILABLE || code == UNAVAILABLE;
@@ -29,9 +36,10 @@ public final class PresenceEventPolicy {
         if (what != EVENT_FAMILY || !isPresenceCode(code) || !(rawJid instanceof String)) return null;
         String jid = (String) rawJid;
         if (jid.length() > 256 || !CONTACT_JID.matcher(jid).matches()) return null;
-        // Non-null presence includes the host's "deny" response. It must not be
-        // converted into a fabricated offline/last-seen timestamp.
-        if (presence != null) return null;
-        return new Event(jid, code == AVAILABLE);
+        // Only the reviewed unavailable/deny envelope invalidates one identity.
+        // Arbitrary non-null values remain unknown input, not a lifecycle signal.
+        boolean denied = code == UNAVAILABLE && "deny".equals(presence);
+        if (presence != null && !denied) return null;
+        return new Event(jid, code == AVAILABLE, !denied);
     }
 }

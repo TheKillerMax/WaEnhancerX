@@ -54,7 +54,7 @@ public class PresenceToastsHook extends BaseFeature {
     private void hookIncomingPresence() {
         try {
             Method presenceMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context, classLoader, "wpp_presence_message_handler_v3",
+                    context, classLoader, "wpp_presence_message_handler_v4",
                     (bridge, loader) -> {
                         // The old available literal belongs to a multiplexed Runnable.
                         // Match the Handler envelope instead, including both event branches.
@@ -66,7 +66,10 @@ public class PresenceToastsHook extends BaseFeature {
                                         .addUsingString("MessageHandler/handleConnectionThreadReady connectionready",
                                                 StringMatchType.Equals)
                                         .addUsingString("lastSeen", StringMatchType.Equals)
-                                        .addUsingString("presence", StringMatchType.Equals)));
+                                        .addUsingString("presence", StringMatchType.Equals)
+                                        .addInvoke(MethodMatcher.create().returnType("void").paramCount(3)
+                                                .addUsingString("MessageHandler/handleDisconnected error=",
+                                                        StringMatchType.Equals))));
                         if (matches.size() != 1) return null;
                         Method candidate = matches.get(0).getMethodInstance(loader);
                         return isPresenceHandler(candidate) ? candidate : null;
@@ -79,14 +82,27 @@ public class PresenceToastsHook extends BaseFeature {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
                     // Observe only successfully handled host events. Never cancel/mutate them.
-                    if (param.hasThrowable()) return;
+                    if (param.hasThrowable() || param.args == null || param.args.length != 1
+                            || !(param.args[0] instanceof Message)) return;
+                    if (PresenceEventPolicy.isTransportInvalidation(((Message) param.args[0]).what)) {
+                        PresenceStateStore.invalidateAll();
+                        return;
+                    }
                     PresenceEventPolicy.Event event = decodePresenceEvent(param.args);
                     if (event == null) return;
-                    boolean transition = PresenceStateStore.update(event.jid, event.online);
-                    if (transition && event.online && isOnlineToastEnabled()) {
+                    if (!event.known) {
+                        PresenceStateStore.invalidate(event.jid);
+                        return;
+                    }
+                    final long transitionId = PresenceStateStore.updateAndGetTransition(event.jid, event.online);
+                    if (transitionId != 0L && event.online && isOnlineToastEnabled()) {
                         asyncExecutor.execute(() -> {
-                            String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
-                            showToastSafely(name + " is online");
+                            if (!PresenceStateStore.isCurrentOnline(event.jid, transitionId)) return;
+                            try {
+                                String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
+                                showToastSafely(name + " is online", () -> isOnlineToastEnabled()
+                                        && PresenceStateStore.isCurrentOnline(event.jid, transitionId));
+                            } catch (RuntimeException | LinkageError ignored) { /* Optional name lookup. */ }
                         });
                     }
                 }
@@ -307,9 +323,14 @@ public class PresenceToastsHook extends BaseFeature {
     }
 
     private void showToastSafely(String message) {
+        showToastSafely(message, () -> true);
+    }
+
+    private void showToastSafely(String message, java.util.function.BooleanSupplier stillValid) {
         mainHandler.post(() -> {
             try {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                // A queued name lookup must not announce an already invalidated transition.
+                if (stillValid.getAsBoolean()) Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             } catch (Throwable ignored) {}
         });
     }
