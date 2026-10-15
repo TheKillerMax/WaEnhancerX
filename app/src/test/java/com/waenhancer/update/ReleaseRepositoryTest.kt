@@ -1,11 +1,30 @@
 package com.waenhancer.update
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReleaseRepositoryTest {
+
+    @Test
+    fun `official repository tags expose semantic version`() {
+        assertEquals("2.0.3", ReleaseRepository.versionFromTag("20300-2.0.3"))
+        assertEquals("2.0.0-beta-3", ReleaseRepository.versionFromTag("2003-2.0.0-beta-3"))
+        assertEquals("3.2.1", ReleaseRepository.versionFromTag("v3.2.1"))
+    }
+
+    @Test
+    fun `only official repository APK assets are accepted`() {
+        assertTrue(ReleaseRepository.isOfficialReleaseAssetUrl(
+            "https://github.com/Xposed-Modules-Repo/com.waenhancer/releases/download/20300-2.0.3/WaEnhancerX-v2.0.3_release.apk"
+        ))
+        assertFalse(ReleaseRepository.isOfficialReleaseAssetUrl(
+            "https://github.com/another-owner/another-repo/releases/download/2.0.3/WaEnhancerX-v2.0.3_release.apk"
+        ))
+        assertFalse(ReleaseRepository.isOfficialReleaseAssetUrl("https://waex.mubashar.dev/update.apk"))
+    }
     private fun release(tag: String) = WaexRelease(tag, tag, "", "", "")
 
     @Test
