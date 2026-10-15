@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = {
     "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 11,
     "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 29,
-    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 6,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 10,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 6,
     "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 2,
     "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt": 4,
@@ -197,4 +197,3 @@ for regression in (
     "qa/test_database_dialog_status_log_privacy.py",
 ):
     runpy.run_path(str(ROOT / regression), run_name="__main__")
-
