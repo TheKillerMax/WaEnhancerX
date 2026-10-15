@@ -124,6 +124,6 @@ class CssThemeHook(
     }
 
     private companion object {
-        val RULE = Regex("(?s)#([A-Za-z0-9_]+)\\s*\\{([^}]*)}")
+        val RULE = Regex("(?s)#([A-Za-z0-9_]+)\\s*\\{([^}]*)\\}")
     }
 }

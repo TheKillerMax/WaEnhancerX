@@ -248,8 +248,9 @@ public final class FeatureRegistry {
                     entry.status = "ACTIVE";
                 } catch (Throwable t) {
                     entry.status = "FAILED";
-                    entry.error = t.getMessage();
-                    XposedBridge.log("[WAEX] Error initializing feature [" + entry.name + "]: " + t.getMessage());
+                    entry.error = t.getMessage() != null ? t.getMessage() : t.getClass().getName();
+                    XposedBridge.log("[WAEX] Error initializing feature [" + entry.name + "]: " + entry.error);
+                    XposedBridge.log(t);
                 }
             }
         }
