@@ -42,7 +42,8 @@ def run_java(name, body, production):
         test.write_text(body, encoding='utf-8')
         subprocess.run(['javac', '--release', '17', '-d', directory,
                         *map(str, production), str(test)], check=True, timeout=60)
-        subprocess.run(['java', '-cp', directory, name], check=True, timeout=60)
+        print('COMPILE_OK: receipt installer',flush=True)
+        subprocess.run(['java', '-cp', directory, 'com.waenhancer.xposed.features.privacy.' + name], check=True, timeout=60)
 
 src = ROOT / 'app/src/main/java/com/waenhancer/xposed/features/privacy'
 text = (src / 'HideReceiptsHook.java').read_text(encoding='utf-8')
@@ -53,9 +54,11 @@ assert 'matches.size() != 1' in resolve, 'Ambiguous DEX matches must be rejected
 assert 'wpp_send_read_receipt_execution_v1' in resolve
 
 body = r"""
+package com.waenhancer.xposed.features.privacy;
 import java.lang.reflect.*;
 import java.util.*;
 import com.waenhancer.xposed.features.privacy.ReceiptJobExecutionPolicy;
+import com.waenhancer.xposed.features.privacy.ReceiptJidPolicy;
 public class TestReceiptExecutionContract {
  static int checks;
  static void check(boolean value, String label) {
@@ -92,8 +95,8 @@ public class TestReceiptExecutionContract {
  }
  static class XposedBridge {
   static final Map<Method,XC_MethodHook> hooks=new LinkedHashMap<>();
-  static int constructors;
-  static void hookAllConstructors(Class<?> c,XC_MethodHook h){constructors++;}
+  static int constructors;static XC_MethodHook constructorHook;
+  static void hookAllConstructors(Class<?> c,XC_MethodHook h){constructors++;constructorHook=h;}
   static void hookMethod(Method m,XC_MethodHook h){hooks.put(m,h);}
   static void log(String s){}
  }
@@ -103,13 +106,16 @@ public class TestReceiptExecutionContract {
   static Object getAdditionalInstanceField(Object j,String k){return marks.get(j);}
   static void setAdditionalInstanceField(Object j,String k,Object v){marks.put(j,v);}
  }
- static class BlueOnReplyHook {static void captureSuppressedReadJob(String j,Constructor<?> c,Object[] a){}}
- boolean isEnabled(String key,boolean value){return value;}
+ static class BlueOnReplyHook {static final List<String> captured=new ArrayList<>();static void captureSuppressedReadJob(String j,Constructor<?> c,Object[] a){captured.add(j);}}
+ boolean blueEnabled;
+ boolean isEnabled(String key,boolean value){return blueEnabled||value;}
+ static String canonicalJid(String value){return ReceiptJidPolicy.canonical(value);}
  boolean isManualSeenTickEnabled(){return false;}
- boolean hasExplicitReceiptIds(Object... args){return false;}
+ static String allowedRecipient;
+ static boolean isExplicitReceiptAllowed(String r,String id){return Objects.equals(allowedRecipient,r)&&"fixture-id".equals(id);}
  String findJidInObject(Object o){return null;}
- String findJidInArguments(Object[] a){return null;}
- String resolveConversationTarget(String a,String b){return a!=null?a:b;}
+
+
  String extractJidString(Object obj,String key){Job j=(Job)obj;return key.equals("jid")?j.jid:j.participant;}
  boolean isStatusTarget(String a,String b){return "status@broadcast".equals(a)||"status@broadcast".equals(b);}
  static boolean hide=true;
@@ -152,7 +158,7 @@ public class TestReceiptExecutionContract {
   }
   Class<?> findClassWithCache(Object c,ClassLoader l,String k,ClassFinder f){return Job.class;}
  }
-""" + install + '\n' + resolve + r"""
+""" + install + '\n' + resolve + '\n' + extract(text, '    private static String findJidInArguments(') + '\n' + extract(text, '    private static String resolveConversationTarget(') + '\n' + extract(text, '    private static boolean hasExplicitReceiptIds(') + r"""
  static Method method(String name,Class<?>...types)throws Exception{return Job.class.getDeclaredMethod(name,types);}
  static Object invoke(Job job,Method method,Object...args)throws Throwable{
   XC_MethodHook h=XposedBridge.hooks.get(method);
@@ -202,8 +208,28 @@ public class TestReceiptExecutionContract {
   setup(method("retry",Exception.class));hook.hookSendReadReceiptJob();check(XposedBridge.hooks.isEmpty(),"Malformed resolver candidate rejected");
   setup(body);DexSearchEngine.cached=method("retry",Exception.class);hook.hookSendReadReceiptJob();
   check(XposedBridge.hooks.isEmpty(),"Cached non-void method revalidated and rejected");
+  setup(body);hook.hookSendReadReceiptJob();hook.blueEnabled=true;
+  XC_MethodHook.MethodHookParam cp=new XC_MethodHook.MethodHookParam();
+  Job captureJob=new Job();cp.thisObject=captureJob;cp.method=Job.class.getDeclaredConstructor();cp.args=new Object[]{"456@s.whatsapp.net",new String[]{"fixture-id"}};
+  captureJob.jid="123@s.whatsapp.net";captureJob.participant="999@s.whatsapp.net";
+  BlueOnReplyHook.captured.clear();XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.equals(Arrays.asList("123@s.whatsapp.net")),"Constructor captures only its serialized recipient");
+  captureJob.jid=null;XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.size()==1,"Missing job recipient never falls back to participant or argument");
+  captureJob.jid="not-a-jid";XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.size()==1,"Invalid job recipient never captures");
+  captureJob.jid="123@g.us";XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.equals(Arrays.asList("123@s.whatsapp.net","123@g.us")),"Group job retains group recipient, not participant");
+  captureJob.jid="status@broadcast";XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.size()==2,"Status constructor is not queued as a conversation read");
+  BlueOnReplyHook.captured.clear();captureJob.jid="123@s.whatsapp.net";captureJob.participant="999@g.us";allowedRecipient="999@g.us";
+  XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.equals(Arrays.asList("123@s.whatsapp.net")),"Participant allowance never exempts serialized recipient");
+  allowedRecipient="123@s.whatsapp.net";XposedBridge.constructorHook.afterHookedMethod(cp);
+  check(BlueOnReplyHook.captured.size()==1,"Exact serialized recipient allowance avoids recapture");
+  allowedRecipient=null;
   System.out.println("CHECKS="+checks+"; extracted production resolver/installer + real policy; not Android/LSPosed");
  }
 }
 """
-run_java('TestReceiptExecutionContract', body, [src / 'ReceiptJobExecutionPolicy.java'])
+run_java('TestReceiptExecutionContract', body, [src / 'ReceiptJobExecutionPolicy.java', src / 'ReceiptJidPolicy.java'])
