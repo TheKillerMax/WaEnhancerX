@@ -434,7 +434,7 @@ class CssThemeHook(
         const val CSS_KEY = "css_theme"
         const val LEGACY_CSS_KEY = "custom_css"
         val COMMENTS = Regex("(?s)/\\*.*?\\*/")
-        val RULE = Regex("(?s)([^{}]+)\\{([^{}]*)}")
+        val RULE = Regex("(?s)([^{}]+)\\{([^{}]*)\\}")
         val CONTAINS = Regex("(?i):contains\\(([^)]*)\\)")
         val NTH_CHILD = Regex("(?i):nth-child\\((\\d+)\\)")
         val LINEAR_GRADIENT = Regex("(?i)linear-gradient\\((.*)\\)")
