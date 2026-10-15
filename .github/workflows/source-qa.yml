@@ -106,7 +106,9 @@ jobs:
             qa/test_blue_receipt_recipient_isolation.py \
             qa/test_manual_blue_tick_ui.py \
             qa/test_receipt_job_execution_contract.py \
+            qa/test_played_receipt_dispatch_contract.py \
             qa/test_presence_event_contract.py \
+            qa/test_presence_state_replay.py \
             qa/test_archived_chats_entry.py \
             qa/test_deleted_indicator_preference_types.py \
             qa/test_proximity_event_isolation.py \
@@ -131,3 +133,52 @@ jobs:
             'Source QA passed. This is NOT a Gradle/Android build.' \
             'No private :licensing module or proprietary WhatsApp APK was used.' \
             'Hook installation, runtime behavior, signatures and LSPosed compatibility require separate device checks.'
+
+  android-presence-rows:
+    name: Extracted renderer / Android framework / native pixels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Determine whether the reviewed renderer has been merged
+        id: presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          renderer=app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+          if [[ -f "$renderer" ]] && grep -q 'private fun stateForRow(' "$renderer"; then
+            test -f qa/android_presence_row_test.py
+            test -f qa/fixtures/PresenceRowRenderingTest.kt
+            test -f qa/test_presence_state_replay.py
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::V17 renderer not in this tree; Android presence rendering was NOT tested by this job.'
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.presence.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run required framework tests for the merged renderer
+        if: steps.presence.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/android_presence_row_test.py --out "$RUNNER_TEMP/waex-android-rows"
+          echo 'Extracted production renderer passed Android framework/Skia tests. NOT an APK build, WhatsApp binder or LSPosed test.'
+      - name: Preserve source identities and text-only rendering evidence
+        if: always() && steps.presence.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-presence-row-evidence
+          path: |
+            ${{ runner.temp }}/waex-android-rows/*.json
+            ${{ runner.temp }}/waex-android-rows/*.log
+            ${{ runner.temp }}/waex-android-rows/*/*.log
+            ${{ runner.temp }}/waex-android-rows/*/*.kt
+          retention-days: 14
+          if-no-files-found: warn
