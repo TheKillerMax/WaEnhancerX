@@ -86,6 +86,7 @@ import com.waenhancer.ui.screens.settings.ChangelogScreen
 import com.waenhancer.ui.screens.settings.ReleaseDetailsScreen
 import com.waenhancer.ui.screens.settings.AboutScreen
 import com.waenhancer.ui.screens.settings.StargazersScreen
+import com.waenhancer.ui.screens.settings.ModuleSettingsScreen
 import com.waenhancer.ui.screens.settings.UpdateSettingsScreen
 import com.waenhancer.ui.screens.settings.SupportedVersionsScreen
 import com.waenhancer.ui.screens.settings.BootloaderSpooferScreen
@@ -233,10 +234,6 @@ fun MainContainerScreen() {
             contactPrivacyList.addAll(loadContactPrivacyList(context, preferenceManager))
         }
     }
-
-    val themeMode = com.waenhancer.ui.designsystem.LocalThemeMode.current
-    val updateThemeMode = com.waenhancer.ui.designsystem.LocalThemeModeUpdater.current
-    var showThemeMenu by remember { mutableStateOf(false) }
 
     val currentScreen = navController.currentScreen
     val isRoot = when (currentScreen) {
@@ -434,82 +431,6 @@ fun MainContainerScreen() {
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            Box(
-                                modifier = Modifier.align(Alignment.CenterVertically)
-                            ) {
-                                val themeIcon = when (themeMode) {
-                                    "Light" -> WaexIcons.LightMode
-                                    "Dark" -> WaexIcons.DarkMode
-                                    else -> WaexIcons.AutoMode
-                                }
-                                IconButton(
-                                    onClick = { showThemeMenu = true },
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = themeIcon,
-                                        contentDescription = "Theme Mode",
-                                        tint = colors.onBackground,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = showThemeMenu,
-                                    onDismissRequest = { showThemeMenu = false },
-                                    modifier = Modifier.background(colors.surface)
-                                ) {
-                                    val modes = listOf("Light", "Dark", "System") +
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) listOf("Monet")
-                                        else emptyList()
-                                    modes.forEach { mode ->
-                                        val active = themeMode == mode
-                                        DropdownMenuItem(
-                                            text = {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    val modeIcon = when (mode) {
-                                                        "Light" -> WaexIcons.LightMode
-                                                        "Dark" -> WaexIcons.DarkMode
-                                                        else -> WaexIcons.AutoMode
-                                                    }
-                                                    Icon(
-                                                        imageVector = modeIcon,
-                                                        contentDescription = null,
-                                                        tint = if (active) colors.primary else colors.onSurfaceVariant,
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                    Text(
-                                                        text = mode,
-                                                        style = typography.bodyMd,
-                                                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (active) colors.primary else colors.onSurface
-                                                    )
-                                                    if (active) {
-                                                        Spacer(modifier = Modifier.weight(1f))
-                                                        Icon(
-                                                            imageVector = WaexIcons.Check,
-                                                            contentDescription = "Active",
-                                                            tint = colors.primary,
-                                                            modifier = Modifier.size(16.dp)
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                            onClick = {
-                                                updateThemeMode(mode)
-                                                showThemeMenu = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(4.dp))
-
                             var showMoreMenu by remember { mutableStateOf(false) }
                             Box(
                                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -559,37 +480,17 @@ fun MainContainerScreen() {
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
                                                 Icon(
-                                                    imageVector = WaexIcons.SystemUpdate,
-                                                    contentDescription = null,
-                                                    tint = colors.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Text(text = "Changelog & Releases", style = typography.bodyMd, color = colors.onSurface)
-                                            }
-                                        },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            navController.navigateTo(Screen.Changelog)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Icon(
                                                     imageVector = WaexIcons.Settings,
                                                     contentDescription = null,
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = "Update Settings", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = "Module Settings", style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
                                             showMoreMenu = false
-                                            navController.navigateTo(Screen.UpdateSettings)
+                                            navController.navigateTo(Screen.ModuleSettings)
                                         }
                                     )
                                     DropdownMenuItem(
@@ -1083,6 +984,7 @@ fun WaexAppNavigation(
         is Screen.ReleaseDetails -> ReleaseDetailsScreen(currentScreen.tagName)
         Screen.About -> AboutScreen()
         Screen.Stargazers -> StargazersScreen()
+        Screen.ModuleSettings -> ModuleSettingsScreen()
         Screen.UpdateSettings -> UpdateSettingsScreen()
         Screen.SupportedVersions -> SupportedVersionsScreen()
         Screen.DeletedMessages -> com.waenhancer.ui.screens.privacy.DeletedMessagesVaultScreen()

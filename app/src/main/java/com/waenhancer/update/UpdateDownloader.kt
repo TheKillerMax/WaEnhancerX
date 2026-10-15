@@ -52,7 +52,7 @@ object UpdateDownloader {
 
     fun hasRootAccess(): Boolean {
         val output = runRootCommand("id")
-        return output?.let { "uid=0" in it || "root" in it } == true
+        return output?.let { "uid=0" in it } == true
     }
 
     fun downloadApk(context: Context, url: String, versionName: String, callback: DownloadCallback): Call? {
@@ -174,10 +174,19 @@ object UpdateDownloader {
                 try {
                     val target = shellQuote(temporary)
                     val source = shellQuote(apkFile.absolutePath)
-                    val size = runRootCommand("cat $source > $target && chmod 644 $target && wc -c < $target")
-                        ?.trim()?.toLongOrNull() ?: 0
-                    if (size > 1024) runRootCommand("pm install -r --user 0 $target", 70)
-                    else "Failed to copy verified APK to temporary storage"
+                    val copyResult = runRootCommand(
+                        "cat $source > $target && chmod 644 $target && wc -c < $target"
+                    )?.trim().orEmpty()
+                    val size = copyResult.toLongOrNull() ?: 0
+                    if (size > 1024) {
+                        // Package Manager requires -d when the APK has a lower versionCode.
+                        runRootCommand("pm install -r -d --user 0 $target", 70)
+                    }
+                    else if (copyResult.isNotEmpty()) {
+                        "Failed to copy verified APK: $copyResult"
+                    } else {
+                        "Failed to copy verified APK to temporary storage"
+                    }
                 } finally {
                     runRootCommand("rm -f -- ${shellQuote(temporary)}")
                 }
@@ -187,7 +196,11 @@ object UpdateDownloader {
                 if (success) {
                     Toast.makeText(activity, "Installation successful. Restarting...", Toast.LENGTH_LONG).show()
                     Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, 2000)
-                } else Toast.makeText(activity, "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unknown error" }}", Toast.LENGTH_LONG).show()
+                } else Toast.makeText(
+                    activity,
+                    "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unable to execute the root installer" }}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }.start()
     }
@@ -211,11 +224,16 @@ object UpdateDownloader {
         val finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
         if (!finished) {
             process.destroyForcibly()
-            return@runCatching null
+            return@runCatching "Root command timed out after ${timeoutSeconds}s"
         }
         drainer.join(500)
-        if (process.exitValue() != 0) return@runCatching null
-        synchronized(output) { output.toString().trim() }
+        val captured = synchronized(output) { output.toString().trim() }
+        if (process.exitValue() != 0) {
+            return@runCatching captured.ifEmpty {
+                "Root command failed with exit code ${process.exitValue()}"
+            }
+        }
+        captured
     }.getOrNull()
 
 }
