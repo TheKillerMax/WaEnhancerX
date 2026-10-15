@@ -481,8 +481,7 @@ private fun AppVersionStatusCard(
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
     val isInstalled = versionName != null
-    val isSupported = decision == UniversalVersionValidator.Decision.BUILTIN_RULE ||
-        decision == UniversalVersionValidator.Decision.CUSTOM_RULE
+    val isSupported = decision == UniversalVersionValidator.Decision.BUILTIN_RULE
 
     Surface(
         shape = radius.mdShape,
@@ -550,7 +549,7 @@ private fun AppVersionStatusCard(
                         text = when {
                             !isInstalled -> "Unavailable"
                             decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> "Matches built-in rules"
-                            decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> "Allowed by custom rule"
+                            decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> "Custom allowance (unverified)"
                             decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> "Bypass active (unverified)"
                             decision == UniversalVersionValidator.Decision.UNSUPPORTED -> "Version rejected by rules"
                             else -> "Version check unavailable"

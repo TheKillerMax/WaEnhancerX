@@ -67,8 +67,9 @@ class PackageManager {class NameNotFoundException:Exception();var version:String
 import android.content.*
 import android.content.res.Resources
 class Activity:Context("com.whatsapp",Resources("com.whatsapp",emptyMap(),emptyMap())) {
- var isFinishing=false;var isDestroyed=false
- fun runOnUiThread(r:()->Unit)=r();fun startActivity(i:Intent){}
+ var isFinishing=false;var isDestroyed=false;var defer=false;val pending=mutableListOf<()->Unit>()
+ fun runOnUiThread(r:()->Unit){if(defer)pending.add(r) else r()};fun startActivity(i:Intent){}
+ fun flush(){val jobs=pending.toList();pending.clear();jobs.forEach{it()}}
 }
 ''')
         put('Sheet.kt', '''package com.waenhancer.xposed.core.components
@@ -90,14 +91,15 @@ object SystemClock{var time=1000L;fun elapsedRealtime()=time}
 object R{object array{const val universal_supported_versions=0x7f030000}}
 ''')
         put('Root.kt', '''package com.waenhancer.xposed.utils
-object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=false;var calls=0
- fun runRootCommand(command:String):String?{calls++;lastCommand=command;if(fail)throw SecurityException("secret diagnostic");return output}}
+object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=false;var calls=0;var advance=0L
+ fun runRootCommand(command:String):String?{calls++;lastCommand=command;android.os.SystemClock.time+=advance;if(fail)throw SecurityException("secret diagnostic");return output}}
 ''')
         fixture = (ROOT/'qa/fixtures/RuntimeDiagnosticsChecks.kt').read_text()
         rules=[i.text for i in ET.parse(ROOT/'app/src/main/res/values/arrays.xml').getroot().find("string-array[@name='universal_supported_versions']")]
         put('Checks.kt',fixture.replace('/*BUILTIN_RULES*/',','.join(json.dumps(s) for s in rules)))
         args = [shutil.which('kotlinc'), '-nowarn', '-language-version', '2.0', *map(str, sorted(src.glob('*.kt'))), '-include-runtime', '-d', str(out/'checks.jar')]
         subprocess.run(args, check=True, timeout=90)
+        print('COMPILE_OK: production runtime source',flush=True)
         subprocess.run(['java','-jar',str(out/'checks.jar'),str(out/'command.sh')], check=True, timeout=30)
         # Validate the exact emitted shell: unavailable/malformed command results
         # must never produce a valid empty observation. Never invoke real su here.
@@ -107,7 +109,7 @@ object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=fal
             env=os.environ|{'PATH':str(out),'FAKE_CODE':str(code),'FAKE_OUTPUT':output}
             result=subprocess.run(['/bin/sh','-c',command],text=True,capture_output=True,env=env,timeout=5)
             assert (result.returncode==0)==success,(code,output,result)
-            if success: assert result.stdout==f'PID|com.whatsapp|{output}\n'
+            if success: assert result.stdout==f'PID|com.whatsapp|{output}\nEND|WAEX_PROCESS_SNAPSHOT\n'
         empty=out/'empty';empty.mkdir()
         result=subprocess.run(['/bin/sh','-c',command],text=True,capture_output=True,env=os.environ|{'PATH':str(empty)},timeout=5)
         assert result.returncode==127
@@ -124,6 +126,8 @@ object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=fal
     assert 'app.injectionEvidence.label' in health
     assert 'UniversalVersionValidator.evaluate(' in versions and 'Version check unavailable' in versions
     assert 'if (isAllSupported)' not in versions
+    assert 'Custom allowance (unverified)' in versions
+    assert 'val isSupported = decision == UniversalVersionValidator.Decision.BUILTIN_RULE\n' in versions
     clock=(JAVA/'ui/components/RuntimeObservationClock.kt').read_text()
     assert 'repeatOnLifecycle(Lifecycle.State.STARTED)' in clock and 'delay(5_000L)' in clock
     assert all(s not in clock for s in ('inspect(', 'detectWhatsAppApps(', 'runRootCommand('))

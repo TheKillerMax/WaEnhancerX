@@ -33,6 +33,7 @@ object TargetRuntimePresentation {
         app.runtimeStatus != "READY" -> Status("Injected • Feature readiness unconfirmed", Severity.UNKNOWN)
         app.bridgeStatus != "PROVIDER" -> Status("Injected • Settings connection unconfirmed", Severity.UNKNOWN)
         decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> Status("Injected • Version bypass active", Severity.REVIEW)
+        decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> Status("Injected • Custom version allowance; unverified", Severity.REVIEW)
         else -> Status("Injected • Initialization reported complete", Severity.OK)
     }
 
@@ -66,6 +67,8 @@ object TargetRuntimePresentation {
             return Summary("Target runtime requires review", false)
         if (installed.any { decisions[it.packageName] == UniversalVersionValidator.Decision.EXPLICIT_BYPASS })
             return Summary("Version bypass active; compatibility unverified", false)
+        if (installed.any { decisions[it.packageName] == UniversalVersionValidator.Decision.CUSTOM_RULE })
+            return Summary("Custom version allowance; compatibility unverified", false)
         if (installed.any { !it.isHooked || it.runtimeStatus != "READY" || it.bridgeStatus != "PROVIDER" })
             return Summary("Version rules accepted; runtime unconfirmed", null)
         // Even current READY reports are not acceptance tests of all individual features.
