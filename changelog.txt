@@ -1,3 +1,6 @@
+[Added]
+- Multilingual support
+
 [Fixed]
 - Fixed the Disable Screen Off on Proximity Sensor option not working correctly
 - Fixed Seconds on Timestamp
@@ -19,6 +22,19 @@
 - Improved startup of module and performance
 - Improved Delete For Me messages
 - Improved Tasker (Not tested yet)
+
+[Languages]
+- English
+- Spanish ( Español )
+- Arabic ( العربية )
+- Portuguese ( Português )
+- Indonesian ( Bahasa Indonesia )
+- Russian ( Русский )
+- Turkish ( Türkçe )
+- Hindi ( हिन्दी )
+- Urdu ( اردو )
+- German ( Deutsch )
+- French ( Français )
 
 [Notes]
 - WAEnhancerX now requires a rooted device for reliable compatibility and to protect the module's integrity.
