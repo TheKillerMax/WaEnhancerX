@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.privacy
 
+import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -66,6 +68,7 @@ fun GlobalPrivacySettingsScreen(
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
+    val context = LocalContext.current
 
     var selectedTab by remember { mutableStateOf("privacy") } // "privacy" | "conversation"
 
@@ -137,6 +140,18 @@ fun GlobalPrivacySettingsScreen(
             "1", "true" -> "1"
             else -> "0"
         })
+    }
+
+    var archiveOpenViaMenu by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_menu", true))
+    }
+
+    var archiveOpenViaTitleLongPress by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_title_long_press", true))
+    }
+
+    var archiveOpenViaTitleTripleTap by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_title_triple_tap", false))
     }
 
     val settingsState = remember {
@@ -245,7 +260,7 @@ fun GlobalPrivacySettingsScreen(
             "Security & Vault",
             listOf(
                 SettingItem("Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "locked_chats_enhancer"),
-                SettingItem("Hide Archived Chats", "Hide the archive shortcut; open archived chats from the WAEX menu", "typearchive"),
+                SettingItem("Hide Archived Chats", "Hide the archive shortcut and choose how to open archived chats", "typearchive"),
                 SettingItem("DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "dnd_mode"),
                 SettingItem("Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "hide_chats")
             )
@@ -670,6 +685,97 @@ fun GlobalPrivacySettingsScreen(
                                                     )
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (item.key == "typearchive" && settingsState["typearchive"] == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceDim.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "OPEN ARCHIVED CHATS",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Show in 3-dots / WAEX menu",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaMenu,
+                                                onCheckedChange = { checked ->
+                                                    if (!checked && !archiveOpenViaTitleLongPress && !archiveOpenViaTitleTripleTap) {
+                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        archiveOpenViaMenu = checked
+                                                        preferenceManager.putBoolean("archive_open_via_menu", checked)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Long-press WhatsApp title",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaTitleLongPress,
+                                                onCheckedChange = { checked ->
+                                                    if (!checked && !archiveOpenViaMenu && !archiveOpenViaTitleTripleTap) {
+                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        archiveOpenViaTitleLongPress = checked
+                                                        preferenceManager.putBoolean("archive_open_via_title_long_press", checked)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Tap WhatsApp title 3 times",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaTitleTripleTap,
+                                                onCheckedChange = { checked ->
+                                                    if (!checked && !archiveOpenViaMenu && !archiveOpenViaTitleLongPress) {
+                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        archiveOpenViaTitleTripleTap = checked
+                                                        preferenceManager.putBoolean("archive_open_via_title_triple_tap", checked)
+                                                    }
+                                                }
+                                            )
                                         }
                                     }
                                 }
