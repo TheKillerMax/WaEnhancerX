@@ -2,7 +2,7 @@ name: Source and JVM regression checks
 
 on:
   push:
-    branches: [main, 'integration/preview-current-main-*']
+    branches: [main, 'integration/preview-current-main-*', 'fix/qa-localized-catalog-*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -74,6 +74,7 @@ jobs:
             qa/test_restart_safety.py
             qa/test_hook_return_types.py
             qa/test_monet_wiring.py
+            qa/test_catalog_source.py
           )
           for test_script in "${tests[@]}"; do
             echo "::group::$test_script"

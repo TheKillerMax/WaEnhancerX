@@ -3,6 +3,7 @@
 from pathlib import Path
 import subprocess
 import tempfile
+from catalog_source import catalog_features, string_resources
 root=Path(__file__).resolve().parents[1]
 src=root/'app/src/main/java/com/waenhancer'
 archive=(src/'xposed/features/privacy/HideArchivedChatsHook.java').read_text()
@@ -53,7 +54,9 @@ assert 'entryName.contains("toolbar_title")' in menu
 assert 'actual.equalsIgnoreCase("WhatsApp")' in menu
 assert 'preferenceManager.putString("typearchive", if (value) "1" else "0")' in ui
 assert 'click 5 times or hold' not in ui and 'click 5 times or hold' not in catalog
-assert 'Hide the archive shortcut' in ui and 'Hide the archive shortcut' in catalog
+assert any(row['key'] == 'typearchive' for row in catalog_features(root))
+assert 'Hide the archive shortcut' in string_resources(root)['feat_typearchive_desc']
+assert 'LocalizationHelper.getDesc(context, item)' in ui
 assert 'item.key == "typearchive" && settingsState["typearchive"] == true' in ui
 assert 'OPEN ARCHIVED CHATS' in ui
 assert 'Show in 3-dots / WAEX menu' in ui
@@ -75,4 +78,4 @@ with tempfile.TemporaryDirectory(prefix='waex_archive_policy_') as temp:
                     str(root/'qa/java/TestArchivedChatsPreferencePolicy.java')],check=True)
     subprocess.run(['java','-cp',temp,
                     'com.waenhancer.xposed.features.privacy.TestArchivedChatsPreferencePolicy'],check=True)
-print('PASS: 17 archive preference, menu recovery, and UI key type invariants')
+print('PASS: archive preference, menu recovery, localized description and UI key type invariants')

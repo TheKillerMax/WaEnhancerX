@@ -6,6 +6,7 @@ navigation-only entries. Do not infer that an alias is a working UI switch.
 """
 from pathlib import Path
 import re
+from catalog_source import catalog_features
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'app/src/main/java/com/waenhancer'
@@ -61,7 +62,7 @@ def validate(catalog, schema, aliases):
 
 
 def main():
-    cat = parse_catalog((SRC / 'config/FeatureCatalog.kt').read_text(encoding='utf-8'))
+    cat = [row['key'] for row in catalog_features(ROOT)]
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)

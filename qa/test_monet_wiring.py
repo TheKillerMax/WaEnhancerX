@@ -5,7 +5,7 @@ r = Path(__file__).resolve().parents[1] / 'app/src/main/java/com/waenhancer'
 theme = (r/'ui/designsystem/WaexTheme.kt').read_text()
 main = (r/'app/MainActivity.kt').read_text()
 permission = (r/'app/PermissionsActivity.kt').read_text()
-menu = (r/'ui/navigation/Navigation.kt').read_text()
+menu = (r/'ui/screens/settings/ModuleSettingsScreen.kt').read_text()
 checks = {
     'legacy palette fallback': '?: if (darkTheme) darkColors else lightColors' in theme,
     'Android 12+ guard': 'useMonet && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S' in theme,
@@ -14,7 +14,7 @@ checks = {
     'M3 role mapping': 'monetWaexColors(scheme: ColorScheme' in theme,
     'main opt-in': 'useMonet = themeMode == "Monet"' in main,
     'onboarding opt-in': 'useMonet = themeMode == "Monet"' in permission,
-    'only show supported menu': 'android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) listOf("Monet")' in menu,
+    'only show supported menu': 'Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) listOf("Monet") else emptyList()' in menu,
 }
 for key, value in checks.items():
     assert value, f'Monet wiring regression: {key}'
