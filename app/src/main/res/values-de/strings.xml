@@ -301,4 +301,29 @@
     <string name="sec_security_vault">Sicherheit &amp; Tresor</string>
     <string name="sec_chat_navigation_shortcuts">Chat-Navigation &amp; Kurzbefehle</string>
     <string name="catalog_tab_privacy">Datenschutz</string><string name="catalog_tab_conversation">Unterhaltung</string><string name="catalog_tab_media">Medien</string><string name="catalog_tab_automation">Automatisierung</string><string name="catalog_tab_styles">Stile</string><string name="catalog_tab_settings">Einstellungen</string><string name="catalog_tab_premium">Premium</string>
+    <string name="injected_hooks_active_count">Injizierte Hooks (%1\$d/%2\$d aktiv)</string>
+    <string name="diag_label_module">Modul</string>
+    <string name="diag_status_active">Aktiv</string>
+    <string name="diag_status_inactive">Inaktiv</string>
+    <string name="diag_status_checking">Überprüfung…</string>
+    <string name="diag_label_framework">Framework</string>
+    <string name="diag_framework_detecting">Erkennung…</string>
+    <string name="diag_label_compatibility">Zielkompatibilität</string>
+    <string name="diag_status_supported">Unterstützt</string>
+    <string name="diag_status_review_required">Überprüfung erforderlich</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">Erlaubt</string>
+    <string name="diag_root_not_allowed">Nicht erlaubt</string>
+    <string name="diag_disclaimer">Lokal auf diesem Gerät überprüft. Keine Diagnosedaten werden hochgeladen.</string>
+    <string name="tasker_integration_box_title">Tasker &amp; Automations-Integrationen</string>
+    <string name="tasker_integration_box_desc">Automatisieren Sie WhatsApp-Funktionen, automatische Antworten und Nachrichtenprotokollierung mit Broadcast-Intents in Tasker, MacroDroid oder Automate.</string>
+    <string name="tasker_view_setup_guide">Einrichtungsanleitung ansehen →</string>
+    <string name="tasker_execution_history">Ausführungsverlauf</string>
+    <string name="call_recording_config_title">Anrufaufzeichnung-Konfiguration</string>
+    <string name="call_recording_config_desc">Root-Direkt-Audiopipeline, Formate &amp; Bitrate konfigurieren</string>
+    <string name="requires_pro_label">Erfordert Pro</string>
+    <string name="subtab_automation">Automatisierung</string>
+    <string name="subtab_audio_ai">Audio &amp; KI</string>
 </resources>

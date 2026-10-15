@@ -269,7 +269,7 @@ fun MainDashboardScreen(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Changelog",
+                                text = stringResource(R.string.title_changelog),
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 11.sp
@@ -493,7 +493,11 @@ fun MainDashboardScreen(
                                                     modifier = Modifier.size(14.dp)
                                                 )
                                                 Text(
-                                                    text = "Injected Hooks ($activeCount/$totalCount Active)",
+                                                    text = stringResource(
+                                                        R.string.injected_hooks_active_count,
+                                                        activeCount,
+                                                        totalCount
+                                                    ),
                                                     style = typography.labelSm,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = colors.onSurface,
@@ -505,7 +509,7 @@ fun MainDashboardScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Text(
-                                                    text = "View all",
+                                                    text = stringResource(R.string.view_all),
                                                     style = typography.labelSm,
                                                     color = colors.primary,
                                                     fontSize = 11.sp,
@@ -677,13 +681,13 @@ fun MainDashboardScreen(
                             )
                         }
                         Text(
-                            text = "Customization",
+                            text = stringResource(R.string.customization_coming_soon_title),
                             style = typography.headlineMd,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
                         )
                         Text(
-                            text = "Customization settings coming soon",
+                            text = stringResource(R.string.customization_coming_soon_desc),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -699,7 +703,7 @@ fun MainDashboardScreen(
                                 .fillMaxWidth()
                                 .height(48.dp)
                         ) {
-                            Text(text = "OK", style = typography.bodyMd, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.action_ok), style = typography.bodyMd, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -748,13 +752,13 @@ private fun DashboardDiagnosticsCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "System diagnostics",
+                        text = stringResource(R.string.system_diagnostics_title),
                         style = typography.titleMd,
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurface
                     )
                     Text(
-                        text = "Live health overview",
+                        text = stringResource(R.string.live_health_overview),
                         style = typography.bodySm,
                         color = colors.onSurfaceVariant
                     )
@@ -765,7 +769,7 @@ private fun DashboardDiagnosticsCard(
                 ) {
                     Icon(
                         imageVector = WaexIcons.Refresh,
-                        contentDescription = "Refresh diagnostics",
+                        contentDescription = stringResource(R.string.system_diagnostics_title),
                         tint = colors.onSurfaceVariant,
                         modifier = Modifier.size(19.dp)
                     )
@@ -775,24 +779,24 @@ private fun DashboardDiagnosticsCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             DashboardDiagnosticRow(
-                label = "Module",
+                label = stringResource(R.string.diag_label_module),
                 value = when (diagnostics?.moduleActive) {
-                    true -> "Active"
-                    false -> "Inactive"
-                    null -> "Checking…"
+                    true -> stringResource(R.string.diag_status_active)
+                    false -> stringResource(R.string.diag_status_inactive)
+                    null -> stringResource(R.string.diag_status_checking)
                 },
                 healthy = diagnostics?.moduleActive
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
-                label = "Framework",
-                value = diagnostics?.framework?.name ?: "Detecting…",
+                label = stringResource(R.string.diag_label_framework),
+                value = diagnostics?.framework?.name ?: stringResource(R.string.diag_framework_detecting),
                 healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
-                label = "Target compatibility",
-                value = if (hasUnsupportedTarget) "Review required" else "Supported",
+                label = stringResource(R.string.diag_label_compatibility),
+                value = if (hasUnsupportedTarget) stringResource(R.string.diag_status_review_required) else stringResource(R.string.diag_status_supported),
                 healthy = !hasUnsupportedTarget
             )
 
@@ -803,25 +807,25 @@ private fun DashboardDiagnosticsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DiagnosticMetric(
-                    label = "Android",
+                    label = stringResource(R.string.diag_label_android),
                     value = diagnostics?.let { "API ${it.sdk}" } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
-                    label = "SELinux",
+                    label = stringResource(R.string.diag_label_selinux),
                     value = diagnostics?.selinux ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
-                    label = "Root",
-                    value = diagnostics?.let { if (it.rootAllowed) "Allowed" else "Not allowed" } ?: "—",
+                    label = stringResource(R.string.diag_label_root),
+                    value = diagnostics?.let { if (it.rootAllowed) stringResource(R.string.diag_root_allowed) else stringResource(R.string.diag_root_not_allowed) } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Checked locally on this device. No diagnostic data is uploaded.",
+                text = stringResource(R.string.diag_disclaimer),
                 style = typography.labelSm,
                 color = colors.onSurfaceVariant
             )
@@ -839,7 +843,7 @@ private fun DashboardDiagnosticsCard(
                 )
             ) {
                 Text(
-                    text = "View diagnostic details",
+                    text = stringResource(R.string.view_diagnostic_details),
                     style = typography.bodyMd,
                     fontWeight = FontWeight.Bold
                 )
@@ -861,7 +865,7 @@ private fun DashboardDiagnosticsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Supported versions catalog",
+                    text = stringResource(R.string.supported_versions_catalog),
                     style = typography.bodyMd,
                     color = colors.primary,
                     fontWeight = FontWeight.Medium,

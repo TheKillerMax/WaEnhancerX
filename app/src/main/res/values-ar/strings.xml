@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">إزالة زر «عرض المزيد»</string><string name="feat_removeseemore_desc">يعرض الرسائل الطويلة كاملة ويزيل «عرض المزيد».</string>
     <string name="sec_security_vault">الأمان والخزنة</string><string name="sec_chat_navigation_shortcuts">تنقل الدردشات والاختصارات</string>
     <string name="catalog_tab_privacy">الخصوصية</string><string name="catalog_tab_conversation">الدردشات</string><string name="catalog_tab_media">الوسائط</string><string name="catalog_tab_automation">الأتمتة</string><string name="catalog_tab_styles">الأنماط</string><string name="catalog_tab_settings">الإعدادات</string><string name="catalog_tab_premium">المميز</string>
+    <string name="injected_hooks_active_count">الخطافات المحقونة (%1\$d/%2\$d نشط)</string>
+    <string name="diag_label_module">الوحدة</string>
+    <string name="diag_status_active">نشط</string>
+    <string name="diag_status_inactive">غير نشط</string>
+    <string name="diag_status_checking">جارٍ التحقق…</string>
+    <string name="diag_label_framework">إطار العمل</string>
+    <string name="diag_framework_detecting">جارٍ الكشف…</string>
+    <string name="diag_label_compatibility">توافق الهدف</string>
+    <string name="diag_status_supported">مدعوم</string>
+    <string name="diag_status_review_required">مراجعة مطلوبة</string>
+    <string name="diag_label_android">أندرويد</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">روت</string>
+    <string name="diag_root_allowed">مسموح</string>
+    <string name="diag_root_not_allowed">غير مسموح</string>
+    <string name="diag_disclaimer">تم الفحص محلياً على هذا الجهاز. لا يتم تحميل أي بيانات تشخيصية.</string>
+    <string name="tasker_integration_box_title">تكامل تاسكر والأتمتة</string>
+    <string name="tasker_integration_box_desc">أتمتة ميزات WhatsApp والردود التلقائية وتسجيل الرسائل باستخدام بث النوايا في Tasker أو MacroDroid أو Automate.</string>
+    <string name="tasker_view_setup_guide">عرض دليل الإعداد ←</string>
+    <string name="tasker_execution_history">سجل التنفيذ</string>
+    <string name="call_recording_config_title">إعدادات تسجيل المكالمات</string>
+    <string name="call_recording_config_desc">تكوين مسار الصوت المباشر للجذر والتنسيقات ومعدل البت</string>
+    <string name="requires_pro_label">يتطلب برو</string>
+    <string name="subtab_automation">الأتمتة</string>
+    <string name="subtab_audio_ai">الصوت والذكاء الاصطناعي</string>
 </resources>

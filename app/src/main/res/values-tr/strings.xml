@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">“Daha fazla gör” düğmesini kaldır</string><string name="feat_removeseemore_desc">Uzun mesajları tamamen gösterir ve “Daha fazla gör” seçeneğini kaldırır.</string>
     <string name="sec_security_vault">Güvenlik ve kasa</string><string name="sec_chat_navigation_shortcuts">Sohbet gezintisi ve kısayollar</string>
     <string name="catalog_tab_privacy">Gizlilik</string><string name="catalog_tab_conversation">Sohbet</string><string name="catalog_tab_media">Medya</string><string name="catalog_tab_automation">Otomasyon</string><string name="catalog_tab_styles">Stiller</string><string name="catalog_tab_settings">Ayarlar</string><string name="catalog_tab_premium">Premium</string>
+    <string name="injected_hooks_active_count">Enjekte Edilen Kancalar (%1\$d/%2\$d Aktif)</string>
+    <string name="diag_label_module">Modül</string>
+    <string name="diag_status_active">Aktif</string>
+    <string name="diag_status_inactive">Devre Dışı</string>
+    <string name="diag_status_checking">Kontrol ediliyor…</string>
+    <string name="diag_label_framework">Çerçeve</string>
+    <string name="diag_framework_detecting">Algılanıyor…</string>
+    <string name="diag_label_compatibility">Hedef Uyumluluğu</string>
+    <string name="diag_status_supported">Destekleniyor</string>
+    <string name="diag_status_review_required">İnceleme Gerekli</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">İzin Verildi</string>
+    <string name="diag_root_not_allowed">İzin Verilmedi</string>
+    <string name="diag_disclaimer">Bu cihazda yerel olarak kontrol edildi. Hiçbir tanılama verisi yüklenmez.</string>
+    <string name="tasker_integration_box_title">Tasker ve Otomasyon Entegrasyonları</string>
+    <string name="tasker_integration_box_desc">Tasker, MacroDroid veya Automate\'teki yayın amaçlarını (broadcast intents) kullanarak WhatsApp özelliklerini, otomatik yanıtları ve mesaj günlüğünü otomatikleştirin.</string>
+    <string name="tasker_view_setup_guide">Kurulum Kılavuzunu Görüntüle →</string>
+    <string name="tasker_execution_history">Çalıştırma Geçmişi</string>
+    <string name="call_recording_config_title">Arama Kaydı Yapılandırması</string>
+    <string name="call_recording_config_desc">Root doğrudan ses ardışık düzenini, biçimleri ve bit hızını yapılandırın</string>
+    <string name="requires_pro_label">Pro Gerektirir</string>
+    <string name="subtab_automation">Otomasyon</string>
+    <string name="subtab_audio_ai">Ses ve Yapay Zeka</string>
 </resources>

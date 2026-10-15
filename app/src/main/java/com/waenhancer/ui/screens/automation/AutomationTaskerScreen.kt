@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.automation
 
+import com.waenhancer.app.R
+import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.foundation.background
@@ -189,7 +191,7 @@ fun AutomationTaskerScreen() {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    listOf("automation" to "Automation", "ai" to "Audio & AI").forEach { (tabId, label) ->
+                    listOf("automation" to stringResource(R.string.subtab_automation), "ai" to stringResource(R.string.subtab_audio_ai)).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -301,8 +303,9 @@ fun AutomationTaskerScreen() {
                                         fontWeight = FontWeight.Bold,
                                         color = colors.onSurface
                                     )
+                                    val reqProText = stringResource(R.string.requires_pro_label)
                                     Text(
-                                        text = if (isLocked) "$locDesc • Requires Pro" else locDesc,
+                                        text = if (isLocked) "$locDesc • $reqProText" else locDesc,
                                         style = typography.bodyMd,
                                         color = colors.onSurfaceVariant,
                                         fontSize = 12.sp
@@ -339,13 +342,13 @@ fun AutomationTaskerScreen() {
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Tasker & Automation Integrations",
+                            text = stringResource(R.string.tasker_integration_box_title),
                             style = typography.bodyLg,
                             fontWeight = FontWeight.Bold,
                             color = colors.primary
                         )
                         Text(
-                            text = "Automate WhatsApp features, auto-replies, and message logging using Broadcast intents in Tasker, MacroDroid, or Automate.",
+                            text = stringResource(R.string.tasker_integration_box_desc),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             fontSize = 12.sp
@@ -367,7 +370,7 @@ fun AutomationTaskerScreen() {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "View Setup Guide →",
+                                    text = stringResource(R.string.tasker_view_setup_guide),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary
@@ -384,7 +387,7 @@ fun AutomationTaskerScreen() {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Execution History",
+                                    text = stringResource(R.string.tasker_execution_history),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface

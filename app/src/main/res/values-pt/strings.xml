@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">Remover botão «Ver mais»</string><string name="feat_removeseemore_desc">Mostra mensagens longas por completo e remove «Ver mais».</string>
     <string name="sec_security_vault">Segurança e cofre</string><string name="sec_chat_navigation_shortcuts">Navegação e atalhos da conversa</string>
     <string name="catalog_tab_privacy">Privacidade</string><string name="catalog_tab_conversation">Conversas</string><string name="catalog_tab_media">Multimédia</string><string name="catalog_tab_automation">Automação</string><string name="catalog_tab_styles">Estilos</string><string name="catalog_tab_settings">Definições</string><string name="catalog_tab_premium">Premium</string>
+    <string name="injected_hooks_active_count">Hooks injetados (%1\$d/%2\$d ativos)</string>
+    <string name="diag_label_module">Módulo</string>
+    <string name="diag_status_active">Ativo</string>
+    <string name="diag_status_inactive">Inativo</string>
+    <string name="diag_status_checking">Verificando…</string>
+    <string name="diag_label_framework">Framework</string>
+    <string name="diag_framework_detecting">Detectando…</string>
+    <string name="diag_label_compatibility">Compatibilidade do alvo</string>
+    <string name="diag_status_supported">Suportado</string>
+    <string name="diag_status_review_required">Revisão necessária</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">Permitido</string>
+    <string name="diag_root_not_allowed">Não permitido</string>
+    <string name="diag_disclaimer">Verificado localmente neste dispositivo. Nenhum dado de diagnóstico é enviado.</string>
+    <string name="tasker_integration_box_title">Integrações do Tasker e Automação</string>
+    <string name="tasker_integration_box_desc">Automatize recursos do WhatsApp, respostas automáticas e registro de mensagens usando intenções de transmissão no Tasker, MacroDroid ou Automate.</string>
+    <string name="tasker_view_setup_guide">Ver guia de configuração →</string>
+    <string name="tasker_execution_history">Histórico de execução</string>
+    <string name="call_recording_config_title">Configuração de gravação de chamadas</string>
+    <string name="call_recording_config_desc">Configurar pipeline de áudio direto root, formatos e taxa de bits</string>
+    <string name="requires_pro_label">Requer Pro</string>
+    <string name="subtab_automation">Automação</string>
+    <string name="subtab_audio_ai">Áudio e IA</string>
 </resources>

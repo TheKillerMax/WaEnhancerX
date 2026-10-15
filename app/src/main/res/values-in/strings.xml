@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">Hapus tombol “Lihat lainnya”</string><string name="feat_removeseemore_desc">Menampilkan pesan panjang sepenuhnya dan menghapus “Lihat lainnya”.</string>
     <string name="sec_security_vault">Keamanan &amp; brankas</string><string name="sec_chat_navigation_shortcuts">Navigasi &amp; pintasan chat</string>
     <string name="catalog_tab_privacy">Privasi</string><string name="catalog_tab_conversation">Percakapan</string><string name="catalog_tab_media">Media</string><string name="catalog_tab_automation">Otomatisasi</string><string name="catalog_tab_styles">Gaya</string><string name="catalog_tab_settings">Setelan</string><string name="catalog_tab_premium">Premium</string>
+    <string name="injected_hooks_active_count">Hook Disuntikkan (%1\$d/%2\$d Aktif)</string>
+    <string name="diag_label_module">Modul</string>
+    <string name="diag_status_active">Aktif</string>
+    <string name="diag_status_inactive">Tidak Aktif</string>
+    <string name="diag_status_checking">Memeriksa…</string>
+    <string name="diag_label_framework">Kerangka Kerja</string>
+    <string name="diag_framework_detecting">Mendeteksi…</string>
+    <string name="diag_label_compatibility">Kompatibilitas Target</string>
+    <string name="diag_status_supported">Didukung</string>
+    <string name="diag_status_review_required">Perlu Ditinjau</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">Diizinkan</string>
+    <string name="diag_root_not_allowed">Tidak Diizinkan</string>
+    <string name="diag_disclaimer">Diperiksa secara lokal di perangkat ini. Tidak ada data diagnostik yang diunggah.</string>
+    <string name="tasker_integration_box_title">Integrasi Tasker &amp; Otomatisasi</string>
+    <string name="tasker_integration_box_desc">Otomatiskan fitur WhatsApp, balasan otomatis, dan pencatatan pesan menggunakan broadcast intent di Tasker, MacroDroid, atau Automate.</string>
+    <string name="tasker_view_setup_guide">Lihat Panduan Penyiapan →</string>
+    <string name="tasker_execution_history">Riwayat Eksekusi</string>
+    <string name="call_recording_config_title">Konfigurasi Perekaman Panggilan</string>
+    <string name="call_recording_config_desc">Konfigurasikan jalur audio langsung root, format &amp; bitrate</string>
+    <string name="requires_pro_label">Memerlukan Pro</string>
+    <string name="subtab_automation">Otomatisasi</string>
+    <string name="subtab_audio_ai">Audio &amp; AI</string>
 </resources>

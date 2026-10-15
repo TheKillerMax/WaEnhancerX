@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">Убрать кнопку «Подробнее»</string><string name="feat_removeseemore_desc">Полностью показывает длинные сообщения и убирает «Подробнее».</string>
     <string name="sec_security_vault">Безопасность и хранилище</string><string name="sec_chat_navigation_shortcuts">Навигация и ярлыки чатов</string>
     <string name="catalog_tab_privacy">Конфиденциальность</string><string name="catalog_tab_conversation">Чаты</string><string name="catalog_tab_media">Медиа</string><string name="catalog_tab_automation">Автоматизация</string><string name="catalog_tab_styles">Стили</string><string name="catalog_tab_settings">Настройки</string><string name="catalog_tab_premium">Премиум</string>
+    <string name="injected_hooks_active_count">Внедренные хуки (%1\$d/%2\$d активны)</string>
+    <string name="diag_label_module">Модуль</string>
+    <string name="diag_status_active">Активен</string>
+    <string name="diag_status_inactive">Неактивен</string>
+    <string name="diag_status_checking">Проверка…</string>
+    <string name="diag_label_framework">Фреймворк</string>
+    <string name="diag_framework_detecting">Определение…</string>
+    <string name="diag_label_compatibility">Совместимость цели</string>
+    <string name="diag_status_supported">Поддерживается</string>
+    <string name="diag_status_review_required">Требуется проверка</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">Разрешен</string>
+    <string name="diag_root_not_allowed">Не разрешен</string>
+    <string name="diag_disclaimer">Проверено локально на этом устройстве. Диагностические данные не передаются.</string>
+    <string name="tasker_integration_box_title">Интеграция с Tasker и автоматизацией</string>
+    <string name="tasker_integration_box_desc">Автоматизируйте функции WhatsApp, автоответы и ведение журнала сообщений с помощью широковещательных интентов в Tasker, MacroDroid или Automate.</string>
+    <string name="tasker_view_setup_guide">Инструкция по настройке →</string>
+    <string name="tasker_execution_history">История выполнения</string>
+    <string name="call_recording_config_title">Настройка записи звонков</string>
+    <string name="call_recording_config_desc">Настройка прямого аудиоканала root, форматов и битрейта</string>
+    <string name="requires_pro_label">Требуется Pro</string>
+    <string name="subtab_automation">Автоматизация</string>
+    <string name="subtab_audio_ai">Аудио и ИИ</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.media
 
+import com.waenhancer.app.R
+import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.foundation.background
@@ -202,13 +204,13 @@ fun MediaStatusHubScreen() {
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Call Recording Configuration",
+                        text = stringResource(R.string.call_recording_config_title),
                         style = typography.bodyLg,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.onSurface
                     )
                     Text(
-                        text = "Configure root direct audio pipeline, formats & bitrate",
+                        text = stringResource(R.string.call_recording_config_desc),
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant
                     )

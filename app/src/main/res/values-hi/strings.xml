@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">“और देखें” बटन हटाएँ</string><string name="feat_removeseemore_desc">लंबे संदेश पूरे दिखाता है और “और देखें” हटाता है।</string>
     <string name="sec_security_vault">सुरक्षा और वॉल्ट</string><string name="sec_chat_navigation_shortcuts">चैट नेविगेशन और शॉर्टकट</string>
     <string name="catalog_tab_privacy">गोपनीयता</string><string name="catalog_tab_conversation">चैट</string><string name="catalog_tab_media">मीडिया</string><string name="catalog_tab_automation">स्वचालन</string><string name="catalog_tab_styles">शैलियाँ</string><string name="catalog_tab_settings">सेटिंग</string><string name="catalog_tab_premium">प्रीमियम</string>
+    <string name="injected_hooks_active_count">इंजेक्टेड हुक्स (%1\$d/%2\$d सक्रिय)</string>
+    <string name="diag_label_module">मॉड्यूल</string>
+    <string name="diag_status_active">सक्रिय</string>
+    <string name="diag_status_inactive">निष्क्रिय</string>
+    <string name="diag_status_checking">जाँच जारी है…</string>
+    <string name="diag_label_framework">फ़्रेमवर्क</string>
+    <string name="diag_framework_detecting">खोज जारी है…</string>
+    <string name="diag_label_compatibility">लक्ष्य अनुकूलता</string>
+    <string name="diag_status_supported">समर्थित</string>
+    <string name="diag_status_review_required">समीक्षा आवश्यक</string>
+    <string name="diag_label_android">एंड्रॉइड</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">रूट</string>
+    <string name="diag_root_allowed">अनुमति है</string>
+    <string name="diag_root_not_allowed">अनुमति नहीं है</string>
+    <string name="diag_disclaimer">इस डिवाइस पर स्थानीय रूप से जाँचा गया। कोई नैदानिक डेटा अपलोड नहीं किया जाता है।</string>
+    <string name="tasker_integration_box_title">टास्कर और ऑटोमेशन एकीकरण</string>
+    <string name="tasker_integration_box_desc">Tasker, MacroDroid, या Automate में ब्रॉडकास्ट इंटेंट का उपयोग करके व्हाट्सएप सुविधाओं, ऑटो-जवाब और मैसेज लॉगिंग को स्वचालित करें।</string>
+    <string name="tasker_view_setup_guide">सेटअप गाइड देखें →</string>
+    <string name="tasker_execution_history">निष्पादन इतिहास</string>
+    <string name="call_recording_config_title">कॉल रिकॉर्डिंग कॉन्फ़िगरेशन</string>
+    <string name="call_recording_config_desc">रूट डायरेक्ट ऑडियो पाइपलाइन, प्रारूप और बिटरेट कॉन्फ़िगर करें</string>
+    <string name="requires_pro_label">प्रो आवश्यक है</string>
+    <string name="subtab_automation">ऑटोमेशन</string>
+    <string name="subtab_audio_ai">ऑडियो और एआई</string>
 </resources>

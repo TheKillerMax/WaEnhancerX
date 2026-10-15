@@ -296,4 +296,29 @@
     <string name="feat_removeseemore_title">Quitar el botón «Ver más»</string><string name="feat_removeseemore_desc">Muestra completos los mensajes largos y elimina «Ver más».</string>
     <string name="sec_security_vault">Seguridad y bóveda</string><string name="sec_chat_navigation_shortcuts">Navegación y accesos directos del chat</string>
     <string name="catalog_tab_privacy">Privacidad</string><string name="catalog_tab_conversation">Conversación</string><string name="catalog_tab_media">Multimedia</string><string name="catalog_tab_automation">Automatización</string><string name="catalog_tab_styles">Estilos</string><string name="catalog_tab_settings">Ajustes</string><string name="catalog_tab_premium">Premium</string>
+    <string name="injected_hooks_active_count">Hooks inyectados (%1\$d/%2\$d activos)</string>
+    <string name="diag_label_module">Módulo</string>
+    <string name="diag_status_active">Activo</string>
+    <string name="diag_status_inactive">Inactivo</string>
+    <string name="diag_status_checking">Comprobando…</string>
+    <string name="diag_label_framework">Framework</string>
+    <string name="diag_framework_detecting">Detectando…</string>
+    <string name="diag_label_compatibility">Compatibilidad de destino</string>
+    <string name="diag_status_supported">Compatible</string>
+    <string name="diag_status_review_required">Revisión requerida</string>
+    <string name="diag_label_android">Android</string>
+    <string name="diag_label_selinux">SELinux</string>
+    <string name="diag_label_root">Root</string>
+    <string name="diag_root_allowed">Permitido</string>
+    <string name="diag_root_not_allowed">No permitido</string>
+    <string name="diag_disclaimer">Comprobado localmente en este dispositivo. No se suben datos de diagnóstico.</string>
+    <string name="tasker_integration_box_title">Integraciones de Tasker y Automatización</string>
+    <string name="tasker_integration_box_desc">Automatiza funciones de WhatsApp, respuestas automáticas y registro de mensajes mediante intents de difusión en Tasker, MacroDroid o Automate.</string>
+    <string name="tasker_view_setup_guide">Ver guía de configuración →</string>
+    <string name="tasker_execution_history">Historial de ejecución</string>
+    <string name="call_recording_config_title">Configuración de grabación de llamadas</string>
+    <string name="call_recording_config_desc">Configura la canalización de audio directa raíz, formatos y tasa de bits</string>
+    <string name="requires_pro_label">Requiere Pro</string>
+    <string name="subtab_automation">Automatización</string>
+    <string name="subtab_audio_ai">Audio e IA</string>
 </resources>
