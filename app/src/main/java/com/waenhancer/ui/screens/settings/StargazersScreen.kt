@@ -3,6 +3,11 @@ package com.waenhancer.ui.screens.settings
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
@@ -266,63 +271,69 @@ fun StargazersScreen() {
             }
 
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(
-                    shape = radius.bentoCardShape,
-                    color = colors.surfaceContainerLow,
-                    border = BorderStroke(1.dp, colors.outlineVariant),
-                    modifier = Modifier.fillMaxWidth()
+                AnimatedVisibility(
+                    visible = !isSearchVisible,
+                    enter = fadeIn(tween(250)) + expandVertically(animationSpec = tween(250)),
+                    exit = fadeOut(tween(200)) + shrinkVertically(animationSpec = tween(250))
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Surface(
+                        shape = radius.bentoCardShape,
+                        color = colors.surfaceContainerLow,
+                        border = BorderStroke(1.dp, colors.outlineVariant),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = colors.primary.copy(alpha = 0.12f),
-                            modifier = Modifier.size(56.dp)
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = WaexIcons.Premium,
-                                    contentDescription = null,
-                                    tint = colors.primary,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                            Surface(
+                                shape = CircleShape,
+                                color = colors.primary.copy(alpha = 0.12f),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = WaexIcons.Premium,
+                                        contentDescription = null,
+                                        tint = colors.primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                             }
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        Text(
-                            text = stringResource(R.string.stargazers_thank_you),
-                            style = typography.headlineMd,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.onSurface,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.stargazers_message),
-                            style = typography.bodyMd,
-                            color = colors.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        if (stargazers.isNotEmpty()) {
                             Spacer(Modifier.height(14.dp))
                             Text(
-                                text = "${stargazers.size} supporters and counting",
-                                style = typography.bodyLg,
+                                text = stringResource(R.string.stargazers_thank_you),
+                                style = typography.headlineMd,
                                 fontWeight = FontWeight.Bold,
-                                color = colors.primary
+                                color = colors.onSurface,
+                                textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(8.dp))
                             Text(
-                                text = buildString {
-                                    append("Updates every $updateIntervalHours hours")
-                                    if (lastUpdated.isNotEmpty()) append(" | Last updated $lastUpdated")
-                                },
+                                text = stringResource(R.string.stargazers_message),
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             )
+                            if (stargazers.isNotEmpty()) {
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    text = "${stargazers.size} supporters and counting",
+                                    style = typography.bodyLg,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.primary
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = buildString {
+                                        append("Updates every $updateIntervalHours hours")
+                                        if (lastUpdated.isNotEmpty()) append(" | Last updated $lastUpdated")
+                                    },
+                                    style = typography.bodyMd,
+                                    color = colors.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
@@ -395,17 +406,24 @@ fun StargazersScreen() {
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "No matching supporters",
+                            text = "Couldn’t find you or your friend here?",
                             style = typography.bodyLg,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.onSurface
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Try a different GitHub username.",
+                            text = "Join our supporters and get your GitHub profile featured in this list.",
                             style = typography.bodyMd,
-                            color = colors.onSurfaceVariant
+                            color = colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { showSupportSheet = true }) {
+                            Text("🫵")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Become a supporter", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {
