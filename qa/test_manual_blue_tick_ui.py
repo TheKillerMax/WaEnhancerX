@@ -17,7 +17,8 @@ receipts = (src / "xposed/features/privacy/HideReceiptsHook.java").read_text()
 assert '"seentick", Type.STRING' in schema
 assert '"seen_tick_customization"' in ui
 assert 'preferenceManager.getString("seentick", "0")' in ui
-assert 'preferenceManager.putString("seentick",' in ui
+assert 'preferenceManager.putPublicString("seentick", nextPlacement)' in ui
+assert 'preferenceManager.putString("seentick",' not in ui
 assert 'preferenceManager.putBoolean("seen_tick_customization"' not in ui
 assert 'ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement)' in ui
 assert '"Manual Blue Tick Button"' in cat and '"Manual Blue Tick Button"' in ui

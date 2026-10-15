@@ -126,10 +126,13 @@ fun StylesSettingsScreen() {
         if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
         if (key == "seen_tick_customization") {
             val currentPlacement = preferenceManager.getString("seentick", "0")
-            preferenceManager.putString("seentick",
-                ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement))
-            settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(
-                preferenceManager.getString("seentick", "0"))
+            val nextPlacement = ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement)
+            if (preferenceManager.putPublicString("seentick", nextPlacement)) {
+                settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(nextPlacement)
+            } else {
+                // A failed commit can already have changed memory. Keep the last confirmed UI state.
+                Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            }
             return@update
         }
         val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)

@@ -110,6 +110,25 @@ public final class WaexPreferenceManager {
         }
     }
 
+    public boolean putPublicString(String key, String value) {
+        if (value == null || !isPublicType(key, PreferenceSchema.Type.STRING)) return false;
+        try {
+            if (!PreferenceStores.publicStore(context).edit().putString(key, value).commit()) {
+                return false;
+            }
+            notifyChange();
+            return true;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isPublicType(String key, PreferenceSchema.Type type) {
+        if (key == null || key.isEmpty()) return false;
+        PreferenceSchema.Entry entry = PreferenceSchema.entry(key);
+        return entry != null && entry.type == type && entry.store == PreferenceSchema.Store.PUBLIC;
+    }
+
     public java.util.Set<String> getStringSet(String key, java.util.Set<String> defaultValue) {
         try {
             java.util.Set<String> value = getStore(key).getStringSet(key, defaultValue);
