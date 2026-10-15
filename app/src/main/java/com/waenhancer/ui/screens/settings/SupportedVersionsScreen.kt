@@ -13,27 +13,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -60,6 +66,7 @@ import com.waenhancer.utils.UniversalVersionValidator
  * Dynamically displays all installed WhatsApp targets and allows 1-tap app selection
  * to add universal wildcard version rules without manual typing.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupportedVersionsScreen() {
     val context = LocalContext.current
@@ -357,27 +364,37 @@ fun SupportedVersionsScreen() {
         }
     }
 
-    // App Selection Dialog for Adding Version Rule
+    // App Selection Sheet for Adding Version Rule
     if (showSelectAppDialog) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showSelectAppDialog = false },
-            title = {
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = colors.surface,
+            shape = radius.bottomSheetShape
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
                     text = "Select Unsupported App",
                     style = typography.headlineMd,
                     color = colors.onSurface,
                     fontWeight = FontWeight.Bold
                 )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Select an installed app to automatically generate and register its universal version rule:",
-                        style = typography.labelSm,
-                        color = colors.onSurfaceVariant
-                    )
+                Text(
+                    text = "Select an installed app to automatically generate and register its universal version rule:",
+                    style = typography.labelSm,
+                    color = colors.onSurfaceVariant
+                )
 
-                    unsupportedApps.forEach { app ->
+                unsupportedApps.forEach { app ->
                         val cleanVer = app.versionName.removePrefix("v")
                         val wildcard = UniversalVersionValidator.toWildcard(cleanVer)
                         Surface(
@@ -431,15 +448,17 @@ fun SupportedVersionsScreen() {
                                 }
                             }
                         }
-                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSelectAppDialog = false }) {
-                    Text("Cancel", color = colors.primary)
+
+                OutlinedButton(
+                    onClick = { showSelectAppDialog = false },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = radius.buttonShape
+                ) {
+                    Text("Cancel")
                 }
             }
-        )
+        }
     }
 }
 

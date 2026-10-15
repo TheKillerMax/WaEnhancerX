@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.license
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +20,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.components.WaexCard
+import com.waenhancer.ui.components.WaexConfirmationBottomSheet
 import com.waenhancer.ui.components.WaexInfoBanner
 import com.waenhancer.ui.components.WaexSectionHeader
 import com.waenhancer.ui.components.WaexTopBar
@@ -84,6 +88,9 @@ fun LicenseActivationScreen() {
     var licenseKeyInput by remember { mutableStateOf("") }
     var isVerifying by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var showRemoveLicenseDialog by remember { mutableStateOf(false) }
+    var isRemovingLicense by remember { mutableStateOf(false) }
+    var removeLicenseError by remember { mutableStateOf("") }
 
     val fallbackPlans = remember {
         listOf(
@@ -196,6 +203,65 @@ fun LicenseActivationScreen() {
     val linkedDevicesCount = remember(proStatus) { prefs.getInt("linked_devices_count", 1) }
     val deviceLimit = remember(proStatus) { prefs.getInt("device_limit", 2) }
 
+    if (showRemoveLicenseDialog) {
+        WaexConfirmationBottomSheet(
+            title = "Remove License?",
+            message = "This will unlink this device, remove the saved license, and return WAEX to the Free tier.",
+            confirmLabel = "Remove License",
+            destructive = true,
+            confirmEnabled = !isRemovingLicense,
+            onDismiss = {
+                if (!isRemovingLicense) {
+                    showRemoveLicenseDialog = false
+                    removeLicenseError = ""
+                }
+            },
+            onConfirm = {
+                isRemovingLicense = true
+                removeLicenseError = ""
+                LicenseManager.unlinkDevice(
+                    context,
+                    object : LicenseManager.UnlinkCallback {
+                        override fun onSuccess() {
+                            isRemovingLicense = false
+                            showRemoveLicenseDialog = false
+                            proStatus = LicenseManager.getProStatus(context)
+                            planName = LicenseManager.getProPlanName(context)
+                            Toast.makeText(context, "License removed from this device.", Toast.LENGTH_LONG).show()
+                        }
+
+                        override fun onError(msg: String?) {
+                            isRemovingLicense = false
+                            removeLicenseError = msg ?: "Unable to remove the license. Please try again."
+                        }
+                    }
+                )
+            },
+            supportingContent = {
+                if (removeLicenseError.isNotEmpty()) {
+                    Text(
+                        text = removeLicenseError,
+                        style = typography.labelSm,
+                        color = colors.error
+                    )
+                }
+            },
+            confirmContent = {
+                if (isRemovingLicense) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Removing…")
+                } else {
+                    Text("Remove License", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             WaexTopBar(
@@ -295,6 +361,27 @@ fun LicenseActivationScreen() {
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        removeLicenseError = ""
+                        showRemoveLicenseDialog = true
+                    },
+                    shape = radius.buttonShape,
+                    border = BorderStroke(1.dp, Color(0xFFF44336)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Clear,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Remove License", fontWeight = FontWeight.SemiBold)
                 }
 
             } else {

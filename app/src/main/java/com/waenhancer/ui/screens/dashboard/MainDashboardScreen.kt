@@ -37,7 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,6 +74,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.waenhancer.config.PreferenceStores
+import com.waenhancer.ui.components.WaexConfirmationBottomSheet
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
@@ -616,51 +616,26 @@ fun MainDashboardScreen(
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        // Reset Settings Confirmation Dialog
+        // Reset Settings Confirmation Sheet
         if (showResetSettingsDialog) {
-            AlertDialog(
-                onDismissRequest = { showResetSettingsDialog = false },
-                title = {
-                    Text(
-                        text = "Reset All Settings",
-                        style = typography.headlineMd
-                    )
-                },
-                text = {
-                    Text(
-                        text = "Are you sure you want to reset all module settings to their default values? All customizations and preferences will be cleared.",
-                        style = typography.bodyMd,
-                        color = colors.onSurfaceVariant
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val savedTheme = preferenceManager.getString("app_theme_mode", "System")
-                            val publicStore = PreferenceStores.publicStore(context)
-                            publicStore.edit().clear().commit()
-                            if (savedTheme != null) {
-                                preferenceManager.putString("app_theme_mode", savedTheme)
-                            }
-                            preferenceManager.remove("dummy_notify")
-                            refreshTrigger++
-                            showResetSettingsDialog = false
-                            Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Text(
-                            text = "Reset",
-                            color = colors.error,
-                            fontWeight = FontWeight.Bold
-                        )
+            WaexConfirmationBottomSheet(
+                title = "Reset All Settings",
+                message = "Are you sure you want to reset all module settings to their default values? All customizations and preferences will be cleared.",
+                confirmLabel = "Reset Settings",
+                destructive = true,
+                onDismiss = { showResetSettingsDialog = false },
+                onConfirm = {
+                    val savedTheme = preferenceManager.getString("app_theme_mode", "System")
+                    val publicStore = PreferenceStores.publicStore(context)
+                    publicStore.edit().clear().commit()
+                    if (savedTheme != null) {
+                        preferenceManager.putString("app_theme_mode", savedTheme)
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetSettingsDialog = false }) {
-                        Text("Cancel")
-                    }
-                },
-                containerColor = colors.surface
+                    preferenceManager.remove("dummy_notify")
+                    refreshTrigger++
+                    showResetSettingsDialog = false
+                    Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
+                }
             )
         }
 

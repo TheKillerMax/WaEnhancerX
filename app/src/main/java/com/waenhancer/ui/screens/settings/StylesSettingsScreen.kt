@@ -514,6 +514,7 @@ private fun TypedStyleEditorDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TextValueEditorDialog(
     title: String,
@@ -528,26 +529,53 @@ private fun TextValueEditorDialog(
 ) {
     var value by remember(title, initialValue) { mutableStateOf(initialValue) }
     val valid = validator(value.trim())
-    AlertDialog(
+    val colors = WaexTheme.colors
+    val radius = WaexTheme.radius
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(description, style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
-                    singleLine = singleLine,
-                    placeholder = { Text(placeholder) },
-                    isError = !valid,
-                    supportingText = if (!valid) ({ Text(errorMessage) }) else null
-                )
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
+                singleLine = singleLine,
+                placeholder = { Text(placeholder) },
+                isError = !valid,
+                supportingText = if (!valid) ({ Text(errorMessage) }) else null
+            )
+            Button(
+                onClick = { onSave(value) },
+                enabled = valid,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.buttonShape
+            ) {
+                Text("Save", fontWeight = FontWeight.Bold)
             }
-        },
-        confirmButton = { TextButton(onClick = { onSave(value) }, enabled = valid) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.buttonShape
+            ) {
+                Text("Cancel")
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
