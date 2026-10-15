@@ -1,0 +1,66 @@
+name: V18 reviewed manual save and presence validation
+on:
+  push:
+    branches: ['test/manual-presence-validation-v18-2026-10-14']
+    paths: ['qa/v18_payload.part1.b64', 'qa/v18_payload.part2.b64', 'qa/v18_prepare.py', '.github/workflows/v18-reviewed-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require compilers and reconstruct the hash-pinned public source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          javac -version
+          kotlinc -version
+          mvn -version
+          python3 -m py_compile qa/v18_prepare.py
+          python3 - <<'PY'
+          from pathlib import Path
+          text=''.join(''.join(Path('qa/v18_payload.part'+str(n)+'.b64').read_text().split()) for n in (1,2))
+          assert len(text)==25856
+          Path('qa/v18_payload.gz.b64').write_text(text)
+          PY
+      - name: Validate independent PRs and the exact combined source without private modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import runpy, subprocess
+          try:
+              runpy.run_path('qa/v18_prepare.py', run_name='__main__')
+          except subprocess.CalledProcessError as error:
+              print(error.stdout or '')
+              print(error.stderr or '')
+              raise
+          PY
+      - name: Preserve verified commit objects on the staging ref only
+        shell: bash
+        env:
+          V18_STAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 qa/v18_prepare.py preserve
+      - name: Preserve text-only evidence without APKs, dependencies or private sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v18-reviewed-validation
+          path: ${{ runner.temp }}/waex-v18-evidence
+          retention-days: 14
+          if-no-files-found: warn
