@@ -9,6 +9,7 @@
 - Fixed Custom Theme
 - Fixed Custom DPI
 - Fixed Hide Archived Chats
+- Fixed Hide Locked Chats
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
@@ -19,4 +20,4 @@
 - Rootless setups such as LSPatch or Shizuku are not supported. They may behave unpredictably and increase the risk of WhatsApp or WhatsApp Business account restrictions, so please do not use them with WAEnhancerX.
 
 [Community contribution]
-- Thanks to @TheKillerMax for contributions through PRs
+- Thanks to @TheKillerMax for contributions in this update
