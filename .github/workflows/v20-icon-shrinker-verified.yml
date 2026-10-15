@@ -1,0 +1,54 @@
+name: V20 verified dynamic icon shrinker regression
+on:
+  push:
+    branches: ['test/apk-startup-audit-v20-2026-10-15']
+    paths: ['.github/workflows/v20-icon-shrinker-verified.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  resource-fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 352943f608bca4d69c4009e365eb6a1bb9b645f0
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate the exact branch and build both optimized fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_dynamic_menu_resources.py
+          python3 qa/verify_dynamic_icon_shrinking.py --out "$RUNNER_TEMP/v20-icon-verified"
+      - name: Check public release code identity without copying APKs into artifacts
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import io,hashlib,json,os,re,urllib.request,zipfile
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'v20-icon-verified/evidence';out.mkdir(parents=True,exist_ok=True)
+          url='https://github.com/WaEnhancerX/WaEnhancerX/releases/download/2.0.3/WaEnhancerX-v2.0.3_release.apk'
+          with urllib.request.urlopen(url,timeout=60) as r:data=r.read()
+          digest=hashlib.sha256(data).hexdigest()
+          if digest!='f19d64239b493785b48540dce068a32a295f33bd33b18e48b46d168896c4ac0f':raise ValueError('Release asset changed')
+          result={'apk_sha256':digest,'dex':{}}
+          with zipfile.ZipFile(io.BytesIO(data)) as archive:
+              for n in archive.namelist():
+                  if re.fullmatch(r'classes(?:[0-9]+)?\.dex',n):
+                      dex=archive.read(n);result['dex'][n]={'sha256':hashlib.sha256(dex).hexdigest(),'r8_map_ids':sorted(set(m.decode() for m in re.findall(rb'r8-map-id-([0-9a-f]{64})',dex)))}
+          (out/'republished-code-identity.json').write_text(json.dumps(result,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v20-icon-verified
+          path: ${{ runner.temp }}/v20-icon-verified/evidence
+          retention-days: 7
+          if-no-files-found: error
