@@ -1,0 +1,87 @@
+name: V20 published APK resource and issue audit
+on:
+  push:
+    branches: ['test/apk-startup-audit-v20-2026-10-15']
+    paths: ['.github/workflows/v20-apk-input-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Inspect hash-pinned public releases and all issue pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,shutil,subprocess,urllib.request,zipfile
+          out=Path(os.environ['RUNNER_TEMP'])/'v20-audit';out.mkdir()
+          tools=out/'tools';tools.mkdir()
+          tmp=Path(os.environ['RUNNER_TEMP'])/'v20-public-apks';tmp.mkdir()
+          sdk=Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0'
+          aapt=sdk/'aapt2';signer=sdk/'apksigner'
+          if not aapt.is_file() or not signer.is_file():raise RuntimeError('Build tools 36.0.0 required')
+          shutil.copy2(aapt,tools/'aapt2')
+          def get(url):
+              headers={'User-Agent':'WaEnhancerX-read-only-audit'}
+              if url.startswith('https://api.github.com/'):
+                  headers['Authorization']='Bearer '+os.environ['GH_TOKEN']
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=60) as r:return r.read()
+          def api(path):return json.loads(get('https://api.github.com/repos/WaEnhancerX/WaEnhancerX/'+path))
+          def pages(path):
+              result=[]
+              for page in range(1,21):
+                  batch=api(path+('&' if '?' in path else '?')+'per_page=100&page='+str(page));result+=batch
+                  if len(batch)<100:return result
+              raise RuntimeError('Pagination limit reached')
+          issues=[i for i in pages('issues?state=all&sort=created&direction=desc') if 'pull_request' not in i]
+          for i in issues:i['all_comments']=pages('issues/'+str(i['number'])+'/comments')
+          (out/'issues.json').write_text(json.dumps(issues,indent=2))
+          (out/'pulls.json').write_text(json.dumps(pages('pulls?state=all'),indent=2))
+          for name,path in [('main','git/ref/heads/main'),('release','releases/latest')]:
+              (out/(name+'.json')).write_text(json.dumps(api(path),indent=2))
+          review='\n\n'.join('## #'+str(i['number'])+' ['+i['state']+'] '+i['title']+'\nCreated '+i['created_at']+'; updated '+i['updated_at']+'\n'+(i.get('body') or '')+'\n\n'+ '\n\n'.join(c['body'] for c in i['all_comments']) for i in issues)
+          (out/'issues-full.md').write_text(review)
+          versions={'debug':'c4531d92851c5f251614e8af822f340737981adeb7128341463f8897e3d42114','release':'f19d64239b493785b48540dce068a32a295f33bd33b18e48b46d168896c4ac0f'}
+          results=[]
+          for variant,expected in versions.items():
+              url='https://github.com/WaEnhancerX/WaEnhancerX/releases/download/2.0.3/WaEnhancerX-v2.0.3_'+variant+'.apk'
+              data=get(url);actual=hashlib.sha256(data).hexdigest()
+              if actual!=expected:raise RuntimeError('Public asset changed: '+variant+' '+actual)
+              apk=tmp/(variant+'.apk');apk.write_bytes(data)
+              folder=out/variant;folder.mkdir()
+              with zipfile.ZipFile(apk) as z:
+                  if z.testzip() is not None:raise RuntimeError('ZIP CRC failure')
+                  for entry in ['resources.arsc','AndroidManifest.xml','assets/preference_catalog.json']:
+                      (folder/Path(entry).name).write_bytes(z.read(entry))
+              for label,cmd in [('resources',[str(aapt),'dump','resources',str(apk)]),('badging',[str(aapt),'dump','badging',str(apk)]),('signatures',[str(signer),'verify','--verbose','--print-certs',str(apk)])]:
+                  p=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=120)
+                  (folder/(label+'.txt')).write_text(p.stdout)
+                  if p.returncode:raise RuntimeError(label+' failed for '+variant)
+              results.append({'variant':variant,'url':url,'bytes':len(data),'sha256':actual})
+          for name,url in [('apk-parser.jar','https://repo.maven.apache.org/maven2/net/dongliu/apk-parser/2.6.10/apk-parser-2.6.10.jar'),('dexlib2.jar','https://repo.maven.apache.org/maven2/org/smali/dexlib2/2.5.2/dexlib2-2.5.2.jar'),('guava.jar','https://repo.maven.apache.org/maven2/com/google/guava/guava/27.1-android/guava-27.1-android.jar'),('jsr305.jar','https://repo.maven.apache.org/maven2/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar')]:
+              (tools/name).write_bytes(get(url))
+          (out/'results.json').write_text(json.dumps(results,indent=2))
+          (out/'SHA256SUMS.json').write_text(json.dumps({str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file()},indent=2))
+          print('Verified public modules and collected',len(issues),'non-PR issues. No WhatsApp APK uploaded or executed.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v20-input-audit
+          path: ${{ runner.temp }}/v20-audit
+          retention-days: 7
+          if-no-files-found: error
