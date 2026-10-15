@@ -154,6 +154,18 @@ fun GlobalPrivacySettingsScreen(
         mutableStateOf(preferenceManager.getBoolean("archive_open_via_title_triple_tap", false))
     }
 
+    var lockedOpenViaMenu by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_menu", false))
+    }
+
+    var lockedOpenViaTitleLongPress by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_title_long_press", false))
+    }
+
+    var lockedOpenViaTitleTripleTap by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_title_triple_tap", false))
+    }
+
     val settingsState = remember {
         mutableStateMapOf<String, Boolean>().apply {
             privacyKeys.forEach { key ->
@@ -262,7 +274,7 @@ fun GlobalPrivacySettingsScreen(
                 SettingItem("Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "locked_chats_enhancer"),
                 SettingItem("Hide Archived Chats", "Hide the archive shortcut and choose how to open archived chats", "typearchive"),
                 SettingItem("DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "dnd_mode"),
-                SettingItem("Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "hide_chats")
+                SettingItem("Hide Locked Chats", "Hide locked chats and choose how to open them", "hide_chats")
             )
         ),
         SettingGroup(
@@ -722,11 +734,11 @@ fun GlobalPrivacySettingsScreen(
                                             StitchSwitch(
                                                 checked = archiveOpenViaMenu,
                                                 onCheckedChange = { checked ->
-                                                    if (!checked && !archiveOpenViaTitleLongPress && !archiveOpenViaTitleTripleTap) {
-                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        archiveOpenViaMenu = checked
-                                                        preferenceManager.putBoolean("archive_open_via_menu", checked)
+                                                    archiveOpenViaMenu = checked
+                                                    preferenceManager.putBoolean("archive_open_via_menu", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaMenu = false
+                                                        preferenceManager.putBoolean("locked_open_via_menu", false)
                                                     }
                                                 }
                                             )
@@ -745,11 +757,11 @@ fun GlobalPrivacySettingsScreen(
                                             StitchSwitch(
                                                 checked = archiveOpenViaTitleLongPress,
                                                 onCheckedChange = { checked ->
-                                                    if (!checked && !archiveOpenViaMenu && !archiveOpenViaTitleTripleTap) {
-                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        archiveOpenViaTitleLongPress = checked
-                                                        preferenceManager.putBoolean("archive_open_via_title_long_press", checked)
+                                                    archiveOpenViaTitleLongPress = checked
+                                                    preferenceManager.putBoolean("archive_open_via_title_long_press", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaTitleLongPress = false
+                                                        preferenceManager.putBoolean("locked_open_via_title_long_press", false)
                                                     }
                                                 }
                                             )
@@ -768,14 +780,79 @@ fun GlobalPrivacySettingsScreen(
                                             StitchSwitch(
                                                 checked = archiveOpenViaTitleTripleTap,
                                                 onCheckedChange = { checked ->
-                                                    if (!checked && !archiveOpenViaMenu && !archiveOpenViaTitleLongPress) {
-                                                        Toast.makeText(context, "Keep at least one opening method enabled", Toast.LENGTH_SHORT).show()
-                                                    } else {
-                                                        archiveOpenViaTitleTripleTap = checked
-                                                        preferenceManager.putBoolean("archive_open_via_title_triple_tap", checked)
+                                                    archiveOpenViaTitleTripleTap = checked
+                                                    preferenceManager.putBoolean("archive_open_via_title_triple_tap", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaTitleTripleTap = false
+                                                        preferenceManager.putBoolean("locked_open_via_title_triple_tap", false)
                                                     }
                                                 }
                                             )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (item.key == "hide_chats" && settingsState["hide_chats"] == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceDim.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "OPEN LOCKED CHATS",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                        listOf(
+                                            Triple("Show in 3-dots / WAEX menu", lockedOpenViaMenu) { checked: Boolean ->
+                                                lockedOpenViaMenu = checked
+                                                preferenceManager.putBoolean("locked_open_via_menu", checked)
+                                                if (checked) {
+                                                    archiveOpenViaMenu = false
+                                                    preferenceManager.putBoolean("archive_open_via_menu", false)
+                                                }
+                                            },
+                                            Triple("Long-press WhatsApp title", lockedOpenViaTitleLongPress) { checked: Boolean ->
+                                                lockedOpenViaTitleLongPress = checked
+                                                preferenceManager.putBoolean("locked_open_via_title_long_press", checked)
+                                                if (checked) {
+                                                    archiveOpenViaTitleLongPress = false
+                                                    preferenceManager.putBoolean("archive_open_via_title_long_press", false)
+                                                }
+                                            },
+                                            Triple("Tap WhatsApp title 3 times", lockedOpenViaTitleTripleTap) { checked: Boolean ->
+                                                lockedOpenViaTitleTripleTap = checked
+                                                preferenceManager.putBoolean("locked_open_via_title_triple_tap", checked)
+                                                if (checked) {
+                                                    archiveOpenViaTitleTripleTap = false
+                                                    preferenceManager.putBoolean("archive_open_via_title_triple_tap", false)
+                                                }
+                                            }
+                                        ).forEach { (label, checked, onChange) ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    style = typography.bodySm,
+                                                    color = colors.onSurface,
+                                                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                                )
+                                                StitchSwitch(
+                                                    checked = checked,
+                                                    onCheckedChange = onChange
+                                                )
+                                            }
                                         }
                                     }
                                 }

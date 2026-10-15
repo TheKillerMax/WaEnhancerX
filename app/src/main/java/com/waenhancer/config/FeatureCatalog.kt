@@ -34,7 +34,7 @@ object FeatureCatalog {
         FeatureItem("locked_chats_enhancer", "Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("typearchive", "Hide Archived Chats", "Hide the archive shortcut and choose how to open archived chats", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("dnd_mode", "DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "Message Protection & Security", 1, "privacy", "Privacy"),
-        FeatureItem("hide_chats", "Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "Message Protection & Security", 1, "privacy", "Privacy"),
+        FeatureItem("hide_chats", "Hide Locked Chats", "Hide locked chats and choose how to open them", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("custom_privacy", "Custom Privacy per contact", "Activate the custom privacy button on the contact information screen", "Advanced Rules & Filtering", 1, "privacy", "Privacy"),
         FeatureItem("call_privacy", "Block Calls", "Block WhatsApp calls based on privacy type", "Advanced Rules & Filtering", 1, "privacy", "Privacy"),
         FeatureItem("autonext_status", "Disable Auto Skip Status", "Prevents the current status from advancing automatically to the next one", "Status Privacy", 1, "privacy", "Privacy"),

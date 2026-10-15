@@ -59,6 +59,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     /** Separate-mode: the single WAEX shield toolbar button */
     private static final int MENU_ID_WAEX_TOOLBAR  = 0x7EAE0006;
     private static final int MENU_ID_ARCHIVED      = 0x7EAE0007;
+    private static final int MENU_ID_LOCKED        = 0x7EAE0008;
     private static final AtomicLong LAST_ARCHIVE_OPEN_MS = new AtomicLong(-1L);
     private static final AtomicBoolean TITLE_LONG_PRESS_HOOKED = new AtomicBoolean(false);
     private final Set<View> archiveTitleViews = Collections.synchronizedSet(
@@ -164,14 +165,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             XposedHelpers.findAndHookMethod(View.class, "performLongClick", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (!(param.thisObject instanceof View) || !isArchivedHidden()
-                            || !isArchiveTitleLongPressEnabled()) return;
+                    if (!(param.thisObject instanceof View)) return;
                     View view = (View) param.thisObject;
                     Activity activity = findActivity(view.getContext());
                     if (activity == null || !homeActivityClass.isInstance(activity)) return;
                     if (!isWhatsAppHomeTitle(view, activity)) return;
-                    openArchivedConversations(activity);
-                    param.setResult(true);
+                    if (openLongPressDestination(activity)) param.setResult(true);
                 }
             });
         } catch (Throwable t) {
@@ -205,18 +204,14 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         if (title == null) title = findHomeTitle(root, activity);
         if (title == null || !archiveTitleViews.add(title)) return;
         title.setLongClickable(true);
-        title.setOnLongClickListener(clicked -> {
-            if (!isArchivedHidden() || !isArchiveTitleLongPressEnabled()) return false;
-            openArchivedConversations(activity);
-            return true;
-        });
+        title.setOnLongClickListener(clicked -> openLongPressDestination(activity));
         title.setClickable(true);
         title.setOnClickListener(clicked -> handleArchiveTitleTap(activity));
         XposedBridge.log(TAG + " Archive long press attached: " + resourceEntryName(title));
     }
 
     private synchronized void handleArchiveTitleTap(Activity activity) {
-        if (!isArchivedHidden() || !isArchiveTitleTripleTapEnabled()) {
+        if (!hasTripleTapDestination()) {
             archiveTitleTapCount = 0;
             lastArchiveTitleTapMs = -1L;
             return;
@@ -232,7 +227,32 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         if (archiveTitleTapCount >= 3) {
             archiveTitleTapCount = 0;
             lastArchiveTitleTapMs = -1L;
+            openTripleTapDestination(activity);
+        }
+    }
+
+    private boolean openLongPressDestination(Activity activity) {
+        if (isArchivedHidden() && isArchiveTitleLongPressEnabled()) {
             openArchivedConversations(activity);
+            return true;
+        }
+        if (isHideLockedChatsEnabled() && isLockedTitleLongPressEnabled()) {
+            openLockedConversations(activity);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasTripleTapDestination() {
+        return (isArchivedHidden() && isArchiveTitleTripleTapEnabled())
+                || (isHideLockedChatsEnabled() && isLockedTitleTripleTapEnabled());
+    }
+
+    private void openTripleTapDestination(Activity activity) {
+        if (isArchivedHidden() && isArchiveTitleTripleTapEnabled()) {
+            openArchivedConversations(activity);
+        } else if (isHideLockedChatsEnabled() && isLockedTitleTripleTapEnabled()) {
+            openLockedConversations(activity);
         }
     }
 
@@ -383,6 +403,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         menu.removeItem(MENU_ID_RESTART);
         menu.removeItem(MENU_ID_SETTINGS);
         menu.removeItem(MENU_ID_ARCHIVED);
+        menu.removeItem(MENU_ID_LOCKED);
     }
 
     /** Grouped mode: all WAEX items nested inside a single "WAEX" submenu entry in the 3-dots menu. */
@@ -410,7 +431,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
         // In separate mode the quick-action sheet is unchanged; the archive
         // is reachable from the overflow menu even if it is hidden in the list.
-        appendArchiveEntry(menu, activity);
+        appendRecoveryEntries(menu, activity);
     }
 
     /**
@@ -502,15 +523,21 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             item.setShowAsAction(showAsAction);
             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
         }
-        appendArchiveEntry(target, activity);
+        appendRecoveryEntries(target, activity);
     }
 
-    /** Always place recovery in overflow, not as a conspicuous toolbar icon. */
-    private void appendArchiveEntry(Menu target, Activity activity) {
-        if (!isArchivedHidden() || !isArchiveMenuEnabled()) return;
-        MenuItem item = target.add(Menu.NONE, MENU_ID_ARCHIVED, Menu.NONE, "Open archived chats");
-        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-        item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+    /** Always place recovery actions in overflow, not as conspicuous toolbar icons. */
+    private void appendRecoveryEntries(Menu target, Activity activity) {
+        if (isArchivedHidden() && isArchiveMenuEnabled()) {
+            MenuItem item = target.add(Menu.NONE, MENU_ID_ARCHIVED, Menu.NONE, "Open archived chats");
+            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+            item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+        }
+        if (isHideLockedChatsEnabled() && isLockedMenuEnabled()) {
+            MenuItem item = target.add(Menu.NONE, MENU_ID_LOCKED, Menu.NONE, "Open locked chats");
+            item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+            item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+        }
     }
 
     private boolean isArchivedHidden() {
@@ -531,6 +558,25 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         return prefs.getBoolean("archive_open_via_title_triple_tap", false);
     }
 
+    private boolean isHideLockedChatsEnabled() {
+        return prefs.getBoolean("hide_chats", false);
+    }
+
+    private boolean isLockedMenuEnabled() {
+        return prefs.getBoolean("locked_open_via_menu", false)
+                && !(isArchivedHidden() && isArchiveMenuEnabled());
+    }
+
+    private boolean isLockedTitleLongPressEnabled() {
+        return prefs.getBoolean("locked_open_via_title_long_press", false)
+                && !(isArchivedHidden() && isArchiveTitleLongPressEnabled());
+    }
+
+    private boolean isLockedTitleTripleTapEnabled() {
+        return prefs.getBoolean("locked_open_via_title_triple_tap", false)
+                && !(isArchivedHidden() && isArchiveTitleTripleTapEnabled());
+    }
+
     private boolean hasNormalWaexAction() {
         return isEnabled("ghostmode", false) || isEnabled("freezelastseen", false)
                 || isEnabled("show_dndmode", false) || isEnabled("restartbutton", false)
@@ -539,7 +585,9 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
 
     /** Returns true if at least one injected item should be visible. */
     private boolean hasAnyActiveItem() {
-        return hasNormalWaexAction() || (isArchivedHidden() && isArchiveMenuEnabled());
+        return hasNormalWaexAction()
+                || (isArchivedHidden() && isArchiveMenuEnabled())
+                || (isHideLockedChatsEnabled() && isLockedMenuEnabled());
     }
 
     // -------------------------------------------------------------------------
@@ -552,6 +600,11 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
 
         if (id == MENU_ID_ARCHIVED) {
             if (activityObj instanceof Activity) openArchivedConversations((Activity) activityObj);
+            return true;
+        }
+
+        if (id == MENU_ID_LOCKED) {
+            if (activityObj instanceof Activity) openLockedConversations((Activity) activityObj);
             return true;
         }
 
@@ -666,6 +719,29 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Cannot open archived chats: " + t.getClass().getSimpleName());
             Toast.makeText(activity, "Could not open archived chats", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** Launch only the verified in-package WhatsApp locked-conversations Activity. */
+    private void openLockedConversations(Activity activity) {
+        if (!isHideLockedChatsEnabled() || activity.isFinishing() || activity.isDestroyed()) return;
+        long now = SystemClock.elapsedRealtime();
+        long previous = LAST_ARCHIVE_OPEN_MS.get();
+        if (previous >= 0L && now >= previous && now - previous < 800L) return;
+        if (!LAST_ARCHIVE_OPEN_MS.compareAndSet(previous, now)) return;
+        try {
+            Class<?> locked = XposedHelpers.findClassIfExists(
+                    "com.whatsapp.conversation.conversationslist.LockedConversationsActivity",
+                    classLoader);
+            if (locked == null || !Activity.class.isAssignableFrom(locked)) {
+                Toast.makeText(activity, "Locked chats unavailable in this WhatsApp build",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            activity.startActivity(new Intent(activity, locked));
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Cannot open locked chats: " + t.getClass().getSimpleName());
+            Toast.makeText(activity, "Could not open locked chats", Toast.LENGTH_SHORT).show();
         }
     }
 
