@@ -32,6 +32,22 @@ with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
 # This second compilation exercises production AppRestartHelper but substitutes only the
 # Android framework, Kotlin package detector, and the external su process starter.
 STUBS = {
+ 'android/app/AlarmManager.java': '''package android.app;
+public class AlarmManager {
+ public static final int ELAPSED_REALTIME=3;
+ public void set(int type,long triggerAtMillis,PendingIntent operation) {}
+}
+''',
+ 'android/app/PendingIntent.java': '''package android.app;
+import android.content.Context;
+import android.content.Intent;
+public class PendingIntent {
+ public static final int FLAG_CANCEL_CURRENT=0x10000000, FLAG_IMMUTABLE=0x04000000;
+ public static PendingIntent getActivity(Context context,int requestCode,Intent intent,int flags) {
+  return new PendingIntent();
+ }
+}
+''',
  'android/content/ComponentName.java': '''package android.content;
 public class ComponentName {
  private final String packageName, cls;
@@ -58,6 +74,10 @@ public class Intent {
  public String getStringExtra(String name){return extras.get(name);}
  public Intent addFlags(int flags){this.flags|=flags;return this;}
  public int getFlags(){return flags;}
+ public static Intent makeRestartActivityTask(ComponentName component) {
+  return new Intent("android.intent.action.MAIN").setComponent(component)
+    .addFlags(FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TASK);
+ }
 }
 ''',
  'android/content/pm/PackageManager.java': '''package android.content.pm;
@@ -70,8 +90,11 @@ public class PackageManager {
  'android/content/Context.java': '''package android.content;
 import android.content.pm.PackageManager;
 public abstract class Context {
+ public static final String ALARM_SERVICE="alarm";
  public abstract Context getApplicationContext();
  public abstract PackageManager getPackageManager();
+ public abstract String getPackageName();
+ public abstract Object getSystemService(String name);
  public abstract void sendBroadcast(Intent intent);
  public abstract void startActivity(Intent intent);
 }
@@ -85,6 +108,15 @@ public class Handler {
  public boolean post(Runnable task) { task.run(); return true; }
  public boolean postDelayed(Runnable task,long delay){ task.run(); return true; }
 }
+''',
+ 'android/os/Process.java': '''package android.os;
+public class Process {
+ public static int myPid(){return 1234;}
+ public static void killProcess(int pid) {}
+}
+''',
+ 'android/os/SystemClock.java': '''package android.os;
+public class SystemClock { public static long elapsedRealtime(){return 1000L;} }
 ''',
  'android/widget/Toast.java': '''package android.widget;
 import android.content.Context;

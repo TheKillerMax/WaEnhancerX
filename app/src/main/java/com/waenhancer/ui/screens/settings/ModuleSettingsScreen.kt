@@ -71,7 +71,7 @@ fun ModuleSettingsScreen() {
         ) {
             ModuleSettingsTile(
                 title = "App Theme",
-                description = "Choose how WaEnhancerX looks",
+                description = "Choose how WAEX looks",
                 value = themeMode,
                 icon = themeIcon(themeMode),
                 onClick = { showThemeSheet = true }
