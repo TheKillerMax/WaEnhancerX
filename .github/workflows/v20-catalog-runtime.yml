@@ -1,0 +1,36 @@
+name: V20 compiled catalog Android resource validation
+on:
+  push:
+    branches: ['test/apk-startup-audit-v20-2026-10-15']
+    paths: ['.github/workflows/v20-catalog-runtime.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalog-framework:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Execute production validator against public APK resource tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          kotlinc -version
+          mvn -version
+          python3 qa/catalog_resource_runtime_probe.py --out "$RUNNER_TEMP/v20-catalog-framework"
+      - name: Preserve text-only results, never downloaded APKs or dependencies
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v20-catalog-framework
+          path: ${{ runner.temp }}/v20-catalog-framework/evidence
+          retention-days: 7
+          if-no-files-found: error
