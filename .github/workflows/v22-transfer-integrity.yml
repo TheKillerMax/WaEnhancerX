@@ -1,0 +1,35 @@
+name: V22 exact source transfer integrity
+on:
+  push:
+    paths: ['.github/workflows/v22-transfer-integrity.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/transfer"
+          cp qa/v22-candidate-payload.part* "$RUNNER_TEMP/transfer/"
+          python3 - <<'PY'
+          import hashlib, pathlib,base64,gzip,json
+          names=['1','2','3a','3b','4a','4b','5a','5b']
+          text=''
+          for name in names:
+              p=pathlib.Path('qa/v22-candidate-payload.part'+name).read_text()
+              print(name,len(p),hashlib.sha256(p.encode()).hexdigest(),flush=True)
+              text+=p
+          data=base64.b64decode(text,validate=True)
+          digest=hashlib.sha256(data).hexdigest()
+          print('GZIP SHA256',digest,flush=True)
+          assert digest=='4cf2ec16a6fdb4cbf0f8d64345ac87ccf1de128f492c36333cc6f001adf991a2'
+          p=json.loads(gzip.decompress(data));print('verified candidate recipes',list(p['inputs']))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v22-transfer-integrity
+          path: ${{ runner.temp }}/transfer
+          retention-days: 1
