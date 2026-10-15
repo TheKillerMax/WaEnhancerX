@@ -65,8 +65,12 @@ fun ReleaseDetailsScreen(tagName: String) {
         when {
             item != null -> LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(spacing.pageMargin), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
-                    Text(item.tagName, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
-                    Text(formatReleaseDate(item.publishedAt), style = typography.bodyMd, color = colors.onSurfaceVariant)
+                    Text(item.name, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+                    Text(
+                        "Version ${item.version}  •  ${formatReleaseDate(item.publishedAt)}",
+                        style = typography.bodyMd,
+                        color = colors.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(18.dp))
                     ChangelogBodyView(item.body)
                     Spacer(Modifier.height(20.dp))
