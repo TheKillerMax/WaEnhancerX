@@ -274,6 +274,10 @@ fun MainContainerScreen() {
 
     val pagerState = rememberPagerState { 5 }
     val coroutineScope = rememberCoroutineScope()
+    // PagerState is saveable, so Android can restore the previously selected tab after an
+    // Activity recreation. The in-memory controller starts at Home, though. Do not let the
+    // restored pager page overwrite that controller before it has performed its first sync.
+    var pagerNavigationReady by remember { mutableStateOf(false) }
 
     var lastBackPressTime by remember { mutableStateOf(0L) }
 
@@ -305,24 +309,8 @@ fun MainContainerScreen() {
         }
     }
 
-    // Sync from pager scroll to navController (only when scroll has settled to avoid feedback loops)
-    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
-        if (!pagerState.isScrollInProgress) {
-            val targetScreen = when (pagerState.currentPage) {
-                0 -> Screen.MainDashboard
-                1 -> Screen.GlobalPrivacySettings
-                2 -> Screen.MediaStatusHub
-                3 -> Screen.AutomationTasker
-                4 -> Screen.StylesSettings
-                else -> Screen.MainDashboard
-            }
-            if (navController.currentScreen != targetScreen && isRoot) {
-                navController.navigateTo(targetScreen, clearStack = true)
-            }
-        }
-    }
-
-    // Sync from navController to pager programmatically
+    // Sync from navController to pager first. This establishes a single source of truth after
+    // recreation (including a locale change) before observing restored pager state.
     LaunchedEffect(currentScreen) {
         val targetPage = when (currentScreen) {
             Screen.MainDashboard -> 0
@@ -334,6 +322,25 @@ fun MainContainerScreen() {
         }
         if (targetPage != -1 && pagerState.currentPage != targetPage) {
             pagerState.scrollToPage(targetPage)
+        }
+        pagerNavigationReady = true
+    }
+
+    // Sync from pager scroll to navController only when scroll has settled, and only after the
+    // initial navigation-to-pager sync above has resolved restored state.
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        if (pagerNavigationReady && !pagerState.isScrollInProgress) {
+            val targetScreen = when (pagerState.currentPage) {
+                0 -> Screen.MainDashboard
+                1 -> Screen.GlobalPrivacySettings
+                2 -> Screen.MediaStatusHub
+                3 -> Screen.AutomationTasker
+                4 -> Screen.StylesSettings
+                else -> Screen.MainDashboard
+            }
+            if (navController.currentScreen != targetScreen && isRoot) {
+                navController.navigateTo(targetScreen, clearStack = true)
+            }
         }
     }
 
