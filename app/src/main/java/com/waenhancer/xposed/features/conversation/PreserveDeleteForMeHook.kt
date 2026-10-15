@@ -60,6 +60,7 @@ class PreserveDeleteForMeHook(
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (!isEnabled(PREF_KEY, false)) return
                             if (deleteMethod.name == "run" && !isDeleteForMeRunnable(param.thisObject)) return
+                            captureRunnableMessages(param.thisObject)
                             deleteForMeScope.set(true)
                         }
 
@@ -411,6 +412,98 @@ class PreserveDeleteForMeHook(
             discriminator.getInt(instance) == 6
         } catch (_: Throwable) {
             false
+        }
+    }
+
+    /**
+     * Current WhatsApp versions delete through an internal message-store API and may never call
+     * SQLiteDatabase.delete(). The Delete-for-me Runnable still owns the selected message Set, so
+     * copy those rows to the WAEX vault before allowing the Runnable to continue.
+     */
+    private fun captureRunnableMessages(instance: Any?) {
+        if (instance == null) return
+        try {
+            val messages = instance.javaClass.declaredFields.asSequence()
+                .filterNot { it.type.isPrimitive }
+                .mapNotNull { field ->
+                    field.isAccessible = true
+                    field.get(instance) as? Set<*>
+                }
+                .firstOrNull() ?: return
+
+            val keys = messages.mapNotNull(::extractMessageKey).distinctBy { it.id }
+            if (keys.isEmpty()) {
+                XposedBridge.log("$TAG Warning: selected message keys were not resolved")
+                return
+            }
+
+            val dbFile = context.getDatabasePath("msgstore.db")
+            if (!dbFile.exists()) {
+                XposedBridge.log("$TAG Warning: msgstore.db was not found")
+                return
+            }
+
+            var captured = 0
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                keys.forEach { key ->
+                    db.rawQuery(
+                        "SELECT _id, key_id, chat_row_id, from_me, message_type, text_data, " +
+                            "timestamp, sender_jid_row_id FROM message WHERE key_id = ? LIMIT 1",
+                        arrayOf(key.id)
+                    ).use { cursor ->
+                        if (!cursor.moveToFirst() || cursor.getInt(4) == 15) return@use
+                        val chatRowId = cursor.getLong(2)
+                        val fromMe = cursor.getInt(3) == 1
+                        val chatJid = resolveChatJid(db, chatRowId).ifBlank { key.chatJid }
+                        val isGroup = chatJid.contains("@g.us")
+                        val chatName = resolveChatDisplayName(context, db, chatRowId, chatJid)
+                        val senderName = if (isGroup) {
+                            resolveSenderDisplayName(context, db, cursor.getLong(7), chatName)
+                        } else if (fromMe) {
+                            "You"
+                        } else {
+                            chatName
+                        }
+                        dispatchToManagerApp(
+                            jid = chatJid,
+                            chatName = chatName,
+                            senderName = senderName,
+                            msgId = cursor.getString(1) ?: key.id,
+                            text = cursor.getString(5) ?: "",
+                            timestamp = cursor.getLong(6),
+                            fromMe = fromMe,
+                            isGroup = isGroup
+                        )
+                        captured++
+                    }
+                }
+            }
+            XposedBridge.log("$TAG Copied $captured Delete for me message(s) to vault")
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG Error copying selected messages: ${t.javaClass.simpleName}")
+        }
+    }
+
+    private data class SelectedMessageKey(
+        val id: String,
+        val chatJid: String
+    )
+
+    private fun extractMessageKey(message: Any?): SelectedMessageKey? {
+        if (message == null) return null
+        return try {
+            val key = message.javaClass.methods.firstOrNull {
+                it.name == "Atl" && it.parameterCount == 0
+            }?.invoke(message) ?: return null
+            val fields = key.javaClass.declaredFields.onEach { it.isAccessible = true }
+            val id = fields.firstOrNull { it.type == String::class.java }
+                ?.get(key) as? String ?: return null
+            val jid = fields.firstOrNull {
+                !it.type.isPrimitive && it.type != String::class.java
+            }?.get(key)?.toString().orEmpty()
+            SelectedMessageKey(id, jid)
+        } catch (_: Throwable) {
+            null
         }
     }
 }

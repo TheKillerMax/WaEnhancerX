@@ -14,10 +14,11 @@
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
 - Improved startup of module and performance
+- Improved Delete For Me messages
 
 [Notes]
 - WAEnhancerX now requires a rooted device for reliable compatibility and to protect the module's integrity.
 - Rootless setups such as LSPatch or Shizuku are not supported. They may behave unpredictably and increase the risk of WhatsApp or WhatsApp Business account restrictions, so please do not use them with WAEnhancerX.
 
 [Community contribution]
-- Thanks to @TheKillerMax for contributions in this update
+- Thanks to @TheKillerMax for valuable contributions in this update.
