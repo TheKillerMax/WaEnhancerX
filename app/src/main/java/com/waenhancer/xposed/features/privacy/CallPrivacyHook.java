@@ -106,7 +106,7 @@ public class CallPrivacyHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error setting up VoipManager hooks: " + t.getMessage());
+            XposedBridge.log(TAG + " Error setting up VoipManager hooks: " + t.getClass().getSimpleName());
         }
     }
 
@@ -228,13 +228,13 @@ public class CallPrivacyHook extends BaseFeature {
                                     break;
                             }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error in incoming call hook: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error in incoming call hook: " + t.getClass().getSimpleName());
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Call Privacy: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Call Privacy: " + t.getClass().getSimpleName());
         }
     }
 
@@ -284,13 +284,13 @@ public class CallPrivacyHook extends BaseFeature {
                                 }
                             }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error in nativeHandleIncomingXmppOffer: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error in nativeHandleIncomingXmppOffer: " + t.getClass().getSimpleName());
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking nativeHandleIncomingXmppOffer: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking nativeHandleIncomingXmppOffer: " + t.getClass().getSimpleName());
         }
     }
 
@@ -358,18 +358,18 @@ public class CallPrivacyHook extends BaseFeature {
                                     try {
                                         processAndShowCallInformation(wamCallObj, peerJid, rawJid);
                                     } catch (Throwable t) {
-                                        XposedBridge.log(TAG + " Error showing call information: " + t.getMessage());
+                                        XposedBridge.log(TAG + " Error showing call information: " + t.getClass().getSimpleName());
                                     }
                                 });
                             }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error in fieldstatsReady: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error in fieldstatsReady: " + t.getClass().getSimpleName());
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Call Information: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Call Information: " + t.getClass().getSimpleName());
         }
     }
 
@@ -512,7 +512,7 @@ public class CallPrivacyHook extends BaseFeature {
 
             notificationManager.notify(new Random().nextInt(100000) + 1000, builder.build());
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error showing notification: " + t.getMessage());
+            XposedBridge.log(TAG + " Error showing notification: " + t.getClass().getSimpleName());
         }
     }
 

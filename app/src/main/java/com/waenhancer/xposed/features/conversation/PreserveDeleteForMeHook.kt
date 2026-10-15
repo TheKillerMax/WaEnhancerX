@@ -59,7 +59,7 @@ class PreserveDeleteForMeHook(
                             try {
                                 param.result = null
                             } catch (t: Throwable) {
-                                XposedBridge.log("$TAG Error in bytecode delete hook: ${t.message}")
+                                XposedBridge.log("$TAG Error in bytecode delete hook: ${t.javaClass.simpleName}")
                             }
                         }
 
@@ -72,7 +72,7 @@ class PreserveDeleteForMeHook(
                 XposedBridge.log("$TAG Warning: DeleteForMe method not found via dexkit.")
             }
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Failed to install bytecode DeleteForMe hook: ${t.message}")
+            XposedBridge.log("$TAG Failed to install bytecode DeleteForMe hook: ${t.javaClass.simpleName}")
         }
     }
 
@@ -144,13 +144,13 @@ class PreserveDeleteForMeHook(
                                 }
                             }
                         } catch (t: Throwable) {
-                            XposedBridge.log("$TAG Error inspecting message before delete: ${t.message}")
+                            XposedBridge.log("$TAG Error inspecting message before delete: ${t.javaClass.simpleName}")
                         }
                     }
                 }
             )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Error installing DB Delete-For-Me hook: ${t.message}")
+            XposedBridge.log("$TAG Error installing DB Delete-For-Me hook: ${t.javaClass.simpleName}")
         }
     }
 
@@ -352,7 +352,7 @@ class PreserveDeleteForMeHook(
                 }
             )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Exception while searching DeleteForMe method: ${t.message}")
+            XposedBridge.log("$TAG Exception while searching DeleteForMe method: ${t.javaClass.simpleName}")
             null
         }
     }

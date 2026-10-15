@@ -85,7 +85,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
             pending.get();
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] PreferenceBridgeClient: Initial preference sync failed: "
-                    + t.getMessage());
+                    + t.getClass().getSimpleName());
         }
     }
 
@@ -100,7 +100,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
             }
         } catch (Throwable t) {
             providerError = diagnosticError(t);
-            XposedBridge.log("[WAEX] PreferenceBridgeClient: Provider IPC query failed: " + t.getMessage());
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: Provider IPC query failed: " + t.getClass().getSimpleName());
         }
 
         // Disk read fallback if provider query was unavailable
@@ -131,8 +131,9 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     }
 
     private static String diagnosticError(Throwable error) {
-        String detail = error.getClass().getSimpleName() + ": "
-                + (error.getMessage() == null ? "No detail" : error.getMessage());
+        // Exception messages may embed private JIDs, user data, or filesystem paths.
+        // Runtime health records only the stable exception class, never its raw text.
+        String detail = error.getClass().getSimpleName();
         detail = detail.replace('\n', ' ').replace('\r', ' ').trim();
         return detail.length() <= 240 ? detail : detail.substring(0, 240);
     }
@@ -206,7 +207,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     private void notifyListeners(@Nullable String key) {
         for (OnSharedPreferenceChangeListener listener : changeListeners) {
             try { listener.onSharedPreferenceChanged(this, key); }
-            catch (Throwable t) { XposedBridge.log("[WAEX] Preference change listener error: " + t.getMessage()); }
+            catch (Throwable t) { XposedBridge.log("[WAEX] Preference change listener error: " + t.getClass().getSimpleName()); }
         }
     }
 
@@ -223,7 +224,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
                     }
             );
         } catch (Throwable t) {
-            XposedBridge.log("[WAEX] PreferenceBridgeClient: ContentObserver registration failed: " + t.getMessage());
+            XposedBridge.log("[WAEX] PreferenceBridgeClient: ContentObserver registration failed: " + t.getClass().getSimpleName());
         }
     }
 
@@ -405,7 +406,7 @@ public final class PreferenceBridgeClient implements SharedPreferences {
                     PROVIDER_URI, "apply_preferences", null, request);
             return response != null && response.getBoolean("success", false);
         } catch (Throwable t) {
-            XposedBridge.log("[WAEX] Preference batch write failed: " + t.getMessage());
+            XposedBridge.log("[WAEX] Preference batch write failed: " + t.getClass().getSimpleName());
             return false;
         }
     }

@@ -173,7 +173,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                 val row = db.insert(TABLE_NAME, null, cv)
             }
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Insert DB error: ${t.message}")
+            XposedBridge.log("$TAG Insert DB error: ${t.javaClass.simpleName}")
         }
     }
 
@@ -235,7 +235,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                 else if (rowId > 0) messagesCache[rowId.toString()] = result
             }
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Query error: ${t.message}")
+            XposedBridge.log("$TAG Query error: ${t.javaClass.simpleName}")
         }
 
         return result

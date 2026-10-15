@@ -193,7 +193,7 @@ public class AntiRevokeHook extends BaseFeature {
                         });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error initializing message key classes: " + t.getMessage());
+            XposedBridge.log(TAG + " Error initializing message key classes: " + t.getClass().getSimpleName());
         }
     }
 
@@ -265,13 +265,13 @@ public class AntiRevokeHook extends BaseFeature {
                                 setHandledResult(param);
                             }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error extracting key from bytecode revoke: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error extracting key from bytecode revoke: " + t.getClass().getSimpleName());
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking bytecode revoke: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking bytecode revoke: " + t.getClass().getSimpleName());
         }
     }
 
@@ -335,13 +335,13 @@ public class AntiRevokeHook extends BaseFeature {
                             showDeletedMessageToast(extractSenderJid(statusKey));
                             setHandledResult(param);
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getClass().getSimpleName());
                         }
                     }
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking status bytecode revoke: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking status bytecode revoke: " + t.getClass().getSimpleName());
         }
     }
 
@@ -448,7 +448,7 @@ public class AntiRevokeHook extends BaseFeature {
                             }
                         } catch (Throwable t) {
                             // Ownership could not be established, so let WhatsApp perform the delete.
-                            XposedBridge.log(TAG + " Error querying status before delete: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error querying status before delete: " + t.getClass().getSimpleName());
                         }
                         return;
                     }
@@ -500,7 +500,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 }
                             }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error intercepting message delete: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error intercepting message delete: " + t.getClass().getSimpleName());
                         }
                     }
                 }
@@ -573,7 +573,7 @@ public class AntiRevokeHook extends BaseFeature {
             });
 
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getMessage());
+            XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getClass().getSimpleName());
         }
     }
 
@@ -706,7 +706,7 @@ public class AntiRevokeHook extends BaseFeature {
                     }
                 }
             } catch (Throwable t) {
-                XposedBridge.log(TAG + " Error in realtime UI update runnable: " + t.getMessage());
+                XposedBridge.log(TAG + " Error in realtime UI update runnable: " + t.getClass().getSimpleName());
             }
         });
     }
@@ -839,12 +839,12 @@ public class AntiRevokeHook extends BaseFeature {
                         });
 
                     } catch (Throwable t) {
-                        XposedBridge.log(TAG + " Error hooking getView on " + boundAdapter.getClass().getName() + ": " + t.getMessage());
+                        XposedBridge.log(TAG + " Error hooking getView on " + boundAdapter.getClass().getName() + ": " + t.getClass().getSimpleName());
                     }
                 }
             });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error setting up ListView adapter hook: " + t.getMessage());
+            XposedBridge.log(TAG + " Error setting up ListView adapter hook: " + t.getClass().getSimpleName());
         }
     }
 
@@ -989,7 +989,7 @@ public class AntiRevokeHook extends BaseFeature {
             hookStatusDbQueryReads();
 
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking status playback UI: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking status playback UI: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1051,7 +1051,7 @@ public class AntiRevokeHook extends BaseFeature {
             });
             XposedBridge.log(TAG + " AndroidX Fragment.onResume status fallback hook installed.");
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " AndroidX Fragment.onResume hook failed: " + t.getMessage());
+            XposedBridge.log(TAG + " AndroidX Fragment.onResume hook failed: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1097,7 +1097,7 @@ public class AntiRevokeHook extends BaseFeature {
                 }
             });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error installing status DB read tracker: " + t.getMessage());
+            XposedBridge.log(TAG + " Error installing status DB read tracker: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1252,7 +1252,7 @@ public class AntiRevokeHook extends BaseFeature {
                 curr = curr.getSuperclass();
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Exact status date lookup failed: " + t.getMessage());
+            XposedBridge.log(TAG + " Exact status date lookup failed: " + t.getClass().getSimpleName());
         }
         return null;
     }
@@ -1322,7 +1322,7 @@ public class AntiRevokeHook extends BaseFeature {
             final long finalTs = ts;
             uiHandler.post(() -> applyStatusDecoration(fragment, finalKeyId, finalTs));
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " tryDecorateStatusFragment error: " + t.getMessage());
+            XposedBridge.log(TAG + " tryDecorateStatusFragment error: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1359,7 +1359,7 @@ public class AntiRevokeHook extends BaseFeature {
                 applyStatusDecoration(fragmentOrController, keyId, ts);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " applyStatusDecorationFromContext error: " + t.getMessage());
+            XposedBridge.log(TAG + " applyStatusDecorationFromContext error: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1442,14 +1442,14 @@ public class AntiRevokeHook extends BaseFeature {
                     try {
                         View r = extractFragmentRootView(fragment);
                         if (r != null) doApplyStatusDecoration(r, keyId, ts);
-                        else XposedBridge.log(TAG + " Status root view still null after delay, keyId=" + keyId);
+                        else XposedBridge.log(TAG + " Status root view still null after delay");
                     } catch (Throwable ignored) {}
                 }, 350);
                 return;
             }
             doApplyStatusDecoration(root, keyId, ts);
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " applyStatusDecoration error: " + t.getMessage());
+            XposedBridge.log(TAG + " applyStatusDecoration error: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1459,7 +1459,7 @@ public class AntiRevokeHook extends BaseFeature {
 
         TextView target = findStatusTimestampTextView((ViewGroup) root, ctx);
         if (target == null) {
-            XposedBridge.log(TAG + " No timestamp TextView in status view for key=" + keyId);
+            XposedBridge.log(TAG + " No timestamp TextView in status view");
             return;
         }
         decorateRevokedStatusTextView(target, ts);
@@ -1568,7 +1568,7 @@ public class AntiRevokeHook extends BaseFeature {
                 depth++;
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " extractStatusKeyIdFromFragment error: " + t.getMessage());
+            XposedBridge.log(TAG + " extractStatusKeyIdFromFragment error: " + t.getClass().getSimpleName());
         }
         return null;
     }
@@ -1724,7 +1724,7 @@ public class AntiRevokeHook extends BaseFeature {
 
             decorateRevokedTextView(dateTextView, messageTextView, rowContext, deletedTimestamp);
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " decorateRevokedRow error: " + t.getMessage());
+            XposedBridge.log(TAG + " decorateRevokedRow error: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1793,7 +1793,7 @@ public class AntiRevokeHook extends BaseFeature {
                 );
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " decorateRevokedTextView error: " + t.getMessage());
+            XposedBridge.log(TAG + " decorateRevokedTextView error: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1811,7 +1811,7 @@ public class AntiRevokeHook extends BaseFeature {
             dateTextView.setCompoundDrawablePadding(0);
             dateTextView.setText("🚫 Deleted • " + originalDate);
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Status emoji decoration failed: " + t.getMessage());
+            XposedBridge.log(TAG + " Status emoji decoration failed: " + t.getClass().getSimpleName());
         }
     }
 
@@ -1944,7 +1944,7 @@ public class AntiRevokeHook extends BaseFeature {
                 curr = curr.getSuperclass();
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " extractIsFromMe error: " + t.getMessage());
+            XposedBridge.log(TAG + " extractIsFromMe error: " + t.getClass().getSimpleName());
         }
         return null;
     }
@@ -2047,7 +2047,7 @@ public class AntiRevokeHook extends BaseFeature {
                 curr = curr.getSuperclass();
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " extractKeyIdFromFMessage error: " + t.getMessage());
+            XposedBridge.log(TAG + " extractKeyIdFromFMessage error: " + t.getClass().getSimpleName());
         }
         return null;
     }

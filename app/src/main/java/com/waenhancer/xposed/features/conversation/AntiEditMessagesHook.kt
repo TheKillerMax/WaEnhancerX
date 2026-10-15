@@ -119,14 +119,14 @@ class AntiEditMessagesHook(
                                     }
                                 }
                             } catch (t: Throwable) {
-                                XposedBridge.log("$TAG Error in onMessageEdit: ${t.message}")
+                                XposedBridge.log("$TAG Error in onMessageEdit: ${t.javaClass.simpleName}")
                             }
                         }
                     }
                 )
             }
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Failed to hook onMessageEdit: ${t.message}")
+            XposedBridge.log("$TAG Failed to hook onMessageEdit: ${t.javaClass.simpleName}")
         }
     }
 
@@ -217,7 +217,7 @@ class AntiEditMessagesHook(
                 }
             )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Database insert hook error: ${t.message}")
+            XposedBridge.log("$TAG Database insert hook error: ${t.javaClass.simpleName}")
         }
     }
 
@@ -290,13 +290,13 @@ class AntiEditMessagesHook(
                                 }
                             )
                         } catch (t: Throwable) {
-                            XposedBridge.log("$TAG Error hooking getView: ${t.message}")
+                            XposedBridge.log("$TAG Error hooking getView: ${t.javaClass.simpleName}")
                         }
                     }
                 }
             )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG ListView setAdapter hook error: ${t.message}")
+            XposedBridge.log("$TAG ListView setAdapter hook error: ${t.javaClass.simpleName}")
         }
     }
 
@@ -340,7 +340,7 @@ class AntiEditMessagesHook(
                 }
             )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG View attachment hook error: ${t.message}")
+            XposedBridge.log("$TAG View attachment hook error: ${t.javaClass.simpleName}")
         }
     }
 
