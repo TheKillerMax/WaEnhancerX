@@ -24,6 +24,7 @@ import androidx.annotation.Nullable;
 
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.db.DelMessageStore;
+import com.waenhancer.xposed.features.conversation.PreserveDeleteForMeHook;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
 import com.waenhancer.xposed.utils.ActivityTracker;
@@ -417,6 +418,9 @@ public class AntiRevokeHook extends BaseFeature {
                     boolean isStatusTable = "status".equals(table) || "status_v3".equals(table) || table.contains("status");
 
                     if (!isMsgTable && !isStatusTable) return;
+                    // A user-initiated Delete-for-me must remove the WhatsApp row. The dedicated
+                    // preservation hook has already copied its contents to the WAEX vault.
+                    if (PreserveDeleteForMeHook.isDeleteForMeInProgress()) return;
 
                     String where = (String) param.args[1];
                     String[] whereArgs = param.args.length > 2 ? (String[]) param.args[2] : null;

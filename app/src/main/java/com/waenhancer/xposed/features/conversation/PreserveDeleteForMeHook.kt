@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Bundle
 import com.waenhancer.xposed.core.BaseFeature
-import com.waenhancer.xposed.core.db.DelMessageStore
 import com.waenhancer.xposed.core.devkit.DexSearchEngine
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -22,7 +21,7 @@ import java.lang.reflect.Method
  *
  * Intercepts message deletion requests when the user clicks "Delete For Me".
  * Resolves contact display names, sender names, & group subjects from WhatsApp's wa.db & msgstore.db,
- * prevents row deletion in msgstore.db, and sends metadata to the Manager App.
+ * copies the message to the Manager App vault, then allows WhatsApp to delete its own row.
  */
 class PreserveDeleteForMeHook(
     context: Context,
@@ -37,6 +36,12 @@ class PreserveDeleteForMeHook(
         private const val TAG = "[WAEX:PreserveDeleteForMe]"
         private const val PREF_KEY = "preserve_delete_for_me"
         private const val PROVIDER_URI = "content://com.waenhancer.hookprovider"
+
+        private val deleteForMeScope = ThreadLocal<Boolean>()
+
+        /** Lets other database hooks distinguish a local Delete-for-me from a remote revoke. */
+        @JvmStatic
+        fun isDeleteForMeInProgress(): Boolean = deleteForMeScope.get() == true
     }
 
     override fun hook() {
@@ -44,27 +49,22 @@ class PreserveDeleteForMeHook(
         hookDatabaseDeleteForMe()
     }
 
-    private val isDeleteForMeActive = ThreadLocal<Boolean>()
-
     private fun hookBytecodeDeleteForMe() {
         try {
             val deleteMethod = resolveDeleteForMeMethod()
             if (deleteMethod != null) {
+                XposedBridge.log("$TAG Installed Delete for me hook: $deleteMethod")
                 XposedBridge.hookMethod(
                     deleteMethod,
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (!isEnabled(PREF_KEY, false)) return
-                            isDeleteForMeActive.set(true)
-                            try {
-                                param.result = null
-                            } catch (t: Throwable) {
-                                XposedBridge.log("$TAG Error in bytecode delete hook: ${t.javaClass.simpleName}")
-                            }
+                            if (deleteMethod.name == "run" && !isDeleteForMeRunnable(param.thisObject)) return
+                            deleteForMeScope.set(true)
                         }
 
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            isDeleteForMeActive.set(false)
+                            deleteForMeScope.remove()
                         }
                     }
                 )
@@ -84,7 +84,7 @@ class PreserveDeleteForMeHook(
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (!isEnabled(PREF_KEY, false)) return
-                        if (isDeleteForMeActive.get() != true) return
+                        if (!isDeleteForMeInProgress()) return
 
                         val table = param.args.getOrNull(0) as? String ?: return
                         if (table != "message") return
@@ -100,7 +100,6 @@ class PreserveDeleteForMeHook(
 
                             db.rawQuery(querySql, sqlArgs).use { cursor ->
                                 if (cursor != null && cursor.moveToFirst()) {
-                                    var hasIncomingToPreserve = false
                                     do {
                                         val keyId = cursor.getString(1)
                                         val chatRowId = cursor.getLong(2)
@@ -110,9 +109,7 @@ class PreserveDeleteForMeHook(
                                         val msgTs = cursor.getLong(6)
                                         val senderJidRowId = if (cursor.columnCount > 7) cursor.getLong(7) else 0L
 
-                                        // Only preserve INCOMING messages (from_me == 0) deleted via Delete For Me.
-                                        if (!fromMe && !keyId.isNullOrEmpty() && msgType != 15) {
-                                            hasIncomingToPreserve = true
+                                        if (!keyId.isNullOrEmpty() && msgType != 15) {
                                             val now = System.currentTimeMillis()
                                             val chatJid = resolveChatJid(db, chatRowId)
                                             val isGroup = chatJid.contains("@g.us")
@@ -121,9 +118,6 @@ class PreserveDeleteForMeHook(
                                                 resolveSenderDisplayName(context, db, senderJidRowId, chatDisplayName)
                                             else chatDisplayName
 
-                                            DelMessageStore.getInstance(context).insertMessage(
-                                                chatJid, keyId, now
-                                            )
                                             dispatchToManagerApp(
                                                 jid = chatJid,
                                                 chatName = chatDisplayName,
@@ -131,16 +125,11 @@ class PreserveDeleteForMeHook(
                                                 msgId = keyId,
                                                 text = textData,
                                                 timestamp = if (msgTs > 0) msgTs else now,
-                                                fromMe = false,
+                                                fromMe = fromMe,
                                                 isGroup = isGroup
                                             )
                                         }
                                     } while (cursor.moveToNext())
-
-                                    // Only block the DELETE if there are incoming rows to preserve.
-                                    if (hasIncomingToPreserve) {
-                                        param.result = 0
-                                    }
                                 }
                             }
                         } catch (t: Throwable) {
@@ -331,7 +320,7 @@ class PreserveDeleteForMeHook(
             DexSearchEngine.getInstance().findMethodWithCache(
                 context,
                 classLoader,
-                "wpp_delete_for_me_method_v3",
+                "wpp_delete_for_me_method_v5",
                 { bridge, loader ->
                     val data = bridge.findMethod(
                         FindMethod.create().matcher(
@@ -348,12 +337,80 @@ class PreserveDeleteForMeHook(
                             )
                         )
                     ).firstOrNull()
-                    data?.getMethodInstance(loader)
+                    if (data != null) {
+                        data.getMethodInstance(loader)
+                    } else {
+                        resolveCurrentDeleteForMeRunnable(bridge, loader)
+                    }
                 }
             )
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Exception while searching DeleteForMe method: ${t.javaClass.simpleName}")
             null
+        }
+    }
+
+    /**
+     * WhatsApp 2.26.41+ moved local deletion into a multiplexed Runnable. Resolve it from the
+     * delete-dialog contract instead of relying on an obfuscated class or method name:
+     * dialog builder -> Delete-for-me listener -> Runnable constructor -> run().
+     */
+    private fun resolveCurrentDeleteForMeRunnable(
+        bridge: org.luckypray.dexkit.DexKitBridge,
+        loader: ClassLoader
+    ): Method? {
+        val dialogMethod = bridge.findMethod(
+            FindMethod.create().matcher(
+                MethodMatcher.create().addUsingString(
+                    "dialog/delete no messages",
+                    StringMatchType.Equals
+                )
+            )
+        ).singleOrNull() ?: return null
+
+        val deleteListenerConstructor = dialogMethod.invokes.singleOrNull { invoked ->
+            if (!invoked.isConstructor) return@singleOrNull false
+            val params = invoked.paramTypeNames
+            if (params.firstOrNull() != "android.widget.CheckBox" ||
+                "java.util.Set" !in params) return@singleOrNull false
+            val declaredClass = invoked.declaredClass ?: return@singleOrNull false
+            declaredClass.interfaces.any {
+                it.name == "android.content.DialogInterface\$OnClickListener"
+            }
+        } ?: return null
+
+        val deleteListenerClass = deleteListenerConstructor.declaredClass ?: return null
+        val onClick = deleteListenerClass.methods.singleOrNull { method ->
+            method.name == "onClick" &&
+                method.paramTypeNames == listOf("android.content.DialogInterface", "int") &&
+                method.returnTypeName == "void"
+        } ?: return null
+
+        val deleteRunnableConstructor = onClick.invokes.singleOrNull { invoked ->
+            if (!invoked.isConstructor || "int" !in invoked.paramTypeNames) {
+                return@singleOrNull false
+            }
+            val declaredClass = invoked.declaredClass ?: return@singleOrNull false
+            declaredClass.interfaces.any { it.name == "java.lang.Runnable" }
+        } ?: return null
+
+        val deleteRunnableClass = deleteRunnableConstructor.declaredClass ?: return null
+        return deleteRunnableClass.methods.singleOrNull { method ->
+            method.name == "run" && method.paramCount == 0 && method.returnTypeName == "void"
+        }?.getMethodInstance(loader)
+    }
+
+    private fun isDeleteForMeRunnable(instance: Any?): Boolean {
+        if (instance == null) return false
+        return try {
+            val discriminator = instance.javaClass.declaredFields.singleOrNull {
+                it.type == Int::class.javaPrimitiveType
+            } ?: return false
+            discriminator.isAccessible = true
+            // Reviewed in WhatsApp Business 2.26.41.3: case 6 is Delete for me.
+            discriminator.getInt(instance) == 6
+        } catch (_: Throwable) {
+            false
         }
     }
 }

@@ -254,7 +254,7 @@ fun AboutScreen() {
 
             val client = OkHttpClient()
             val request = Request.Builder()
-                .url("https://api.github.com/repos/mubashardev/WaEnhancer/contributors")
+                .url("https://api.github.com/repos/WaEnhancerX/WaEnhancerX/contributors")
                 .header("User-Agent", "WaEnhancerX-App")
                 .header("Accept", "application/vnd.github.v3+json")
                 .build()
