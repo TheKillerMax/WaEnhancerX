@@ -1,0 +1,81 @@
+name: V22 read-only reconciliation evidence
+on:
+  push:
+    branches: [test/runtime-contract-validation-v22-2026-10-15]
+    paths: [.github/workflows/v22-readonly-reconciliation.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inspect exact public refs and preserve text-only candidate trees
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+          out=pathlib.Path('v22-readonly');out.mkdir()
+          def git(*args,check=True):
+              p=subprocess.run(['git',*args],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+              if check and p.returncode:raise RuntimeError(p.stdout)
+              return p.stdout
+          main='6e0aa7accd8ab988205d39e3eb582c7379b49a70'
+          refs={'pr35':'9f1dac912d3e254d026cc447a2f9bd4228942169','pr41':'aa32a7bd3bd4de4e4ee2f2bd4cf4df87699757eb'}
+          git('fetch','https://github.com/WaEnhancerX/WaEnhancerX.git',main)
+          git('config','user.name','TheKillerMax');git('config','user.email','70108066+TheKillerMax@users.noreply.github.com')
+          def snapshot(ref,destination):
+              root=out/destination;root.mkdir(parents=True,exist_ok=True)
+              entries=[]
+              for line in git('ls-tree','-r',ref).splitlines():
+                  info,path=line.split('\t',1);mode,kind,sha=info.split()
+                  entries.append({'path':path,'mode':mode,'type':kind,'sha':sha})
+                  if kind!='blob':continue
+                  data=subprocess.check_output(['git','cat-file','blob',sha])
+                  try:text=data.decode('utf-8')
+                  except UnicodeDecodeError:continue
+                  if '\0' in text or pathlib.Path(path).suffix.lower() in ('.apk','.jks','.keystore','.ttf','.otf','.pem'):continue
+                  p=root/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+              (root/'TREE_MANIFEST.json').write_text(json.dumps(entries,indent=2))
+          snapshot(main,'main')
+          for name,head in refs.items():
+              git('fetch','origin',head)
+              base=git('merge-base',main,head).strip()
+              snapshot(head,name+'/head');snapshot(base,name+'/base')
+              git('checkout','--detach',head)
+              result=git('merge','--no-commit','--no-ff',main,check=False)
+              conflicts=git('diff','--name-only','--diff-filter=U').splitlines()
+              (out/(name+'-merge.json')).write_text(json.dumps({'main':main,'head':head,'base':base,'conflicts':conflicts,'output':result},indent=2))
+              snapshot(head,name+'/candidate')
+              destination=out/name/'candidate'
+              for path in git('diff','--name-only',head).splitlines():
+                  p=pathlib.Path(path);target=destination/path
+                  if not p.exists():
+                      if target.exists():target.unlink()
+                      continue
+                  data=p.read_bytes()
+                  try:text=data.decode('utf-8')
+                  except UnicodeDecodeError:continue
+                  if '\0' not in text:
+                      target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+              (out/(name+'-main-to-candidate.patch')).write_text(git('diff',main,check=False))
+              git('merge','--abort',check=False)
+          def fetch(path):
+              request=urllib.request.Request('https://api.github.com/'+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+              return json.load(urllib.request.urlopen(request))
+          prs=fetch('repos/WaEnhancerX/WaEnhancerX/pulls?state=all&per_page=100')
+          (out/'pulls.json').write_text(json.dumps([{'number':p['number'],'state':p['state'],'merged_at':p['merged_at'],'title':p['title'],'head':p['head']['ref'],'sha':p['head']['sha'],'url':p['html_url']} for p in prs],indent=2))
+          branches=fetch('repos/TheKillerMax/WaEnhancerX/branches?per_page=100')
+          (out/'branches.json').write_text(json.dumps([{'name':b['name'],'sha':b['commit']['sha']} for b in branches],indent=2))
+          print('Read-only inspection complete; no functional ref was changed.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v22-readonly
+          path: v22-readonly/
+          retention-days: 7
+          include-hidden-files: true
