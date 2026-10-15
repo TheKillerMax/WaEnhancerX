@@ -1,0 +1,55 @@
+name: V22 pending PR reconciliation evidence
+on:
+  push:
+    paths: ['.github/workflows/v22-reconciliation-evidence.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Capture public text only and three-way conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'TheKillerMax'
+          git config user.email '70108066+TheKillerMax@users.noreply.github.com'
+          export OUT="$RUNNER_TEMP/v22-reconcile"
+          mkdir -p "$OUT"
+          for item in '35:9f1dac912d3e254d026cc447a2f9bd4228942169' '41:aa32a7bd3bd4de4e4ee2f2bd4cf4df87699757eb'; do
+            n=${item%%:*}; head=${item#*:}
+            git checkout --detach 6e0aa7accd8ab988205d39e3eb582c7379b49a70
+            mkdir -p "$OUT/$n"
+            git diff "$(git merge-base HEAD "$head")" "$head" > "$OUT/$n/proposal.patch"
+            git diff "$head" HEAD -- app/src/main/java > "$OUT/$n/head-vs-main.patch"
+            git merge --no-commit --no-ff "$head" > "$OUT/$n/merge.log" 2>&1 || true
+            git ls-files -u > "$OUT/$n/unmerged.txt"
+            git status --porcelain > "$OUT/$n/status.txt"
+            N="$n" python3 - <<'PY'
+          import os, subprocess, pathlib, json
+          out=pathlib.Path(os.environ['OUT'])/os.environ['N']; files={}
+          allowed={'.java','.kt','.kts','.py','.xml','.toml','.json','.md','.txt','.yml','.yaml','.properties','.sh','.csv'}
+          for row in subprocess.check_output(['git','ls-files','-s'],text=True).splitlines():
+              metadata,name=row.split('\t',1); mode,sha,stage=metadata.split()
+              if pathlib.Path(name).suffix not in allowed: continue
+              data=subprocess.check_output(['git','cat-file','blob',sha])
+              try: data.decode('utf-8')
+              except UnicodeDecodeError: continue
+              dest=out/('stage'+stage)/name; dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+              files[stage+':'+name]={'sha':sha,'mode':mode}
+          (out/'blobs.json').write_text(json.dumps(files,indent=2))
+          PY
+            git merge --abort || true
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v22-merge-inputs
+          path: ${{ runner.temp }}/v22-reconcile
+          retention-days: 7
+          if-no-files-found: error
