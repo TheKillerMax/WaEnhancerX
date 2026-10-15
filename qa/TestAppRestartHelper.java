@@ -31,6 +31,8 @@ public final class TestAppRestartHelper {
         volatile CountDownLatch awaited = new CountDownLatch(1);
         @Override public Context getApplicationContext() { return this; }
         @Override public PackageManager getPackageManager() { return pm; }
+        @Override public String getPackageName() { return "com.waenhancer"; }
+        @Override public Object getSystemService(String name) { return null; }
         @Override public void sendBroadcast(Intent intent) {
             broadcast = intent;
             broadcasts++;

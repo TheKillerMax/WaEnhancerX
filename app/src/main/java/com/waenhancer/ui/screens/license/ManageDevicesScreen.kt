@@ -21,10 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,7 +68,13 @@ import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.xposed.utils.AppRestartHelper
 import org.json.JSONArray
+import android.content.Context
+import androidx.compose.ui.text.style.TextOverflow
+import com.waenhancer.ui.components.BannerType
+import com.waenhancer.ui.designsystem.WaexRadius
+import com.waenhancer.ui.designsystem.WaexSpacing
 
 data class ConnectedDeviceItem(
     val id: Int = 0,
@@ -102,7 +111,7 @@ fun shimmerBrush(targetValue: Float = 1000f): Brush {
 }
 
 @Composable
-fun ManageDevicesShimmer(spacing: com.waenhancer.ui.designsystem.WaexSpacing, radius: com.waenhancer.ui.designsystem.WaexRadius) {
+fun ManageDevicesShimmer(spacing: WaexSpacing, radius: WaexRadius) {
     val brush = shimmerBrush()
 
     LazyColumn(
@@ -232,7 +241,7 @@ fun ManageDevicesScreen() {
     val radius = WaexTheme.radius
 
     val prefs = remember {
-        context.getSharedPreferences("com.waenhancer_preferences", android.content.Context.MODE_PRIVATE)
+        context.getSharedPreferences("com.waenhancer_preferences", Context.MODE_PRIVATE)
     }
 
     var isLoading by remember { mutableStateOf(true) }
@@ -457,7 +466,7 @@ fun ManageDevicesScreen() {
                             WaexInfoBanner(
                                 title = "Device Management",
                                 message = "You can unlink inactive devices here to free up slots for new installations. Unlinking your current device will deactivate Pro on this phone.",
-                                bannerType = com.waenhancer.ui.components.BannerType.INFO
+                                bannerType = BannerType.INFO
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                         }
@@ -482,9 +491,11 @@ fun ManageDevicesScreen() {
                 shape = radius.bottomSheetShape
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
                         .padding(top = 4.dp, bottom = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -615,7 +626,7 @@ fun ManageDevicesScreen() {
                                             deviceToUnlink = null
                                             if (wasCurrent) {
                                                 Toast.makeText(context, "Current device unlinked. Reverted to Free tier.", Toast.LENGTH_LONG).show()
-                                                navController.popBack()
+                                                AppRestartHelper.restartWhatsAppAndModule(context)
                                             } else {
                                                 Toast.makeText(context, "Device unlinked successfully.", Toast.LENGTH_SHORT).show()
                                                 loadDevices(isPull = true)
@@ -737,7 +748,7 @@ private fun DeviceCardItem(
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurface,
                         maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (device.isCurrent) {
@@ -764,7 +775,7 @@ private fun DeviceCardItem(
                         style = typography.labelSm,
                         color = colors.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -794,4 +805,3 @@ private fun DeviceCardItem(
         }
     }
 }
-

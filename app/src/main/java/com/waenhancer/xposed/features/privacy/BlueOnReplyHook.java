@@ -134,7 +134,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 }
             });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getMessage());
+            XposedBridge.log(TAG + " Error initializing receipt dispatcher: " + t.getClass().getSimpleName());
         }
     }
 
@@ -176,7 +176,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking Blue on Reply: " + t.getClass().getSimpleName());
         }
     }
 
@@ -201,8 +201,7 @@ public class BlueOnReplyHook extends BaseFeature {
         constructor.setAccessible(true);
         pending.add(new ReadJobRecipe(constructor, copy));
         lastHiddenConversationJid = key;
-        XposedBridge.log(TAG + " Captured hidden read job for " + key
-                + " (pending=" + pending.size() + ")");
+        XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")");
     }
 
     private static Object getOrFindJobManager() {
@@ -226,6 +225,14 @@ public class BlueOnReplyHook extends BaseFeature {
 
     private static int sendPendingReadJobs(String jid) {
         String key = canonicalJid(jid);
+        // The SendE2EMessageJob recipient is the only safe authority for an automatic
+        // blue-on-reply dispatch.  A phone/LID user-part match, the foreground
+        // conversation, or the last captured job may refer to a different chat while
+        // WhatsApp is sending queued work.  Never touch another job when it is unknown.
+        if (key == null) {
+            XposedBridge.log(TAG + " Cannot dispatch: outgoing recipient is unavailable");
+            return 0;
+        }
         Method enqueue = enqueueJobMethod;
         Object manager = getOrFindJobManager();
 
@@ -234,60 +241,14 @@ public class BlueOnReplyHook extends BaseFeature {
             return 0;
         }
 
-        List<ReadJobRecipe> pending = null;
-        String matchedKey = null;
-
-        if (key != null) {
-            pending = PENDING_JOBS.remove(key);
-            if (pending != null && !pending.isEmpty()) {
-                matchedKey = key;
-            } else {
-                // Match by user part / phone number prefix (e.g. 12345 in 12345@s.whatsapp.net or 12345@lid)
-                String userPart = getUserPart(key);
-                if (userPart != null && !userPart.isEmpty()) {
-                    for (String candidateKey : PENDING_JOBS.keySet()) {
-                        if (userPart.equals(getUserPart(candidateKey))) {
-                            pending = PENDING_JOBS.remove(candidateKey);
-                            if (pending != null && !pending.isEmpty()) {
-                                matchedKey = candidateKey;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fallback to last hidden conversation JID if still empty
-        if ((pending == null || pending.isEmpty()) && lastHiddenConversationJid != null) {
-            pending = PENDING_JOBS.remove(lastHiddenConversationJid);
-            if (pending != null && !pending.isEmpty()) {
-                matchedKey = lastHiddenConversationJid;
-            }
-        }
-
-        // If still empty and there is exactly one pending conversation, drain it
-        if ((pending == null || pending.isEmpty()) && PENDING_JOBS.size() == 1) {
-            for (String singleKey : PENDING_JOBS.keySet()) {
-                pending = PENDING_JOBS.remove(singleKey);
-                if (pending != null && !pending.isEmpty()) {
-                    matchedKey = singleKey;
-                    break;
-                }
-            }
-        }
+        List<ReadJobRecipe> pending = PENDING_JOBS.remove(key);
 
         if (pending == null || pending.isEmpty()) {
-            XposedBridge.log(TAG + " No captured read jobs for " + (key != null ? key : "null"));
+            XposedBridge.log(TAG + " No captured read jobs for reply");
             return 0;
         }
 
-        if (matchedKey != null) {
-            HideReceiptsHook.allowBlueReplyReceipt(matchedKey);
-        }
-        if (key != null && !key.equals(matchedKey)) {
-            HideReceiptsHook.allowBlueReplyReceipt(key);
-        }
+        HideReceiptsHook.allowBlueReplyReceipt(key);
 
         int sent = 0;
         for (ReadJobRecipe recipe : pending) {
@@ -297,18 +258,12 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
                 sent++;
-                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt for " + (matchedKey != null ? matchedKey : key));
+                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt");
             } catch (Throwable t) {
-                XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getMessage());
+                XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getClass().getSimpleName());
             }
         }
         return sent;
-    }
-
-    private static String getUserPart(String jid) {
-        if (jid == null) return null;
-        int atIdx = jid.indexOf('@');
-        return atIdx != -1 ? jid.substring(0, atIdx) : jid;
     }
 
     private String extractRemoteJid(Object source) {
@@ -323,23 +278,8 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         } catch (Throwable ignored) {
         }
-        try {
-            Class<?> current = source.getClass();
-            while (current != null && current != Object.class) {
-                for (Field field : current.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers())) continue;
-                    field.setAccessible(true);
-                    Object value = field.get(source);
-                    if (value == null) continue;
-                    String raw = value.toString();
-                    if (raw.contains("@s.whatsapp.net") || raw.contains("@g.us")
-                            || raw.contains("@lid") || raw.contains("@broadcast")) {
-                        return raw;
-                    }
-                }
-                current = current.getSuperclass();
-            }
-        } catch (Throwable ignored) {}
+        // Do not scan arbitrary fields. Send jobs also carry participant and device JIDs,
+        // neither of which proves the conversation that owns this outbound message.
         return null;
     }
 
@@ -397,7 +337,7 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedBridge.log(TAG + " Hooked Conversation menu method: " + menuMethod);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getMessage());
+            XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getClass().getSimpleName());
         }
     }
 

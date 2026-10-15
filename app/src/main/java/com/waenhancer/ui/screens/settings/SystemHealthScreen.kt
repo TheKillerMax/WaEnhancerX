@@ -47,6 +47,7 @@ import com.waenhancer.utils.XposedRuntimeInspector
 import com.waenhancer.utils.XposedRuntimeSnapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun SystemHealthScreen() {
@@ -174,7 +175,7 @@ fun SystemHealthScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceContainerLow,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -207,7 +208,7 @@ fun SystemHealthScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceContainerLow,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -248,7 +249,7 @@ private fun DiagnosticCard(title: String, entries: List<Pair<String, String>>, a
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    Surface(shape = radius.bentoCardShape, color = colors.surfaceContainerLow, border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = radius.bentoCardShape, color = colors.surfaceContainerLow, border = BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp)) {
             Text(title, style = typography.bodyLg, fontWeight = FontWeight.Bold, color = accent)
             Spacer(Modifier.height(12.dp))

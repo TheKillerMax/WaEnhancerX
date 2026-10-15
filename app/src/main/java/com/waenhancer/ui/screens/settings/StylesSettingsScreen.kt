@@ -30,11 +30,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+import com.waenhancer.core.preferences.WaexPreferenceManager
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
 
 @Composable
 fun StylesSettingsScreen() {
@@ -48,7 +61,7 @@ fun StylesSettingsScreen() {
     var typedValueRevision by remember { mutableIntStateOf(0) }
 
     val navController = LocalWaexNavController.current
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -83,7 +96,7 @@ fun StylesSettingsScreen() {
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val stylesKeys = remember {
         listOf(
             "bubble_colors", "custom_theme", "custom_time_format", "custom_toolbar",
@@ -134,59 +147,22 @@ fun StylesSettingsScreen() {
     }
 
 
-    val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-    val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+    val isPro = LocalIsPro.current
+    val onActivatePro = LocalOnActivatePro.current
 
-    val appearanceGroups = listOf(
-        StyleGroup(
-            "Visual Styles",
-            WaexIcons.Palette,
-            listOf(
-                StyleItem("Change Bubble Colors", "Change Bubble Color on Conversation Screen", "bubble_colors"),
-                StyleItem("Custom Theme CSS", "Customize your WhatsApp using CSS styles", "custom_theme", isPro = true),
-                StyleItem("Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "custom_time_format"),
-                StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
-                StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
-                StyleItem("View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "seen_tick_customization"),
-                StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar"),
-                StyleItem("Unlock WA Plus", "Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.", "unlock_premium_customization", isPro = true),
-                StyleItem("Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs", "custom_filters")
-            )
-        )
-    )
-
-    val layoutGroups = listOf(
-        StyleGroup(
-            "Conversation List Activity & Presence",
-            WaexIcons.Security,
-            listOf(
-                StyleItem("Show Online Dot in Conversation List", "Show a green online dot on home screen", "dotonline"),
-                StyleItem("Show Online/Last seen in Conversation List", "Show a text online or last seen on home screen", "showonlinetext"),
-                StyleItem("Show toast on contact online", "Show a toast when a contact is online", "typing_online_toasts")
-            )
-        ),
-        StyleGroup(
-            "Home Layout & Navigation",
-            WaexIcons.GridView,
-            listOf(
-                StyleItem("Remove Channel Recomendations", "Remove Channel Recomendations from tab Status", "channels_enhancements"),
-                StyleItem("Enable filter chats for type", "Show options to filter chats for groups, contacts and unseen messages", "chat_filters"),
-                StyleItem("Hide Tabs on Home", "Hide tabs on the home screen such as Updates, Communities and Calls", "hide_ui_tabs"),
-                StyleItem("Enable IGStatus on Home Screen", "Show status style Instagram in Home Screen", "instagram_status_layout"),
-                StyleItem("Separate Groups", "Separate your chats by: Groups, Private Chats, Status, Calls, Communities", "separate_groups_tabs"),
-                StyleItem("Quick Action Home Menu", "Add quick actions to home long-press", "quick_home_menu")
-            )
-        ),
-        StyleGroup(
-            "Utilities & Data",
-            WaexIcons.Extension,
-            listOf(
-                StyleItem("Show Contact Added Status in Conversation", "This option verifies whether the contact added you or has a public profile photo", "contact_blocked_verify"),
-                StyleItem("Audio to Voice Status", "Pick a local audio file and publish it as a voice status", "send_audio_as_voice_status", isPro = true),
-                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "disable_sensor_proximity")
-            )
-        )
-    )
+    val appearanceGroups = remember {
+        FeatureCatalog.groupsFor(4, "appearance").map { StyleGroup(it.id, WaexIcons.Palette, it.items()) }
+    }
+    val layoutGroups = remember {
+        FeatureCatalog.groupsFor(4, "layout").map { group ->
+            val icon = when (group.id) {
+                "conversation_list_activity_presence" -> WaexIcons.Security
+                "home_layout_navigation" -> WaexIcons.GridView
+                else -> WaexIcons.Extension
+            }
+            StyleGroup(group.id, icon, group.items())
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -202,7 +178,7 @@ fun StylesSettingsScreen() {
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -255,7 +231,7 @@ fun StylesSettingsScreen() {
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -292,7 +268,7 @@ fun StylesSettingsScreen() {
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = group.title,
+                        text = LocalizationHelper.getLocalizedSectionTitle(context, group.title),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurfaceVariant
@@ -302,7 +278,7 @@ fun StylesSettingsScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
@@ -315,6 +291,8 @@ fun StylesSettingsScreen() {
                                 animationSpec = tween(durationMillis = 300),
                                 label = "highlight_bg"
                             )
+                            val locTitle = LocalizationHelper.getTitle(context, item)
+                            val locDesc = LocalizationHelper.getDesc(context, item)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -346,14 +324,15 @@ fun StylesSettingsScreen() {
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = item.label,
+                                            text = locTitle,
                                             style = typography.bodyLg,
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
+                                        val reqPro = stringResource(R.string.requires_pro_label)
                                         Text(
-                                            text = if (needsTypedEditor) "${item.sublabel} • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
-                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "$locDesc • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
+                                                else if (isLocked) "$locDesc • $reqPro" else locDesc,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -366,7 +345,7 @@ fun StylesSettingsScreen() {
                                         if (item.key == "floating_bottom_bar") {
                                             IconButton(
                                                 onClick = {
-                                                    navController.navigateTo(com.waenhancer.ui.navigation.Screen.FloatingBottomBarCustomizer)
+                                                    navController.navigateTo(Screen.FloatingBottomBarCustomizer)
                                                 },
                                                 modifier = Modifier.size(36.dp)
                                             ) {
@@ -381,7 +360,7 @@ fun StylesSettingsScreen() {
                                         if (item.key == "custom_filters") {
                                             IconButton(
                                                 onClick = {
-                                                    navController.navigateTo(com.waenhancer.ui.navigation.Screen.FilterItems)
+                                                    navController.navigateTo(Screen.FilterItems)
                                                 },
                                                 modifier = Modifier.size(36.dp)
                                             ) {
@@ -396,7 +375,7 @@ fun StylesSettingsScreen() {
                                         if (needsTypedEditor) {
                                             Icon(
                                                 imageVector = WaexIcons.ChevronRight,
-                                                contentDescription = "Configure ${item.label}",
+                                                contentDescription = "Configure $locTitle",
                                                 tint = colors.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -444,19 +423,30 @@ fun StylesSettingsScreen() {
 @Composable
 private fun TypedStyleEditorDialog(
     key: String,
-    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    preferenceManager: WaexPreferenceManager,
     onDismiss: () -> Unit,
     onSaved: () -> Unit
 ) {
+    val context = LocalContext.current
+    val completeSave: (Boolean) -> Unit = { saved ->
+        if (saved) {
+            onSaved()
+        } else {
+            // Keep the editor and its input open so the user can retry.
+            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+        }
+    }
     when (key) {
         "custom_theme" -> TextValueEditorDialog(
             title = "Custom Theme CSS",
-            description = "Enter CSS rules to apply to supported WhatsApp views.",
+            description = "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving.",
             initialValue = preferenceManager.getString("css_theme", "") ?: "",
             singleLine = false,
-            placeholder = "/* Your CSS rules */",
+            placeholder = "#conversation_row_date {\n  color: #FFFFFF;\n  font-size: 12sp;\n}",
+            validator = ::isValidCustomCss,
+            errorMessage = "Check that every selector has a matching { } block",
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("css_theme", it.trim()); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("css_theme", it.trim())) }
         )
         "custom_view_dpi" -> TextValueEditorDialog(
             title = "Default DPI",
@@ -469,14 +459,14 @@ private fun TypedStyleEditorDialog(
             },
             errorMessage = "Enter 0 or a number from 120 to 1000",
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("change_dpi", it.trim()); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("change_dpi", it.trim())) }
         )
         "chat_filters" -> ChoiceValueEditorDialog(
             title = "Chat filter display",
             selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
             choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("chatfilter", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("chatfilter", it)) }
         )
         "quick_home_menu" -> ChoiceValueEditorDialog(
             title = "Quick Action Home Menu",
@@ -487,7 +477,7 @@ private fun TypedStyleEditorDialog(
                 "icons" to "Toolbar icons"
             ),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putString("waex_menu_style", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicString("waex_menu_style", it)) }
         )
         "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
             title = "Hide home tabs",
@@ -499,12 +489,13 @@ private fun TypedStyleEditorDialog(
                 "700" to "Tools"
             ),
             onDismiss = onDismiss,
-            onSave = { preferenceManager.putStringSet("hidetabs", it); onSaved() }
+            onSave = { completeSave(preferenceManager.putPublicStringSet("hidetabs", it)) }
         )
         else -> onDismiss()
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TextValueEditorDialog(
     title: String,
@@ -519,26 +510,53 @@ private fun TextValueEditorDialog(
 ) {
     var value by remember(title, initialValue) { mutableStateOf(initialValue) }
     val valid = validator(value.trim())
-    AlertDialog(
+    val colors = WaexTheme.colors
+    val radius = WaexTheme.radius
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(description, style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
-                    singleLine = singleLine,
-                    placeholder = { Text(placeholder) },
-                    isError = !valid,
-                    supportingText = if (!valid) ({ Text(errorMessage) }) else null
-                )
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.fillMaxWidth().then(if (singleLine) Modifier else Modifier.height(220.dp)),
+                singleLine = singleLine,
+                placeholder = { Text(placeholder) },
+                isError = !valid,
+                supportingText = if (!valid) ({ Text(errorMessage) }) else null
+            )
+            Button(
+                onClick = { onSave(value) },
+                enabled = valid,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.buttonShape
+            ) {
+                Text("Save", fontWeight = FontWeight.Bold)
             }
-        },
-        confirmButton = { TextButton(onClick = { onSave(value) }, enabled = valid) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = radius.buttonShape
+            ) {
+                Text("Cancel")
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -803,9 +821,36 @@ private fun MultiChoiceValueEditorDialog(
     }
 }
 
+private fun isValidCustomCss(css: String): Boolean {
+    if (css.isBlank()) return true
+    var depth = 0
+    var inComment = false
+    var index = 0
+    while (index < css.length) {
+        if (!inComment && index + 1 < css.length && css[index] == '/' && css[index + 1] == '*') {
+            inComment = true
+            index += 2
+            continue
+        }
+        if (inComment && index + 1 < css.length && css[index] == '*' && css[index + 1] == '/') {
+            inComment = false
+            index += 2
+            continue
+        }
+        if (!inComment) {
+            when (css[index]) {
+                '{' -> depth++
+                '}' -> if (--depth < 0) return false
+            }
+        }
+        index++
+    }
+    return !inComment && depth == 0 && css.contains('{')
+}
+
 private fun typedStyleSummary(
     key: String,
-    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    preferenceManager: WaexPreferenceManager,
     @Suppress("UNUSED_PARAMETER") revision: Int
 ): String = when (key) {
     "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"
@@ -819,15 +864,9 @@ private fun typedStyleSummary(
 private data class StyleGroup(
     val title: String,
     val icon: ImageVector,
-    val items: List<StyleItem>
+    val items: List<FeatureItem>
 )
 
-private data class StyleItem(
-    val label: String,
-    val sublabel: String,
-    val key: String,
-    val isPro: Boolean = false
-)
 
 @Preview(showBackground = true)
 @Composable

@@ -29,6 +29,7 @@ import android.widget.TextView
 import androidx.core.widget.NestedScrollView
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import android.R
 
 /**
  * Modern Native WhatsApp WDS (WhatsApp Design System) bottom sheet component for WAEX.
@@ -125,7 +126,7 @@ class WaexBottomSheet(private val context: Context) {
             }.create().also { createdDialog = it }
         }
 
-        val dialog = Dialog(context, android.R.style.Theme_Translucent_NoTitleBar)
+        val dialog = Dialog(context, R.style.Theme_Translucent_NoTitleBar)
         val density = context.resources.displayMetrics.density
         val dp = { v: Int -> (v * density).toInt() }
         val screenHeight = context.resources.displayMetrics.heightPixels
@@ -324,7 +325,7 @@ class WaexBottomSheet(private val context: Context) {
                             isClickable = false
                             if (isDark) {
                                 buttonTintList = ColorStateList(
-                                    arrayOf(intArrayOf(-android.R.attr.state_checked), intArrayOf(android.R.attr.state_checked)),
+                                    arrayOf(intArrayOf(-R.attr.state_checked), intArrayOf(R.attr.state_checked)),
                                     intArrayOf(0xFF8696A0.toInt(), accentColor)
                                 )
                             }

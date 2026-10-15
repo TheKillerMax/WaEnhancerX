@@ -11,6 +11,7 @@ import com.waenhancer.xposed.core.BaseFeature
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
+import com.waenhancer.xposed.utils.ActivityTracker
 
 /**
  * Enables long-press copy functionality for status text captions and text status updates.
@@ -40,7 +41,7 @@ class CopyStatusTextHook(
                         val view = param.thisObject as? TextView ?: return
                         val resName = getResourceEntryName(view) ?: return
 
-                        val act = com.waenhancer.xposed.utils.ActivityTracker.getCurrentActivity()
+                        val act = ActivityTracker.getCurrentActivity()
                         val actName = act?.javaClass?.simpleName ?: ""
                         // Only target Status activities (StatusPlaybackActivity), never Conversation
                         if (actName.contains("Conversation")) return

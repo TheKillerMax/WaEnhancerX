@@ -6,7 +6,12 @@ import android.content.Intent
 import android.net.Uri
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.config.PreferenceRestartTracker
+import com.waenhancer.config.FeatureCatalog
 import dagger.hilt.android.HiltAndroidApp
+import android.content.Context
+import com.waenhancer.licensing.features.BootloaderSpooferFeature
+import com.waenhancer.utils.LocaleHelper
+import com.waenhancer.utils.WhatsAppPackageDetector
 
 @HiltAndroidApp
 class WaexApp : Application() {
@@ -17,20 +22,29 @@ class WaexApp : Application() {
             notifyHookedPackages(key)
         }
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
+        FeatureCatalog.initialize(this)
+        val lang = LocaleHelper.getSelectedLanguageCode(this)
+        if (lang != "system") {
+            LocaleHelper.applyLanguage(this, lang)
+        }
         PreferenceStores.publicStore(this).apply {
             registerOnSharedPreferenceChangeListener(preferenceListener)
             val installedVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "0"
             edit().putString("wae_version_name", installedVersion).apply()
         }
-        com.waenhancer.licensing.features.BootloaderSpooferFeature.syncDefaultKeyboxAsync(this)
+        BootloaderSpooferFeature.syncDefaultKeyboxAsync(this)
     }
 
     private fun notifyHookedPackages(changedKey: String?) {
         val publicPrefs = PreferenceStores.publicStore(this)
         val targets = LinkedHashSet(
-            com.waenhancer.utils.WhatsAppPackageDetector.getSupportedPackages(this)
+            WhatsAppPackageDetector.getSupportedPackages(this)
         )
         targets.addAll(publicPrefs.getStringSet("hooked_whatsapp_packages", emptySet()).orEmpty())
         targets.forEach { packageName ->

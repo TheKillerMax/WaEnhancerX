@@ -50,6 +50,7 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import io.noties.markwon.Markwon
 import io.noties.markwon.html.HtmlPlugin
+import android.content.Context
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -305,7 +306,7 @@ private fun NoticeMarkdownText(markdown: String, textColor: Int) {
     )
 }
 
-private fun handleAction(context: android.content.Context, action: NoticeAction) {
+private fun handleAction(context: Context, action: NoticeAction) {
     if ("url".equals(action.type, ignoreCase = true) && !action.url.isNullOrBlank()) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(action.url)).apply {

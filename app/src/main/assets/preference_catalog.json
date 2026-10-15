@@ -1,0 +1,272 @@
+[
+  {
+    "id": "presence_online_visibility",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "always_online",
+      "freezelastseen",
+      "ghostmode_t",
+      "ghostmode_r"
+    ]
+  },
+  {
+    "id": "message_delivery_receipts",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "hide_read_receipts",
+      "hideread_group",
+      "blueonreply",
+      "seentick",
+      "hide_delivery_receipts",
+      "hide_seen_receipts",
+      "hideonceseen"
+    ]
+  },
+  {
+    "id": "status_privacy",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "stealth_status_view",
+      "autonext_status",
+      "toast_viewed_status"
+    ]
+  },
+  {
+    "id": "message_protection_security",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "anti_view_once",
+      "download_view_once"
+    ]
+  },
+  {
+    "id": "anti_revoke_deletion_defense",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "anti_revoke",
+      "hide_anti_revoke",
+      "preserve_own_revoke",
+      "antirevokestatus",
+      "antidisappearing",
+      "toastdeleted",
+      "toast_viewed_message"
+    ]
+  },
+  {
+    "id": "security_vault",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "locked_chats_enhancer",
+      "typearchive",
+      "dnd_mode",
+      "hide_chats",
+      "custom_privacy"
+    ]
+  },
+  {
+    "id": "home_menu_shortcuts",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "ghostmode",
+      "show_dndmode",
+      "restartbutton",
+      "open_wae"
+    ]
+  },
+  {
+    "id": "advanced_rules_filtering",
+    "tabIndex": 1,
+    "subTabId": "privacy",
+    "tabId": "privacy",
+    "keys": [
+      "call_privacy"
+    ]
+  },
+  {
+    "id": "message_controls",
+    "tabIndex": 1,
+    "subTabId": "conversation",
+    "tabId": "conversation",
+    "keys": [
+      "message_bomber",
+      "anti_edit_messages",
+      "message_device_source",
+      "preserve_delete_for_me",
+      "revokeallmessages",
+      "hide_forwarded_tag",
+      "removeforwardlimit",
+      "sticker_confirm_alert",
+      "removeseemore",
+      "stamp_copied_message",
+      "doubletap2like",
+      "doubletap2like_emoji"
+    ],
+    "proKeys": [
+      "message_bomber"
+    ]
+  },
+  {
+    "id": "chat_navigation_shortcuts",
+    "tabIndex": 1,
+    "subTabId": "conversation",
+    "tabId": "conversation",
+    "keys": [
+      "jump_to_first_message",
+      "unlimited_pinned_chats",
+      "broadcast_tag",
+      "direct_chat_dialer",
+      "inline_translation",
+      "copy_status_text"
+    ]
+  },
+  {
+    "id": "chat_group_utilities",
+    "tabIndex": 1,
+    "subTabId": "conversation",
+    "tabId": "conversation",
+    "keys": [
+      "call_type_controller",
+      "group_admin_tools",
+      "status_text_composer"
+    ]
+  },
+  {
+    "id": "media_quality_status",
+    "tabIndex": 2,
+    "tabId": "media",
+    "keys": [
+      "status_downloader",
+      "media_upload_quality",
+      "send_audio_as_voice_status",
+      "status_video_splitter",
+      "file_size_spoofer"
+    ],
+    "proKeys": [
+      "send_audio_as_voice_status",
+      "status_video_splitter",
+      "file_size_spoofer"
+    ]
+  },
+  {
+    "id": "media_utility_downloader",
+    "tabIndex": 2,
+    "tabId": "media",
+    "keys": [
+      "call_recording",
+      "download_view_once",
+      "media_preview",
+      "download_profile"
+    ]
+  },
+  {
+    "id": "automation",
+    "tabIndex": 3,
+    "subTabId": "automation",
+    "tabId": "automation",
+    "keys": [
+      "always_typing",
+      "tasker_integration"
+    ]
+  },
+  {
+    "id": "audio_ai",
+    "tabIndex": 3,
+    "subTabId": "ai",
+    "tabId": "automation",
+    "keys": [
+      "voice_transcription"
+    ]
+  },
+  {
+    "id": "visual_styles",
+    "tabIndex": 4,
+    "subTabId": "appearance",
+    "tabId": "styles",
+    "keys": [
+      "bubble_colors",
+      "custom_theme",
+      "custom_time_format",
+      "custom_toolbar",
+      "custom_view_dpi",
+      "seen_tick_customization",
+      "floating_bottom_bar",
+      "unlock_premium_customization",
+      "filter_items",
+      "custom_filters"
+    ],
+    "proKeys": [
+      "unlock_premium_customization"
+    ]
+  },
+  {
+    "id": "conversation_list_activity_presence",
+    "tabIndex": 4,
+    "subTabId": "layout",
+    "tabId": "styles",
+    "keys": [
+      "dotonline",
+      "showonlinetext",
+      "typing_online_toasts"
+    ]
+  },
+  {
+    "id": "home_layout_navigation",
+    "tabIndex": 4,
+    "subTabId": "layout",
+    "tabId": "styles",
+    "keys": [
+      "channels_enhancements",
+      "chat_filters",
+      "hide_ui_tabs",
+      "instagram_status_layout",
+      "separate_groups_tabs",
+      "quick_home_menu"
+    ]
+  },
+  {
+    "id": "utilities_data",
+    "tabIndex": 4,
+    "subTabId": "layout",
+    "tabId": "styles",
+    "keys": [
+      "contact_blocked_verify",
+      "send_audio_as_voice_status",
+      "disable_sensor_proximity"
+    ]
+  },
+  {
+    "id": "system_compatibility",
+    "tabIndex": -1,
+    "tabId": "settings",
+    "keys": [
+      "show_hook_toast",
+      "show_restart_sheet",
+      "supported_versions",
+      "bypass_version_check",
+      "bootloader_spoofer"
+    ]
+  },
+  {
+    "id": "premium",
+    "tabIndex": -1,
+    "tabId": "premium",
+    "keys": [
+      "license_verification",
+      "pro_features_unlock"
+    ]
+  }
+]

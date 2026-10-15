@@ -40,6 +40,7 @@ import java.util.Map;
 public interface SharedPreferences {
  boolean getBoolean(String key, boolean fallback);
  String getString(String key, String fallback);
+ java.util.Set<String> getStringSet(String key, java.util.Set<String> fallback);
  int getInt(String key, int fallback);
  float getFloat(String key, float fallback);
  Map<String, ?> getAll();
@@ -47,6 +48,7 @@ public interface SharedPreferences {
  interface Editor {
   Editor putBoolean(String key, boolean value);
   Editor putString(String key, String value);
+  Editor putStringSet(String key, java.util.Set<String> value);
   Editor putInt(String key, int value);
   Editor putFloat(String key, float value);
   Editor remove(String key);

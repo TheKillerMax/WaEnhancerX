@@ -51,6 +51,8 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.Screen
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -210,7 +212,7 @@ fun DashboardBentoScreen() {
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -399,7 +401,7 @@ fun DashboardBentoScreen() {
                 Surface(
                     shape = radius.cardShape,
                     color = colors.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -495,7 +497,7 @@ fun DashboardBentoScreen() {
                 Surface(
                     shape = radius.cardShape,
                     color = colors.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -554,7 +556,7 @@ fun DashboardBentoScreen() {
                                 containerColor = colors.background,
                                 contentColor = colors.onSurface
                             ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                            border = BorderStroke(1.dp, colors.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
@@ -576,7 +578,7 @@ fun DashboardBentoScreen() {
 @Composable
 private fun WaexBentoItemMobile(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     chips: List<String>,
     onManageClick: () -> Unit
 ) {
@@ -587,7 +589,7 @@ private fun WaexBentoItemMobile(
     Surface(
         shape = radius.cardShape,
         color = colors.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+        border = BorderStroke(1.dp, colors.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -645,7 +647,7 @@ private fun WaexBentoItemMobile(
                     containerColor = colors.background,
                     contentColor = colors.onSurface
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
