@@ -790,63 +790,52 @@ public class HideReceiptsHook extends BaseFeature {
      */
     private void hookSenderPlayed() {
         try {
-            DexSearchEngine engine = DexSearchEngine.getInstance();
-
-            // 1. Resolve SenderPlayed class via anchor string
-            Class<?> senderPlayedClass = engine.findClassWithCache(
-                    context,
-                    classLoader,
-                    "wpp_sender_played_class",
-                    (bridge, loader) -> {
-                        ClassData cd = bridge.findClass(FindClass.create()
-                                .matcher(ClassMatcher.create().usingStrings("sendmethods/sendClearDirty"))
-                        ).firstOrNull();
-                        return cd != null ? cd.getInstance(loader) : null;
-                    }
-            );
-
-            if (senderPlayedClass == null) {
-                XposedBridge.log(TAG + " WARNING: SenderPlayed class not found.");
+            Method dispatch = resolvePlayedReceiptDispatch();
+            if (dispatch == null) {
+                XposedBridge.log(TAG + " WARNING: Verified played dispatcher unavailable; audio/view-once privacy coverage is incomplete.");
                 return;
             }
-
-            // 2. Hook single-message played sender method
-            for (Method m : senderPlayedClass.getDeclaredMethods()) {
-                if (m.getParameterCount() == 1) {
-                    Class<?> pType = m.getParameterTypes()[0];
-                    // Parameter is FMessage or media message type
-                    if (!pType.isPrimitive() && !pType.getName().startsWith("java.lang.")) {
-                        XposedBridge.hookMethod(m, new XC_MethodHook() {
-                            @Override
-                            protected void beforeHookedMethod(MethodHookParam param) {
-                                Object msgObj = param.args[0];
-                                if (shouldSuppressPlayedReceipt(msgObj)) {
-                                    param.setResult(null);
-                                }
-                            }
-                        });
+            XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (!PlayedReceiptDispatchPolicy.isDispatchCall(
+                            dispatch, param.method, param.thisObject, param.args)) return;
+                    java.util.Set<?> messages = (java.util.Set<?>) param.args[0];
+                    // Retain existing played-batch privacy semantics. Media-kind classification
+                    // and mixed-batch granularity require an independently verified contract.
+                    if (!messages.isEmpty()
+                            && shouldSuppressPlayedReceipt(messages.iterator().next())) {
+                        param.setResult(null);
                     }
-                } else if (m.getParameterCount() > 0 && java.util.Set.class.isAssignableFrom(m.getParameterTypes()[0])) {
-                    // Hook batch/business set played sender method
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
-                            if (param.args[0] instanceof java.util.Set) {
-                                java.util.Set<?> set = (java.util.Set<?>) param.args[0];
-                                if (!set.isEmpty()) {
-                                    Object first = set.iterator().next();
-                                    if (shouldSuppressPlayedReceipt(first)) {
-                                        param.setResult(null);
-                                    }
-                                }
-                            }
-                        }
-                    });
                 }
-            }
+            });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking sender played: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking sender played: " + t.getClass().getSimpleName());
         }
+    }
+
+    private Method resolvePlayedReceiptDispatch() {
+        Method method = DexSearchEngine.getInstance().findMethodWithCache(
+                context, classLoader, "wpp_played_batch_dispatch_v1",
+                (bridge, loader) -> {
+                    // sendClearDirty identifies a multi-purpose dispatcher, not a played method.
+                    // Require the actual constructor call edge observed for the receipt job.
+                    MethodDataList matches = bridge.findMethod(FindMethod.create()
+                            .matcher(MethodMatcher.create()
+                                    .returnType("void")
+                                    .paramCount(2)
+                                    .addParamType("java.util.Set")
+                                    .addParamType("boolean")
+                                    .addInvoke(MethodMatcher.create()
+                                            .declaredClass("com.whatsapp.messaging.receipts.jobqueue.job.SendPlayedReceiptJobV2")
+                                            .name("<init>")
+                                            .paramCount(2)
+                                            .addUsingString("played-receipt-v2-", StringMatchType.Equals))));
+                    if (matches.size() != 1) return null;
+                    Method candidate = matches.get(0).getMethodInstance(loader);
+                    return PlayedReceiptDispatchPolicy.isDispatchMethod(candidate) ? candidate : null;
+                });
+        return PlayedReceiptDispatchPolicy.isDispatchMethod(method) ? method : null;
     }
 
     private boolean shouldSuppressPlayedReceipt(Object msgObj) {
