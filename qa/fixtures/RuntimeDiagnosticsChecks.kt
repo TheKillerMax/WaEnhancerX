@@ -23,7 +23,7 @@ class Prefs:SharedPreferences,SharedPreferences.Editor {
     override fun apply(){}
 }
 var checks=0
-fun ck(label:String,a:Any?,b:Any?){check(a==b){"$label actual=$a expected=$b"};checks++}
+fun ck(label:String,a:Any?,b:Any?){check(a==b){"ASSERTION|$label actual=$a expected=$b"};checks++}
 fun main(args:Array<String>){
     val names=mapOf("universal_supported_versions" to R.array.universal_supported_versions)
     val rules=arrayOf(/*BUILTIN_RULES*/)
@@ -103,7 +103,7 @@ fun main(args:Array<String>){
     ck("compat helper preserves strict proof",hasCurrentInjection(true,7,7,123,setOf(123),10000,35000),true)
     ck("compat helper expires",hasCurrentInjection(true,7,7,123,setOf(123),10000,35001),false)
     SystemClock.time=1000
-    Root.output="PID|com.whatsapp|123 456\n"
+    Root.output="PID|com.whatsapp|123 456\n\nEND|WAEX_PROCESS_SNAPSHOT"
     val snap=XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!
     File(args.single()).writeText(Root.lastCommand)
     ck("PID values",snap.pidsFor("com.whatsapp",1000),setOf(123,456))
@@ -115,23 +115,23 @@ fun main(args:Array<String>){
     SystemClock.time=26001;ck("cache expires",XposedRuntimeInspector.cached(),null)
     SystemClock.time=1000
     for(text in listOf("", "bad", "PID|com.whatsapp|123\nPID|com.whatsapp|456", "PID|com.whatsapp|0", "PID|com.whatsapp|-1", "PID|com.whatsapp|abc", "PID|com.whatsapp|2147483648", "PID|com.whatsapp|123 other", "PID|com.whatsapp;bad|123", "PID|com.whatsapp.w4b|456")){
-        Root.output=text
+        Root.output=text+"\nEND|WAEX_PROCESS_SNAPSHOT\n"
         ck("incomplete or malformed probe rejected",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
         ck("failed probe clears old proof",XposedRuntimeInspector.cached(),null)
     }
-    Root.output="PID|com.whatsapp|123";XposedRuntimeInspector.inspect(listOf("com.whatsapp"))
+    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(listOf("com.whatsapp"))
     Root.output=null;ck("root denied",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
     ck("denied invalidates cached",XposedRuntimeInspector.cached(),null)
-    Root.output="PID|com.whatsapp|123";XposedRuntimeInspector.inspect(listOf("com.whatsapp"));Root.fail=true
+    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(listOf("com.whatsapp"));Root.fail=true
     ck("root exception unavailable",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null);Root.fail=false
     ck("exception clears cache",XposedRuntimeInspector.cached(),null)
-    Root.output="PID|com.whatsapp|"
+    Root.output="PID|com.whatsapp|\nEND|WAEX_PROCESS_SNAPSHOT"
     ck("true absence is distinct",XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!.pidsFor("com.whatsapp",1000),emptySet<Int>())
-    Root.output="PID|com.whatsapp|123";val calls=Root.calls
+    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";val calls=Root.calls
     ck("invalid package refused",XposedRuntimeInspector.inspect(listOf("com.whatsapp;id")),null)
     ck("invalid input never reaches shell",Root.calls,calls)
     ck("partial report refuses multiple packages",XposedRuntimeInspector.inspect(listOf("com.whatsapp","com.whatsapp.w4b")),null)
-    Root.output="PID|com.whatsapp|123\nPID|com.whatsapp.w4b|456"
+    Root.output="PID|com.whatsapp|123\nPID|com.whatsapp.w4b|456\nEND|WAEX_PROCESS_SNAPSHOT"
     ck("both identities present",XposedRuntimeInspector.inspect(listOf("com.whatsapp","com.whatsapp.w4b"))!!.runningPids.size,2)
     var immutable=false
     try{(snap.runningPids as MutableMap).clear()}catch(_:UnsupportedOperationException){immutable=true}
@@ -167,5 +167,42 @@ fun main(args:Array<String>){
     ck("complete reported",sum(listOf(app)).healthy,true)
     ck("one unknown not all confirmed",sum(listOf(app,expired.copy(packageName="com.whatsapp.w4b"))).healthy,null)
     ck("summary says not all feature acceptance",sum(listOf(app)).text,"Rules accepted; initialization reported")
+
+    // Complete-looking final PID tokens are not completion evidence without the sentinel.
+    Root.fail=false;Root.advance=0;SystemClock.time=1000
+    Root.output="PID|com.whatsapp|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
+    ck("finished probe accepted",XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!=null,true)
+    Root.output="PID|com.whatsapp|42"
+    ck("missing terminal record is unknown",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+    ck("truncated new probe removes cached proof",XposedRuntimeInspector.cached(),null)
+    Root.output="PID|com.whatsapp|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
+    Root.advance=4000
+    val slow=XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!
+    ck("probe age starts before command",slow.observedAtElapsed,1000L)
+    SystemClock.time=26001
+    ck("slow probe cannot extend validity",XposedRuntimeInspector.cached(),null)
+    SystemClock.time=1000;Root.advance=25001
+    ck("probe expiring during collection rejected",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+    SystemClock.time=1000;Root.advance=0
+    ck("custom allowance card is not verified",TargetRuntimePresentation.card(app,true,D.CUSTOM_RULE).severity,S.REVIEW)
+    ck("custom allowance summary not verified",sum(listOf(app),D.CUSTOM_RULE).healthy,false)
+    ck("other negative boot value is unknown",classifyInjection(true,-2,-2,42,setOf(42),1000,1001),InjectionEvidence.BOOT_UNKNOWN)
+    val delayed=android.app.Activity();delayed.defer=true
+    prefs.values.clear();prefs.fail=false;host.packageManager.fail=false;host.packageManager.version="99.99.99.99"
+    ck("queue scenario paused",VersionGuard.verifyAndGuard(host,host.javaClass.classLoader,prefs),false)
+    VersionGuard.onTargetActivityResumed(delayed)
+    val before=WaexBottomSheet.shows
+    host.packageManager.version="2.26.40.76"
+    ck("queue scenario subsequently admitted",VersionGuard.verifyAndGuard(host,host.javaClass.classLoader,prefs),true)
+    delayed.flush()
+    ck("obsolete pause callback does not render",WaexBottomSheet.shows,before)
+    host.packageManager.version="99.99.99.99"
+    VersionGuard.verifyAndGuard(host,host.javaClass.classLoader,prefs);VersionGuard.onTargetActivityResumed(delayed)
+    host.packageManager.version=null
+    VersionGuard.verifyAndGuard(host,host.javaClass.classLoader,prefs);VersionGuard.onTargetActivityResumed(delayed)
+    delayed.flush()
+    ck("only latest failed decision renders",WaexBottomSheet.shows,before+1)
+    ck("latest message uses latest decision",WaexBottomSheet.lastMessage.contains("determine the installed WhatsApp version"),true)
+
     println("PASS: $checks runtime compatibility/evidence/queue presentation checks. Explicit Android and root doubles.")
 }

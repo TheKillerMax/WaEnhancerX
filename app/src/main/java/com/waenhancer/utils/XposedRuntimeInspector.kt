@@ -50,18 +50,24 @@ object XposedRuntimeInspector {
             return null
         }
         if (packages.isEmpty()) return XposedRuntimeSnapshot(emptyMap()).also { cachedSnapshot = it }
+        val startedAtElapsed = SystemClock.elapsedRealtime()
         val command = "command -v pidof >/dev/null 2>&1 || exit 127\n" + packages.joinToString("\n") { pkg ->
             "pids=\$(pidof $pkg 2>/dev/null); rc=\$?; " +
                 "case \"\$rc\" in 0) [ -n \"\$pids\" ] || exit 2;; " +
                 "1) [ -z \"\$pids\" ] || exit 2;; *) exit 2;; esac; " +
                 "printf 'PID|$pkg|%s\\n' \"\$pids\""
         }
-        val output = try { AppRestartHelper.runRootCommand(command) }
+        val completedCommand = command + "\nprintf 'END|WAEX_PROCESS_SNAPSHOT\\n'"
+        val output = try { AppRestartHelper.runRootCommand(completedCommand) }
             catch (_: RuntimeException) { null }
             catch (_: LinkageError) { null }
-        val result = output?.let(::parseXposedRuntimeSnapshot)?.takeIf {
-            it.complete && it.runningPids.keys == packages.toSet()
-        }
+        val lines = output?.lineSequence()?.filter { it.isNotBlank() }?.toList()
+        val result = lines?.takeIf { it.lastOrNull() == "END|WAEX_PROCESS_SNAPSHOT" }
+            ?.dropLast(1)?.joinToString("\n")?.let(::parseXposedRuntimeSnapshot)
+            ?.copy(observedAtElapsed = startedAtElapsed)?.takeIf {
+                it.complete && it.runningPids.keys == packages.toSet() &&
+                    isRecentTimestamp(startedAtElapsed, SystemClock.elapsedRealtime())
+            }
         cachedSnapshot = result // A failed new observation invalidates old cached proof.
         return result
     }

@@ -22,7 +22,7 @@ internal fun classifyInjection(
     runningPids: Set<Int>?, lastActiveTime: Long, now: Long
 ): InjectionEvidence = when {
     !isModuleActive -> InjectionEvidence.MODULE_INACTIVE
-    currentBoot == -1 -> InjectionEvidence.BOOT_UNKNOWN
+    currentBoot < 0 -> InjectionEvidence.BOOT_UNKNOWN
     reportedPid <= 0 || lastActiveTime <= 0L -> InjectionEvidence.NO_REPORT
     recordedBoot != currentBoot -> InjectionEvidence.PREVIOUS_BOOT
     !isRecentTimestamp(lastActiveTime, now) -> InjectionEvidence.REPORT_EXPIRED

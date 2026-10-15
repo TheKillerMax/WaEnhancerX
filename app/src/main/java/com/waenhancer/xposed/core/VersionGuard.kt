@@ -9,6 +9,7 @@ import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.xposed.core.components.WaexBottomSheet
 import de.robv.android.xposed.XposedBridge
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * VersionGuard applies configured version rules before hook installation. A rule match is
@@ -19,9 +20,10 @@ object VersionGuard {
 
     private const val TAG = "[WAEX][VersionGuard]"
     private val dialogShown = AtomicBoolean(false)
-    private var sCurrentVersion: String = ""
-    private var sPrefs: SharedPreferences? = null
-    private var sDecision = UniversalVersionValidator.Decision.VERSION_UNAVAILABLE
+    private val decisionGeneration = AtomicLong(0L)
+    @Volatile private var sCurrentVersion: String = ""
+    @Volatile private var sPrefs: SharedPreferences? = null
+    @Volatile private var sDecision = UniversalVersionValidator.Decision.VERSION_UNAVAILABLE
 
     @JvmStatic
     fun runtimeStatus(): String = if (sDecision == UniversalVersionValidator.Decision.UNSUPPORTED)
@@ -48,6 +50,7 @@ object VersionGuard {
         classLoader: ClassLoader,
         prefs: SharedPreferences
     ): Boolean {
+        decisionGeneration.incrementAndGet()
         sPrefs = prefs
         sCurrentVersion = "unknown"
         sDecision = UniversalVersionValidator.Decision.VERSION_UNAVAILABLE
@@ -97,7 +100,11 @@ object VersionGuard {
 
         XposedBridge.log("$TAG Posting showUnsupportedBottomSheetOnce for $currentVersion on ${activity.javaClass.name}")
 
+        val generation = decisionGeneration.get()
+        val decision = sDecision
         activity.runOnUiThread {
+            // A newer check owns its own dialog flag; an obsolete callback must not reset it.
+            if (generation != decisionGeneration.get() || decision.allowed) return@runOnUiThread
             try {
                 if (activity.isFinishing || activity.isDestroyed) {
                     dialogShown.set(false)
@@ -106,7 +113,7 @@ object VersionGuard {
 
                 WaexBottomSheet(activity)
                     .setTitle("WAEX Compatibility Notice")
-                    .setMessage(noticeMessage(currentVersion, sDecision))
+                    .setMessage(noticeMessage(currentVersion, decision))
                     .setPositiveButton("Open WAEX Settings") { dialog, _ ->
                         try {
                             val pm = activity.packageManager

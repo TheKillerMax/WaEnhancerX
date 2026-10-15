@@ -225,12 +225,10 @@ public class HideReceiptsHook extends BaseFeature {
                                 }
                             } else if ((isEnabled("blueonreply", false)
                                     || isManualSeenTickEnabled())
-                                    && !hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)) {
-                                // Preserve upstream: no participant or arbitrary object-field capture fallback.
-                                String captureJid = jid;
-                                if (captureJid == null) {
-                                    captureJid = findJidInArguments(param.args);
-                                }
+                                    && !hasExplicitReceiptIds(jid, param.args)) {
+                                // The serialized job recipient is authoritative. A group participant
+                                // or an arbitrary argument is not an alternate conversation identity.
+                                String captureJid = canonicalJid(jid);
                                 if (captureJid != null) {
                                     BlueOnReplyHook.captureSuppressedReadJob(
                                             captureJid, (Constructor<?>) param.method, param.args);

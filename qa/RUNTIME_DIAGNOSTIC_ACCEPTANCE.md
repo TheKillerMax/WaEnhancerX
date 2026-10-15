@@ -64,3 +64,23 @@ root denial/timeouts, PID changes, restarts, expired heartbeat, pause and failur
 states, long-open screens and refresh recovery. Do not declare every feature
 working or ask users to disable privacy/version protections just to obtain a
 green status. Missing resources cannot be corrected by clearing user data.
+
+
+## Continuation after interrupted publication
+
+The validated staged commits were recovered before moving any functional branch.
+The final follow-up additionally requires an end-of-probe sentinel and timestamps
+process observations before, not after, the root command. A slow or truncated
+probe cannot manufacture fresh positive evidence. Successful no-match pidof output
+still represents observed absence; unavailable output remains unknown.
+
+Queued compatibility notices capture a decision-generation token. A callback from
+an older check neither displays an obsolete pause nor clears the newer check's
+one-notice flag. Explicit custom version allowances, like bypasses, remain usable
+but are presented as unverified rather than a verified compatibility result.
+
+The expanded production/JVM test exercises 165 checks and seven emitted-shell
+controls. The shell uses a fake pidof and does not run Android root. A separate
+framework runner compiles public utilities and the lifecycle clock against real
+Android/Compose dependencies and exercises compiled release/debug resources.
+These do not replace a full WAEX build or HMA, Binder, Vector and LSPosed acceptance.
