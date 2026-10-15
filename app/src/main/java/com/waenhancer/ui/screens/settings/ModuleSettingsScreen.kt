@@ -31,9 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.waenhancer.ui.components.WaexFeatureTile
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.LocalThemeMode
 import com.waenhancer.ui.designsystem.LocalThemeModeUpdater
@@ -69,20 +69,18 @@ fun ModuleSettingsScreen() {
                 .padding(horizontal = spacing.pageMargin, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            WaexFeatureTile(
+            ModuleSettingsTile(
                 title = "App Theme",
                 description = "Choose how WaEnhancerX looks",
-                statusText = themeMode,
+                value = themeMode,
                 icon = themeIcon(themeMode),
-                onClick = { showThemeSheet = true },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { showThemeSheet = true }
             )
-            WaexFeatureTile(
+            ModuleSettingsTile(
                 title = "Update Settings",
                 description = "Configure checks, installation, and downgrades",
                 icon = WaexIcons.SystemUpdate,
-                onClick = { navController.navigateTo(Screen.UpdateSettings) },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { navController.navigateTo(Screen.UpdateSettings) }
             )
         }
     }
@@ -165,6 +163,73 @@ fun ModuleSettingsScreen() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ModuleSettingsTile(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    value: String? = null,
+    onClick: () -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+
+    Surface(
+        shape = WaexTheme.radius.cardShape,
+        color = colors.surfaceContainerLow,
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(colors.primary.copy(alpha = 0.14f), WaexTheme.radius.mdShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(23.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = typography.bodyLg,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurface
+                )
+                Text(
+                    text = description,
+                    style = typography.bodyMd,
+                    color = colors.onSurfaceVariant
+                )
+            }
+            if (value != null) {
+                Text(
+                    text = value,
+                    style = typography.bodyMd,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.primary,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+            }
+            Icon(
+                imageVector = WaexIcons.ChevronRight,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp).size(20.dp)
+            )
         }
     }
 }

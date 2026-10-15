@@ -128,7 +128,8 @@ object ReleaseRepository {
                     val assetName = asset.optString("name").trim()
                     val assetUrl = asset.optString("browser_download_url")
                         .takeIf(::isOfficialReleaseAssetUrl)
-                    if (assetName.endsWith(".apk", ignoreCase = true) && assetUrl != null) {
+                    if (assetName.endsWith(".apk", ignoreCase = true) &&
+                        assetUrl != null && assetMatchesRelease(assetName, versionFromTag(tag))) {
                         add(WaexAsset(assetName, assetUrl, asset.optLong("size")))
                     }
                 }
@@ -149,6 +150,16 @@ object ReleaseRepository {
         val url = value.toHttpUrlOrNull() ?: return false
         return url.isHttps && url.host.equals("github.com", ignoreCase = true) &&
             url.encodedPath.startsWith("/$RELEASE_REPOSITORY/releases/", ignoreCase = true)
+    }
+
+    internal fun assetMatchesRelease(assetName: String, releaseVersion: String): Boolean {
+        val match = Regex(
+            "(?i)(?:^|[-_])v?(\\d+\\.\\d+(?:\\.\\d+)?(?:-[a-z0-9.-]+)?)(?=[_-]|\\.apk$)"
+        ).find(assetName) ?: return false
+        return normalizeVersion(match.groupValues[1]).equals(
+            normalizeVersion(releaseVersion),
+            ignoreCase = true
+        )
     }
 }
 

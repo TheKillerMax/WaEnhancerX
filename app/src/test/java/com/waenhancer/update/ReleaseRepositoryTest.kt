@@ -25,6 +25,22 @@ class ReleaseRepositoryTest {
         ))
         assertFalse(ReleaseRepository.isOfficialReleaseAssetUrl("https://waex.mubashar.dev/update.apk"))
     }
+
+    @Test
+    fun `asset version must match its release`() {
+        assertTrue(ReleaseRepository.assetMatchesRelease(
+            "WaEnhancerX-v2.0.2_release.apk",
+            "2.0.2"
+        ))
+        assertTrue(ReleaseRepository.assetMatchesRelease(
+            "WaEnhancerX-v2.0.0-beta-3_debug.apk",
+            "2.0.0-beta-3"
+        ))
+        assertFalse(ReleaseRepository.assetMatchesRelease(
+            "WaEnhancerX-v2.0.1_release.apk",
+            "2.0.2"
+        ))
+    }
     private fun release(tag: String) = WaexRelease(tag, tag, "", "", "")
 
     @Test

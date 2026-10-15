@@ -30,7 +30,7 @@ object UpdateDownloader {
         .build()
 
     /** Reject corrupt, partial, and unrelated packages before offering installation. */
-    private fun isValidModuleApk(context: Context, file: File): Boolean {
+    private fun isValidModuleApk(context: Context, file: File, expectedVersion: String? = null): Boolean {
         if (!file.isFile || file.length() < 1024L) return false
         return runCatching {
             val validZip = ZipFile(file).use { archive ->
@@ -39,7 +39,9 @@ object UpdateDownloader {
             if (!validZip) return@runCatching false
             @Suppress("DEPRECATION")
             val packageInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
-            packageInfo?.packageName == context.packageName
+            packageInfo?.packageName == context.packageName &&
+                (expectedVersion == null || normalizeVersion(packageInfo.versionName.orEmpty())
+                    .equals(normalizeVersion(expectedVersion), ignoreCase = true))
         }.getOrDefault(false)
     }
 
@@ -55,14 +57,14 @@ object UpdateDownloader {
         return output?.let { "uid=0" in it } == true
     }
 
-    fun downloadApk(context: Context, url: String, versionName: String, callback: DownloadCallback): Call? {
-        val safeVersion = versionName.replace(Regex("[^a-zA-Z0-9.-]"), "_")
+    fun downloadApk(context: Context, url: String, expectedVersion: String, callback: DownloadCallback): Call? {
+        val safeVersion = expectedVersion.replace(Regex("[^a-zA-Z0-9.-]"), "_")
         val segment = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
         val safeSegment = segment?.replace(Regex("[^a-zA-Z0-9._-]"), "_")
             ?.takeIf { it.endsWith(".apk", true) && !it.startsWith(".") && it.length <= 120 }
         val fileName = safeSegment ?: "WaEnhancerX_${safeVersion}.apk"
         val apkFile = File(context.cacheDir, fileName)
-        if (isValidModuleApk(context, apkFile)) {
+        if (isValidModuleApk(context, apkFile, expectedVersion)) {
             callback.onSuccess(apkFile)
             return null
         }
@@ -126,8 +128,8 @@ object UpdateDownloader {
                                 }
                             }
                         }
-                        if (!isValidModuleApk(context, staging)) {
-                            throw IOException("Downloaded file is not a valid WAEX APK")
+                        if (!isValidModuleApk(context, staging, expectedVersion)) {
+                            throw IOException("Downloaded APK does not match selected version $expectedVersion")
                         }
                         if (!staging.renameTo(apkFile)) throw IOException("Unable to save verified update")
                         callback.onSuccess(apkFile)
@@ -142,10 +144,10 @@ object UpdateDownloader {
         return call
     }
 
-    fun installApk(context: Context, apkFile: File) {
+    fun installApk(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
-        if (!isValidModuleApk(activity, apkFile)) {
-            Toast.makeText(activity, "Invalid WAEX update package", Toast.LENGTH_LONG).show()
+        if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.packageManager.canRequestPackageInstalls()) {
@@ -158,10 +160,10 @@ object UpdateDownloader {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    fun installApkWithRoot(context: Context, apkFile: File) {
+    fun installApkWithRoot(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
-        if (!isValidModuleApk(activity, apkFile)) {
-            Toast.makeText(activity, "Invalid WAEX update package", Toast.LENGTH_LONG).show()
+        if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
             return
         }
         Thread {

@@ -234,7 +234,7 @@ fun ChangelogScreen() {
         val isDowngrade = ReleaseRepository.versionCode(rel.version) < ReleaseRepository.versionCode(installedVersion)
         UpdateDownloadSheet(
             url = asset.downloadUrl,
-            version = "${rel.tagName} (${asset.buildTypeLabel})",
+            version = rel.version,
             useRoot = isDowngrade || preferences.getBoolean("root_auto_install", false),
             onDismiss = { activeDownload = null }
         )
