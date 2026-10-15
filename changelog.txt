@@ -8,6 +8,7 @@
 - Fixed Chat Filters
 - Fixed Custom Theme
 - Fixed Custom DPI
+- Fixed Hide Archived Chats
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
