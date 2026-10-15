@@ -81,6 +81,20 @@ jobs:
             echo '::endgroup::'
           done
 
+      - name: Require tests for merged checked-save and invalidation APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          store=app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java
+          ui=app/src/main/java/com/waenhancer/ui/screens/settings/StylesSettingsScreen.kt
+          if grep -q 'updateAndGetTransition(' "$store"; then
+            test -f qa/test_presence_invalidation.py
+            test -f qa/test_presence_state_invalidation.py
+          fi
+          if grep -q 'putPublicString("seentick", nextPlacement)' "$ui"; then
+            test -f qa/test_manual_seen_tick_persistence.py
+          fi
+
       - name: Run additional source-only QA suites when merged
         shell: bash
         run: |
@@ -105,10 +119,13 @@ jobs:
             qa/test_database_dialog_status_log_privacy.py \
             qa/test_blue_receipt_recipient_isolation.py \
             qa/test_manual_blue_tick_ui.py \
+            qa/test_manual_seen_tick_persistence.py \
             qa/test_receipt_job_execution_contract.py \
             qa/test_played_receipt_dispatch_contract.py \
             qa/test_presence_event_contract.py \
             qa/test_presence_state_replay.py \
+            qa/test_presence_invalidation.py \
+            qa/test_presence_state_invalidation.py \
             qa/test_archived_chats_entry.py \
             qa/test_deleted_indicator_preference_types.py \
             qa/test_proximity_event_isolation.py \
