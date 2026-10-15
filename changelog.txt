@@ -10,6 +10,7 @@
 - Fixed Custom DPI
 - Fixed Hide Archived Chats
 - Fixed Hide Locked Chats
+- Fixed New Setting Style
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings

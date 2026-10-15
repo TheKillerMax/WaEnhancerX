@@ -47,3 +47,5 @@ google-services.json
 
 # Private implementation module, supplied outside the public repository
 /licensing/
+
+*/__pycache__

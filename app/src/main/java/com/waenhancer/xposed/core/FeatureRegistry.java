@@ -26,6 +26,7 @@ import com.waenhancer.xposed.features.customization.FilterItemsHook;
 import com.waenhancer.xposed.features.customization.FloatingBottomBarHook;
 import com.waenhancer.xposed.features.customization.OnlinePresenceIndicatorsHook;
 import com.waenhancer.xposed.features.customization.HideHomeTabsHook;
+import com.waenhancer.xposed.features.customization.NewSettingsStyleHook;
 import com.waenhancer.xposed.features.customization.SeparateGroupsHook;
 import com.waenhancer.xposed.features.homescreen.ChatListCustomizationsHook;
 import com.waenhancer.xposed.features.homescreen.HomeScreenHeaderActionsHook;
@@ -220,6 +221,7 @@ public final class FeatureRegistry {
         addFeature(CustomDpiHook.class, "Customization", () -> new CustomDpiHook(context, classLoader, prefs));
         addFeature(CssThemeHook.class, "Customization", () -> new CssThemeHook(context, classLoader, prefs));
         addFeature(HideHomeTabsHook.class, "Customization", () -> new HideHomeTabsHook(context, classLoader, prefs));
+        addFeature(NewSettingsStyleHook.class, "Customization", () -> new NewSettingsStyleHook(context, classLoader, prefs));
         addFeature(OnlinePresenceIndicatorsHook.class, "Customization", () -> new OnlinePresenceIndicatorsHook(context, classLoader, prefs));
         addFeature(SeparateGroupsHook.class, "Customization", () -> new SeparateGroupsHook(context, classLoader, prefs));
         addFeature(FloatingBottomBarHook.class, "Customization", () -> new FloatingBottomBarHook(context, classLoader, prefs));
