@@ -59,7 +59,9 @@ def check_wiring(styles):
         assert 'onSave = { ' + call + ' }' in arm, ui
     # Do not erase optional receipt and current proximity integration when rebasing.
     if 'ManualSeenTickPreferencePolicy.isEnabled' in styles:
-        assert 'preferenceManager.putString("seentick",' in styles
+        # #35 may include the checked persistence follow-up independently of #39.
+        assert ('preferenceManager.putPublicString("seentick", nextPlacement)' in styles
+                or 'preferenceManager.putString("seentick",' in styles)
     assert '"disable_sensor_proximity"' in styles
     assert 'StyleItem("Disable Screen off on proximity sensor"' in styles
 
