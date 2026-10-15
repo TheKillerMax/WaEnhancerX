@@ -2,7 +2,7 @@ name: V18 reviewed manual save and presence validation
 on:
   push:
     branches: ['test/manual-presence-validation-v18-2026-10-14']
-    paths: ['qa/v18_payload.part1.b64', 'qa/v18_payload.part2.b64', 'qa/v18_prepare.py', '.github/workflows/v18-reviewed-validation.yml']
+    paths: ['qa/v18_payload.part1.b64', 'qa/v18_payload.part2.b64', 'qa/v18_prepare.py', 'qa/v18_followup.py', 'qa/v18-assertion-detector.patch', '.github/workflows/v18-reviewed-validation.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -29,7 +29,7 @@ jobs:
           javac -version
           kotlinc -version
           mvn -version
-          python3 -m py_compile qa/v18_prepare.py
+          python3 -m py_compile qa/v18_prepare.py qa/v18_followup.py
           python3 - <<'PY'
           from pathlib import Path
           text=''.join(''.join(Path('qa/v18_payload.part'+str(n)+'.b64').read_text().split()) for n in (1,2))
@@ -43,7 +43,7 @@ jobs:
           python3 - <<'PY'
           import runpy, subprocess
           try:
-              runpy.run_path('qa/v18_prepare.py', run_name='__main__')
+              runpy.run_path('qa/v18_followup.py', run_name='__main__')
           except subprocess.CalledProcessError as error:
               print(error.stdout or '')
               print(error.stderr or '')
@@ -55,7 +55,7 @@ jobs:
           V18_STAGE_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python3 qa/v18_prepare.py preserve
+          python3 qa/v18_followup.py preserve
       - name: Preserve text-only evidence without APKs, dependencies or private sources
         if: always()
         uses: actions/upload-artifact@v4
