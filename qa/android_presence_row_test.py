@@ -108,8 +108,8 @@ def execute(root, out, deps, baseline):
     if baseline:
         if result == 0 or 'AssertionError' not in log or 'Tests run: 6,  Failures: 6' not in log:
             raise RuntimeError('Baseline must fail all 6 assertions, not fail to compile/load/run')
-    elif 'OK (57 tests)' not in log:
-        raise RuntimeError('Expected all 19 scenarios on 3 Android API levels')
+    elif 'OK (75 tests)' not in log:
+        raise RuntimeError('Expected all 25 scenarios on 3 Android API levels')
     return {'source_root':str(root),'baseline':baseline,'exit_code':result,
             'renderer_sha256':hashlib.sha256((root/RENDERER).read_bytes()).hexdigest(),
             'store_sha256':hashlib.sha256((root/STORE).read_bytes()).hexdigest()}

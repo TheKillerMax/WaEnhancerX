@@ -20,16 +20,19 @@ measure='''        overlay.measure(
             View.MeasureSpec.makeMeasureSpec(row.height.coerceAtLeast(0), View.MeasureSpec.EXACTLY)
         )'''
 variants=[
+ ('denial-is-known-offline',qa.STORE,'record(jid, false, false);','record(jid, true, false);'),
+ ('no-global-clear',qa.STORE,'            STATES.clear();','            // Fault: old transport observations retained'),
+ ('unknown-cannot-mask-alias',qa.STORE,'candidate != null && (latest == null','candidate != null && candidate.known && (latest == null'),
  ('no-overlay-measure',qa.RENDERER,measure,''),
  ('ignore-cached-alias',qa.RENDERER,'PresenceStateStore.getLatest(keys)','PresenceStateStore.get(jid)'),
  ('alias-does-not-repaint',qa.RENDERER,'        queuePresenceRefresh()\n    }\n\n    companion object','    }\n\n    companion object'),
  ('oldest-alias-wins',qa.STORE,'candidate.revision > latest.revision','candidate.revision < latest.revision'),
- ('no-observation-order',qa.STORE,'++nextRevision','nextRevision'),
- ('ignore-repeat-observation',qa.STORE,'for (Listener listener : LISTENERS) {','if (transition) for (Listener listener : LISTENERS) {'),
+ ('no-observation-order',qa.STORE,'long revision = ++nextRevision;\n            long changedAt','long revision = nextRevision;\n            long changedAt'),
+ ('ignore-repeat-observation',qa.STORE,'notifyListeners(key, state);','if (transition) notifyListeners(key, state);'),
  ('conflicting-alias-overwrites',qa.RENDERER,'if (previous == null || previous == jid) jid else ""','jid'),
  ('stale-dot-on-cleared-row',qa.RENDERER,'        render(row, null)\n    }','    }'),
  ('drop-current-event-render',qa.RENDERER,'render(row, stateForRow(boundJid))','render(row, null)'),
- ('offline-state-is-visible',qa.RENDERER,'if (state?.online == true) View.VISIBLE','if (state != null) View.VISIBLE'),
+ ('offline-state-is-visible',qa.RENDERER,'if (state?.known == true && state.online) View.VISIBLE','if (state != null) View.VISIBLE'),
  ('drop-host-layout-direction',qa.RENDERER,'        overlay.layoutDirection = row.layoutDirection','        // Fault: host direction omitted'),
  ('duplicate-overlays',qa.RENDERER,'        rowOverlays[row]?.get()?.let { return it }','        // Fault: existing overlay ignored'),
 ]
@@ -46,7 +49,7 @@ for name,path,old,new in variants:
   try:qa.execute(candidate,folder,deps,False)
   except RuntimeError:
    log=(folder/'junit.log').read_text() if (folder/'junit.log').is_file() else ''
-   if 'java.lang.AssertionError' not in log or 'Tests run: 19,' not in log or 'initializationError' in log:
+   if not any(kind in log for kind in ('java.lang.AssertionError', 'org.junit.ComparisonFailure')) or 'Tests run: 25,' not in log or 'initializationError' in log:
     raise AssertionError('Fault was not rejected by Android assertions: '+name)
   else:raise AssertionError('Fault survived: '+name)
   results.append({'mutation':name,'rejected_by_behavior':True,'android_api':34})

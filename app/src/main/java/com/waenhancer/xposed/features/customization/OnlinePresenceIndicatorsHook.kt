@@ -293,10 +293,10 @@ class OnlinePresenceIndicatorsHook(
 
     private fun render(row: View, state: PresenceStateStore.State?) {
         val overlay = rowOverlays[row]?.get() ?: return
-        overlay.findViewById<View>(ID_DOT)?.visibility = if (state?.online == true) View.VISIBLE else View.GONE
+        overlay.findViewById<View>(ID_DOT)?.visibility = if (state?.known == true && state.online) View.VISIBLE else View.GONE
         overlay.findViewById<TextView>(ID_TEXT)?.let { text ->
             when {
-                state == null -> { text.text = ""; text.visibility = View.GONE }
+                state == null || !state.known -> { text.text = ""; text.visibility = View.GONE }
                 state.online -> { text.text = "online"; text.visibility = View.VISIBLE }
                 else -> {
                     val time = DateFormat.getTimeFormat(row.context).format(state.changedAtMillis)

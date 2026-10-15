@@ -153,4 +153,43 @@ class PresenceRowRenderingTest {
         PresenceStateStore.update(a, false); pump(); bitmap.eraseColor(Color.TRANSPARENT)
         r.draw(Canvas(bitmap)); assertNotEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))
     }
+    @Test fun deniedPresenceClearsVisibleDotAndTextWithoutLastSeen() {
+        val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump()
+        PresenceStateStore.invalidate(a); pump()
+        assertFalse(visible(r)); assertEquals("", h.text(r)!!.text.toString())
+        assertEquals(View.GONE, h.text(r)!!.visibility)
+    }
+    @Test fun deniedAliasMasksAnOlderCanonicalObservation() {
+        val r = row(); h.alias(lid, a); PresenceStateStore.update(a, true)
+        PresenceStateStore.invalidate(lid); h.bind(r, a); pump()
+        assertFalse(visible(r)); assertEquals("", h.text(r)!!.text.toString())
+        PresenceStateStore.update(lid, true); pump(); assertTrue(visible(r))
+    }
+    @Test fun transportInvalidationRepaintsAlreadyVisibleRows() {
+        val ra = row(); val rb = row()
+        PresenceStateStore.update(a, true); PresenceStateStore.update(b, false)
+        h.bind(ra, a); h.bind(rb, b); pump()
+        PresenceStateStore.invalidateAll(); pump()
+        assertFalse(visible(ra)); assertEquals("", h.text(ra)!!.text.toString())
+        assertEquals("", h.text(rb)!!.text.toString())
+    }
+    @Test fun pendingOldRefreshCannotResurrectTransportState() {
+        val r = row(); h.bind(r, a); PresenceStateStore.update(a, true)
+        PresenceStateStore.invalidateAll(); pump(); assertFalse(visible(r))
+        PresenceStateStore.update(a, true); pump(); assertTrue(visible(r))
+    }
+    @Test fun deniedCanonicalDoesNotReplayOldAliasAfterRebind() {
+        val r = row(); h.alias(lid, a); PresenceStateStore.update(lid, true)
+        h.bind(r, a); pump(); PresenceStateStore.invalidate(a)
+        h.bind(r, a); pump(); assertFalse(visible(r))
+        assertEquals("", h.text(r)!!.text.toString())
+    }
+    @Test fun invalidationClearsTheNativeGreenPixel() {
+        val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump()
+        val dot = h.dot(r)!!; val x = dot.left + dot.width / 2; val y = dot.top + dot.height / 2
+        val bitmap = Bitmap.createBitmap(400, 80, Bitmap.Config.ARGB_8888)
+        r.draw(Canvas(bitmap)); assertEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))
+        PresenceStateStore.invalidate(a); pump(); bitmap.eraseColor(Color.TRANSPARENT)
+        r.draw(Canvas(bitmap)); assertNotEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))
+    }
 }

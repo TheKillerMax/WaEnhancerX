@@ -62,7 +62,7 @@ public final class TestPresenceReplay {
   check(PresenceStateStore.stateCount()==2048,"State remains bounded at 2048");
   check(PresenceStateStore.get("0@lid")==null,"Evicted identity is unknown, not offline");
   PresenceStateStore.get("952@lid");PresenceStateStore.update("new@lid",true);
-  check(PresenceStateStore.get("952@lid")!=null&&PresenceStateStore.get("953@lid")==null,"Access-order eviction retained");
+  check(PresenceStateStore.get("952@lid")==null&&PresenceStateStore.get("953@lid")!=null,"Reads cannot extend an old observation past a newer tombstone");
   reset();int workers=8,loops=4000;
   Set<Long> revisions=ConcurrentHashMap.newKeySet();AtomicInteger delivered=new AtomicInteger();
   PresenceStateStore.addListener((j,s)->{if(!revisions.add(s.revision))throw new AssertionError("Duplicate revision");delivered.incrementAndGet();});
