@@ -143,7 +143,7 @@ fun StylesSettingsScreen() {
             WaexIcons.Palette,
             listOf(
                 StyleItem("Change Bubble Colors", "Change Bubble Color on Conversation Screen", "bubble_colors"),
-                StyleItem("Custom Theme CSS", "Customize your WhatsApp using CSS styles", "custom_theme", isPro = true),
+                StyleItem("Custom Theme CSS", "Customize your WhatsApp using CSS styles", "custom_theme"),
                 StyleItem("Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "custom_time_format"),
                 StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
                 StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
@@ -460,10 +460,12 @@ private fun TypedStyleEditorDialog(
     when (key) {
         "custom_theme" -> TextValueEditorDialog(
             title = "Custom Theme CSS",
-            description = "Enter CSS rules to apply to supported WhatsApp views.",
+            description = "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving.",
             initialValue = preferenceManager.getString("css_theme", "") ?: "",
             singleLine = false,
-            placeholder = "/* Your CSS rules */",
+            placeholder = "#conversation_row_date {\n  color: #FFFFFF;\n  font-size: 12sp;\n}",
+            validator = ::isValidCustomCss,
+            errorMessage = "Check that every selector has a matching { } block",
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicString("css_theme", it.trim())) }
         )
@@ -838,6 +840,33 @@ private fun MultiChoiceValueEditorDialog(
             }
         }
     }
+}
+
+private fun isValidCustomCss(css: String): Boolean {
+    if (css.isBlank()) return true
+    var depth = 0
+    var inComment = false
+    var index = 0
+    while (index < css.length) {
+        if (!inComment && index + 1 < css.length && css[index] == '/' && css[index + 1] == '*') {
+            inComment = true
+            index += 2
+            continue
+        }
+        if (inComment && index + 1 < css.length && css[index] == '*' && css[index + 1] == '/') {
+            inComment = false
+            index += 2
+            continue
+        }
+        if (!inComment) {
+            when (css[index]) {
+                '{' -> depth++
+                '}' -> if (--depth < 0) return false
+            }
+        }
+        index++
+    }
+    return !inComment && depth == 0 && css.contains('{')
 }
 
 private fun typedStyleSummary(

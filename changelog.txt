@@ -6,7 +6,7 @@
 - Fixed Quick Actions
 - Fixed Hide Tabs on Home
 - Fixed Chat Filters
-- Fixed Custom Theme
+- Fixed Custom Theme CSS & and shifted as free feature
 - Fixed Custom DPI
 - Fixed Hide Archived Chats
 - Fixed Hide Locked Chats
