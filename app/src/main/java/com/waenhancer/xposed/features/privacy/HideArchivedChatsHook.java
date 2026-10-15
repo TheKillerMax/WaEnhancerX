@@ -38,9 +38,10 @@ public class HideArchivedChatsHook extends BaseFeature {
 
     private boolean isHideArchivedEnabled() {
         try {
-            if (isEnabled(PREF_KEY, false)) return true;
-            String val = prefs.getString(PREF_KEY, "0");
-            return val != null && !val.equals("0") && !val.equalsIgnoreCase("false");
+            // The canonical typearchive preference is a STRING ("1"/"0").
+            // Calling SharedPreferences.getBoolean first throws ClassCastException
+            // and the old broad catch skipped the String fallback entirely.
+            return ArchivedChatsPreferencePolicy.isHidden(prefs.getAll().get(PREF_KEY));
         } catch (Throwable ignored) {
             return false;
         }

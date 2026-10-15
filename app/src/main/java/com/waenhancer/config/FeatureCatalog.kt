@@ -32,7 +32,7 @@ object FeatureCatalog {
         FeatureItem("antirevokestatus", "Anti-Delete Status", "View statuses that users have since deleted", "Anti-Revoke & Deletion Defense", 1, "privacy", "Privacy"),
         FeatureItem("anti_view_once", "Unlimited View Once", "Allows you to open view once media multiple times", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("locked_chats_enhancer", "Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "Message Protection & Security", 1, "privacy", "Privacy"),
-        FeatureItem("typearchive", "Hide Archived Chats", "Hide archived chats, to access click 5 times or hold on the \"WhatsApp\" title", "Message Protection & Security", 1, "privacy", "Privacy"),
+        FeatureItem("typearchive", "Hide Archived Chats", "Hide the archive shortcut; open archived chats from the WAEX menu", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("dnd_mode", "DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("hide_chats", "Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "Message Protection & Security", 1, "privacy", "Privacy"),
         FeatureItem("custom_privacy", "Custom Privacy per contact", "Activate the custom privacy button on the contact information screen", "Advanced Rules & Filtering", 1, "privacy", "Privacy"),
