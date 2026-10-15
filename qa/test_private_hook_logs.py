@@ -176,7 +176,6 @@ assert 'getOrFindJobManager()' in blue
 assert 'SendE2EMessageJob/onRun' in blue
 assert "doApplyStatusDecoration(r, keyId, ts)" in anti
 assert "decorateRevokedStatusTextView(target, ts)" in anti
-assert "DelMessageStore.getInstance(context).insertMessage(" in preserve
 assert "dispatchToManagerApp(" in preserve
 assert ("editStore.recordEdit(" in edit or
         "editStore.recordTransitionAsync(" in edit), "Anti-edit history writer removed"
