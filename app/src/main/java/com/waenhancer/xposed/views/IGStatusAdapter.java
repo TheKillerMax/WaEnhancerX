@@ -13,6 +13,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -98,6 +99,18 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
             holder = (ViewHolder) convertView.getTag();
         }
 
+        // Apply left-side whitespace on My Status (position == 0) while keeping the scroller full-width
+        int leftPad = (position == 0) ? dipToPx(12) : 0;
+        convertView.setPadding(leftPad, 0, 0, 0);
+
+        ViewGroup.LayoutParams lp = convertView.getLayoutParams();
+        int baseWidth = dipToPx(82);
+        int targetWidth = (position == 0) ? (baseWidth + leftPad) : baseWidth;
+        if (lp != null && lp.width != targetWidth) {
+            lp.width = targetWidth;
+            convertView.setLayoutParams(lp);
+        }
+
         if (item == null) {
             holder.bindMyStatus();
         } else {
@@ -109,78 +122,39 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
     }
 
     private void onItemClicked(ViewHolder holder) {
-        XposedBridge.log(TAG + " onItemClicked: isMyStatus=" + holder.isMyStatus + ", targetJid=" + holder.targetJid);
         Activity activity = ActivityTracker.getCurrentActivity();
         if (activity == null && getContext() instanceof Activity) {
             activity = (Activity) getContext();
         }
-        if (activity == null) {
-            XposedBridge.log(TAG + " onItemClicked: activity is null");
-            return;
-        }
+        if (activity == null) return;
 
         if (holder.isMyStatus) {
-            showMyStatusPickerSheet(activity);
-            return;
-        }
-
-        if (holder.targetJid != null && !holder.targetJid.isEmpty()) {
-            launchStatusPlayback(activity, holder.targetJid);
-        } else {
-            XposedBridge.log(TAG + " onItemClicked: targetJid is null or empty");
-        }
-    }
-
-    private void showMyStatusPickerSheet(Activity activity) {
-        try {
-            WaexBottomSheet sheet = new WaexBottomSheet(activity);
-            sheet.setTitle("Select Status Type");
-
-            LinearLayout optionsContainer = new LinearLayout(activity);
-            optionsContainer.setOrientation(LinearLayout.VERTICAL);
-            int pad = dipToPx(16);
-            optionsContainer.setPadding(pad, pad, pad, pad);
-
-            // 1. View My Statuses
-            addOptionRow(optionsContainer, "View My Status", "ic_waex_logo", () -> {
+            if (hasOwnActiveStatus(getContext())) {
+                // If I have status added, open my statuses screen (MyStatusesActivity)
                 try {
                     Class<?> myStatusAct = XposedHelpers.findClassIfExists(
                             "com.whatsapp.status.playback.MyStatusesActivity", activity.getClassLoader());
                     if (myStatusAct != null) {
                         Intent intent = new Intent(activity, myStatusAct);
                         activity.startActivity(intent);
+                        return;
                     }
-                } catch (Throwable t) {
-                    Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+                } catch (Throwable ignored) {}
 
-            // 2. Open Camera
-            addOptionRow(optionsContainer, "Open Camera", "ic_waex_camera", () -> {
                 try {
-                    Class<?> cameraAct = XposedHelpers.findClassIfExists(
-                            "com.whatsapp.camera.ui.CameraActivity", activity.getClassLoader());
-                    if (cameraAct == null) {
-                        cameraAct = XposedHelpers.findClassIfExists(
-                                "com.whatsapp.camera.CameraActivity", activity.getClassLoader());
-                    }
-                    if (cameraAct != null) {
-                        Intent intent = new Intent(activity, cameraAct);
+                    Class<?> statusPlayback = XposedHelpers.findClassIfExists(
+                            "com.whatsapp.status.playback.StatusPlaybackActivity", activity.getClassLoader());
+                    if (statusPlayback != null) {
+                        Intent intent = new Intent(activity, statusPlayback);
                         intent.putExtra("jid", "status@broadcast");
-                        intent.putExtra("camera_origin", 4);
-                        intent.putExtra("is_coming_from_chat", false);
-                        intent.putExtra("media_sharing_user_journey_origin", 32);
-                        intent.putExtra("media_sharing_user_journey_start_target", 9);
-                        intent.putExtra("media_sharing_user_journey_chat_type", 4);
                         activity.startActivity(intent);
+                        return;
                     }
                 } catch (Throwable t) {
                     Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            });
-
-            // 3. Text Status Composer
-            addOptionRow(optionsContainer, "Write Text Status", "ic_waex_edit", () -> {
+            } else {
+                // Otherwise directly open write text status composer screen
                 try {
                     Class<?> composerAct = XposedHelpers.findClassIfExists(
                             "com.whatsapp.status.composer.ConsolidatedStatusComposerActivity", activity.getClassLoader());
@@ -196,59 +170,68 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                 } catch (Throwable t) {
                     Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            });
+            }
+            return;
+        }
 
-            sheet.setView(optionsContainer);
-            sheet.create().show();
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " showMyStatusPickerSheet failed: " + t.getMessage());
+        if (holder.targetJid != null && !holder.targetJid.isEmpty()) {
+            launchStatusPlayback(activity, holder.targetJid);
         }
     }
 
-    private void addOptionRow(LinearLayout parent, String label, String iconName, Runnable onClick) {
-        Context ctx = parent.getContext();
-        LinearLayout row = new LinearLayout(ctx);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        int padV = dipToPx(12);
-        int padH = dipToPx(8);
-        row.setPadding(padH, padV, padH, padV);
-
-        ImageView icon = new ImageView(ctx);
-        int iconSize = dipToPx(24);
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
-        iconParams.rightMargin = dipToPx(16);
-        icon.setLayoutParams(iconParams);
-        Drawable d = MenuIconLoader.load(ctx, iconName);
-        if (d != null) {
-            icon.setImageDrawable(d);
+    public static boolean hasOwnActiveStatus(Context context) {
+        if (context != null) {
+            try {
+                File statusDb = context.getDatabasePath("status.db");
+                if (statusDb != null && statusDb.exists()) {
+                    android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                            statusDb.getAbsolutePath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                    try (android.database.Cursor cursor = db.rawQuery(
+                            "SELECT total_count, last_status_timestamp FROM status_info WHERE chat_jid = 'status_me' LIMIT 1", null)) {
+                        if (cursor.moveToFirst()) {
+                            int totalCount = cursor.getInt(0);
+                            long lastTimestamp = cursor.getLong(1);
+                            long now = System.currentTimeMillis();
+                            if (totalCount > 0 && (lastTimestamp <= 0 || (now - lastTimestamp < 24 * 60 * 60 * 1000L))) {
+                                return true;
+                            }
+                        }
+                    } finally {
+                        db.close();
+                    }
+                }
+            } catch (Throwable ignored) {}
         }
-        row.addView(icon);
 
-        TextView tv = new TextView(ctx);
-        tv.setText(label);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
-        tv.setTextColor(isDarkTheme() ? Color.WHITE : Color.BLACK);
-        row.addView(tv);
+        for (Object item : IGStatusHook.items) {
+            if (item == null) continue;
+            try {
+                Object jidObj = findJidObject(item, 4);
+                if (jidObj != null) {
+                    String str = String.valueOf(jidObj);
+                    if (str.contains("status@broadcast") || str.startsWith("status@")) {
+                        return true;
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
 
-        row.setOnClickListener(v -> onClick.run());
-        parent.addView(row);
+    public static boolean hasOwnActiveStatus() {
+        return hasOwnActiveStatus(ActivityTracker.getCurrentActivity());
     }
 
     private void launchStatusPlayback(Activity activity, String rawJid) {
         try {
-            XposedBridge.log(TAG + " launchStatusPlayback for rawJid=" + rawJid);
             Class<?> statusPlayback = XposedHelpers.findClassIfExists(
                     "com.whatsapp.status.playback.StatusPlaybackActivity", activity.getClassLoader());
             if (statusPlayback != null) {
                 Intent intent = new Intent(activity, statusPlayback);
                 intent.putExtra("jid", rawJid);
                 activity.startActivity(intent);
-            } else {
-                XposedBridge.log(TAG + " launchStatusPlayback: StatusPlaybackActivity class not found");
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " launchStatusPlayback error: " + t.getMessage());
             Toast.makeText(activity, "Error opening status: " + t.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
@@ -257,7 +240,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         Context ctx = getContext();
 
         RelativeLayout root = new RelativeLayout(ctx);
-        root.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(86), ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(82), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         FrameLayout frame = new FrameLayout(ctx);
         frame.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -268,37 +251,17 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         column.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         RelativeLayout avatarBox = new RelativeLayout(ctx);
-        avatarBox.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(64), dipToPx(64)));
+        avatarBox.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(62), dipToPx(62)));
 
-        ImageView photoView;
-        if (contactStatusThumbnailClazz != null) {
-            try {
-                Constructor<?> ctor = contactStatusThumbnailClazz.getConstructor(Context.class);
-                photoView = (ImageView) ctor.newInstance(ctx);
-            } catch (Throwable t) {
-                photoView = new ImageView(ctx);
-            }
-        } else {
-            photoView = new ImageView(ctx);
-        }
-
+        ImageView photoView = new ImageView(ctx);
         RelativeLayout.LayoutParams photoParams = new RelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         photoView.setLayoutParams(photoParams);
-        int pad = dipToPx(2.5f);
-        photoView.setPadding(pad, pad, pad, pad);
         photoView.setScaleType(ImageView.ScaleType.CENTER_CROP);
         holder.photoView = photoView;
 
-        try {
-            XposedHelpers.callMethod(photoView, "setBorderSize", (float) dipToPx(2.5f));
-            XposedHelpers.callMethod(photoView, "setCornerRadius", (float) dipToPx(80f));
-            XposedHelpers.setObjectField(photoView, "A02", Color.GRAY);
-            XposedHelpers.setObjectField(photoView, "A03", 0xFF25D366);
-        } catch (Throwable ignored) {}
-
         RelativeLayout addBadge = new RelativeLayout(ctx);
-        RelativeLayout.LayoutParams badgeParams = new RelativeLayout.LayoutParams(dipToPx(22), dipToPx(22));
+        RelativeLayout.LayoutParams badgeParams = new RelativeLayout.LayoutParams(dipToPx(20), dipToPx(20));
         badgeParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         badgeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
         addBadge.setLayoutParams(badgeParams);
@@ -309,7 +272,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         addBadge.setBackground(badgeBg);
 
         ImageView addIcon = new ImageView(ctx);
-        int iconSize = dipToPx(14);
+        int iconSize = dipToPx(12);
         RelativeLayout.LayoutParams iconParams = new RelativeLayout.LayoutParams(iconSize, iconSize);
         iconParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         addIcon.setLayoutParams(iconParams);
@@ -347,6 +310,38 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         return root;
     }
 
+    private static Object findJidObject(Object obj, int depth) {
+        if (obj == null || depth < 0) return null;
+        Class<?> clazz = obj.getClass();
+        String name = clazz.getName();
+
+        if (name.endsWith(".Jid") || name.endsWith(".UserJid") || name.endsWith(".PhoneUserJid") || name.endsWith(".DeviceJid")) {
+            return obj;
+        }
+
+        if (name.startsWith("java.") || name.startsWith("android.") || name.startsWith("androidx.") || name.startsWith("kotlin.")) {
+            return null;
+        }
+
+        if (obj instanceof String) {
+            String str = (String) obj;
+            if (str.contains("@s.whatsapp.net") || str.contains("@broadcast") || str.contains("@lid") || str.contains("@g.us")) {
+                return str;
+            }
+        }
+
+        for (Field f : clazz.getDeclaredFields()) {
+            try {
+                f.setAccessible(true);
+                Object val = f.get(obj);
+                if (val == null) continue;
+                Object found = findJidObject(val, depth - 1);
+                if (found != null) return found;
+            } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
     private class ViewHolder {
         ImageView photoView;
         RelativeLayout addBadge;
@@ -357,21 +352,23 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         void bindMyStatus() {
             this.isMyStatus = true;
             this.targetJid = "status@broadcast";
-            if (addBadge != null) addBadge.setVisibility(View.VISIBLE);
+            boolean hasActive = hasOwnActiveStatus(getContext());
+            if (addBadge != null) {
+                addBadge.setVisibility(hasActive ? View.GONE : View.VISIBLE);
+            }
             if (nameView != null) nameView.setText("My Status");
 
-            Drawable myPhoto = loadMyPhoto();
-            if (myPhoto != null && photoView != null) {
-                photoView.setImageDrawable(myPhoto);
-            } else if (photoView != null) {
-                Drawable placeholder = MenuIconLoader.load(getContext(), "ic_waex_user_foreground");
-                if (placeholder != null) {
-                    photoView.setImageDrawable(placeholder);
-                } else {
+            Drawable preview = hasActive ? loadMyLatestStatusPreview() : null;
+            if (preview != null && photoView != null) {
+                photoView.setImageDrawable(toCircleDrawable(preview));
+            } else {
+                Drawable myPhoto = loadMyPhoto();
+                if (myPhoto != null && photoView != null) {
+                    photoView.setImageDrawable(toCircleDrawable(myPhoto));
+                } else if (photoView != null) {
                     photoView.setImageDrawable(createDefaultAvatarDrawable());
                 }
             }
-            setCount(0, 0);
         }
 
         void bindItem(Object item) {
@@ -379,107 +376,169 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
             if (addBadge != null) addBadge.setVisibility(View.GONE);
 
             String jid = null;
-            int unseen = 0;
-            int total = 0;
-
-            try {
-                Object statusInfo = null;
-                // Item is either C42610Irb or has statusInfo directly
-                for (Field f : item.getClass().getDeclaredFields()) {
-                    f.setAccessible(true);
-                    Object val = f.get(item);
-                    if (val != null && (statusInfoClazz.isInstance(val) || val.getClass().getName().contains("EaO"))) {
-                        statusInfo = val;
-                        break;
-                    }
+            Object jidObj = findJidObject(item, 4);
+            if (jidObj != null) {
+                try {
+                    Method m = jidObj.getClass().getMethod("getRawString");
+                    jid = (String) m.invoke(jidObj);
+                } catch (Throwable ignored) {
+                    jid = String.valueOf(jidObj);
                 }
-                if (statusInfo == null && statusInfoClazz.isInstance(item)) {
-                    statusInfo = item;
-                }
+            }
 
-                if (statusInfo != null) {
-                    for (Field f : statusInfo.getClass().getDeclaredFields()) {
-                        f.setAccessible(true);
-                        Object val = f.get(statusInfo);
-                        if (val != null && val.getClass().getName().contains("jid")) {
-                            Method getRaw = val.getClass().getMethod("getRawString");
-                            jid = (String) getRaw.invoke(val);
-                            break;
-                        }
-                    }
-                    if (jid == null) {
-                        // inspect fields for JID pattern
-                        for (Field f : statusInfo.getClass().getDeclaredFields()) {
-                            f.setAccessible(true);
-                            Object val = f.get(statusInfo);
-                            if (val != null) {
-                                String str = val.toString();
-                                if (str.contains("@s.whatsapp.net") || str.contains("@lid")) {
-                                    jid = str.replaceAll(".*([0-9]+@[a-z\\.]+).*", "$1");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // unread / total count
-                    try {
-                        Method mUnread = statusInfo.getClass().getMethod("A02");
-                        unseen = (Integer) mUnread.invoke(statusInfo);
-                        Method mTotal = statusInfo.getClass().getMethod("A01");
-                        total = (Integer) mTotal.invoke(statusInfo);
-                    } catch (Throwable ignored) {
-                        unseen = 1;
-                        total = 1;
-                    }
-                }
-            } catch (Throwable t) {
-                XposedBridge.log(TAG + " bindItem extraction error: " + t.getMessage());
+            if (jid != null && jid.contains("@")) {
+                // Ensure bare/clean JID
+                jid = jid.trim();
             }
 
             this.targetJid = jid;
-            XposedBridge.log(TAG + " bindItem for item=" + item.getClass().getName() + " -> targetJid=" + jid);
             String resolvedName = jid != null ? ContactNameResolver.INSTANCE.resolveName(getContext(), jid, null, null) : "Contact";
             if (nameView != null) nameView.setText(resolvedName);
 
             Drawable contactPhoto = jid != null ? loadContactPhoto(jid) : null;
             if (contactPhoto != null && photoView != null) {
-                photoView.setImageDrawable(contactPhoto);
+                photoView.setImageDrawable(toCircleDrawable(contactPhoto));
             } else if (photoView != null) {
-                Drawable placeholder = MenuIconLoader.load(getContext(), "ic_waex_user_foreground");
-                if (placeholder != null) {
-                    photoView.setImageDrawable(placeholder);
-                } else {
-                    photoView.setImageDrawable(createDefaultAvatarDrawable());
+                photoView.setImageDrawable(createDefaultAvatarDrawable());
+            }
+        }
+    }
+
+    private Drawable loadMyLatestStatusPreview() {
+        try {
+            File statusDb = getContext().getDatabasePath("status.db");
+            if (statusDb == null || !statusDb.exists()) return null;
+
+            android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                    statusDb.getAbsolutePath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+            try {
+                // Query latest status row for status_me
+                long statusRowId = -1;
+                int type = -1;
+                String textData = null;
+                try (android.database.Cursor cursor = db.rawQuery(
+                        "SELECT row_id, type, text_data FROM status WHERE sender_user_jid = 'status_me' ORDER BY timestamp DESC LIMIT 1", null)) {
+                    if (cursor.moveToFirst()) {
+                        statusRowId = cursor.getLong(0);
+                        type = cursor.getInt(1);
+                        textData = cursor.getString(2);
+                    }
                 }
-            }
 
-            setCount(unseen, total);
-        }
+                if (statusRowId <= 0) return null;
 
-        private void setCount(int countUnseen, int total) {
-            if (setCountStatusMethod != null && photoView != null) {
-                try {
-                    setCountStatusMethod.invoke(photoView, total, countUnseen, total);
-                } catch (Throwable ignored) {}
+                // Check if image/video thumbnail exists in status_thumbnail
+                try (android.database.Cursor thumbCursor = db.rawQuery(
+                        "SELECT thumbnail, thumbnail_path FROM status_thumbnail WHERE status_row_id = ? LIMIT 1",
+                        new String[]{String.valueOf(statusRowId)})) {
+                    if (thumbCursor.moveToFirst()) {
+                        byte[] blob = thumbCursor.getBlob(0);
+                        if (blob != null && blob.length > 0) {
+                            Bitmap bmp = BitmapFactory.decodeByteArray(blob, 0, blob.length);
+                            if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+                        }
+                        String path = thumbCursor.getString(1);
+                        if (path != null && !path.isEmpty()) {
+                            File f = new File(path);
+                            if (f.exists()) {
+                                Bitmap bmp = BitmapFactory.decodeFile(f.getAbsolutePath());
+                                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+                            }
+                        }
+                    }
+                }
+
+                // If text status, check status_text for background color and render text preview
+                int bgColor = 0xFF00A884;
+                try (android.database.Cursor textCursor = db.rawQuery(
+                        "SELECT background_color, thumbnail FROM status_text WHERE status_row_id = ? LIMIT 1",
+                        new String[]{String.valueOf(statusRowId)})) {
+                    if (textCursor.moveToFirst()) {
+                        int col = textCursor.getInt(0);
+                        if (col != 0) {
+                            bgColor = col;
+                        }
+                        byte[] blob = textCursor.getBlob(1);
+                        if (blob != null && blob.length > 0) {
+                            Bitmap bmp = BitmapFactory.decodeByteArray(blob, 0, blob.length);
+                            if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+                        }
+                    }
+                }
+
+                // Render circular preview bitmap with background color and text snippet
+                int size = dipToPx(62);
+                Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+
+                Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                bgPaint.setColor(bgColor);
+                canvas.drawCircle(size / 2f, size / 2f, size / 2f, bgPaint);
+
+                if (textData != null && !textData.trim().isEmpty()) {
+                    TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+                    textPaint.setColor(Color.WHITE);
+                    textPaint.setTextSize(dipToPx(13f));
+                    textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+                    textPaint.setTextAlign(Paint.Align.CENTER);
+
+                    // Clean text (remove formatting symbols for small preview snippet)
+                    String previewSnippet = textData.trim();
+                    if (previewSnippet.length() > 6) {
+                        previewSnippet = previewSnippet.substring(0, 5) + "…";
+                    }
+
+                    Paint.FontMetrics fm = textPaint.getFontMetrics();
+                    float textY = (size / 2f) - ((fm.descent + fm.ascent) / 2f);
+                    canvas.drawText(previewSnippet, size / 2f, textY, textPaint);
+                }
+
+                return new BitmapDrawable(getContext().getResources(), bitmap);
+            } finally {
+                db.close();
             }
-        }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     private Drawable loadMyPhoto() {
         try {
             File filesDir = getContext().getFilesDir();
+            File avatarDir = new File(filesDir, "Avatars");
+            File meJ = new File(avatarDir, "me.j");
+            if (meJ.exists()) {
+                Bitmap bmp = BitmapFactory.decodeFile(meJ.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+            }
             File me = new File(filesDir, "me.jpg");
             if (me.exists()) {
-                return Drawable.createFromPath(me.getAbsolutePath());
+                Bitmap bmp = BitmapFactory.decodeFile(me.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
             }
         } catch (Throwable ignored) {}
         return null;
     }
 
     private Drawable loadContactPhoto(String jid) {
+        if (jid == null) return null;
         try {
+            File filesDir = getContext().getFilesDir();
+            File avatarDir = new File(filesDir, "Avatars");
+            // Check direct avatar file: e.g. <jid>.j or <user>@s.whatsapp.net.j
+            File jFile = new File(avatarDir, jid + ".j");
+            if (jFile.exists()) {
+                Bitmap bmp = BitmapFactory.decodeFile(jFile.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+            }
+
             String user = jid.contains("@") ? jid.substring(0, jid.indexOf("@")) : jid;
+            File userJFile = new File(avatarDir, user + "@s.whatsapp.net.j");
+            if (userJFile.exists()) {
+                Bitmap bmp = BitmapFactory.decodeFile(userJFile.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+            }
+
+            // Check Profile Pictures cache
             File cacheDir = getContext().getCacheDir();
             File picDir = new File(cacheDir, "Profile Pictures");
             if (picDir.exists()) {
@@ -491,6 +550,35 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
             }
         } catch (Throwable ignored) {}
         return null;
+    }
+
+    private Drawable toCircleDrawable(Drawable drawable) {
+        if (drawable == null) return null;
+        try {
+            Bitmap src;
+            if (drawable instanceof BitmapDrawable) {
+                src = ((BitmapDrawable) drawable).getBitmap();
+            } else {
+                int w = Math.max(1, drawable.getIntrinsicWidth());
+                int h = Math.max(1, drawable.getIntrinsicHeight());
+                src = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(src);
+                drawable.setBounds(0, 0, w, h);
+                drawable.draw(canvas);
+            }
+            if (src == null) return drawable;
+
+            int size = Math.min(src.getWidth(), src.getHeight());
+            Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(output);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setShader(new android.graphics.BitmapShader(src, android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP));
+            float r = size / 2f;
+            canvas.drawCircle(r, r, r, paint);
+            return new BitmapDrawable(getContext().getResources(), output);
+        } catch (Throwable ignored) {
+            return drawable;
+        }
     }
 
     private Drawable createPlusDrawable(Context ctx) {
@@ -509,7 +597,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
     }
 
     private Drawable createDefaultAvatarDrawable() {
-        int size = dipToPx(64);
+        int size = dipToPx(62);
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
