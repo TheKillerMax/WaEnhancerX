@@ -4,11 +4,13 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -77,6 +81,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.sin
+import kotlin.random.Random
 
 private const val PROJECT_URL = "https://github.com/WaEnhancerX/WaEnhancerX"
 private const val STARGAZERS_DATA_URL = "https://waex.mubashar.dev/api/stargazers"
@@ -134,11 +140,16 @@ fun StargazersScreen() {
     var showSupportSheet by remember { mutableStateOf(false) }
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    val confettiProgress = remember { Animatable(0f) }
     val supportSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val filteredStargazers = remember(stargazers, searchQuery) {
         val query = searchQuery.trim()
         if (query.isEmpty()) stargazers
         else stargazers.filter { it.login.contains(query, ignoreCase = true) }
+    }
+
+    LaunchedEffect(Unit) {
+        confettiProgress.animateTo(1f, animationSpec = tween(durationMillis = 2600))
     }
 
     fun openUrl(url: String) {
@@ -165,7 +176,7 @@ fun StargazersScreen() {
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
             updateIntervalHours = snapshot.updateIntervalHours
         }.onFailure {
-            errorMessage = "We couldn't load the stargazers right now."
+            errorMessage = "We couldn't load the supporters right now."
             stargazers = emptyList()
         }
         isLoading = false
@@ -196,7 +207,7 @@ fun StargazersScreen() {
                     ) {
                         Icon(
                             imageVector = if (isSearchVisible) WaexIcons.Clear else WaexIcons.Search,
-                            contentDescription = if (isSearchVisible) "Close search" else "Search stargazers",
+                            contentDescription = if (isSearchVisible) "Close search" else "Search supporters",
                             tint = colors.onSurface
                         )
                     }
@@ -214,20 +225,23 @@ fun StargazersScreen() {
         },
         containerColor = colors.background
     ) { scaffoldPadding ->
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 96.dp),
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding),
-            contentPadding = PaddingValues(
-                start = spacing.pageMargin,
-                end = spacing.pageMargin,
-                top = 16.dp,
-                bottom = 24.dp
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(scaffoldPadding)
         ) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 96.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = spacing.pageMargin,
+                    end = spacing.pageMargin,
+                    top = 16.dp,
+                    bottom = 24.dp
+                ),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
             if (isSearchVisible) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     OutlinedTextField(
@@ -352,7 +366,7 @@ fun StargazersScreen() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Be the first to star WaEnhancerX on GitHub.",
+                            text = "Be the first supporter featured here by starring WaEnhancerX on GitHub.",
                             style = typography.bodyLg,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -432,6 +446,8 @@ fun StargazersScreen() {
                     }
                 }
             }
+            }
+            SupportersConfettiOverlay(progress = confettiProgress.value)
         }
     }
 
@@ -598,6 +614,72 @@ fun StargazersScreen() {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text("Add me to the list", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+private data class ConfettiPiece(
+    val x: Float,
+    val delay: Float,
+    val speed: Float,
+    val drift: Float,
+    val size: Float,
+    val rotation: Float,
+    val colorIndex: Int,
+    val circular: Boolean
+)
+
+@Composable
+private fun SupportersConfettiOverlay(progress: Float) {
+    if (progress >= 1f) return
+    val pieces = remember {
+        val random = Random(2026)
+        List(52) {
+            ConfettiPiece(
+                x = random.nextFloat(),
+                delay = random.nextFloat() * 0.28f,
+                speed = 0.85f + random.nextFloat() * 0.35f,
+                drift = (random.nextFloat() - 0.5f) * 90f,
+                size = 6f + random.nextFloat() * 8f,
+                rotation = random.nextFloat() * 360f,
+                colorIndex = random.nextInt(6),
+                circular = random.nextBoolean()
+            )
+        }
+    }
+    val palette = remember {
+        listOf(
+            Color(0xFFFFC107),
+            Color(0xFFFF5C8A),
+            Color(0xFF7C4DFF),
+            Color(0xFF00BCD4),
+            Color(0xFF4CAF50),
+            Color(0xFFFF7043)
+        )
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        pieces.forEach { piece ->
+            val localProgress = ((progress - piece.delay) / (1f - piece.delay))
+                .coerceIn(0f, 1f) * piece.speed
+            if (localProgress <= 0f || localProgress >= 1.1f) return@forEach
+            val fade = if (localProgress > 0.82f) ((1f - localProgress) / 0.18f).coerceIn(0f, 1f) else 1f
+            val x = piece.x * size.width +
+                sin(localProgress * 10f + piece.rotation) * piece.drift
+            val y = -piece.size + localProgress * (size.height + piece.size * 3f)
+            val color = palette[piece.colorIndex].copy(alpha = fade)
+
+            rotate(piece.rotation + localProgress * 540f, pivot = androidx.compose.ui.geometry.Offset(x, y)) {
+                if (piece.circular) {
+                    drawCircle(color = color, radius = piece.size * 0.45f, center = androidx.compose.ui.geometry.Offset(x, y))
+                } else {
+                    drawRect(
+                        color = color,
+                        topLeft = androidx.compose.ui.geometry.Offset(x - piece.size / 2f, y - piece.size / 3f),
+                        size = androidx.compose.ui.geometry.Size(piece.size, piece.size * 0.66f)
+                    )
                 }
             }
         }

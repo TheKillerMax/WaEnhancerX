@@ -544,7 +544,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = "Stargazers", style = typography.bodyMd, color = colors.onSurface)
+                                    Text(text = "Our Supporters", style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
