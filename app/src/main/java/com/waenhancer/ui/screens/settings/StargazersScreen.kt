@@ -55,6 +55,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -148,7 +150,7 @@ fun StargazersScreen() {
     fun openProjectForStar() {
         Toast.makeText(
             context,
-            "Tap Star on GitHub to support WaEnhancerX. Thank you!",
+            "Tap Star on GitHub and your profile will appear after the list updates.",
             Toast.LENGTH_SHORT
         ).show()
         openUrl(PROJECT_URL)
@@ -199,10 +201,12 @@ fun StargazersScreen() {
                         )
                     }
                     IconButton(onClick = { showSupportSheet = true }) {
-                        Icon(
-                            imageVector = WaexIcons.Premium,
-                            contentDescription = "Support project on GitHub",
-                            tint = colors.primary
+                        Text(
+                            text = "🫵",
+                            style = typography.headlineMd,
+                            modifier = Modifier
+                                .padding(bottom = 2.dp)
+                                .semantics { contentDescription = "Join the supporters list" }
                         )
                     }
                 }
@@ -555,17 +559,15 @@ fun StargazersScreen() {
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = WaexIcons.Premium,
-                            contentDescription = null,
-                            tint = colors.primary,
-                            modifier = Modifier.size(28.dp)
+                        Text(
+                            text = "🫵",
+                            style = typography.headlineMd
                         )
                     }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Support WaEnhancerX",
+                    text = "Want to see yourself here?",
                     style = typography.headlineMd,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface,
@@ -573,7 +575,7 @@ fun StargazersScreen() {
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "Starring the project on GitHub is completely free. Your star helps more people discover WaEnhancerX and shows that the work matters. That support helps keep development focused, active, and motivated.",
+                    text = "Star WaEnhancerX on GitHub and your profile can join this supporters list. It’s free, takes only a moment, and helps more people discover the project. New stars may take a little while to appear.",
                     style = typography.bodyMd,
                     color = colors.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -595,7 +597,7 @@ fun StargazersScreen() {
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Star for free on GitHub", fontWeight = FontWeight.Bold)
+                    Text("Add me to the list", fontWeight = FontWeight.Bold)
                 }
             }
         }
