@@ -108,10 +108,12 @@ fun SupportedVersionsScreen() {
         WhatsAppPackageDetector.detectWhatsAppApps(context)
     }
 
-    val unsupportedApps = detectedApps.filter { app ->
-        app.isInstalled && !UniversalVersionValidator.isSupported(context, app.versionName.removePrefix("v"), prefs)
+    val decisions = detectedApps.associate {
+        it.packageName to UniversalVersionValidator.evaluate(context, it.versionName, prefs)
     }
-    val isAllSupported = unsupportedApps.isEmpty()
+    val unsupportedApps = detectedApps.filter { app ->
+        app.isInstalled && decisions[app.packageName] == UniversalVersionValidator.Decision.UNSUPPORTED
+    }
 
     var showSelectAppDialog by remember { mutableStateOf(false) }
 
@@ -148,12 +150,12 @@ fun SupportedVersionsScreen() {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     detectedApps.forEach { app ->
                         val cleanVer = app.versionName.removePrefix("v")
-                        val isSupported = app.isInstalled && (isBypassEnabled || UniversalVersionValidator.isSupported(context, cleanVer, prefs))
+                        val decision = decisions.getValue(app.packageName)
                         AppVersionStatusCard(
                             appName = app.appName,
                             packageName = app.packageName,
                             versionName = if (app.isInstalled) cleanVer else null,
-                            isSupported = isSupported,
+                            decision = decision,
                             onAddCurrentClick = {
                                 if (app.isInstalled) {
                                     val wildcardRule = UniversalVersionValidator.toWildcard(cleanVer)
@@ -281,10 +283,10 @@ fun SupportedVersionsScreen() {
 
                     Button(
                         onClick = {
-                            if (isAllSupported) {
+                            if (unsupportedApps.isEmpty()) {
                                 Toast.makeText(
                                     context,
-                                    "All installed WhatsApp apps are already supported!",
+                                    "No rejected version is available to add. Check each target's rules status; this is not a feature compatibility test.",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
@@ -472,13 +474,15 @@ private fun AppVersionStatusCard(
     appName: String,
     packageName: String,
     versionName: String?,
-    isSupported: Boolean,
+    decision: UniversalVersionValidator.Decision,
     onAddCurrentClick: () -> Unit
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
     val isInstalled = versionName != null
+    val isSupported = decision == UniversalVersionValidator.Decision.BUILTIN_RULE ||
+        decision == UniversalVersionValidator.Decision.CUSTOM_RULE
 
     Surface(
         shape = radius.mdShape,
@@ -545,8 +549,11 @@ private fun AppVersionStatusCard(
                     Text(
                         text = when {
                             !isInstalled -> "Unavailable"
-                            isSupported -> "Supported"
-                            else -> "Unsupported"
+                            decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> "Matches built-in rules"
+                            decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> "Allowed by custom rule"
+                            decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> "Bypass active (unverified)"
+                            decision == UniversalVersionValidator.Decision.UNSUPPORTED -> "Version rejected by rules"
+                            else -> "Version check unavailable"
                         },
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
@@ -561,7 +568,7 @@ private fun AppVersionStatusCard(
             }
 
             // Quick 1-tap add button if unsupported
-            if (isInstalled && !isSupported) {
+            if (isInstalled && decision == UniversalVersionValidator.Decision.UNSUPPORTED) {
                 val wildcard = UniversalVersionValidator.toWildcard(versionName)
                 Button(
                     onClick = onAddCurrentClick,

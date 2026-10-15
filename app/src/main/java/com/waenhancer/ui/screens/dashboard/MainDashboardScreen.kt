@@ -89,7 +89,8 @@ import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.utils.WhatsAppPackageDetector
 import com.waenhancer.utils.XposedRuntimeInspector
-import com.waenhancer.utils.XposedRuntimeSnapshot
+import com.waenhancer.utils.TargetRuntimePresentation
+import com.waenhancer.ui.components.rememberRuntimeObservationClock
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
 import kotlinx.coroutines.Dispatchers
@@ -164,7 +165,7 @@ fun MainDashboardScreen(
         val refreshed = withContext(Dispatchers.IO) {
             XposedRuntimeInspector.inspect(packages)
         }
-        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
+        runtimeSnapshot = refreshed
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -196,14 +197,19 @@ fun MainDashboardScreen(
     }
 
     // Dynamic WhatsApp Packages & Clones Detector
-    val detectedApps = remember(refreshTrigger, runtimeSnapshot) {
+    val reportedApps = remember(refreshTrigger, runtimeSnapshot) {
         WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
     }
-
-    val prefs = remember(context) { PreferenceStores.publicStore(context) }
-    val hasUnsupportedActiveApp = detectedApps.any {
-        it.isInstalled && it.isHooked && !UniversalVersionValidator.isSupported(context, it.versionName.removePrefix("v"), prefs)
+    val observationTime = rememberRuntimeObservationClock()
+    val detectedApps = reportedApps.map {
+        TargetRuntimePresentation.asOf(it, observationTime.wall, observationTime.elapsed)
     }
+    val prefs = remember(context) { PreferenceStores.publicStore(context) }
+    val versionDecisions = remember(reportedApps, refreshTrigger) {
+        reportedApps.associate { it.packageName to UniversalVersionValidator.evaluate(context, it.versionName, prefs) }
+    }
+    val targetSummary = TargetRuntimePresentation.summarize(detectedApps, versionDecisions)
+    val hasTargetReview = targetSummary.healthy == false
     val moduleVersion = remember(context) {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
@@ -226,7 +232,7 @@ fun MainDashboardScreen(
                 color = colors.surface,
                 border = BorderStroke(
                     1.dp,
-                    if (hasUnsupportedActiveApp) Color(0xFFEF4444).copy(alpha = 0.5f) else colors.outline
+                    if (hasTargetReview) Color(0xFFEF4444).copy(alpha = 0.5f) else colors.outline
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -243,7 +249,7 @@ fun MainDashboardScreen(
                                 .background(
                                     when {
                                         !isModuleActive -> colors.error
-                                        hasUnsupportedActiveApp -> Color(0xFFEF4444)
+                                        hasTargetReview -> Color(0xFFEF4444)
                                         else -> colors.primary
                                     }
                                 )
@@ -252,7 +258,7 @@ fun MainDashboardScreen(
                         Text(
                             text = when {
                                 !isModuleActive -> stringResource(R.string.module_inactive_version, moduleVersion)
-                                hasUnsupportedActiveApp -> stringResource(R.string.module_active_version, "$moduleVersion • ${stringResource(R.string.unsupported_target)}")
+                                hasTargetReview -> stringResource(R.string.module_active_version, "$moduleVersion • ${stringResource(R.string.diag_status_review_required)}")
                                 else -> stringResource(R.string.module_active_version, moduleVersion)
                             },
                             style = typography.bodyMd,
@@ -260,7 +266,7 @@ fun MainDashboardScreen(
                             fontSize = 12.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            color = if (hasUnsupportedActiveApp) Color(0xFFEF4444) else colors.onSurface,
+                            color = if (hasTargetReview) Color(0xFFEF4444) else colors.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         Box(
@@ -288,58 +294,20 @@ fun MainDashboardScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         detectedApps.forEach { app ->
                             val cleanVer = app.versionName.removePrefix("v")
-                            val isVersionSupported = UniversalVersionValidator.isSupported(context, cleanVer, prefs)
+                            val decision = versionDecisions[app.packageName] ?: UniversalVersionValidator.Decision.RULES_UNAVAILABLE
+                            val isVersionSupported = decision.allowed
                             val appIcon = remember(app.packageName) {
                                 WhatsAppPackageDetector.getAppIcon(context, app.packageName)
                             }
 
-                            val (statusDotColor, statusText, statusTextColor) = when {
-                                !app.isInstalled -> Triple(
-                                    colors.onSurfaceVariant.copy(alpha = 0.4f),
-                                    "Not Installed",
-                                    colors.onSurfaceVariant
-                                )
-                                !isModuleActive -> Triple(
-                                    colors.error,
-                                    "Module inactive",
-                                    colors.error
-                                )
-                                app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
-                                    colors.error,
-                                    "Injected • Initialization failed",
-                                    colors.error
-                                )
-                                app.isHooked && !isVersionSupported -> Triple(
-                                    colors.error,
-                                    "Injected • Unsupported version",
-                                    colors.error
-                                )
-                                app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
-                                    colors.error,
-                                    "Injected • Settings connection unavailable",
-                                    colors.error
-                                )
-                                app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Injected • Using settings fallback",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Injected • Some features failed",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.isHooked -> Triple(
-                                    colors.primary,
-                                    "Hooks injected",
-                                    colors.primary
-                                )
-                                else -> Triple(
-                                    colors.onSurfaceVariant,
-                                    "Hooks not injected",
-                                    colors.onSurfaceVariant
-                                )
+                            val status = TargetRuntimePresentation.card(app, isModuleActive, decision)
+                            val statusDotColor = when (status.severity) {
+                                TargetRuntimePresentation.Severity.OK -> colors.primary
+                                TargetRuntimePresentation.Severity.REVIEW -> colors.error
+                                TargetRuntimePresentation.Severity.UNKNOWN -> colors.onSurfaceVariant
                             }
+                            val statusText = status.text
+                            val statusTextColor = statusDotColor
 
                             Surface(
                                 shape = radius.defaultShape,
@@ -536,7 +504,7 @@ fun MainDashboardScreen(
 
             DashboardDiagnosticsCard(
                 diagnostics = systemDiagnostics,
-                hasUnsupportedTarget = hasUnsupportedActiveApp,
+                targetSummary = targetSummary,
                 onRefresh = { refreshTrigger++ },
                 onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
                 onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) }
@@ -718,7 +686,7 @@ fun MainDashboardScreen(
 @Composable
 private fun DashboardDiagnosticsCard(
     diagnostics: SystemDiagnostics?,
-    hasUnsupportedTarget: Boolean,
+    targetSummary: TargetRuntimePresentation.Summary,
     onRefresh: () -> Unit,
     onViewDetails: () -> Unit,
     onViewSupportedVersions: () -> Unit
@@ -799,8 +767,8 @@ private fun DashboardDiagnosticsCard(
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_compatibility),
-                value = if (hasUnsupportedTarget) stringResource(R.string.diag_status_review_required) else stringResource(R.string.diag_status_supported),
-                healthy = !hasUnsupportedTarget
+                value = targetSummary.text,
+                healthy = targetSummary.healthy
             )
 
             Spacer(modifier = Modifier.height(14.dp))

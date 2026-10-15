@@ -36,7 +36,9 @@ data class HookedAppInfo(
     val lastActiveTime: Long = 0L,
     val runtimeStatus: String = "NOT_DETECTED",
     val bridgeStatus: String = "NOT_REPORTED",
-    val initializationError: String? = null
+    val initializationError: String? = null,
+    val injectionEvidence: InjectionEvidence = if (isHooked) InjectionEvidence.CURRENT else InjectionEvidence.NO_REPORT,
+    val processObservedAtElapsed: Long = -1L
 )
 
 internal fun hasCurrentInjection(
@@ -47,9 +49,9 @@ internal fun hasCurrentInjection(
     runningPids: Set<Int>,
     lastActiveTime: Long,
     now: Long
-): Boolean = isModuleActive && currentBoot != -1 && recordedBoot == currentBoot &&
-        reportedPid > 0 && reportedPid in runningPids &&
-        lastActiveTime > 0L && now - lastActiveTime in 0L..25_000L
+): Boolean = classifyInjection(isModuleActive, recordedBoot, currentBoot, reportedPid,
+    runningPids, lastActiveTime, now) == InjectionEvidence.CURRENT
+
 
 object WhatsAppPackageDetector {
 
@@ -323,15 +325,16 @@ object WhatsAppPackageDetector {
                 val recordedBoot = prefs.getInt("runtime_boot_$pkg", Int.MIN_VALUE)
                 val currentBoot = currentBootCount(context)
                 val reportedPid = prefs.getInt("runtime_pid_$pkg", -1)
-                val isInjected = hasCurrentInjection(
+                val evidence = classifyInjection(
                     isModuleActive = isGlobalModuleActive,
                     recordedBoot = recordedBoot,
                     currentBoot = currentBoot,
                     reportedPid = reportedPid,
-                    runningPids = runtimeSnapshot?.runningPids?.get(pkg).orEmpty(),
+                    runningPids = runtimeSnapshot?.pidsFor(pkg, android.os.SystemClock.elapsedRealtime()),
                     lastActiveTime = lastActiveTime,
                     now = System.currentTimeMillis()
                 )
+                val isInjected = evidence == InjectionEvidence.CURRENT
                 val injectedHooks = if (isInjected) getInjectedHooks(context, pkg) else emptyList()
 
                 result.add(
@@ -345,7 +348,9 @@ object WhatsAppPackageDetector {
                         lastActiveTime = lastActiveTime,
                         runtimeStatus = prefs.getString("runtime_status_$pkg", "NOT_DETECTED") ?: "NOT_DETECTED",
                         bridgeStatus = prefs.getString("bridge_status_$pkg", "NOT_REPORTED") ?: "NOT_REPORTED",
-                        initializationError = prefs.getString("runtime_error_$pkg", null)
+                        initializationError = prefs.getString("runtime_error_$pkg", null),
+                        injectionEvidence = evidence,
+                        processObservedAtElapsed = runtimeSnapshot?.observedAtElapsed ?: -1L
                     )
                 )
             } catch (e: PackageManager.NameNotFoundException) {
