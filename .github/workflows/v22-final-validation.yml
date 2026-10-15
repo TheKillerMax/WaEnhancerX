@@ -1,0 +1,116 @@
+name: V22 final recovered runtime and receipt validation
+on:
+  push:
+    branches: [test/runtime-contract-validation-v22-2026-10-15]
+    paths: [.github/workflows/v22-final-validation.yml]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact inputs and execute standalone, combined and framework regressions
+        run: |
+          python3 - <<'PY'
+          import base64,gzip,hashlib,json,os,pathlib,shutil,subprocess,time
+          root=pathlib.Path.cwd();out=pathlib.Path(os.environ['RUNNER_TEMP'])/'v22-final-evidence';out.mkdir()
+          def git(*args,data=None):return subprocess.check_output(['git',*args],input=data).decode().strip()
+          def run(name,args,timeout=300):
+              started=time.monotonic()
+              with (out/(name+'.log')).open('w') as log:
+                  p=subprocess.run(args,stdout=log,stderr=subprocess.STDOUT,timeout=timeout)
+              result={'name':name,'exit':p.returncode,'seconds':round(time.monotonic()-started,3)}
+              (out/(name+'.result.json')).write_text(json.dumps(result));print(result,flush=True)
+              if p.returncode:
+                  print((out/(name+'.log')).read_text()[-9000:],flush=True)
+                  raise RuntimeError(name+' failed')
+          stage=os.environ['GITHUB_SHA'];stage_tree=git('rev-parse',stage+'^{tree}')
+          branch='test/runtime-contract-validation-v22-2026-10-15'
+          encoded=''.join((root/('qa/v22-final-candidates.part'+str(i))).read_text() for i in (1,2,3))
+          assert len(encoded)==12488,('Transfer length mismatch',len(encoded))
+          packed=base64.b64decode(encoded,validate=True)
+          assert hashlib.sha256(packed).hexdigest()=='0a073f9863e27f83ced1764a019b6ff8c011c655fb1bda5e33b1799f6602f42d','Transfer checksum mismatch'
+          spec=json.loads(gzip.decompress(packed));(out/'verified-inputs.json').write_text(json.dumps(spec,indent=2))
+          live=git('ls-remote','https://github.com/WaEnhancerX/WaEnhancerX.git','refs/heads/main').split()[0]
+          assert live==spec['base'],('Upstream advanced: reconcile instead of silently overwriting',live)
+          git('config','user.name','TheKillerMax');git('config','user.email','70108066+TheKillerMax@users.noreply.github.com')
+          for sha,recipe in spec['recipes'].items():
+              if 'text' in recipe:text=recipe['text']
+              else:
+                  lines=subprocess.check_output(['git','cat-file','blob',recipe['base']]).decode().splitlines(keepends=True)
+                  text=''.join(''.join(lines[p[0]:p[1]]) if isinstance(p,list) else p for p in recipe['parts'])
+              actual=git('hash-object','-w','--stdin',data=text.encode());assert actual==sha,(sha,actual)
+          candidates={}
+          messages={'targets':'fix(targets): preserve exact declared target selection and regression evidence','runtime':'fix(diagnostics): bound process observations and invalidate obsolete compatibility notices','qa':'test(qa): add behavioral negative controls for runtime and receipt contracts','pr35':'fix(receipts): preserve serialized recipient identity during constructor capture','pr41':'test(presence): retain reviewed diagnostic checks after upstream reconciliation'}
+          for name,entry in spec['inputs'].items():
+              git('read-tree',entry['parent'])
+              for path,blob in entry['entries'].items():
+                  assert not path.startswith('/') and '..' not in pathlib.PurePosixPath(path).parts
+                  assert pathlib.Path(path).suffix.lower() not in ('.apk','.ttf','.otf','.jks','.keystore')
+                  git('update-index','--add','--cacheinfo',blob['mode'],blob['sha'],path)
+              for path in entry['remove']:git('update-index','--force-remove',path)
+              tree=git('write-tree');assert tree==entry['tree'],(name,'tree mismatch',tree,entry['tree'])
+              sha=git('commit-tree',tree,'-p',entry['parent'],'-m',messages[name])
+              candidates[name]={'sha':sha,'tree':tree,'parent':entry['parent'],'branch':entry['branch']}
+          (out/'candidates.json').write_text(json.dumps(candidates,indent=2))
+          tests={'targets':['test_declared_targets.py'],'runtime':['test_runtime_diagnostics.py','test_startup_reconciliation.py','test_provider_derived_keys.py'],'pr35':['test_blue_receipt_recipient_isolation.py','test_manual_blue_tick_ui.py','test_manual_seen_tick_persistence.py','test_receipt_job_execution_contract.py','test_played_receipt_dispatch_contract.py','test_private_hook_logs.py'],'pr41':['test_presence_event_contract.py','test_presence_state_replay.py','test_presence_invalidation.py','test_presence_state_invalidation.py','test_notification_memory.py','test_private_hook_logs.py']}
+          try:
+              for name,scripts in tests.items():
+                  git('checkout','--detach','--force',candidates[name]['sha'])
+                  for script in scripts:run(name+'-'+script,['python3','qa/'+script])
+              git('checkout','--detach','--force',spec['integrated']['parent'])
+              for name in ('qa','targets','runtime','pr35','pr41'):
+                  run('merge-'+name,['git','merge','--no-ff','--no-edit',candidates[name]['sha']])
+              tree=git('write-tree');assert tree==spec['integrated']['tree'],('Combined tree mismatch',tree,spec['integrated']['tree'])
+              parents=[spec['integrated']['parent']]+[candidates[n]['sha'] for n in ('qa','targets','runtime','pr35','pr41')]
+              head=git('commit-tree',tree,*[x for p in parents for x in ('-p',p)],'-m','merge: retain current main and validated runtime, resource, receipt and presence contributions')
+              candidates['integrated']={'sha':head,'tree':tree,'parents':parents,'branch':spec['integrated']['branch']}
+              (out/'candidates.json').write_text(json.dumps(candidates,indent=2));git('checkout','--detach','--force',head)
+              run('integrated-syntax',['python3','qa/check_syntax.py'])
+              run('production-syntax',['python3','qa/check_syntax.py','--root','app/src/main/java','--json'])
+              scripts=sorted(p for p in pathlib.Path('qa').glob('test_*.py') if p.name!='test_host_class_relocations.py')
+              assert len(scripts)==51,len(scripts)
+              for script in scripts:run('integrated-'+script.name,['python3',str(script)])
+              run('behavioral-mutants',['python3','qa/mutate_runtime_evidence.py','--out',str(out/'mutants')],900)
+              run('android-presence-rows',['python3','qa/android_presence_row_test.py','--out',str(out.parent/'v22-final-rows')],900)
+              run('runtime-framework',['python3','qa/verify_runtime_framework.py','--out',str(out.parent/'v22-final-runtime')],900)
+              verification={'source_scripts':len(scripts),'standalone_scripts':sum(map(len,tests.values())),'mutants':12,'production_java':len(list(pathlib.Path('app/src/main/java').rglob('*.java'))),'production_kotlin':len(list(pathlib.Path('app/src/main/java').rglob('*.kt'))),'integrated_tree':tree,'all_passed':True,'limits':'Source/JVM, isolated Android framework, no full WAEX APK or LSPosed.'}
+              (out/'verification.json').write_text(json.dumps(verification,indent=2))
+              (out/'combined.patch').write_text(git('diff',spec['base'],head))
+              for name,value in candidates.items():
+                  (out/(name+'.patch')).write_text(git('diff',spec['base'],value['sha']))
+              live=git('ls-remote','origin','refs/heads/'+branch).split()[0];assert live==stage
+              hold=git('commit-tree',stage_tree,'-p',stage,'-p',head,'-m','test(qa): preserve final validated candidates before non-force functional publication')
+              run('preserve-tested-objects',['git','push','origin',hold+':refs/heads/'+branch])
+              (out/'holding-commit.txt').write_text(hold+'\n')
+          finally:
+              for folder in ('v22-final-rows','v22-final-runtime'):
+                  src=out.parent/folder
+                  if not src.exists():continue
+                  dest=out/folder;dest.mkdir(exist_ok=True)
+                  for p in src.rglob('*'):
+                      if not p.is_file() or any(x in p.parts for x in ('deps','apks','.gradle')):continue
+                      if p.suffix not in ('.log','.json','.xml','.txt'):continue
+                      if folder=='v22-final-runtime' and 'evidence' not in p.parts:continue
+                      target=dest/p.relative_to(src);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v22-final-validation
+          path: ${{ runner.temp }}/v22-final-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
