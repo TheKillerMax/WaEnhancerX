@@ -462,4 +462,10 @@ WA Plus کو غیر مقفل کریں۔
 [289] سسٹم اور مطابقت</string>
     <string name="sec_utilities_data">Utilities &amp; Data</string>
     <string name="sec_system_compatibility">System &amp; Compatibility</string>
+    <string name="feat_anti_edit_messages_title">ترمیم کی تاریخ دکھائیں</string><string name="feat_anti_edit_messages_desc">پیغام میں «ترمیم شدہ» پر ٹیپ کرنے سے ترمیم کی تاریخ دکھاتا ہے۔</string>
+    <string name="feat_revokeallmessages_title">«سب کے لیے حذف کریں» کی حد بڑھائیں</string><string name="feat_revokeallmessages_desc">«سب کے لیے حذف کریں» کی وقت کی حد تین دن تک بڑھاتا ہے۔</string>
+    <string name="feat_hide_forwarded_tag_title">«فارورڈ کیا گیا» ٹیگ چھپائیں</string><string name="feat_hide_forwarded_tag_desc">پیغامات کو «فارورڈ کیا گیا» ٹیگ کے بغیر آگے بھیجتا ہے۔</string>
+    <string name="feat_removeseemore_title">«مزید دیکھیں» بٹن ہٹائیں</string><string name="feat_removeseemore_desc">لمبے پیغامات مکمل دکھاتا ہے اور «مزید دیکھیں» ہٹاتا ہے۔</string>
+    <string name="sec_security_vault">سکیورٹی اور والٹ</string><string name="sec_chat_navigation_shortcuts">چیٹ نیویگیشن اور شارٹ کٹس</string>
+    <string name="catalog_tab_privacy">رازداری</string><string name="catalog_tab_conversation">گفتگو</string><string name="catalog_tab_media">میڈیا</string><string name="catalog_tab_automation">خود کاری</string><string name="catalog_tab_styles">انداز</string><string name="catalog_tab_settings">ترتیبات</string><string name="catalog_tab_premium">پریمیم</string>
 </resources>

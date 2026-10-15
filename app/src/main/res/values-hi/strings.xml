@@ -290,4 +290,10 @@
     <string name="sec_home_layout_navigation">होम लेआउट और नेविगेशन</string>
     <string name="sec_utilities_data">उपयोगिताएँ एवं डेटा</string>
     <string name="sec_system_compatibility">सिस्टम और अनुकूलता</string>
+    <string name="feat_anti_edit_messages_title">संपादन इतिहास दिखाएँ</string><string name="feat_anti_edit_messages_desc">संदेश में “संपादित” पर टैप करने पर संपादन इतिहास दिखाता है।</string>
+    <string name="feat_revokeallmessages_title">“सभी के लिए हटाएँ” की सीमा बढ़ाएँ</string><string name="feat_revokeallmessages_desc">“सभी के लिए हटाएँ” की समय-सीमा को तीन दिन तक बढ़ाता है।</string>
+    <string name="feat_hide_forwarded_tag_title">“फ़ॉरवर्ड किया गया” टैग छिपाएँ</string><string name="feat_hide_forwarded_tag_desc">संदेशों को “फ़ॉरवर्ड किया गया” टैग के बिना फ़ॉरवर्ड करता है।</string>
+    <string name="feat_removeseemore_title">“और देखें” बटन हटाएँ</string><string name="feat_removeseemore_desc">लंबे संदेश पूरे दिखाता है और “और देखें” हटाता है।</string>
+    <string name="sec_security_vault">सुरक्षा और वॉल्ट</string><string name="sec_chat_navigation_shortcuts">चैट नेविगेशन और शॉर्टकट</string>
+    <string name="catalog_tab_privacy">गोपनीयता</string><string name="catalog_tab_conversation">चैट</string><string name="catalog_tab_media">मीडिया</string><string name="catalog_tab_automation">स्वचालन</string><string name="catalog_tab_styles">शैलियाँ</string><string name="catalog_tab_settings">सेटिंग</string><string name="catalog_tab_premium">प्रीमियम</string>
 </resources>

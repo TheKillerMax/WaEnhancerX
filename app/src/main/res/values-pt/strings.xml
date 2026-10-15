@@ -290,4 +290,10 @@
     <string name="sec_home_layout_navigation">Layout inicial e navegação</string>
     <string name="sec_utilities_data">Utilitários e dados</string>
     <string name="sec_system_compatibility">Sistema e compatibilidade</string>
+    <string name="feat_anti_edit_messages_title">Mostrar histórico de edições</string><string name="feat_anti_edit_messages_desc">Mostra o histórico de edições ao tocar em «Editado» numa mensagem.</string>
+    <string name="feat_revokeallmessages_title">Aumentar limite de «Apagar para todos»</string><string name="feat_revokeallmessages_desc">Aumenta para três dias o limite de «Apagar para todos».</string>
+    <string name="feat_hide_forwarded_tag_title">Ocultar etiqueta «Encaminhada»</string><string name="feat_hide_forwarded_tag_desc">Encaminha mensagens sem a etiqueta «Encaminhada».</string>
+    <string name="feat_removeseemore_title">Remover botão «Ver mais»</string><string name="feat_removeseemore_desc">Mostra mensagens longas por completo e remove «Ver mais».</string>
+    <string name="sec_security_vault">Segurança e cofre</string><string name="sec_chat_navigation_shortcuts">Navegação e atalhos da conversa</string>
+    <string name="catalog_tab_privacy">Privacidade</string><string name="catalog_tab_conversation">Conversas</string><string name="catalog_tab_media">Multimédia</string><string name="catalog_tab_automation">Automação</string><string name="catalog_tab_styles">Estilos</string><string name="catalog_tab_settings">Definições</string><string name="catalog_tab_premium">Premium</string>
 </resources>

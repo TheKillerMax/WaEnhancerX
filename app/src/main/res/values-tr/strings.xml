@@ -290,4 +290,10 @@
     <string name="sec_home_layout_navigation">Ev Düzeni ve Gezinme</string>
     <string name="sec_utilities_data">Yardımcı Programlar ve Veriler</string>
     <string name="sec_system_compatibility">Sistem ve Uyumluluk</string>
+    <string name="feat_anti_edit_messages_title">Düzenleme geçmişini göster</string><string name="feat_anti_edit_messages_desc">Mesajdaki “Düzenlendi” seçeneğine dokununca düzenleme geçmişini gösterir.</string>
+    <string name="feat_revokeallmessages_title">“Herkesten sil” sınırını artır</string><string name="feat_revokeallmessages_desc">“Herkesten sil” zaman sınırını üç güne çıkarır.</string>
+    <string name="feat_hide_forwarded_tag_title">“İletildi” etiketini gizle</string><string name="feat_hide_forwarded_tag_desc">Mesajları “İletildi” etiketi olmadan iletir.</string>
+    <string name="feat_removeseemore_title">“Daha fazla gör” düğmesini kaldır</string><string name="feat_removeseemore_desc">Uzun mesajları tamamen gösterir ve “Daha fazla gör” seçeneğini kaldırır.</string>
+    <string name="sec_security_vault">Güvenlik ve kasa</string><string name="sec_chat_navigation_shortcuts">Sohbet gezintisi ve kısayollar</string>
+    <string name="catalog_tab_privacy">Gizlilik</string><string name="catalog_tab_conversation">Sohbet</string><string name="catalog_tab_media">Medya</string><string name="catalog_tab_automation">Otomasyon</string><string name="catalog_tab_styles">Stiller</string><string name="catalog_tab_settings">Ayarlar</string><string name="catalog_tab_premium">Premium</string>
 </resources>

@@ -290,4 +290,10 @@
     <string name="sec_home_layout_navigation">Disposition de la maison et navigation</string>
     <string name="sec_utilities_data">Utilitaires et données</string>
     <string name="sec_system_compatibility">Système et compatibilité</string>
+    <string name="feat_anti_edit_messages_title">Afficher l’historique des modifications</string><string name="feat_anti_edit_messages_desc">Affiche l’historique des modifications en touchant « Modifié » dans un message.</string>
+    <string name="feat_revokeallmessages_title">Augmenter la limite de « Supprimer pour tous »</string><string name="feat_revokeallmessages_desc">Étend à trois jours la limite de « Supprimer pour tous ».</string>
+    <string name="feat_hide_forwarded_tag_title">Masquer l’étiquette « Transféré »</string><string name="feat_hide_forwarded_tag_desc">Transfère les messages sans l’étiquette « Transféré ».</string>
+    <string name="feat_removeseemore_title">Supprimer le bouton « Voir plus »</string><string name="feat_removeseemore_desc">Affiche les messages longs en entier et supprime « Voir plus ».</string>
+    <string name="sec_security_vault">Sécurité et coffre-fort</string><string name="sec_chat_navigation_shortcuts">Navigation et raccourcis de discussion</string>
+    <string name="catalog_tab_privacy">Confidentialité</string><string name="catalog_tab_conversation">Discussion</string><string name="catalog_tab_media">Médias</string><string name="catalog_tab_automation">Automatisation</string><string name="catalog_tab_styles">Styles</string><string name="catalog_tab_settings">Paramètres</string><string name="catalog_tab_premium">Premium</string>
 </resources>
