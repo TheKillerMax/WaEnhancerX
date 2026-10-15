@@ -4,13 +4,19 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 
 import com.waenhancer.xposed.core.BaseFeature;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Hides WhatsApp's native Locked chats entry from the home conversation list.
@@ -24,8 +30,12 @@ public class HideChatsVaultHook extends BaseFeature {
     private static final String TAG = "[WAEX][HideChatsVault]";
     private static final String PREF_KEY = "hide_chats";
     private static final String LOCKED_HEADER_ID = "conversations_locked_header";
+    private static final String HEADER_COMBO_ID = "conversations_swipe_to_reveal_header_combo";
 
     private volatile int lockedHeaderViewId;
+    private final Set<View> collapsedHeaders = Collections.synchronizedSet(
+            Collections.newSetFromMap(new WeakHashMap<>())
+    );
 
     public HideChatsVaultHook(@NonNull Context context,
                               @NonNull ClassLoader classLoader,
@@ -69,7 +79,32 @@ public class HideChatsVaultHook extends BaseFeature {
                         && param.thisObject instanceof View
                         && isLockedHeader((View) param.thisObject)) {
                     param.args[0] = View.GONE;
-                    collapse((View) param.thisObject);
+                }
+            }
+        });
+
+        XposedBridge.hookAllMethods(LinearLayout.class, "onMeasure", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (!isHideChatsEnabled() || !(param.thisObject instanceof LinearLayout)) return;
+
+                LinearLayout layout = (LinearLayout) param.thisObject;
+                if (!hasResourceName(layout, HEADER_COMBO_ID)) return;
+
+                int remainingHeight = 0;
+                for (int i = 0; i < layout.getChildCount(); i++) {
+                    View child = layout.getChildAt(i);
+                    if (!isLockedHeader(child) && child.getVisibility() != View.GONE) {
+                        remainingHeight = Math.max(remainingHeight, child.getMeasuredHeight());
+                    }
+                }
+                if (remainingHeight > 0 && layout.getMeasuredHeight() != remainingHeight) {
+                    XposedHelpers.callMethod(
+                            layout,
+                            "setMeasuredDimension",
+                            layout.getMeasuredWidth(),
+                            remainingHeight
+                    );
                 }
             }
         });
@@ -80,7 +115,9 @@ public class HideChatsVaultHook extends BaseFeature {
     private void hideIfLockedHeader(View view) {
         if (!isLockedHeader(view)) return;
 
-        collapse(view);
+        if (collapsedHeaders.add(view)) {
+            collapse(view);
+        }
         if (view.getVisibility() != View.GONE) {
             view.setVisibility(View.GONE);
         }
@@ -100,11 +137,24 @@ public class HideChatsVaultHook extends BaseFeature {
         }
     }
 
+    private boolean hasResourceName(View view, String expectedName) {
+        int viewId = view.getId();
+        if (viewId == View.NO_ID) return false;
+        try {
+            return expectedName.equals(view.getResources().getResourceEntryName(viewId));
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private void collapse(View view) {
+        view.setMinimumHeight(0);
+        view.setPadding(0, 0, 0, 0);
         ViewGroup.LayoutParams params = view.getLayoutParams();
         if (params != null && params.height != 0) {
             params.height = 0;
             view.setLayoutParams(params);
         }
+
     }
 }
