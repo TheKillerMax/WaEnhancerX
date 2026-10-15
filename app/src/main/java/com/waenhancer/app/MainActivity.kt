@@ -34,6 +34,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+internal object StartupRootAccess {
+    @Volatile private var pendingResult: Boolean? = null
+
+    fun publish(granted: Boolean) {
+        pendingResult = granted
+    }
+
+    @Synchronized
+    fun consume(): Boolean? = pendingResult.also { pendingResult = null }
+}
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -43,17 +54,7 @@ class MainActivity : ComponentActivity() {
     private var rootCheckAttempt by mutableIntStateOf(0)
     private var rootState by mutableStateOf(RootAccessState.Checking)
     private var hasGrantedRootThisSession by mutableStateOf(false)
-    private var hasStartedOnce = false
-
-    override fun onStart() {
-        super.onStart()
-        if (hasStartedOnce) {
-            rootState = RootAccessState.Checking
-            rootCheckAttempt++
-        } else {
-            hasStartedOnce = true
-        }
-    }
+    private var initialRootResultProvided = false
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -82,6 +83,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initialRootResult = StartupRootAccess.consume()
+        initialRootResultProvided = initialRootResult != null
+        if (initialRootResult != null) {
+            hasGrantedRootThisSession = initialRootResult
+            rootState = if (hasGrantedRootThisSession) RootAccessState.Granted else RootAccessState.Required
+        }
         enableEdgeToEdge()
         setContent {
             val initialTheme = remember { preferenceManager.getString("app_theme_mode", "System") }
@@ -116,6 +123,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         LaunchedEffect(rootCheckAttempt) {
+                            if (initialRootResultProvided && rootCheckAttempt == 0) return@LaunchedEffect
                             rootState = RootAccessState.Checking
                             val hasRoot = withContext(Dispatchers.IO) {
                                 UpdateDownloader.hasRootAccess()
@@ -165,4 +173,5 @@ class MainActivity : ComponentActivity() {
         if (!path.startsWith("/releases/")) return null
         return path.removePrefix("/releases/").trim('/').takeIf { it.isNotBlank() }
     }
+
 }
