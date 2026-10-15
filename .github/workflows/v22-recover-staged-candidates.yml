@@ -1,0 +1,42 @@
+name: V22 recover staged candidates
+on:
+  push:
+    branches: [test/runtime-contract-validation-v22-2026-10-15]
+    paths: [.github/workflows/v22-recover-staged-candidates.yml]
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve public UTF-8 source and exact tree metadata
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          out=pathlib.Path('recovered'); out.mkdir()
+          refs={'targets':'d7632b2ba21427dce85d4eeaa2ec276142f9d3ef','runtime':'c7638c563131e724b339eb2aed4971a349ab8c2b','qa':'89122e2569ed262596887714b6fed15a37623c40','pr35':'d463bd6c8f3714eb04ee3219bd929ec017f8449b','pr41':'69352a7b93ccc28888714a0b5a0f20602b56f397','integrated':'ee550ea37552b7760a8ea5b2c20f9382cb7abf52','stage':'d1be6e8f41ceefd50d632c7e62422b490c6ccf33'}
+          for name,sha in refs.items():
+              subprocess.run(['git','fetch','origin',sha],check=True)
+              root=out/name;root.mkdir()
+              manifest=[]
+              for line in subprocess.check_output(['git','ls-tree','-r',sha],text=True).splitlines():
+                  meta,path=line.split('\t',1);mode,kind,blob=meta.split()
+                  manifest.append({'path':path,'mode':mode,'type':kind,'sha':blob})
+                  if kind!='blob':continue
+                  data=subprocess.check_output(['git','cat-file','blob',blob])
+                  try:text=data.decode('utf-8')
+                  except UnicodeDecodeError:continue
+                  if '\0' in text or pathlib.Path(path).suffix.lower() in ('.apk','.jks','.keystore','.ttf','.otf','.pem'):continue
+                  p=root/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+              (root/'TREE_MANIFEST.json').write_text(json.dumps(manifest,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v22-recovered-sources
+          path: recovered/
+          include-hidden-files: true
+          retention-days: 7
