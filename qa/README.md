@@ -116,3 +116,23 @@ the host APK, and test any hook behavior separately on a verified device.
 The auditor caps the number of ZIP entries and uncompressed input size to avoid accidentally processing excessive files. Do not commit or redistribute proprietary WhatsApp APKs, DEX dumps or private signing keys. Handle diagnostic reports according to your organization's privacy and disclosure policies.
 
 For PRs affecting runtime hooks, also run the repository's supported Android Gradle/CI checks and test representative official WhatsApp, WhatsApp Business and supported-clone targets on an authorized device.
+
+## Localized catalog source (October 2026)
+
+`feature_contract_inventory.py` and `test_catalog_schema_alias_contract.py` read
+`FeatureCatalog.kt` and its authoritative `preference_catalog.json` asset. Titles
+come from default Android string resources, not copied historical English text.
+The reader preserves the reviewed canonical route overrides and first-placement
+deduplication. The current 95 placements represent 93 distinct feature keys.
+`catalog_line` is null for asset entries; `catalog_source` identifies the JSON.
+Legacy inline source remains supported for historical audit fixtures.
+
+Run `python3 qa/test_catalog_source.py` for positive/negative extraction fixtures.
+This validates source metadata, not resource linking, Android locale fallback,
+Pro entitlements or functionality of any hook. UI source guards follow the current
+localized rendering path and the relocated Monet selector; preference, API-level,
+save-failure and unsafe-editor assertions remain enabled. No production source
+or host APK is changed by this QA follow-up.
+
+The localized reader extends the upstream JSON migration; its synthetic fixture
+retains schema/alias assertions and supplies the same routing/resources as production.

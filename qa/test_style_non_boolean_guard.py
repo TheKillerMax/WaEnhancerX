@@ -63,7 +63,9 @@ def check_wiring(styles):
         assert ('preferenceManager.putPublicString("seentick", nextPlacement)' in styles
                 or 'preferenceManager.putString("seentick",' in styles)
     assert '"disable_sensor_proximity"' in styles
-    assert 'StyleItem("Disable Screen off on proximity sensor"' in styles
+    assert 'FeatureCatalog.groupsFor(4, "layout")' in styles
+    assert 'LocalizationHelper.getTitle(context, item)' in styles
+    assert 'LocalizationHelper.getDesc(context, item)' in styles
 
 
 def main():

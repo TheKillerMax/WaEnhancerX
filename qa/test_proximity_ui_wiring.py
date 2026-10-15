@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Ensure Styles proximity switch writes the actual sensor hook preference."""
 from pathlib import Path
-root=Path(__file__).resolve().parents[1]/'app/src/main/java/com/waenhancer'
+from catalog_source import catalog_features, string_resources
+project=Path(__file__).resolve().parents[1]
+root=project/'app/src/main/java/com/waenhancer'
 screen=(root/'ui/screens/settings/StylesSettingsScreen.kt').read_text()
 catalog=(root/'config/FeatureCatalog.kt').read_text()
 policy=(root/'xposed/features/media/ProximityEventPolicy.java').read_text()
@@ -11,11 +13,16 @@ assert '"disable_sensor_proximity", Type.BOOLEAN' in schema
 assert 'private static final String PREF_KEY = "disable_sensor_proximity"' in hook
 assert 'isEnabled(PREF_KEY, false)' in hook
 assert '"disable_sensor_proximity"' in screen
-assert 'StyleItem("Disable Screen off on proximity sensor"' in screen
-assert '"Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "disable_sensor_proximity"' in screen
+rows = catalog_features(project)
+proximity = next(row for row in rows if row['key'] == 'disable_sensor_proximity')
+assert proximity['tab_index'] == 4 and proximity['sub_tab_id'] == 'layout'
+assert 'FeatureCatalog.groupsFor(4, "layout")' in screen
+assert 'group.items()' in screen
+assert 'LocalizationHelper.getTitle(context, item)' in screen
+assert 'LocalizationHelper.getDesc(context, item)' in screen
 assert '"miscellaneous_enhancements"' not in screen
-assert 'FeatureItem("disable_sensor_proximity", "Disable Screen off on proximity sensor"' in catalog
+assert string_resources(project)['feat_disable_sensor_proximity_title'].strip()
 assert '"miscellaneous_enhancements" to "disable_sensor_proximity"' in catalog
 assert 'sensorType != PROXIMITY_TYPE' in policy
 assert 'sensor.getType()' in hook
-print('PASS: 11 UI/catalog/schema/host sensor preference invariants')
+print('PASS: localized UI/catalog/schema/host sensor preference invariants')
