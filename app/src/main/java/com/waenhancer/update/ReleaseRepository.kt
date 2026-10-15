@@ -4,8 +4,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import java.util.Locale
 
 data class WaexAsset(
     val name: String,
@@ -26,7 +29,7 @@ data class WaexAsset(
         get() {
             if (size <= 0) return ""
             val mb = size / (1024.0 * 1024.0)
-            return String.format(java.util.Locale.US, "%.1f MB", mb)
+            return String.format(Locale.US, "%.1f MB", mb)
         }
 }
 
@@ -38,14 +41,17 @@ data class WaexRelease(
     val htmlUrl: String,
     val assets: List<WaexAsset> = emptyList(),
 ) {
-    val version: String get() = normalizeVersion(tagName.removePrefix("debug-"))
+    val version: String get() = ReleaseRepository.versionFromTag(tagName)
     val defaultAsset: WaexAsset? get() = assets.firstOrNull { !it.isDebug } ?: assets.firstOrNull()
     val downloadUrl: String? get() = defaultAsset?.downloadUrl
     val downloadSize: Long get() = defaultAsset?.size ?: 0L
 }
 
 object ReleaseRepository {
-    const val RELEASES_API = "https://waex.mubashar.dev/api/releases"
+    const val RELEASE_REPOSITORY = "Xposed-Modules-Repo/com.waenhancer"
+    const val RELEASES_URL = "https://github.com/$RELEASE_REPOSITORY/releases"
+    const val RELEASES_API = "https://api.github.com/repos/$RELEASE_REPOSITORY/releases?per_page=100"
+    private const val RELEASE_ASSET_PATH_PREFIX = "/$RELEASE_REPOSITORY/releases/download/"
     private val versionPattern = Regex("^\\d+\\.\\d+(\\.\\d+)?(-[a-zA-Z0-9.-]+)?$")
     private val client = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).build()
 
@@ -53,6 +59,7 @@ object ReleaseRepository {
         val request = Request.Builder()
             .url(RELEASES_API)
             .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
             .header("User-Agent", "WaEnhancer X")
             .build()
         client.newCall(request).execute().use { response ->
@@ -61,40 +68,15 @@ object ReleaseRepository {
             buildList {
                 for (i in 0 until array.length()) {
                     val item = array.optJSONObject(i) ?: continue
-                    val tag = item.optString("tag_name").trim()
-                    val version = normalizeVersion(tag.removePrefix("debug-"))
-                    if (!versionPattern.matches(version)) continue
-                    val rawAssets = item.optJSONArray("assets")
-                    val parsedAssets = buildList {
-                        if (rawAssets != null) {
-                            for (j in 0 until rawAssets.length()) {
-                                val asset = rawAssets.optJSONObject(j) ?: continue
-                                val assetName = asset.optString("name")
-                                val apkUrl = asset.optString("browser_download_url").takeIf(String::isNotBlank)
-                                val apkSize = asset.optLong("size")
-                                if (assetName.endsWith(".apk", ignoreCase = true) && apkUrl != null) {
-                                    add(WaexAsset(name = assetName, downloadUrl = apkUrl, size = apkSize))
-                                }
-                            }
-                        }
-                    }
-                    add(
-                        WaexRelease(
-                            tagName = tag,
-                            name = item.optString("name", tag),
-                            body = item.optString("body", "No changelog available."),
-                            publishedAt = item.optString("published_at"),
-                            htmlUrl = item.optString("html_url"),
-                            assets = parsedAssets
-                        )
-                    )
+                    parseRelease(item)?.let(::add)
                 }
             }.sortedByDescending { versionCode(it.version) }
         }
     }
 
     suspend fun fetchRelease(tagName: String): WaexRelease? = fetchReleases().firstOrNull {
-        it.tagName.equals(tagName, true) || it.name.equals(tagName, true) || it.tagName.endsWith(tagName, true)
+        it.tagName.equals(tagName, true) || it.name.equals(tagName, true) ||
+            it.version.equals(normalizeVersion(tagName), true)
     }
 
     fun findUpdate(releases: List<WaexRelease>, installedVersion: String): WaexRelease? {
@@ -116,6 +98,69 @@ object ReleaseRepository {
         if (dashIndex < 0) return baseCode * 1_000L + 999L
         val suffixNum = Regex("\\d+").findAll(normalized.substring(dashIndex)).lastOrNull()?.value?.toLongOrNull()?.coerceIn(1L, 998L) ?: 1L
         return baseCode * 1_000L + suffixNum
+    }
+
+    fun versionFromTag(tagName: String): String {
+        val tag = tagName.trim().removePrefix("debug-")
+        val separator = tag.indexOf('-')
+        val versionPart = if (separator > 0 && tag.substring(0, separator).all(Char::isDigit)) {
+            tag.substring(separator + 1)
+        } else tag
+        return normalizeVersion(versionPart)
+    }
+
+    internal fun isOfficialReleaseAssetUrl(value: String): Boolean {
+        val url = value.toHttpUrlOrNull() ?: return false
+        return url.isHttps && url.host.equals("github.com", ignoreCase = true) &&
+            url.encodedPath.startsWith(RELEASE_ASSET_PATH_PREFIX, ignoreCase = true) &&
+            url.encodedPath.endsWith(".apk", ignoreCase = true)
+    }
+
+    private fun parseRelease(item: JSONObject): WaexRelease? {
+        if (item.optBoolean("draft", false)) return null
+        val tag = item.optString("tag_name").trim()
+        if (!versionPattern.matches(versionFromTag(tag))) return null
+
+        val rawAssets = item.optJSONArray("assets")
+        val parsedAssets = buildList {
+            if (rawAssets != null) {
+                for (i in 0 until rawAssets.length()) {
+                    val asset = rawAssets.optJSONObject(i) ?: continue
+                    val assetName = asset.optString("name").trim()
+                    val assetUrl = asset.optString("browser_download_url")
+                        .takeIf(::isOfficialReleaseAssetUrl)
+                    if (assetName.endsWith(".apk", ignoreCase = true) &&
+                        assetUrl != null && assetMatchesRelease(assetName, versionFromTag(tag))) {
+                        add(WaexAsset(assetName, assetUrl, asset.optLong("size")))
+                    }
+                }
+            }
+        }
+
+        return WaexRelease(
+            tagName = tag,
+            name = item.optString("name").trim().ifBlank { tag },
+            body = item.optString("body").trim().ifBlank { "No changelog available." },
+            publishedAt = item.optString("published_at"),
+            htmlUrl = item.optString("html_url").takeIf(::isOfficialReleasePageUrl).orEmpty(),
+            assets = parsedAssets,
+        )
+    }
+
+    private fun isOfficialReleasePageUrl(value: String): Boolean {
+        val url = value.toHttpUrlOrNull() ?: return false
+        return url.isHttps && url.host.equals("github.com", ignoreCase = true) &&
+            url.encodedPath.startsWith("/$RELEASE_REPOSITORY/releases/", ignoreCase = true)
+    }
+
+    internal fun assetMatchesRelease(assetName: String, releaseVersion: String): Boolean {
+        val match = Regex(
+            "(?i)(?:^|[-_])v?(\\d+\\.\\d+(?:\\.\\d+)?(?:-[a-z0-9.-]+)?)(?=[_-]|\\.apk$)"
+        ).find(assetName) ?: return false
+        return normalizeVersion(match.groupValues[1]).equals(
+            normalizeVersion(releaseVersion),
+            ignoreCase = true
+        )
     }
 }
 

@@ -241,6 +241,7 @@ public class PresenceToastsHook extends BaseFeature {
     }
 
     private static final ToastThrottle TOAST_THROTTLE = new ToastThrottle(1500L, 2048);
+    private static final java.util.concurrent.atomic.AtomicInteger PRESENCE_DIAGNOSTICS = new java.util.concurrent.atomic.AtomicInteger();
 
     private void processReceiptItem(Object receiptObj, boolean statusToast, boolean msgToast) {
         if (receiptObj == null) return;

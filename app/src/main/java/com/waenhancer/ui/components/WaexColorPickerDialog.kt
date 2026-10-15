@@ -1,5 +1,6 @@
 package com.waenhancer.ui.components
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,19 +13,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -38,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.waenhancer.ui.designsystem.WaexTheme
 
 private val PRESET_COLORS = listOf(
@@ -48,7 +56,7 @@ private val PRESET_COLORS = listOf(
     "#8B5CF6", "#A855F7", "#D946EF", "#EC4899"
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WaexColorPickerDialog(
     initialColorHex: String,
@@ -57,12 +65,14 @@ fun WaexColorPickerDialog(
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var selectedColorHex by remember { mutableStateOf(initialColorHex.ifEmpty { "#EF4444" }) }
     var parsedColor by remember(selectedColorHex) {
         mutableStateOf(
             try {
-                Color(android.graphics.Color.parseColor(selectedColorHex))
+                Color(AndroidColor.parseColor(selectedColorHex))
             } catch (_: Throwable) {
                 Color(0xFFEF4444)
             }
@@ -71,7 +81,7 @@ fun WaexColorPickerDialog(
 
     val hsv = remember(parsedColor) {
         val hsvArray = FloatArray(3)
-        android.graphics.Color.colorToHSV(parsedColor.toArgb(), hsvArray)
+        AndroidColor.colorToHSV(parsedColor.toArgb(), hsvArray)
         hsvArray
     }
 
@@ -80,26 +90,27 @@ fun WaexColorPickerDialog(
     var value by remember(parsedColor) { mutableFloatStateOf(hsv[2]) }
 
     fun updateFromHsv(h: Float, s: Float, v: Float) {
-        val argb = android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))
+        val argb = AndroidColor.HSVToColor(floatArrayOf(h, s, v))
         val hex = String.format("#%06X", 0xFFFFFF and argb)
         selectedColorHex = hex
         parsedColor = Color(argb)
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = colors.surface,
-            tonalElevation = 6.dp,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            ) {
                 Text(
                     text = "Select Accent Color",
                     style = typography.headlineMd,
@@ -130,7 +141,7 @@ fun WaexColorPickerDialog(
                             selectedColorHex = cleanInput
                             try {
                                 if (cleanInput.length == 7) {
-                                    parsedColor = Color(android.graphics.Color.parseColor(cleanInput))
+                                    parsedColor = Color(AndroidColor.parseColor(cleanInput))
                                 }
                             } catch (_: Throwable) {}
                         },
@@ -161,7 +172,7 @@ fun WaexColorPickerDialog(
                 ) {
                     PRESET_COLORS.forEach { hex ->
                         val presetColor = try {
-                            Color(android.graphics.Color.parseColor(hex))
+                            Color(AndroidColor.parseColor(hex))
                         } catch (_: Throwable) {
                             Color.Red
                         }
@@ -245,29 +256,25 @@ fun WaexColorPickerDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Actions
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                Button(
+                    onClick = {
+                        onColorSelected(selectedColorHex)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                    shape = radius.buttonShape,
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.onSurfaceVariant)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = {
-                            onColorSelected(selectedColorHex)
-                            onDismiss()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Apply", color = colors.onPrimary, fontWeight = FontWeight.Bold)
-                    }
+                    Text("Apply", color = colors.onPrimary, fontWeight = FontWeight.Bold)
                 }
-            }
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = radius.buttonShape,
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                ) {
+                    Text("Cancel", color = colors.onSurface)
+                }
         }
     }
 }

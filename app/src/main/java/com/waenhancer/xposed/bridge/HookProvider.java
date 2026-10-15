@@ -278,7 +278,7 @@ public class HookProvider extends ContentProvider {
     @Nullable
     private static String allowedRuntimeStatus(@Nullable String value) {
         if (value == null) return null;
-        return Arrays.asList("INJECTED", "INITIALIZING", "READY", "READY_WITH_ERRORS", "UNSUPPORTED_VERSION",
+        return Arrays.asList("INJECTED", "INITIALIZING", "READY", "READY_WITH_ERRORS", "UNSUPPORTED_VERSION", "COMPATIBILITY_UNAVAILABLE",
                 "INITIALIZATION_FAILED").contains(value) ? value : null;
     }
 

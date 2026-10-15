@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  These resources are resolved by name through Resources.getIdentifier().
+  Because there is no static R reference for the shrinker to follow, release
+  builds must explicitly retain them.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/feat_*_title,@string/feat_*_desc,@string/sec_*,@string/catalog_tab_*" />

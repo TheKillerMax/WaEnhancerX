@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.privacy
 
+import android.graphics.Color as AndroidColor
+import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.foundation.background
@@ -33,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -54,8 +57,22 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
+import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+import com.waenhancer.ui.components.WaexColorPickerDialog
+import com.waenhancer.ui.components.WaexEmojiPickerDialog
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy
 
 
 @Composable
@@ -66,6 +83,7 @@ fun GlobalPrivacySettingsScreen(
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
+    val context = LocalContext.current
 
     var selectedTab by remember { mutableStateOf("privacy") } // "privacy" | "conversation"
 
@@ -104,7 +122,7 @@ fun GlobalPrivacySettingsScreen(
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val privacyKeys = remember {
         listOf(
             "always_online", "online_status_indicator", "freeze_last_seen", "freezelastseen",
@@ -137,6 +155,30 @@ fun GlobalPrivacySettingsScreen(
             "1", "true" -> "1"
             else -> "0"
         })
+    }
+
+    var archiveOpenViaMenu by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_menu", true))
+    }
+
+    var archiveOpenViaTitleLongPress by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_title_long_press", true))
+    }
+
+    var archiveOpenViaTitleTripleTap by remember {
+        mutableStateOf(preferenceManager.getBoolean("archive_open_via_title_triple_tap", false))
+    }
+
+    var lockedOpenViaMenu by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_menu", false))
+    }
+
+    var lockedOpenViaTitleLongPress by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_title_long_press", false))
+    }
+
+    var lockedOpenViaTitleTripleTap by remember {
+        mutableStateOf(preferenceManager.getBoolean("locked_open_via_title_triple_tap", false))
     }
 
     val settingsState = remember {
@@ -186,119 +228,14 @@ fun GlobalPrivacySettingsScreen(
     var deletedMessageColor by remember(preferenceManager) {
         // The persisted preference has schema type INT; older releases wrote hex text.
         mutableStateOf(
-            com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(
+            DeletedIndicatorPreferencePolicy.toColorHex(
                 preferenceManager.getAll()["deleted_message_color"]
             )
         )
     }
 
-    val privacyGroups = listOf(
-        SettingGroup(
-            "Presence & Online Visibility",
-            listOf(
-                SettingItem("Always Online", "Show you online even if you minimize WhatsApp (Doesn't work if you remove it from recents)", "always_online"),
-                SettingItem("Freeze Last Seen", "Your last seen time will be frozen", "freezelastseen"),
-                SettingItem("Hide Typing", "Users cannot see that you are typing", "ghostmode_t"),
-                SettingItem("Hide Recording Audio", "Users cannot see that you are recording audio", "ghostmode_r")
-            )
-        ),
-        SettingGroup(
-            "Ticks & Seen Receipts",
-            listOf(
-                SettingItem("Hide Blue Ticks", "View messages within conversation screen without users knowing", "hide_read_receipts"),
-                SettingItem("Hide Blue Tick in Groups", "View messages in groups screen without users knowing", "hideread_group"),
-                SettingItem("Send Blue Ticks upon Reply", "Sends blue ticks after replying to a message\n(NOTE: Requires \"Hide Blue Ticks\" active)", "blueonreply"),
-                SettingItem("Show Button to send blue tick", "Show Button to send blue tick (mark as read/viewed)\n(NOTE: Requires \"Hide Blue Ticks\" active)", "seentick"),
-                SettingItem("Hide Delivered", "Users will not know that their messages have been delivered to you\n(CAUTION: May cause delay in receiving messages)", "hide_delivery_receipts"),
-                SettingItem("Hide audio seen", "Hides the sending of audio reading when listening to it", "hide_seen_receipts"),
-                SettingItem("Hide View Once Seen", "Hide that view one media has been seen", "hideonceseen")
-            )
-        ),
-        SettingGroup(
-            "Status Privacy",
-            listOf(
-                SettingItem("Hide Status View", "View statuses without users knowing", "stealth_status_view"),
-                SettingItem("Disable Auto Skip Status", "Prevents the current status from advancing automatically to the next one", "autonext_status"),
-                SettingItem("Show toast on viewed your status", "Shows a toast if someone views your status", "toast_viewed_status")
-            )
-        ),
-        SettingGroup(
-            "View Once Protection",
-            listOf(
-                SettingItem("Unlimited View Once", "Allows you to open view once media multiple times", "anti_view_once"),
-                SettingItem("Download View Once", "Show button to download view once media", "downloadviewonce")
-            )
-        ),
-        SettingGroup(
-            "Anti-Revoke & Deletion Defense",
-            listOf(
-                SettingItem("Anti-Revoke Messages", "Messages will not be deleted for you", "anti_revoke"),
-                SettingItem("Add Hide Anti-Revoke to Chat Menu", "Add option to conversation menu to hide deleted messages for that chat", "hide_anti_revoke"),
-                SettingItem("Keep My Revoked Messages", "Keep your local copy after Delete for Everyone while deleting it for recipients", "preserve_own_revoke"),
-                SettingItem("Anti-Delete Status", "View statuses that users have since deleted", "antirevokestatus"),
-                SettingItem("Anti Disappearing Messages", "Temporary messages will not be deleted for you", "antidisappearing"),
-                SettingItem("Show toast notification on delete message", "Show toast notification if any contact deletes any message", "toastdeleted"),
-                SettingItem("Show toast on viewed your message", "Shows a toast if someone views your message", "toast_viewed_message")
-            )
-        ),
-        SettingGroup(
-            "Security & Vault",
-            listOf(
-                SettingItem("Enhanced Locked Chats", "Improve locked chats by hiding notifications and contacts from the contact list", "locked_chats_enhancer"),
-                SettingItem("Hide Archived Chats", "Hide the archive shortcut; open archived chats from the WAEX menu", "typearchive"),
-                SettingItem("DND Mode", "When Do Not Disturb mode is on, you will be unable to send or receive messages", "dnd_mode"),
-                SettingItem("Hide Locked Chats", "Hide locked chats, view them by holding WhatsApp title on home screen", "hide_chats")
-            )
-        ),
-        SettingGroup(
-            "Home Menu Shortcuts",
-            listOf(
-                SettingItem("Show Ghost Mode Button", "Show a Ghost Mode button on the home screen toolbar", "ghostmode"),
-                SettingItem("Show Freeze Last Seen Button", "Show button for Freezing Last Seen on home screen toolbar", "freezelastseen"),
-                SettingItem("Show DND Button", "Show button for DND Mode on home screen toolbar", "show_dndmode"),
-                SettingItem("Enable Restart Button", "Add button in Home Screen to Restart App", "restartbutton"),
-                SettingItem("Enable WAEX Button", "Add button in Home Screen to open Wa Enhancer", "open_wae")
-            )
-        )
-    )
-
-    val conversationGroups = listOf(
-        SettingGroup(
-            "Message Protection & Controls",
-            listOf(
-                SettingItem("Message Bomber", "Send a short, delayed sequence of messages from inside a WhatsApp chat", "message_bomber", isPro = true),
-                SettingItem("Show Edited Message History", "Show edited message history when clicking \"Edited\" on a message", "anti_edit_messages"),
-                SettingItem("Show Message Device Source", "Shows whether a message was sent from the primary device or a linked device", "message_device_source"),
-                SettingItem("Delete (for me)", "Retain messages locally when Delete for Me is selected", "preserve_delete_for_me"),
-                SettingItem("Increase limit of \"Delete for everyone\" option", "Increases the limit to 3 days in the option to delete messages for everyone", "revokeallmessages"),
-                SettingItem("Hide \"Forwarded\" Tag", "Forward messages without the tag \"Forwarded\"", "hide_forwarded_tag"),
-                SettingItem("Remove Forward Limit", "Remove forward limit for 5 chats (normal) and 1 chat (multiple times)", "removeforwardlimit"),
-                SettingItem("Confirmation Before Sending Sticker", "Show a dialog before sending the sticker", "sticker_confirm_alert"),
-                SettingItem("Remove \"See More\" Button", "Disable \"See More\" button and show all long message", "removeseemore"),
-                SettingItem("Remove Stamp from Copied Messages", "Removes name and date when copying more than one message", "stamp_copied_message"),
-                SettingItem("Enable Double Click to React", "Activates the possibility of double-clicking on the message to react it", "doubletap2like")
-            )
-        ),
-        SettingGroup(
-            "Chat Navigation & Shortcuts",
-            listOf(
-                SettingItem("Jump to First Message", "Add a button to skip the first message in the conversations screen", "jump_to_first_message"),
-                SettingItem("Disable Pinned Chats Limit", "Disable limit of 3 pinned chats", "unlimited_pinned_chats"),
-                SettingItem("Show chat broadcast icon", "Shows an icon if the contact sent a message via broadcast", "broadcast_tag"),
-                SettingItem("New Chat", "Message someone directly without saving their contact info", "direct_chat_dialer"),
-                SettingItem("Enable Google Translate", "Replaces Whatsapp's native translator with Google Translate", "inline_translation"),
-                SettingItem("Enable Copy Status", "Activates the possibility of copying the description and caption of statuses by holding on them", "copy_status_text")
-            )
-        ),
-        SettingGroup(
-            "Chat & Group Utilities",
-            listOf(
-                SettingItem("Enable selection of call type", "Show an option to select whether you want a call via phone or WhatsApp", "call_type_controller"),
-                SettingItem("Show Admin Group Icon", "Show an admin icon next to the name of the user who is the group admin", "group_admin_tools"),
-                SettingItem("Custom colors for text status", "Press and hold on the color selector in the status to customize it", "status_text_composer")
-            )
-        )
-    )
+    val privacyGroups = remember { FeatureCatalog.groupsFor(1, "privacy").map { SettingGroup(it.id, it.items()) } }
+    val conversationGroups = remember { FeatureCatalog.groupsFor(1, "conversation").map { SettingGroup(it.id, it.items()) } }
 
 
 
@@ -316,7 +253,7 @@ fun GlobalPrivacySettingsScreen(
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -356,7 +293,9 @@ fun GlobalPrivacySettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    listOf("privacy" to "Privacy", "conversation" to "Conversation").forEach { (tabId, label) ->
+                    val tabPrivacyLabel = stringResource(R.string.tab_privacy)
+                    val tabConversationLabel = stringResource(R.string.tab_conversation)
+                    listOf("privacy" to tabPrivacyLabel, "conversation" to tabConversationLabel).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -369,7 +308,7 @@ fun GlobalPrivacySettingsScreen(
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -394,7 +333,7 @@ fun GlobalPrivacySettingsScreen(
                     .padding(horizontal = spacing.pageMargin)
             ) {
                 Text(
-                    text = "ADVANCED HUBS & VAULTS",
+                    text = stringResource(R.string.advanced_hubs_vaults),
                     style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurfaceVariant,
@@ -404,7 +343,7 @@ fun GlobalPrivacySettingsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -412,7 +351,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.PerContactPrivacyList) }
+                                .clickable { navController.navigateTo(Screen.PerContactPrivacyList) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -421,13 +360,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Per Contact Rules",
+                                    text = stringResource(R.string.hub_per_contact_rules_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "Configure granular privacy rules per contact",
+                                    text = stringResource(R.string.hub_per_contact_rules_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -451,7 +390,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.DeletedMessages) }
+                                .clickable { navController.navigateTo(Screen.DeletedMessages) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -460,13 +399,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "\"Delete For Me\" Messages",
+                                    text = stringResource(R.string.hub_delete_for_me_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "View preserved delete-for-me chats & group logs",
+                                    text = stringResource(R.string.hub_delete_for_me_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -490,7 +429,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.CallRecordingSettings) }
+                                .clickable { navController.navigateTo(Screen.CallRecordingSettings) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -499,13 +438,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Calls & Recording Hub",
+                                    text = stringResource(R.string.hub_calls_recording_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "Call blocker, caller privacy, recording formats & logs",
+                                    text = stringResource(R.string.hub_calls_recording_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -533,7 +472,7 @@ fun GlobalPrivacySettingsScreen(
                     .padding(horizontal = spacing.pageMargin)
             ) {
                 Text(
-                    text = group.title,
+                    text = LocalizationHelper.getLocalizedSectionTitle(context, group.title),
                     style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurfaceVariant,
@@ -543,11 +482,11 @@ fun GlobalPrivacySettingsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-                    val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+                    val isPro = LocalIsPro.current
+                    val onActivatePro = LocalOnActivatePro.current
 
                     Column {
                         group.items.forEachIndexed { index, item ->
@@ -563,6 +502,8 @@ fun GlobalPrivacySettingsScreen(
                                 animationSpec = tween(durationMillis = 300),
                                 label = "highlight_bg"
                             )
+                            val locTitle = LocalizationHelper.getTitle(context, item)
+                            val locDesc = LocalizationHelper.getDesc(context, item)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -592,16 +533,18 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = item.label,
+                                            text = locTitle,
                                             style = typography.bodyLg,
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
+                                        val reqPro = stringResource(R.string.requires_pro_label)
+                                        val depHint = stringResource(R.string.dep_disabled_hide_blue_ticks)
                                         Text(
                                             text = when {
-                                                isLocked -> "${item.sublabel} • Requires Pro"
-                                                isDependencyDisabled -> "${item.sublabel}\n(Disabled: Turn on \"Hide Blue Ticks\" first)"
-                                                else -> item.sublabel
+                                                isLocked -> "$locDesc • $reqPro"
+                                                isDependencyDisabled -> "$locDesc\n$depHint"
+                                                else -> locDesc
                                             },
                                             style = typography.bodyMd,
                                             color = if (isDependencyDisabled) colors.error.copy(alpha = 0.8f) else colors.onSurfaceVariant,
@@ -669,6 +612,162 @@ fun GlobalPrivacySettingsScreen(
                                                         color = if (selected) Color.White else colors.onSurfaceVariant
                                                     )
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (item.key == "typearchive" && settingsState["typearchive"] == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceDim.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "OPEN ARCHIVED CHATS",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Show in 3-dots / WAEX menu",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaMenu,
+                                                onCheckedChange = { checked ->
+                                                    archiveOpenViaMenu = checked
+                                                    preferenceManager.putBoolean("archive_open_via_menu", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaMenu = false
+                                                        preferenceManager.putBoolean("locked_open_via_menu", false)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Long-press WhatsApp title",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaTitleLongPress,
+                                                onCheckedChange = { checked ->
+                                                    archiveOpenViaTitleLongPress = checked
+                                                    preferenceManager.putBoolean("archive_open_via_title_long_press", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaTitleLongPress = false
+                                                        preferenceManager.putBoolean("locked_open_via_title_long_press", false)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Tap WhatsApp title 3 times",
+                                                style = typography.bodySm,
+                                                color = colors.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                            )
+                                            StitchSwitch(
+                                                checked = archiveOpenViaTitleTripleTap,
+                                                onCheckedChange = { checked ->
+                                                    archiveOpenViaTitleTripleTap = checked
+                                                    preferenceManager.putBoolean("archive_open_via_title_triple_tap", checked)
+                                                    if (checked) {
+                                                        lockedOpenViaTitleTripleTap = false
+                                                        preferenceManager.putBoolean("locked_open_via_title_triple_tap", false)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (item.key == "hide_chats" && settingsState["hide_chats"] == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = colors.surfaceDim.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "OPEN LOCKED CHATS",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.primary
+                                        )
+                                        listOf(
+                                            Triple("Show in 3-dots / WAEX menu", lockedOpenViaMenu) { checked: Boolean ->
+                                                lockedOpenViaMenu = checked
+                                                preferenceManager.putBoolean("locked_open_via_menu", checked)
+                                                if (checked) {
+                                                    archiveOpenViaMenu = false
+                                                    preferenceManager.putBoolean("archive_open_via_menu", false)
+                                                }
+                                            },
+                                            Triple("Long-press WhatsApp title", lockedOpenViaTitleLongPress) { checked: Boolean ->
+                                                lockedOpenViaTitleLongPress = checked
+                                                preferenceManager.putBoolean("locked_open_via_title_long_press", checked)
+                                                if (checked) {
+                                                    archiveOpenViaTitleLongPress = false
+                                                    preferenceManager.putBoolean("archive_open_via_title_long_press", false)
+                                                }
+                                            },
+                                            Triple("Tap WhatsApp title 3 times", lockedOpenViaTitleTripleTap) { checked: Boolean ->
+                                                lockedOpenViaTitleTripleTap = checked
+                                                preferenceManager.putBoolean("locked_open_via_title_triple_tap", checked)
+                                                if (checked) {
+                                                    archiveOpenViaTitleTripleTap = false
+                                                    preferenceManager.putBoolean("archive_open_via_title_triple_tap", false)
+                                                }
+                                            }
+                                        ).forEach { (label, checked, onChange) ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    style = typography.bodySm,
+                                                    color = colors.onSurface,
+                                                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                                )
+                                                StitchSwitch(
+                                                    checked = checked,
+                                                    onCheckedChange = onChange
+                                                )
                                             }
                                         }
                                     }
@@ -786,7 +885,7 @@ fun GlobalPrivacySettingsScreen(
                                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                                 ) {
                                                     val parsedCurrentColor = try {
-                                                        Color(android.graphics.Color.parseColor(deletedMessageColor))
+                                                        Color(AndroidColor.parseColor(deletedMessageColor))
                                                     } catch (_: Throwable) {
                                                         Color(0xFFEF4444)
                                                     }
@@ -999,7 +1098,7 @@ fun GlobalPrivacySettingsScreen(
                                 }
 
                                 if (showEmojiPicker) {
-                                    com.waenhancer.ui.components.WaexEmojiPickerDialog(
+                                    WaexEmojiPickerDialog(
                                         initialEmoji = currentEmoji,
                                         onEmojiSelected = { emoji ->
                                             currentEmoji = emoji
@@ -1022,14 +1121,14 @@ fun GlobalPrivacySettingsScreen(
     }
 
     if (showColorPickerDialog) {
-        com.waenhancer.ui.components.WaexColorPickerDialog(
+        WaexColorPickerDialog(
             initialColorHex = deletedMessageColor,
             onColorSelected = { selectedHex ->
-                val colorInt = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toArgbOrNull(selectedHex)
+                val colorInt = DeletedIndicatorPreferencePolicy.toArgbOrNull(selectedHex)
                 if (colorInt != null) {
                     // Store the schema's INT ARGB form; do not strand hex strings on disk.
                     preferenceManager.putInt("deleted_message_color", colorInt)
-                    deletedMessageColor = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(colorInt)
+                    deletedMessageColor = DeletedIndicatorPreferencePolicy.toColorHex(colorInt)
                     settingsState["anti_revoke_indicator_dummy"] = !(settingsState["anti_revoke_indicator_dummy"] ?: false)
                 }
             },
@@ -1040,16 +1139,9 @@ fun GlobalPrivacySettingsScreen(
 
 private data class SettingGroup(
     val title: String,
-    val items: List<SettingItem>
+    val items: List<FeatureItem>
 )
 
-
-private data class SettingItem(
-    val label: String,
-    val sublabel: String,
-    val key: String,
-    val isPro: Boolean = false
-)
 
 @Preview(showBackground = true)
 @Composable

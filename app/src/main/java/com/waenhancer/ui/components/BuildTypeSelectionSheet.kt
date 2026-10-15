@@ -32,6 +32,7 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.update.WaexAsset
 import com.waenhancer.update.WaexRelease
+import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +78,7 @@ fun BuildTypeSelectionSheet(
                     Surface(
                         shape = radius.defaultShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelectAsset(asset) }

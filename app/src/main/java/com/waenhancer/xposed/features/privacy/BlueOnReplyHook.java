@@ -208,7 +208,11 @@ public class BlueOnReplyHook extends BaseFeature {
 
     private static int sendPendingReadJobs(String jid) {
         String key = canonicalJid(jid);
-        if (key == null) return 0; // An unknown recipient must never drain another chat.
+        if (key == null) {
+            // Preserve upstream's exact outgoing-recipient guard and sanitized diagnostic.
+            XposedBridge.log(TAG + " Cannot dispatch: outgoing recipient is unavailable");
+            return 0;
+        }
 
         Method enqueue = enqueueJobMethod;
         Object manager = getOrFindJobManager();

@@ -16,6 +16,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from catalog_source import catalog_features
 
 FEATURE = re.compile(r'FeatureItem\(\s*"([^"]+)"\s*,\s*"((?:\\.|[^"\\])*)"')
 SCHEMA = re.compile(
@@ -33,8 +34,8 @@ def inventory(root: Path) -> dict:
     catalog = catalog_path.read_text(encoding='utf-8')
     schema = schema_path.read_text(encoding='utf-8')
     codec = codec_path.read_text(encoding='utf-8')
-    features = [(m.group(1), m.group(2).replace('\\"', '"'),
-                 catalog.count('\n', 0, m.start()) + 1) for m in FEATURE.finditer(catalog)]
+    catalog_rows = catalog_features(root)
+    features = [(row['key'], row['label'], row['catalog_line']) for row in catalog_rows]
     keys = [key for key, _, _ in features]
     if not features or len(set(keys)) != len(keys):
         raise ValueError('Empty catalog or duplicate feature keys')
@@ -54,6 +55,7 @@ def inventory(root: Path) -> dict:
             hook_files.append((path.relative_to(root).as_posix(),
                                path.read_text(encoding='utf-8', errors='replace')))
 
+    catalog_meta = {row['key']: row for row in catalog_rows}
     rows = []
     for key, label, line in features:
         search = '"' + key + '"'
@@ -65,6 +67,8 @@ def inventory(root: Path) -> dict:
             'key': key,
             'label': label,
             'catalog_line': line,
+            'catalog_source': catalog_meta[key]['catalog_source'],
+            'catalog_group': catalog_meta[key].get('group_id'),
             'schema_type': entry['type'] if entry else None,
             'schema_store': entry['store'] if entry else None,
             'runtime_direct_refs': runtime,

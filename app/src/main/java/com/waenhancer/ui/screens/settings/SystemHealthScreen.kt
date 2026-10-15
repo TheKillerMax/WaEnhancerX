@@ -44,9 +44,11 @@ import com.waenhancer.utils.SystemDiagnostics
 import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.WhatsAppPackageDetector
 import com.waenhancer.utils.XposedRuntimeInspector
-import com.waenhancer.utils.XposedRuntimeSnapshot
+import com.waenhancer.utils.TargetRuntimePresentation
+import com.waenhancer.ui.components.rememberRuntimeObservationClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun SystemHealthScreen() {
@@ -81,8 +83,9 @@ fun SystemHealthScreen() {
         val refreshed = withContext(Dispatchers.IO) {
             XposedRuntimeInspector.inspect(packages)
         }
-        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
+        runtimeSnapshot = refreshed
     }
+    val observationTime = rememberRuntimeObservationClock()
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -114,9 +117,12 @@ fun SystemHealthScreen() {
         if (data == null) {
             Column(Modifier.fillMaxSize().padding(insets), Arrangement.Center, Alignment.CenterHorizontally) { CircularProgressIndicator(color = colors.primary) }
         } else {
-            val targetApps = remember(data, refreshTrigger, runtimeSnapshot) {
+            val reportedApps = remember(data, refreshTrigger, runtimeSnapshot) {
                 WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
                     .filter { it.isInstalled }
+            }
+            val targetApps = reportedApps.map {
+                TargetRuntimePresentation.asOf(it, observationTime.wall, observationTime.elapsed)
             }
             Column(
                 Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState()).padding(horizontal = spacing.pageMargin, vertical = 20.dp),
@@ -147,22 +153,9 @@ fun SystemHealthScreen() {
                         add("Manager process hooked" to if (data.moduleActive) "Yes" else "No")
                         add("Runtime API captured" to if (data.framework.api != null) "Yes" else "No")
                         targetApps.forEach { app ->
-                            add("${app.appName} hooks" to if (app.isHooked) "Injected" else "Not injected")
-                            add("${app.appName} preference bridge" to when (app.bridgeStatus) {
-                                "PROVIDER" -> "Connected directly"
-                                "DISK_FALLBACK" -> "Using disk fallback"
-                                "FAILED" -> "Unavailable"
-                                else -> "Awaiting runtime report"
-                            })
-                            add("${app.appName} initialization" to when (app.runtimeStatus) {
-                                "READY" -> "Completed"
-                                "READY_WITH_ERRORS" -> "Completed with hook failures"
-                                "INITIALIZING" -> "In progress"
-                                "UNSUPPORTED_VERSION" -> "Paused: unsupported version"
-                                "INITIALIZATION_FAILED" -> "Failed"
-                                "INJECTED" -> "Injection detected"
-                                else -> "Not reported"
-                            })
+                            add("${app.appName} hooks" to app.injectionEvidence.label)
+                            add("${app.appName} preference bridge" to TargetRuntimePresentation.bridge(app))
+                            add("${app.appName} initialization" to TargetRuntimePresentation.initialization(app))
                             app.initializationError?.takeIf { it.isNotBlank() }?.let {
                                 add("${app.appName} last error" to it)
                             }
@@ -174,7 +167,7 @@ fun SystemHealthScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceContainerLow,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -207,7 +200,7 @@ fun SystemHealthScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceContainerLow,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -248,7 +241,7 @@ private fun DiagnosticCard(title: String, entries: List<Pair<String, String>>, a
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    Surface(shape = radius.bentoCardShape, color = colors.surfaceContainerLow, border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = radius.bentoCardShape, color = colors.surfaceContainerLow, border = BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp)) {
             Text(title, style = typography.bodyLg, fontWeight = FontWeight.Bold, color = accent)
             Spacer(Modifier.height(12.dp))

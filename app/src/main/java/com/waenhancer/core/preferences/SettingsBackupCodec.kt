@@ -21,6 +21,9 @@ import java.nio.charset.StandardCharsets
 import java.util.Collections
 import java.util.LinkedHashSet
 import java.util.Locale
+import android.content.SharedPreferences
+import java.io.ByteArrayInputStream
+import java.nio.CharBuffer
 
 /**
  * Versioned WAEX settings container with support for both binary (.waex) and legacy JSON backups.
@@ -244,7 +247,7 @@ object SettingsBackupCodec {
 
     /** Best-effort compensation for a failed multi-store commit, limited to touched keys. */
     private fun restoreTouchedKeys(
-        store: android.content.SharedPreferences,
+        store: SharedPreferences,
         original: Map<String, Any?>,
         touched: Set<String>
     ): Boolean {
@@ -272,7 +275,7 @@ object SettingsBackupCodec {
         }
     }
 
-    private fun decodeBinary(bytes: java.io.ByteArrayInputStream.() -> Unit = {}): List<Record> {
+    private fun decodeBinary(bytes: ByteArrayInputStream.() -> Unit = {}): List<Record> {
         throw UnsupportedOperationException()
     }
 
@@ -552,7 +555,7 @@ object SettingsBackupCodec {
         val bytes = StandardCharsets.UTF_8.newEncoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT)
-            .encode(java.nio.CharBuffer.wrap(value))
+            .encode(CharBuffer.wrap(value))
         return ByteArray(bytes.remaining()).also { bytes.get(it) }
     }
 

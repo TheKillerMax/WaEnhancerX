@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.automation
 
+import com.waenhancer.app.R
+import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
 
 import androidx.compose.foundation.background
@@ -65,11 +67,20 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
+import com.waenhancer.config.FeatureCatalog
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
 
 
 @Composable
@@ -83,6 +94,7 @@ fun AutomationTaskerScreen() {
     var selectedTab by remember { mutableStateOf("automation") } // "automation" | "ai"
 
     val navController = LocalWaexNavController.current
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -117,7 +129,7 @@ fun AutomationTaskerScreen() {
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
 
     // Automation states
     var alwaysTypingEnabled by remember { mutableStateOf(preferenceManager.getBoolean("always_typing", preferenceManager.getBoolean("ghostmode_t", false))) }
@@ -146,7 +158,7 @@ fun AutomationTaskerScreen() {
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -186,7 +198,7 @@ fun AutomationTaskerScreen() {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    listOf("automation" to "Automation", "ai" to "Audio & AI").forEach { (tabId, label) ->
+                    listOf("automation" to stringResource(R.string.subtab_automation), "ai" to stringResource(R.string.subtab_audio_ai)).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -199,7 +211,7 @@ fun AutomationTaskerScreen() {
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -219,12 +231,12 @@ fun AutomationTaskerScreen() {
         if (selectedTab == "automation") {
             // Automation Cards
             val cards = listOf(
-                AutomationCardData("always_typing", WaexIcons.Lock, "Hide Typing", "Users cannot see that you are typing", alwaysTypingEnabled, false) {
+                AutomationCardData("always_typing", WaexIcons.Lock, alwaysTypingEnabled, FeatureCatalog.findByKey("always_typing")?.isPro ?: false) {
                     alwaysTypingEnabled = it
                     preferenceManager.putBoolean("always_typing", it)
                     preferenceManager.putBoolean("ghostmode_t", it)
                 },
-                AutomationCardData("tasker_integration", WaexIcons.AutoAwesome, "Enable Tasker Automation", "Enables using intents to receive and send messages in Tasker", taskerIntegrationEnabled, false) {
+                AutomationCardData("tasker_integration", WaexIcons.AutoAwesome, taskerIntegrationEnabled, FeatureCatalog.findByKey("tasker_integration")?.isPro ?: false) {
                     taskerIntegrationEnabled = it
                     preferenceManager.putBoolean("tasker_integration", it)
                 }
@@ -237,8 +249,8 @@ fun AutomationTaskerScreen() {
                     .padding(horizontal = spacing.pageMargin),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-                val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+                val isPro = LocalIsPro.current
+                val onActivatePro = LocalOnActivatePro.current
 
                 cards.forEach { card ->
                     val isLocked = card.isPro && !isPro
@@ -251,7 +263,7 @@ fun AutomationTaskerScreen() {
                     Surface(
                         shape = radius.bentoCardShape,
                         color = highlightBgColor,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier
                             .fillMaxWidth()
                             .onGloballyPositioned { coordinates ->
@@ -285,18 +297,22 @@ fun AutomationTaskerScreen() {
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
+                                val item = FeatureCatalog.findByKey(card.key)
+                                val locTitle = if (item != null) LocalizationHelper.getTitle(context, item) else LocalizationHelper.getLocalizedFeatureTitle(context, card.key)
+                                val locDesc = if (item != null) LocalizationHelper.getDesc(context, item) else LocalizationHelper.getLocalizedFeatureDesc(context, card.key)
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = card.title,
+                                        text = locTitle,
                                         style = typography.bodyLg,
                                         fontWeight = FontWeight.Bold,
                                         color = colors.onSurface
                                     )
+                                    val reqProText = stringResource(R.string.requires_pro_label)
                                     Text(
-                                        text = if (isLocked) "${card.desc} • Requires Pro" else card.desc,
+                                        text = if (isLocked) "$locDesc • $reqProText" else locDesc,
                                         style = typography.bodyMd,
                                         color = colors.onSurfaceVariant,
                                         fontSize = 12.sp
@@ -323,7 +339,7 @@ fun AutomationTaskerScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = spacing.pageMargin)
@@ -333,13 +349,13 @@ fun AutomationTaskerScreen() {
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Tasker & Automation Integrations",
+                            text = stringResource(R.string.tasker_integration_box_title),
                             style = typography.bodyLg,
                             fontWeight = FontWeight.Bold,
                             color = colors.primary
                         )
                         Text(
-                            text = "Automate WhatsApp features, auto-replies, and message logging using Broadcast intents in Tasker, MacroDroid, or Automate.",
+                            text = stringResource(R.string.tasker_integration_box_desc),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             fontSize = 12.sp
@@ -356,12 +372,12 @@ fun AutomationTaskerScreen() {
                                     .weight(1f)
                                     .clip(radius.defaultShape)
                                     .background(colors.primary.copy(alpha = 0.1f))
-                                    .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.TaskerGuide) }
+                                    .clickable { navController.navigateTo(Screen.TaskerGuide) }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "View Setup Guide →",
+                                    text = stringResource(R.string.tasker_view_setup_guide),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary
@@ -373,12 +389,12 @@ fun AutomationTaskerScreen() {
                                     .clip(radius.defaultShape)
                                     .background(colors.surface)
                                     .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                                    .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.TaskerHistory) }
+                                    .clickable { navController.navigateTo(Screen.TaskerHistory) }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Execution History",
+                                    text = stringResource(R.string.tasker_execution_history),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
@@ -409,7 +425,7 @@ fun AutomationTaskerScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = highlightBgColor,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { coordinates ->
@@ -468,7 +484,7 @@ fun AutomationTaskerScreen() {
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -645,28 +661,12 @@ fun AutomationTaskerScreen() {
 
 private data class AutomationCardData(
     val key: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val title: String,
-    val desc: String,
+    val icon: ImageVector,
     val enabled: Boolean,
     val isPro: Boolean,
     val onCheckedChange: (Boolean) -> Unit
 )
 
-private data class VoiceFeatureData(
-    val label: String,
-    val sub: String,
-    val key: String,
-    val enabled: Boolean,
-    val onChecked: (Boolean) -> Unit
-)
-
-private data class TaskerFieldData(
-    val label: String,
-    val value: String,
-    val key: String,
-    val onValueChange: (String) -> Unit
-)
 
 @Preview(showBackground = true)
 @Composable

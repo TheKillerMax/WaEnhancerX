@@ -2,7 +2,6 @@ package com.waenhancer.utils
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -12,10 +11,10 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import com.waenhancer.app.R
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.xposed.utils.ModuleStatus
 import org.json.JSONArray
+import java.io.File
 
 data class InjectedHookItem(
     val name: String,
@@ -35,7 +34,9 @@ data class HookedAppInfo(
     val lastActiveTime: Long = 0L,
     val runtimeStatus: String = "NOT_DETECTED",
     val bridgeStatus: String = "NOT_REPORTED",
-    val initializationError: String? = null
+    val initializationError: String? = null,
+    val injectionEvidence: InjectionEvidence = if (isHooked) InjectionEvidence.CURRENT else InjectionEvidence.NO_REPORT,
+    val processObservedAtElapsed: Long = -1L
 )
 
 internal fun hasCurrentInjection(
@@ -46,80 +47,28 @@ internal fun hasCurrentInjection(
     runningPids: Set<Int>,
     lastActiveTime: Long,
     now: Long
-): Boolean = isModuleActive && currentBoot != -1 && recordedBoot == currentBoot &&
-        reportedPid > 0 && reportedPid in runningPids &&
-        lastActiveTime > 0L && now - lastActiveTime in 0L..25_000L
+): Boolean = classifyInjection(isModuleActive, recordedBoot, currentBoot, reportedPid,
+    runningPids, lastActiveTime, now) == InjectionEvidence.CURRENT
+
 
 object WhatsAppPackageDetector {
 
     private const val MODULE_PACKAGE = "com.waenhancer"
 
-    /**
-     * Dynamically reads supported WhatsApp packages & clones from arrays.xml.
-     */
+    /** Declared targets are available before Application/Context initialization. */
     @JvmStatic
-    fun getSupportedPackages(context: Context?): Set<String> {
-        val packages = LinkedHashSet<String>()
-        if (context != null) {
-            try {
-                val moduleContext = if (context.packageName == MODULE_PACKAGE) {
-                    context
-                } else {
-                    try {
-                        context.createPackageContext(MODULE_PACKAGE, Context.CONTEXT_IGNORE_SECURITY)
-                    } catch (_: Throwable) {
-                        context
-                    }
-                }
-                val resId = moduleContext.resources.getIdentifier("xposed_scope", "array", MODULE_PACKAGE)
-                if (resId != 0) {
-                    packages.addAll(moduleContext.resources.getStringArray(resId))
-                } else {
-                    packages.addAll(context.resources.getStringArray(R.array.xposed_scope))
-                }
-                packages.remove(MODULE_PACKAGE)
-            } catch (_: Throwable) {}
-        }
-        return packages
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun getSupportedPackages(context: Context?): Set<String> = DeclaredWhatsAppTargets.packages()
 
-    /**
-     * Returns true if a package name matches any supported WhatsApp package from arrays.xml
-     * or WhatsApp clone pattern.
-     */
+    /** Package-name membership only; this does not authenticate a client or confirm hooks. */
     @JvmStatic
-    fun isWhatsAppPackageName(context: Context?, packageName: String?): Boolean {
-        if (packageName.isNullOrBlank()) return false
-        val pkg = packageName.lowercase()
-        if (pkg == MODULE_PACKAGE || pkg.startsWith("android") || pkg.startsWith("com.android") || pkg.startsWith("com.google.android")) {
-            return false
-        }
-
-        // 1. Direct match from arrays.xml
-        val supportedPackages = getSupportedPackages(context)
-        if (supportedPackages.contains(pkg)) {
-            return true
-        }
-
-        // 2. Pattern recognition for custom clones & dual app wrappers
-        return pkg.contains("whatsapp") ||
-                pkg.contains("w4b") ||
-                pkg.contains("gbwa") ||
-                pkg.contains("fmwa") ||
-                pkg.contains("yowa") ||
-                pkg.contains("nowha") ||
-                pkg.contains("aerow") ||
-                pkg.contains("delight") ||
-                pkg.contains("wtsapp") ||
-                pkg.contains("wago") ||
-                pkg.contains("ymwa") ||
-                pkg.endsWith(".litex")
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun isWhatsAppPackageName(context: Context?, packageName: String?): Boolean =
+        DeclaredWhatsAppTargets.contains(packageName)
 
     @JvmStatic
-    fun isWhatsAppPackageName(packageName: String?): Boolean {
-        return isWhatsAppPackageName(null, packageName)
-    }
+    fun isWhatsAppPackageName(packageName: String?): Boolean =
+        DeclaredWhatsAppTargets.contains(packageName)
 
     /**
      * Registers a hooked WhatsApp package when Xposed injects into it at runtime.
@@ -204,7 +153,7 @@ object WhatsAppPackageDetector {
     fun currentBootCount(context: Context): Int = runCatching {
         Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
     }.getOrElse {
-        runCatching { java.io.File("/proc/sys/kernel/random/boot_id").readText().trim().hashCode() }
+        runCatching { File("/proc/sys/kernel/random/boot_id").readText().trim().hashCode() }
             .getOrDefault(-1)
     }
 
@@ -268,7 +217,7 @@ object WhatsAppPackageDetector {
         val pm = context.packageManager
         val discoveredPackages = LinkedHashSet<String>()
 
-        // 1. Read dynamically from arrays.xml
+        // 1. Use the same declared targets as the pre-Context Xposed entry point.
         discoveredPackages.addAll(getSupportedPackages(context))
 
         val isGlobalModuleActive = ModuleStatus.isModuleActive()
@@ -279,19 +228,12 @@ object WhatsAppPackageDetector {
         try {
             hookedSet = prefs.getStringSet("hooked_whatsapp_packages", null)
             if (hookedSet != null) {
-                discoveredPackages.addAll(hookedSet)
+                discoveredPackages.addAll(hookedSet.filter { isWhatsAppPackageName(it) })
             }
         } catch (_: Throwable) {}
 
-        // 3. Scan installed apps for any additional WhatsApp clones
-        try {
-            val installedApps: List<ApplicationInfo> = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            for (app in installedApps) {
-                if (isWhatsAppPackageName(context, app.packageName)) {
-                    discoveredPackages.add(app.packageName)
-                }
-            }
-        } catch (_: Throwable) {}
+        // Do not scan labels/substrings or promote historical reports to new targets.
+        // Membership does not bypass HookProvider caller authorization or LSPosed scope.
 
         discoveredPackages.remove(MODULE_PACKAGE)
 
@@ -322,15 +264,16 @@ object WhatsAppPackageDetector {
                 val recordedBoot = prefs.getInt("runtime_boot_$pkg", Int.MIN_VALUE)
                 val currentBoot = currentBootCount(context)
                 val reportedPid = prefs.getInt("runtime_pid_$pkg", -1)
-                val isInjected = hasCurrentInjection(
+                val evidence = classifyInjection(
                     isModuleActive = isGlobalModuleActive,
                     recordedBoot = recordedBoot,
                     currentBoot = currentBoot,
                     reportedPid = reportedPid,
-                    runningPids = runtimeSnapshot?.runningPids?.get(pkg).orEmpty(),
+                    runningPids = runtimeSnapshot?.pidsFor(pkg, android.os.SystemClock.elapsedRealtime()),
                     lastActiveTime = lastActiveTime,
                     now = System.currentTimeMillis()
                 )
+                val isInjected = evidence == InjectionEvidence.CURRENT
                 val injectedHooks = if (isInjected) getInjectedHooks(context, pkg) else emptyList()
 
                 result.add(
@@ -344,7 +287,9 @@ object WhatsAppPackageDetector {
                         lastActiveTime = lastActiveTime,
                         runtimeStatus = prefs.getString("runtime_status_$pkg", "NOT_DETECTED") ?: "NOT_DETECTED",
                         bridgeStatus = prefs.getString("bridge_status_$pkg", "NOT_REPORTED") ?: "NOT_REPORTED",
-                        initializationError = prefs.getString("runtime_error_$pkg", null)
+                        initializationError = prefs.getString("runtime_error_$pkg", null),
+                        injectionEvidence = evidence,
+                        processObservedAtElapsed = runtimeSnapshot?.observedAtElapsed ?: -1L
                     )
                 )
             } catch (e: PackageManager.NameNotFoundException) {

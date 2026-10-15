@@ -58,7 +58,11 @@ fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismis
             override fun onSuccess(apkFile: File) {
                 mainHandler.post {
                     onDismiss()
-                    if (useRoot) UpdateDownloader.installApkWithRoot(context, apkFile) else UpdateDownloader.installApk(context, apkFile)
+                    if (useRoot) {
+                        UpdateDownloader.installApkWithRoot(context, apkFile, version)
+                    } else {
+                        UpdateDownloader.installApk(context, apkFile, version)
+                    }
                 }
             }
             override fun onFailure(error: Exception) {

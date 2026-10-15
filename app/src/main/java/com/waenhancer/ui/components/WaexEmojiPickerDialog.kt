@@ -11,18 +11,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.waenhancer.ui.designsystem.WaexTheme
 
 private val PRESET_EMOJIS = listOf(
@@ -44,7 +51,7 @@ private val PRESET_EMOJIS = listOf(
     "🤔", "🥳", "✨", "🤝", "🚀", "👌"
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WaexEmojiPickerDialog(
     initialEmoji: String,
@@ -54,23 +61,26 @@ fun WaexEmojiPickerDialog(
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val spacing = WaexTheme.spacing
+    val radius = WaexTheme.radius
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var selectedEmoji by remember { mutableStateOf(initialEmoji.ifBlank { "👍" }) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = colors.surface,
-            tonalElevation = 6.dp,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = radius.bottomSheetShape
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .fillMaxWidth()
-            ) {
                 // Header
                 Text(
                     text = "Custom Reaction Emoji",
@@ -155,30 +165,26 @@ fun WaexEmojiPickerDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Actions
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                Button(
+                    onClick = {
+                        val finalEmoji = selectedEmoji.trim().ifEmpty { "👍" }
+                        onEmojiSelected(finalEmoji)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                    shape = radius.buttonShape,
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.onSurfaceVariant)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = {
-                            val finalEmoji = selectedEmoji.trim().ifEmpty { "👍" }
-                            onEmojiSelected(finalEmoji)
-                            onDismiss()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Save", color = colors.onPrimary, fontWeight = FontWeight.Bold)
-                    }
+                    Text("Save", color = colors.onPrimary, fontWeight = FontWeight.Bold)
                 }
-            }
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = radius.buttonShape,
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                ) {
+                    Text("Cancel", color = colors.onSurface)
+                }
         }
     }
 }

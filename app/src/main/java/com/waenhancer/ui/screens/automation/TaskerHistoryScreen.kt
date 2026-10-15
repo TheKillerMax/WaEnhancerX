@@ -36,6 +36,8 @@ import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 
 data class TaskerHistoryItem(
     val id: String,
@@ -93,7 +95,7 @@ fun TaskerHistoryScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            contentPadding = PaddingValues(
                 horizontal = spacing.pageMargin,
                 vertical = 16.dp
             ),
@@ -103,7 +105,7 @@ fun TaskerHistoryScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(

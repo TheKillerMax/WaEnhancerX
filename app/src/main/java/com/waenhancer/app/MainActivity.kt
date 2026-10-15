@@ -33,36 +33,44 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import android.content.Context
+import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.utils.LocaleHelper
+
+internal object StartupRootAccess {
+    @Volatile private var pendingResult: Boolean? = null
+
+    fun publish(granted: Boolean) {
+        pendingResult = granted
+    }
+
+    @Synchronized
+    fun consume(): Boolean? = pendingResult.also { pendingResult = null }
+}
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var preferenceManager: WaexPreferenceManager
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
+
     private var currentNavController: WaexNavController? = null
     private var rootCheckAttempt by mutableIntStateOf(0)
     private var rootState by mutableStateOf(RootAccessState.Checking)
     private var hasGrantedRootThisSession by mutableStateOf(false)
-    private var hasStartedOnce = false
-
-    override fun onStart() {
-        super.onStart()
-        if (hasStartedOnce) {
-            rootState = RootAccessState.Checking
-            rootCheckAttempt++
-        } else {
-            hasStartedOnce = true
-        }
-    }
+    private var initialRootResultProvided = false
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         val releaseTag = releaseTagFrom(intent)
         if (releaseTag != null) {
-            currentNavController?.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+            currentNavController?.navigateTo(Screen.ReleaseDetails(releaseTag))
         } else if (intent.getStringExtra("target_screen") == "supported_versions") {
-            currentNavController?.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+            currentNavController?.navigateTo(Screen.SupportedVersions)
         }
     }
 
@@ -82,6 +90,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val initialRootResult = StartupRootAccess.consume()
+        initialRootResultProvided = initialRootResult != null
+        if (initialRootResult != null) {
+            hasGrantedRootThisSession = initialRootResult
+            rootState = if (hasGrantedRootThisSession) RootAccessState.Granted else RootAccessState.Required
+        }
         enableEdgeToEdge()
         setContent {
             val initialTheme = remember { preferenceManager.getString("app_theme_mode", "System") }
@@ -108,14 +122,15 @@ class MainActivity : ComponentActivity() {
                             currentNavController = controller
                             val releaseTag = releaseTagFrom(intent)
                             if (releaseTag != null) {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+                                controller.navigateTo(Screen.ReleaseDetails(releaseTag))
                             } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+                                controller.navigateTo(Screen.SupportedVersions)
                             }
                             controller
                         }
 
                         LaunchedEffect(rootCheckAttempt) {
+                            if (initialRootResultProvided && rootCheckAttempt == 0) return@LaunchedEffect
                             rootState = RootAccessState.Checking
                             val hasRoot = withContext(Dispatchers.IO) {
                                 UpdateDownloader.hasRootAccess()
@@ -165,4 +180,5 @@ class MainActivity : ComponentActivity() {
         if (!path.startsWith("/releases/")) return null
         return path.removePrefix("/releases/").trim('/').takeIf { it.isNotBlank() }
     }
+
 }

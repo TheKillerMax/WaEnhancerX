@@ -2,7 +2,7 @@ name: Source and JVM regression checks
 
 on:
   push:
-    branches: [main, 'integration/preview-current-main-*']
+    branches: [main, 'integration/preview-current-main-*', 'fix/qa-localized-catalog-*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -74,6 +74,9 @@ jobs:
             qa/test_restart_safety.py
             qa/test_hook_return_types.py
             qa/test_monet_wiring.py
+            qa/test_catalog_source.py
+            qa/test_catalog_apk.py
+            qa/test_catalog_resource_keep.py
           )
           for test_script in "${tests[@]}"; do
             echo "::group::$test_script"
@@ -81,10 +84,17 @@ jobs:
             echo '::endgroup::'
           done
 
-      - name: Require tests for merged checked-save and invalidation APIs
+      - name: Require tests for merged runtime and resource contracts
         shell: bash
         run: |
           set -euo pipefail
+          if [[ -f app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java ]]; then
+            test -f qa/test_declared_targets.py
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            test -f qa/test_runtime_diagnostics.py
+            test -f qa/fixtures/RuntimeDiagnosticsChecks.kt
+          fi
           store=app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java
           ui=app/src/main/java/com/waenhancer/ui/screens/settings/StylesSettingsScreen.kt
           if grep -q 'updateAndGetTransition(' "$store"; then
@@ -93,6 +103,9 @@ jobs:
           fi
           if grep -q 'putPublicString("seentick", nextPlacement)' "$ui"; then
             test -f qa/test_manual_seen_tick_persistence.py
+          fi
+          if [[ -f app/src/main/res/raw/waex_dynamic_menu_icons_keep.xml ]]; then
+            test -f qa/test_dynamic_menu_resources.py
           fi
 
       - name: Run additional source-only QA suites when merged
@@ -135,6 +148,9 @@ jobs:
             qa/test_startup_reconciliation.py \
             qa/test_tasker_policy.py \
             qa/test_separate_groups_policy.py \
+            qa/test_declared_targets.py \
+            qa/test_runtime_diagnostics.py \
+            qa/test_dynamic_menu_resources.py \
             qa/test_db_migrations.py; do
             if [[ -f "$test_script" ]]; then
               echo "::group::$test_script"
@@ -199,3 +215,38 @@ jobs:
             ${{ runner.temp }}/waex-android-rows/*/*.kt
           retention-days: 14
           if-no-files-found: warn
+
+  runtime-framework:
+    name: Runtime policies / Android resource tables / API compile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Require tests when runtime evidence code is present
+        id: runtime
+        run: |
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            test -f qa/verify_runtime_framework.py
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo 'Runtime evidence contribution not merged; its Android probe was NOT executed.'
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.runtime.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compile public utilities and observation clock; test compiled version resources
+        if: steps.runtime.outputs.present == 'true'
+        run: python3 qa/verify_runtime_framework.py --out "$RUNNER_TEMP/waex-runtime-framework"
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.runtime.outputs.present == 'true'
+        with:
+          name: runtime-framework-evidence
+          path: ${{ runner.temp }}/waex-runtime-framework/evidence
+          retention-days: 14
+          if-no-files-found: error

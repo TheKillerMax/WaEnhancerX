@@ -11,9 +11,9 @@ import de.robv.android.xposed.XposedBridge
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * VersionGuard checks whether the running WhatsApp or WA Business version is verified and supported.
- * If unsupported and not bypassed, it halts hook execution and displays a native WhatsApp bottom sheet
- * prompting the user to either enable support for this version or manage it in WAEX settings.
+ * VersionGuard applies configured version rules before hook installation. A rule match is
+ * not functional acceptance of a host. Unavailable inputs and explicit rejections both
+ * pause installation, with distinct diagnostics instead of an automatic bypass.
  */
 object VersionGuard {
 
@@ -21,6 +21,26 @@ object VersionGuard {
     private val dialogShown = AtomicBoolean(false)
     private var sCurrentVersion: String = ""
     private var sPrefs: SharedPreferences? = null
+    private var sDecision = UniversalVersionValidator.Decision.VERSION_UNAVAILABLE
+
+    @JvmStatic
+    fun runtimeStatus(): String = if (sDecision == UniversalVersionValidator.Decision.UNSUPPORTED)
+        "UNSUPPORTED_VERSION" else "COMPATIBILITY_UNAVAILABLE"
+
+    internal fun noticeMessage(version: String, decision: UniversalVersionValidator.Decision): String {
+        val reason = when (decision) {
+            UniversalVersionValidator.Decision.UNSUPPORTED ->
+                "Your WhatsApp version ($version) does not match the configured version rules."
+            UniversalVersionValidator.Decision.RULES_UNAVAILABLE ->
+                "WAEX could not read its version rules from this WhatsApp process. " +
+                "Check that WhatsApp can access the WAEX package and its resources."
+            UniversalVersionValidator.Decision.PREFERENCES_UNAVAILABLE ->
+                "WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp."
+            else -> "WAEX could not determine the installed WhatsApp version."
+        }
+        return reason + "\n\nWAEX features are paused for safety. This is not confirmation of functional compatibility." +
+            "\n\nOpen WAEX settings to review the problem. Do not enable a version bypass just to hide an access error."
+    }
 
     @JvmStatic
     fun verifyAndGuard(
@@ -28,20 +48,21 @@ object VersionGuard {
         classLoader: ClassLoader,
         prefs: SharedPreferences
     ): Boolean {
+        sPrefs = prefs
+        sCurrentVersion = "unknown"
+        sDecision = UniversalVersionValidator.Decision.VERSION_UNAVAILABLE
+        dialogShown.set(false)
         try {
             val packageInfo: PackageInfo = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
             val currentVersion = packageInfo.versionName ?: ""
-            val isSupported = UniversalVersionValidator.isSupported(appContext, currentVersion, prefs)
-
-            if (isSupported) {
+            val decision = UniversalVersionValidator.evaluate(appContext, currentVersion, prefs)
+            sDecision = decision
+            if (decision.allowed) {
+                sPrefs = null
                 return true
             }
-
-            sCurrentVersion = currentVersion
-            sPrefs = prefs
-            dialogShown.set(false)
-
-            XposedBridge.log("$TAG Unsupported WhatsApp version detected: $currentVersion (${appContext.packageName}). Pausing features.")
+            sCurrentVersion = currentVersion.ifBlank { "unknown" }
+            XposedBridge.log("$TAG Compatibility decision: ${decision.name}. Pausing features.")
 
             return false
         } catch (t: Throwable) {
@@ -83,15 +104,9 @@ object VersionGuard {
                     return@runOnUiThread
                 }
 
-                val wildcard = UniversalVersionValidator.toWildcard(currentVersion)
-
                 WaexBottomSheet(activity)
                     .setTitle("WAEX Compatibility Notice")
-                    .setMessage(
-                        "Your WhatsApp version ($currentVersion) is not in the verified supported version range.\n\n" +
-                        "WAEX features are temporarily paused for safety to prevent app instability.\n\n" +
-                        "You can manage supported versions in WAEX settings."
-                    )
+                    .setMessage(noticeMessage(currentVersion, sDecision))
                     .setPositiveButton("Open WAEX Settings") { dialog, _ ->
                         try {
                             val pm = activity.packageManager
@@ -102,8 +117,7 @@ object VersionGuard {
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                             activity.startActivity(intent)
                         } catch (t: Throwable) {
-                            XposedBridge.log("$TAG Failed to open WAEX settings: ${t.message}")
-                            t.printStackTrace()
+                            XposedBridge.log("$TAG Failed to open WAEX settings: ${t.javaClass.simpleName}")
                         }
                         dialog.dismiss()
                     }

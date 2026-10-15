@@ -71,6 +71,8 @@ import com.waenhancer.ui.navigation.ContactPrivacy
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.components.RequestRuntimePermissionOnUse
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 
 @Composable
 fun PerContactPrivacyListScreen(
@@ -82,7 +84,7 @@ fun PerContactPrivacyListScreen(
     RequestRuntimePermissionOnUse(Manifest.permission.READ_CONTACTS)
 
     val navController = LocalWaexNavController.current
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
@@ -229,7 +231,7 @@ fun PerContactPrivacyListScreen(
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                border = BorderStroke(1.dp, colors.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -282,7 +284,7 @@ fun PerContactPrivacyListScreen(
                                     Surface(
                                         shape = radius.bentoCardShape,
                                         color = colors.surfaceDim,
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                        border = BorderStroke(1.dp, colors.outlineVariant),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Column(modifier = Modifier.fillMaxWidth()) {
@@ -362,7 +364,7 @@ fun PerContactPrivacyListScreen(
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim.copy(alpha = 0.6f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)),
+                                border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -418,7 +420,7 @@ fun PerContactPrivacyListScreen(
                                 Surface(
                                     shape = radius.bentoCardShape,
                                     color = Color(0xFFFFF3E0),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB74D)),
+                                    border = BorderStroke(1.dp, Color(0xFFFFB74D)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
@@ -580,7 +582,7 @@ fun PerContactPrivacyListScreen(
                         .clickable(enabled = false) { }
                         .clip(radius.bottomSheetShape),
                     color = colors.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
+                    border = BorderStroke(1.dp, colors.outlineVariant)
                 ) {
                     if (showClearAllModal) {
                         ClearAllConfirmationModal(

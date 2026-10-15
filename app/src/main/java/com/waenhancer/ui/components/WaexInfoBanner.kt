@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class BannerType {
     INFO,
@@ -118,5 +119,5 @@ private data class BannerTheme(
     val bgColor: Color,
     val borderColor: Color,
     val contentColor: Color,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+    val icon: ImageVector
 )

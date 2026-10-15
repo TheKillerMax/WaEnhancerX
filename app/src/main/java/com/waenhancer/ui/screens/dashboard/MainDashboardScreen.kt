@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -67,12 +68,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.waenhancer.app.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.waenhancer.config.PreferenceStores
+import com.waenhancer.ui.components.WaexConfirmationBottomSheet
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
@@ -85,7 +89,8 @@ import com.waenhancer.utils.SystemDiagnosticsReader
 import com.waenhancer.utils.UniversalVersionValidator
 import com.waenhancer.utils.WhatsAppPackageDetector
 import com.waenhancer.utils.XposedRuntimeInspector
-import com.waenhancer.utils.XposedRuntimeSnapshot
+import com.waenhancer.utils.TargetRuntimePresentation
+import com.waenhancer.ui.components.rememberRuntimeObservationClock
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +98,9 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.Build
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,7 +165,7 @@ fun MainDashboardScreen(
         val refreshed = withContext(Dispatchers.IO) {
             XposedRuntimeInspector.inspect(packages)
         }
-        runtimeSnapshot = refreshed ?: XposedRuntimeSnapshot(emptyMap())
+        runtimeSnapshot = refreshed
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -168,13 +176,13 @@ fun MainDashboardScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
-        val receiver = object : android.content.BroadcastReceiver() {
+        val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 refreshTrigger++
             }
         }
-        val filter = android.content.IntentFilter("com.waenhancer.ACTION_TARGET_APP_ACTIVE")
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
+        val filter = IntentFilter("com.waenhancer.ACTION_TARGET_APP_ACTIVE")
+        if (Build.VERSION.SDK_INT >= 33) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             context.registerReceiver(receiver, filter)
@@ -189,20 +197,26 @@ fun MainDashboardScreen(
     }
 
     // Dynamic WhatsApp Packages & Clones Detector
-    val detectedApps = remember(refreshTrigger, runtimeSnapshot) {
+    val reportedApps = remember(refreshTrigger, runtimeSnapshot) {
         WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
     }
-
-    val prefs = remember(context) { PreferenceStores.publicStore(context) }
-    val hasUnsupportedActiveApp = detectedApps.any {
-        it.isInstalled && it.isHooked && !UniversalVersionValidator.isSupported(context, it.versionName.removePrefix("v"), prefs)
+    val observationTime = rememberRuntimeObservationClock()
+    val detectedApps = reportedApps.map {
+        TargetRuntimePresentation.asOf(it, observationTime.wall, observationTime.elapsed)
     }
+    val prefs = remember(context) { PreferenceStores.publicStore(context) }
+    val versionDecisions = remember(reportedApps, refreshTrigger) {
+        reportedApps.associate { it.packageName to UniversalVersionValidator.evaluate(context, it.versionName, prefs) }
+    }
+    val targetSummary = TargetRuntimePresentation.summarize(detectedApps, versionDecisions)
+    val hasTargetReview = targetSummary.healthy == false
     val moduleVersion = remember(context) {
         @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
     }
 
     var showCustomizationSoon by remember { mutableStateOf(false) }
+    var showResetSettingsDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -218,7 +232,7 @@ fun MainDashboardScreen(
                 color = colors.surface,
                 border = BorderStroke(
                     1.dp,
-                    if (hasUnsupportedActiveApp) Color(0xFFEF4444).copy(alpha = 0.5f) else colors.outline
+                    if (hasTargetReview) Color(0xFFEF4444).copy(alpha = 0.5f) else colors.outline
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -235,7 +249,7 @@ fun MainDashboardScreen(
                                 .background(
                                     when {
                                         !isModuleActive -> colors.error
-                                        hasUnsupportedActiveApp -> Color(0xFFEF4444)
+                                        hasTargetReview -> Color(0xFFEF4444)
                                         else -> colors.primary
                                     }
                                 )
@@ -243,16 +257,16 @@ fun MainDashboardScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = when {
-                                !isModuleActive -> "Module Inactive • v$moduleVersion"
-                                hasUnsupportedActiveApp -> "Module Active • v$moduleVersion • Unsupported Target"
-                                else -> "Module Active • v$moduleVersion"
+                                !isModuleActive -> stringResource(R.string.module_inactive_version, moduleVersion)
+                                hasTargetReview -> stringResource(R.string.module_active_version, "$moduleVersion • ${stringResource(R.string.diag_status_review_required)}")
+                                else -> stringResource(R.string.module_active_version, moduleVersion)
                             },
                             style = typography.bodyMd,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 12.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            color = if (hasUnsupportedActiveApp) Color(0xFFEF4444) else colors.onSurface,
+                            color = if (hasTargetReview) Color(0xFFEF4444) else colors.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         Box(
@@ -264,7 +278,7 @@ fun MainDashboardScreen(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Changelog",
+                                text = stringResource(R.string.title_changelog),
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 11.sp
@@ -280,58 +294,20 @@ fun MainDashboardScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         detectedApps.forEach { app ->
                             val cleanVer = app.versionName.removePrefix("v")
-                            val isVersionSupported = UniversalVersionValidator.isSupported(context, cleanVer, prefs)
+                            val decision = versionDecisions[app.packageName] ?: UniversalVersionValidator.Decision.RULES_UNAVAILABLE
+                            val isVersionSupported = decision.allowed
                             val appIcon = remember(app.packageName) {
                                 WhatsAppPackageDetector.getAppIcon(context, app.packageName)
                             }
 
-                            val (statusDotColor, statusText, statusTextColor) = when {
-                                !app.isInstalled -> Triple(
-                                    colors.onSurfaceVariant.copy(alpha = 0.4f),
-                                    "Not Installed",
-                                    colors.onSurfaceVariant
-                                )
-                                !isModuleActive -> Triple(
-                                    colors.error,
-                                    "Module inactive",
-                                    colors.error
-                                )
-                                app.isHooked && app.runtimeStatus == "INITIALIZATION_FAILED" -> Triple(
-                                    colors.error,
-                                    "Injected • Initialization failed",
-                                    colors.error
-                                )
-                                app.isHooked && !isVersionSupported -> Triple(
-                                    colors.error,
-                                    "Injected • Unsupported version",
-                                    colors.error
-                                )
-                                app.isHooked && app.bridgeStatus == "FAILED" -> Triple(
-                                    colors.error,
-                                    "Injected • Settings connection unavailable",
-                                    colors.error
-                                )
-                                app.isHooked && app.bridgeStatus == "DISK_FALLBACK" -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Injected • Using settings fallback",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.isHooked && app.runtimeStatus == "READY_WITH_ERRORS" -> Triple(
-                                    Color(0xFFF59E0B),
-                                    "Injected • Some features failed",
-                                    Color(0xFFF59E0B)
-                                )
-                                app.isHooked -> Triple(
-                                    colors.primary,
-                                    "Hooks injected",
-                                    colors.primary
-                                )
-                                else -> Triple(
-                                    colors.onSurfaceVariant,
-                                    "Hooks not injected",
-                                    colors.onSurfaceVariant
-                                )
+                            val status = TargetRuntimePresentation.card(app, isModuleActive, decision)
+                            val statusDotColor = when (status.severity) {
+                                TargetRuntimePresentation.Severity.OK -> colors.primary
+                                TargetRuntimePresentation.Severity.REVIEW -> colors.error
+                                TargetRuntimePresentation.Severity.UNKNOWN -> colors.onSurfaceVariant
                             }
+                            val statusText = status.text
+                            val statusTextColor = statusDotColor
 
                             Surface(
                                 shape = radius.defaultShape,
@@ -488,7 +464,11 @@ fun MainDashboardScreen(
                                                     modifier = Modifier.size(14.dp)
                                                 )
                                                 Text(
-                                                    text = "Injected Hooks ($activeCount/$totalCount Active)",
+                                                    text = stringResource(
+                                                        R.string.injected_hooks_active_count,
+                                                        activeCount,
+                                                        totalCount
+                                                    ),
                                                     style = typography.labelSm,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = colors.onSurface,
@@ -500,7 +480,7 @@ fun MainDashboardScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Text(
-                                                    text = "View all",
+                                                    text = stringResource(R.string.view_all),
                                                     style = typography.labelSm,
                                                     color = colors.primary,
                                                     fontSize = 11.sp,
@@ -524,7 +504,7 @@ fun MainDashboardScreen(
 
             DashboardDiagnosticsCard(
                 diagnostics = systemDiagnostics,
-                hasUnsupportedTarget = hasUnsupportedActiveApp,
+                targetSummary = targetSummary,
                 onRefresh = { refreshTrigger++ },
                 onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
                 onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) }
@@ -537,47 +517,103 @@ fun MainDashboardScreen(
                 border = BorderStroke(1.dp, colors.outline),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
+                Column(
                     modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(radius.defaultShape)
-                            .background(colors.surfaceDim)
-                            .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable(onClick = startBackup)
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Backup", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(radius.defaultShape)
+                                .background(colors.surfaceDim)
+                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .clickable(onClick = startBackup)
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = stringResource(R.string.backup_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(radius.defaultShape)
+                                .background(colors.surfaceDim)
+                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .clickable(onClick = startRestore)
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = stringResource(R.string.restore_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            }
                         }
                     }
 
+                    // Reset Settings Button under Backup & Restore
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .clip(radius.defaultShape)
                             .background(colors.surfaceDim)
                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable(onClick = startRestore)
+                            .clickable { showResetSettingsDialog = true }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = WaexIcons.Clear,
+                                contentDescription = null,
+                                tint = colors.error,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Restore", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            Text(
+                                text = stringResource(R.string.reset_settings_btn),
+                                style = typography.bodyMd,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.error
+                            )
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(80.dp))
+        }
+
+        // Reset Settings Confirmation Sheet
+        if (showResetSettingsDialog) {
+            WaexConfirmationBottomSheet(
+                title = stringResource(R.string.reset_settings_confirm_title),
+                message = stringResource(R.string.reset_settings_confirm_msg),
+                confirmLabel = stringResource(R.string.reset_settings_btn),
+                destructive = true,
+                onDismiss = { showResetSettingsDialog = false },
+                onConfirm = {
+                    val savedTheme = preferenceManager.getString("app_theme_mode", "System")
+                    val publicStore = PreferenceStores.publicStore(context)
+                    publicStore.edit().clear().commit()
+                    if (savedTheme != null) {
+                        preferenceManager.putString("app_theme_mode", savedTheme)
+                    }
+                    preferenceManager.remove("dummy_notify")
+                    refreshTrigger++
+                    showResetSettingsDialog = false
+                    Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         // Customization Coming Soon Modal Overlay
@@ -616,13 +652,13 @@ fun MainDashboardScreen(
                             )
                         }
                         Text(
-                            text = "Customization",
+                            text = stringResource(R.string.customization_coming_soon_title),
                             style = typography.headlineMd,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
                         )
                         Text(
-                            text = "Customization settings coming soon",
+                            text = stringResource(R.string.customization_coming_soon_desc),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -638,7 +674,7 @@ fun MainDashboardScreen(
                                 .fillMaxWidth()
                                 .height(48.dp)
                         ) {
-                            Text(text = "OK", style = typography.bodyMd, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.action_ok), style = typography.bodyMd, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -650,7 +686,7 @@ fun MainDashboardScreen(
 @Composable
 private fun DashboardDiagnosticsCard(
     diagnostics: SystemDiagnostics?,
-    hasUnsupportedTarget: Boolean,
+    targetSummary: TargetRuntimePresentation.Summary,
     onRefresh: () -> Unit,
     onViewDetails: () -> Unit,
     onViewSupportedVersions: () -> Unit
@@ -687,13 +723,13 @@ private fun DashboardDiagnosticsCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "System diagnostics",
+                        text = stringResource(R.string.system_diagnostics_title),
                         style = typography.titleMd,
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurface
                     )
                     Text(
-                        text = "Live health overview",
+                        text = stringResource(R.string.live_health_overview),
                         style = typography.bodySm,
                         color = colors.onSurfaceVariant
                     )
@@ -704,7 +740,7 @@ private fun DashboardDiagnosticsCard(
                 ) {
                     Icon(
                         imageVector = WaexIcons.Refresh,
-                        contentDescription = "Refresh diagnostics",
+                        contentDescription = stringResource(R.string.system_diagnostics_title),
                         tint = colors.onSurfaceVariant,
                         modifier = Modifier.size(19.dp)
                     )
@@ -714,25 +750,25 @@ private fun DashboardDiagnosticsCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             DashboardDiagnosticRow(
-                label = "Module",
+                label = stringResource(R.string.diag_label_module),
                 value = when (diagnostics?.moduleActive) {
-                    true -> "Active"
-                    false -> "Inactive"
-                    null -> "Checking…"
+                    true -> stringResource(R.string.diag_status_active)
+                    false -> stringResource(R.string.diag_status_inactive)
+                    null -> stringResource(R.string.diag_status_checking)
                 },
                 healthy = diagnostics?.moduleActive
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
-                label = "Framework",
-                value = diagnostics?.framework?.name ?: "Detecting…",
+                label = stringResource(R.string.diag_label_framework),
+                value = diagnostics?.framework?.name ?: stringResource(R.string.diag_framework_detecting),
                 healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
-                label = "Target compatibility",
-                value = if (hasUnsupportedTarget) "Review required" else "Supported",
-                healthy = !hasUnsupportedTarget
+                label = stringResource(R.string.diag_label_compatibility),
+                value = targetSummary.text,
+                healthy = targetSummary.healthy
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -742,25 +778,25 @@ private fun DashboardDiagnosticsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DiagnosticMetric(
-                    label = "Android",
+                    label = stringResource(R.string.diag_label_android),
                     value = diagnostics?.let { "API ${it.sdk}" } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
-                    label = "SELinux",
+                    label = stringResource(R.string.diag_label_selinux),
                     value = diagnostics?.selinux ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
-                    label = "Root",
-                    value = diagnostics?.let { if (it.rootAllowed) "Allowed" else "Not allowed" } ?: "—",
+                    label = stringResource(R.string.diag_label_root),
+                    value = diagnostics?.let { if (it.rootAllowed) stringResource(R.string.diag_root_allowed) else stringResource(R.string.diag_root_not_allowed) } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Checked locally on this device. No diagnostic data is uploaded.",
+                text = stringResource(R.string.diag_disclaimer),
                 style = typography.labelSm,
                 color = colors.onSurfaceVariant
             )
@@ -778,7 +814,7 @@ private fun DashboardDiagnosticsCard(
                 )
             ) {
                 Text(
-                    text = "View diagnostic details",
+                    text = stringResource(R.string.view_diagnostic_details),
                     style = typography.bodyMd,
                     fontWeight = FontWeight.Bold
                 )
@@ -800,7 +836,7 @@ private fun DashboardDiagnosticsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Supported versions catalog",
+                    text = stringResource(R.string.supported_versions_catalog),
                     style = typography.bodyMd,
                     color = colors.primary,
                     fontWeight = FontWeight.Medium,

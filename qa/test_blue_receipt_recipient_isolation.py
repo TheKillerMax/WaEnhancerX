@@ -14,7 +14,11 @@ assert 'PendingReadReceiptStore<ReadJobRecipe>' in blue
 assert 'PENDING_JOBS.drain(key)' in blue
 # Both routing paths must parse only complete, unambiguous JIDs.
 assert 'ReceiptJidPolicy.canonical(value)' in blue
-assert 'if (key == null) return 0;' in blue
+guard_start = blue.index('private static int sendPendingReadJobs(')
+guard_end = blue.index('Method enqueue =', guard_start)
+guard = blue[guard_start:guard_end]
+assert 'if (key == null)' in guard and 'return 0;' in guard
+assert 'outgoing recipient is unavailable' in guard
 assert 'sendPendingReadJobs(remoteJid)' in blue
 assert 'extractOutgoingJobJid(param.thisObject)' in blue
 assert 'XposedHelpers.getObjectField(job, "jid")' in blue
@@ -51,6 +55,10 @@ assert 'if (isExplicitReceiptAllowed(target, messageId)) return;' not in hide
 assert 'ExplicitReadReceiptPolicy.maySend(type, target, messageId,' in hide
 assert 'hideDelivery, EXPLICIT_RECEIPT_IDS,' in hide
 assert 'hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)' in hide
+assert 'findJidInObject(' not in hide
+assert 'String captureJid = jid;' in hide
+assert 'resolveReadReceiptExecution(' in hide
+assert 'resolvePlayedReceiptDispatch(' in hide
 assert 'SystemClock.elapsedRealtime()' in hide
 assert 'EXPLICIT_RECEIPT_IDS.isAllowed(' in hide
 assert 'new ConcurrentHashMap<>()' not in hide

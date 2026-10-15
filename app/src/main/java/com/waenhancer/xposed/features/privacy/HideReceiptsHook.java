@@ -24,7 +24,6 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -227,10 +226,8 @@ public class HideReceiptsHook extends BaseFeature {
                             } else if ((isEnabled("blueonreply", false)
                                     || isManualSeenTickEnabled())
                                     && !hasExplicitReceiptIds(resolveConversationTarget(jid, participant), param.args)) {
-                                String captureJid = jid != null ? jid : participant;
-                                if (captureJid == null) {
-                                    captureJid = findJidInObject(job);
-                                }
+                                // Preserve upstream: no participant or arbitrary object-field capture fallback.
+                                String captureJid = jid;
                                 if (captureJid == null) {
                                     captureJid = findJidInArguments(param.args);
                                 }
@@ -311,26 +308,6 @@ public class HideReceiptsHook extends BaseFeature {
                     && !"false".equalsIgnoreCase(text);
         }
         return false;
-    }
-
-    private static String findJidInObject(Object obj) {
-        if (obj == null) return null;
-        try {
-            Class<?> curr = obj.getClass();
-            while (curr != null && curr != Object.class) {
-                for (Field f : curr.getDeclaredFields()) {
-                    if (Modifier.isStatic(f.getModifiers())) continue;
-                    f.setAccessible(true);
-                    Object val = f.get(obj);
-                    if (val == null) continue;
-                    String s = val.toString();
-                    String jid = canonicalJid(s);
-                    if (jid != null) return jid;
-                }
-                curr = curr.getSuperclass();
-            }
-        } catch (Throwable ignored) {}
-        return null;
     }
 
     private static String findJidInArguments(Object[] arguments) {

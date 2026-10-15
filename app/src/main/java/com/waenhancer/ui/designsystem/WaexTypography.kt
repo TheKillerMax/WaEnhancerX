@@ -8,6 +8,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.waenhancer.app.R
+import androidx.compose.material3.Typography
 
 val OutfitFontFamily = FontFamily(
     Font(R.font.outfit_regular, FontWeight.Normal),
@@ -90,7 +91,7 @@ data class WaexTypography(
     )
 )
 
-val MaterialTypography = androidx.compose.material3.Typography(
+val MaterialTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Bold,

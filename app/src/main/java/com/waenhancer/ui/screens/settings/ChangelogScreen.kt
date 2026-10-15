@@ -3,8 +3,13 @@ package com.waenhancer.ui.screens.settings
 import android.content.Intent
 import android.net.Uri
 import android.widget.TextView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,15 +21,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,11 +38,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -55,12 +63,17 @@ import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.update.ReleaseRepository
+import com.waenhancer.update.ChangelogParser
+import com.waenhancer.update.ChangelogSection
 import com.waenhancer.update.WaexAsset
 import com.waenhancer.update.WaexRelease
 import io.noties.markwon.Markwon
 import io.noties.markwon.html.HtmlPlugin
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.update.normalizeVersion
 
 @Composable
 fun ChangelogScreen() {
@@ -123,25 +136,61 @@ fun ChangelogScreen() {
             ) {
                 if (releases.isEmpty()) item { Text("No releases found.", color = colors.onSurfaceVariant) }
                 items(releases, key = { it.tagName }) { release ->
-                    val installed = release.version.equals(com.waenhancer.update.normalizeVersion(installedVersion), true)
+                    val installed = release.version.equals(normalizeVersion(installedVersion), true)
                     val comparison = ReleaseRepository.versionCode(release.version).compareTo(ReleaseRepository.versionCode(installedVersion))
                     val allowDowngrade = preferences.getBoolean("downgrades_enabled", false)
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceContainerLow,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth().clickable { navController.navigateTo(Screen.ReleaseDetails(release.tagName)) }
                     ) {
                         Column(Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(release.tagName, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
-                                if (installed) Badge("Installed", Color(0xFF10B981))
-                                if (release.tagName == availableUpdate?.tagName) Badge("Update", colors.primary)
-                                Spacer(Modifier.weight(1f))
-                                Text(formatReleaseDate(release.publishedAt), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        release.name,
+                                        style = typography.headlineMd,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.onSurface
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        formatReleaseDate(release.publishedAt),
+                                        style = typography.bodyMd,
+                                        color = colors.onSurfaceVariant,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                IconButton(onClick = { navController.navigateTo(Screen.ReleaseDetails(release.tagName)) }) {
+                                    Icon(
+                                        WaexIcons.ChevronRight,
+                                        contentDescription = "View release details",
+                                        tint = colors.onSurfaceVariant
+                                    )
+                                }
                             }
-                            Spacer(Modifier.height(12.dp))
-                            ChangelogBodyView(release.body)
+                            if (installed || release.tagName == availableUpdate?.tagName) {
+                                Row(Modifier.padding(top = 8.dp)) {
+                                    if (installed) Badge("Installed", Color(0xFF10B981))
+                                    if (release.tagName == availableUpdate?.tagName) Badge("Update", colors.primary)
+                                }
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            Surface(
+                                shape = radius.bentoCardShape,
+                                color = colors.surfaceDim,
+                                border = BorderStroke(
+                                    1.dp,
+                                    colors.outlineVariant.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                ChangelogBodyView(
+                                    body = release.body,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                )
+                            }
                             if ((release.assets.isNotEmpty() || release.downloadUrl != null) && (comparison > 0 || (comparison < 0 && allowDowngrade))) {
                                 Spacer(Modifier.height(14.dp))
                                 Button(
@@ -188,7 +237,7 @@ fun ChangelogScreen() {
         val isDowngrade = ReleaseRepository.versionCode(rel.version) < ReleaseRepository.versionCode(installedVersion)
         UpdateDownloadSheet(
             url = asset.downloadUrl,
-            version = "${rel.tagName} (${asset.buildTypeLabel})",
+            version = rel.version,
             useRoot = isDowngrade || preferences.getBoolean("root_auto_install", false),
             onDismiss = { activeDownload = null }
         )
@@ -203,106 +252,99 @@ private fun Badge(label: String, color: Color) {
     }
 }
 
-data class ParsedCategory(
-    val name: String,
-    val items: MutableList<String> = mutableListOf()
-)
-
-fun parseChangelogBody(body: String): List<ParsedCategory> {
-    val categories = mutableListOf<ParsedCategory>()
-    if (body.isBlank()) return categories
-    var currentCategory: ParsedCategory? = null
-    val lines = body.split("\n")
-    for (rawLine in lines) {
-        val line = rawLine.trim()
-        if (line.isEmpty()) continue
-
-        if (line.startsWith("[") && line.endsWith("]")) {
-            val catName = line.substring(1, line.length - 1).trim()
-            currentCategory = categories.firstOrNull { it.name.equals(catName, ignoreCase = true) }
-                ?: ParsedCategory(catName).also { categories.add(it) }
-            continue
-        }
-
-        var text = line
-        if (text.startsWith("-") || text.startsWith("*")) {
-            text = text.substring(1).trim()
-        }
-
-        var itemCategoryName = currentCategory?.name ?: "Added"
-        if (text.startsWith("[")) {
-            val closeBracket = text.indexOf(']')
-            if (closeBracket > 0) {
-                itemCategoryName = text.substring(1, closeBracket).trim()
-                text = text.substring(closeBracket + 1).trim()
-            }
-        }
-
-        if (text.startsWith("-") || text.startsWith("*")) {
-            text = text.substring(1).trim()
-        }
-
-        if (text.isNotEmpty()) {
-            val target = categories.firstOrNull { it.name.equals(itemCategoryName, ignoreCase = true) }
-                ?: ParsedCategory(itemCategoryName).also { categories.add(it) }
-            target.items.add(text)
+@Composable
+fun ChangelogBodyView(
+    body: String,
+    modifier: Modifier = Modifier,
+    maxItemsPerCategory: Int = Int.MAX_VALUE,
+    initiallyExpanded: Boolean = false
+) {
+    val sections = remember(body) { ChangelogParser.parse(body) }
+    val expandedStates = remember(sections, initiallyExpanded) {
+        mutableStateMapOf<String, Boolean>().apply {
+            sections.forEach { this[it.title] = initiallyExpanded }
         }
     }
-    return categories
+    val colors = WaexTheme.colors
+
+    if (sections.isEmpty()) {
+        MarkdownText(
+            body.ifBlank { "No changelog available." },
+            colors.onSurfaceVariant.toArgb(),
+            maxLines = 8,
+            modifier = modifier.padding(vertical = 8.dp)
+        )
+    } else {
+        Column(modifier = modifier) {
+            sections.forEachIndexed { index, section ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = colors.outlineVariant.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                val expanded = expandedStates[section.title] ?: initiallyExpanded
+                ChangelogSectionRow(
+                    section = section.copy(items = section.items.take(maxItemsPerCategory)),
+                    expanded = expanded,
+                    onToggle = { expandedStates[section.title] = !expanded }
+                )
+            }
+        }
+    }
 }
 
 @Composable
-fun ChangelogBodyView(body: String, maxItemsPerCategory: Int = Int.MAX_VALUE) {
-    val categories = remember(body) { parseChangelogBody(body) }
+private fun ChangelogSectionRow(
+    section: ChangelogSection,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
+    val rotation by animateFloatAsState(if (expanded) 90f else 0f, label = "sectionChevron")
 
-    if (categories.isEmpty()) {
-        MarkdownText(body, colors.onSurfaceVariant.toArgb(), maxLines = 8)
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            categories.forEach { category ->
-                val badgeBg = when (category.name.lowercase(Locale.US)) {
-                    "added" -> Color(0xFF10B981)
-                    "improvements" -> Color(0xFF3B82F6)
-                    "fixes" -> Color(0xFFEF4444)
-                    else -> Color(0xFF64748B)
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(badgeBg)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = category.name.uppercase(Locale.US),
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(section.title, style = typography.titleMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "(${section.items.size})",
+                style = typography.bodySm,
+                color = colors.onSurfaceVariant,
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                WaexIcons.ChevronRight,
+                contentDescription = if (expanded) "Collapse ${section.title}" else "Expand ${section.title}",
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.rotate(rotation)
+            )
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                section.items.forEach { item ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                        Box(
+                            Modifier.padding(top = 7.dp).size(4.dp).background(
+                                colors.onSurfaceVariant,
+                                CircleShape
+                            )
                         )
-                    }
-
-                    category.items.take(maxItemsPerCategory).forEach { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "•",
-                                color = colors.primary,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.Bold
-                            )
-                            MarkdownText(
-                                markdown = item,
-                                textColor = colors.onSurface.toArgb(),
-                                maxLines = 4
-                            )
-                        }
+                        Spacer(Modifier.width(10.dp))
+                        MarkdownText(item, colors.onSurface.toArgb(), maxLines = 4)
                     }
                 }
             }
@@ -311,7 +353,12 @@ fun ChangelogBodyView(body: String, maxItemsPerCategory: Int = Int.MAX_VALUE) {
 }
 
 @Composable
-internal fun MarkdownText(markdown: String, textColor: Int, maxLines: Int = Int.MAX_VALUE) {
+internal fun MarkdownText(
+    markdown: String,
+    textColor: Int,
+    maxLines: Int = Int.MAX_VALUE,
+    modifier: Modifier = Modifier
+) {
     AndroidView(
         factory = { context ->
             TextView(context).apply {
@@ -328,7 +375,7 @@ internal fun MarkdownText(markdown: String, textColor: Int, maxLines: Int = Int.
             (view.tag as Markwon).setMarkdown(view, markdown.trim())
             LinkifyCompat.addLinks(view, PatternsCompat.WEB_URL, null)
         },
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     )
 }
 
@@ -337,6 +384,6 @@ internal fun formatReleaseDate(value: String): String = try {
     SimpleDateFormat("MMM dd, yyyy", Locale.US).format(input.parse(value)!!)
 } catch (_: Exception) { value.substringBefore('T') }
 
-internal fun openUrl(context: android.content.Context, url: String) {
+internal fun openUrl(context: Context, url: String) {
     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
