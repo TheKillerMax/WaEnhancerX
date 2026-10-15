@@ -37,6 +37,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -203,6 +205,7 @@ fun MainDashboardScreen(
     }
 
     var showCustomizationSoon by remember { mutableStateOf(false) }
+    var showResetSettingsDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -537,47 +540,128 @@ fun MainDashboardScreen(
                 border = BorderStroke(1.dp, colors.outline),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
+                Column(
                     modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(radius.defaultShape)
-                            .background(colors.surfaceDim)
-                            .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable(onClick = startBackup)
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Backup", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(radius.defaultShape)
+                                .background(colors.surfaceDim)
+                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .clickable(onClick = startBackup)
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "Backup", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(radius.defaultShape)
+                                .background(colors.surfaceDim)
+                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .clickable(onClick = startRestore)
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "Restore", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            }
                         }
                     }
 
+                    // Reset Settings Button under Backup & Restore
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .clip(radius.defaultShape)
                             .background(colors.surfaceDim)
                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable(onClick = startRestore)
+                            .clickable { showResetSettingsDialog = true }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = WaexIcons.Clear,
+                                contentDescription = null,
+                                tint = colors.error,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Restore", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                            Text(
+                                text = "Reset Settings",
+                                style = typography.bodyMd,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.error
+                            )
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(80.dp))
+        }
+
+        // Reset Settings Confirmation Dialog
+        if (showResetSettingsDialog) {
+            AlertDialog(
+                onDismissRequest = { showResetSettingsDialog = false },
+                title = {
+                    Text(
+                        text = "Reset All Settings",
+                        style = typography.headlineMd
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Are you sure you want to reset all module settings to their default values? All customizations and preferences will be cleared.",
+                        style = typography.bodyMd,
+                        color = colors.onSurfaceVariant
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val savedTheme = preferenceManager.getString("app_theme_mode", "System")
+                            val publicStore = PreferenceStores.publicStore(context)
+                            publicStore.edit().clear().commit()
+                            if (savedTheme != null) {
+                                preferenceManager.putString("app_theme_mode", savedTheme)
+                            }
+                            preferenceManager.remove("dummy_notify")
+                            refreshTrigger++
+                            showResetSettingsDialog = false
+                            Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text(
+                            text = "Reset",
+                            color = colors.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetSettingsDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                containerColor = colors.surface
+            )
         }
 
         // Customization Coming Soon Modal Overlay
