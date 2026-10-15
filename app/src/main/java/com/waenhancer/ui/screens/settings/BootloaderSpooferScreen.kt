@@ -341,7 +341,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
                     listOf(
                         "Basic integrity supported" to report.basicIntegrity,
                         "Device integrity supported" to report.deviceIntegrity,
-                        "Strong integrity supported" to false
+                        "Strong integrity supported" to report.strongIntegritySupported
                     )
                 )
             }
