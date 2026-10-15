@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -32,8 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.waenhancer.app.R
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.LocalThemeMode
 import com.waenhancer.ui.designsystem.LocalThemeModeUpdater
@@ -41,21 +46,28 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.utils.LocaleHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModuleSettingsScreen() {
     val navController = LocalWaexNavController.current
+    val context = LocalContext.current
     val themeMode = LocalThemeMode.current
     val updateThemeMode = LocalThemeModeUpdater.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     var showThemeSheet by remember { mutableStateOf(false) }
+    var showLanguageSheet by remember { mutableStateOf(false) }
+
+    var currentLangCode by remember {
+        mutableStateOf(LocaleHelper.getSelectedLanguageCode(context))
+    }
 
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Module Settings",
+                title = stringResource(R.string.module_settings_title),
                 onBackClick = navController::popBack
             )
         },
@@ -70,15 +82,22 @@ fun ModuleSettingsScreen() {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             ModuleSettingsTile(
-                title = "App Theme",
-                description = "Choose how WAEX looks",
+                title = stringResource(R.string.app_theme_title),
+                description = stringResource(R.string.app_theme_desc),
                 value = themeMode,
                 icon = themeIcon(themeMode),
                 onClick = { showThemeSheet = true }
             )
             ModuleSettingsTile(
-                title = "Update Settings",
-                description = "Configure checks, installation, and downgrades",
+                title = stringResource(R.string.app_language_title),
+                description = stringResource(R.string.app_language_desc),
+                value = LocaleHelper.getLanguageDisplayName(currentLangCode),
+                icon = Icons.Rounded.Language,
+                onClick = { showLanguageSheet = true }
+            )
+            ModuleSettingsTile(
+                title = stringResource(R.string.update_settings_title),
+                description = stringResource(R.string.update_settings_desc),
                 icon = WaexIcons.SystemUpdate,
                 onClick = { navController.navigateTo(Screen.UpdateSettings) }
             )
@@ -113,7 +132,7 @@ fun ModuleSettingsScreen() {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Choose app theme",
+                    text = stringResource(R.string.choose_app_theme),
                     style = WaexTheme.typography.titleLg,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface,
@@ -151,6 +170,89 @@ fun ModuleSettingsScreen() {
                                 color = if (selected) colors.primary else colors.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
+                            if (selected) {
+                                Icon(
+                                    imageVector = WaexIcons.Check,
+                                    contentDescription = "Selected",
+                                    tint = colors.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLanguageSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
+            onDismissRequest = { showLanguageSheet = false },
+            sheetState = sheetState,
+            containerColor = colors.surface,
+            shape = WaexTheme.radius.bottomSheetShape,
+            dragHandle = {
+                Box(
+                    Modifier
+                        .padding(top = 10.dp, bottom = 6.dp)
+                        .size(width = 36.dp, height = 4.dp)
+                        .background(colors.outlineVariant, RoundedCornerShape(2.dp))
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.choose_app_language),
+                    style = WaexTheme.typography.titleLg,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                LocaleHelper.SUPPORTED_LANGUAGES.forEach { lang ->
+                    val selected = lang.code == currentLangCode
+                    Surface(
+                        shape = WaexTheme.radius.cardShape,
+                        color = if (selected) colors.primary.copy(alpha = 0.12f) else colors.surfaceContainerLow,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (selected) colors.primary else colors.outlineVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            currentLangCode = lang.code
+                            LocaleHelper.applyLanguage(context, lang.code)
+                            showLanguageSheet = false
+                            (context as? android.app.Activity)?.recreate()
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = lang.nativeName,
+                                    style = WaexTheme.typography.bodyLg,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selected) colors.primary else colors.onSurface
+                                )
+                                if (lang.englishName != lang.nativeName) {
+                                    Text(
+                                        text = lang.englishName,
+                                        style = WaexTheme.typography.bodySm,
+                                        color = colors.onSurfaceVariant
+                                    )
+                                }
+                            }
                             if (selected) {
                                 Icon(
                                     imageVector = WaexIcons.Check,
@@ -241,8 +343,11 @@ private fun themeIcon(mode: String) = when (mode) {
     else -> WaexIcons.AutoMode
 }
 
+@Composable
 private fun themeLabel(mode: String) = when (mode) {
-    "System" -> "Follow system"
-    "Monet" -> "Dynamic colors (Monet)"
+    "System" -> stringResource(R.string.theme_follow_system)
+    "Light" -> stringResource(R.string.theme_light)
+    "Dark" -> stringResource(R.string.theme_dark)
+    "Monet" -> stringResource(R.string.theme_monet)
     else -> mode
 }

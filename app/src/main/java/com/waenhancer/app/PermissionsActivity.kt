@@ -109,6 +109,10 @@ class PermissionsActivity : ComponentActivity() {
     @Volatile private var rootCheckComplete = false
     @Volatile private var rootGranted = false
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(com.waenhancer.utils.LocaleHelper.wrapContext(newBase))
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

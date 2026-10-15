@@ -17,8 +17,16 @@ class WaexApp : Application() {
             notifyHookedPackages(key)
         }
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.waenhancer.utils.LocaleHelper.wrapContext(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
+        val lang = com.waenhancer.utils.LocaleHelper.getSelectedLanguageCode(this)
+        if (lang != "system") {
+            com.waenhancer.utils.LocaleHelper.applyLanguage(this, lang)
+        }
         PreferenceStores.publicStore(this).apply {
             registerOnSharedPreferenceChangeListener(preferenceListener)
             val installedVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "0"

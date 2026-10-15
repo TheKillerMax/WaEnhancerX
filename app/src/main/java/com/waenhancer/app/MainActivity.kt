@@ -50,6 +50,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var preferenceManager: WaexPreferenceManager
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.waenhancer.utils.LocaleHelper.wrapContext(newBase))
+    }
+
     private var currentNavController: WaexNavController? = null
     private var rootCheckAttempt by mutableIntStateOf(0)
     private var rootState by mutableStateOf(RootAccessState.Checking)

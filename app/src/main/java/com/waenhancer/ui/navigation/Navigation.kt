@@ -183,15 +183,15 @@ val LocalWaexPreferenceManager = staticCompositionLocalOf<com.waenhancer.core.pr
 
 enum class BottomTab(
     val id: String,
-    val label: String,
+    val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val screen: Screen
 ) {
-    HOME("home", "Home", WaexIcons.GridView, Screen.MainDashboard),
-    PRIVACY("privacy", "Controls", WaexIcons.Security, Screen.GlobalPrivacySettings),
-    MEDIA("media", "Media", WaexIcons.Image, Screen.MediaStatusHub),
-    AUTOMATION("automation", "Automation", WaexIcons.AutoAwesome, Screen.AutomationTasker),
-    STYLES("styles", "Styles", WaexIcons.Palette, Screen.StylesSettings)
+    HOME("home", com.waenhancer.app.R.string.nav_home, WaexIcons.GridView, Screen.MainDashboard),
+    PRIVACY("privacy", com.waenhancer.app.R.string.nav_controls, WaexIcons.Security, Screen.GlobalPrivacySettings),
+    MEDIA("media", com.waenhancer.app.R.string.nav_media, WaexIcons.Image, Screen.MediaStatusHub),
+    AUTOMATION("automation", com.waenhancer.app.R.string.nav_automation, WaexIcons.AutoAwesome, Screen.AutomationTasker),
+    STYLES("styles", com.waenhancer.app.R.string.nav_styles, WaexIcons.Palette, Screen.StylesSettings)
 }
 
 @Composable
@@ -465,7 +465,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                    Text(text = "Our Supporters", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.stargazers_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -485,7 +485,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = "Module Settings", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.module_settings_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -505,7 +505,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = "Supported Versions", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_supported_versions), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -519,7 +519,7 @@ fun MainContainerScreen() {
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 Icon(WaexIcons.Security, contentDescription = null,
                                                     tint = colors.primary, modifier = Modifier.size(16.dp))
-                                                Text("Bootloader Spoofer", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_bootloader_spoofer), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -540,7 +540,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = "About & Credits", style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.about_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -656,14 +656,14 @@ fun MainContainerScreen() {
                                         ) {
                                             Icon(
                                                 imageVector = tab.icon,
-                                                contentDescription = tab.label,
+                                                contentDescription = androidx.compose.ui.res.stringResource(tab.labelRes),
                                                 tint = contentColor,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = tab.label,
+                                            text = androidx.compose.ui.res.stringResource(tab.labelRes),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Medium,
                                             color = contentColor,

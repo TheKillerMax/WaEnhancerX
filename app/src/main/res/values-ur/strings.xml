@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wa Enhancer X</string>
+    <string name="xposed_description">واٹس ایپ اور واٹس ایپ بزنس کے لیے ماڈیولر اینہانسمنٹ فریم ورک۔</string>
+    <string name="about_title">کے بارے میں اور کریڈٹ</string>
+    <string name="maintainer">mubashardev</string>
+    <string name="developer">مبشر دیو نے تیار کیا۔</string>
+    <string name="about_section_title">کے بارے میں</string>
+    <string name="about_info">WaEnhancer X ایک اعلی درجے کا Xposed ماڈیول ہے جسے مبشر دیو نے ڈیزائن اور تیار کیا ہے جو جدید ترین رازداری کی خصوصیات، جمالیاتی حسب ضرورت اور طاقتور ٹولز کے ساتھ آپ کے WhatsApp کے تجربے کو بلند کرتا ہے۔</string>
+    <string name="installation">تنصیب</string>
+    <string name="installation_desc">1. یقینی بنائیں کہ آپ کا آلہ روٹ ہے۔\n2. اپنے آلے پر Xposed Framework انسٹال کریں۔\n3. ایکشن سیکشن سے WaEnhancer X ڈاؤن لوڈ کریں۔\n4. WaEnhancer X APK انسٹال کریں۔\n5. Xposed انسٹالر ایپ میں WaEnhancer X ماڈیول کو فعال کریں۔</string>
+    <string name="community">کمیونٹی</string>
+    <string name="go_to_telegram">ٹیلیگرام چینل</string>
+    <string name="go_to_github">گٹ ہب کے مسائل</string>
+    <string name="contributors">شراکت دار</string>
+    <string name="stargazers_title">ہمارے حامی</string>
+    <string name="stargazers_thank_you">WaEnhancerX کی حمایت کرنے کا شکریہ</string>
+    <string name="stargazers_message">ہر ستارہ اس منصوبے کو دریافت کرنے میں زیادہ سے زیادہ لوگوں کی مدد کرتا ہے۔ یہ دیوار ہر اس شخص کے لیے ہے جس نے اپنی حمایت ظاہر کی ہے۔</string>
+    <string name="support">حمایت
+
+اگر آپ کو کوئی مسئلہ درپیش ہے یا آپ کے پاس WaEnhancer X کے بارے میں سوالات ہیں، تو براہ کرم ٹیلیگرام پر جائیں۔</string>
+    <string name="support_desc">If you encounter any issues or have questions about WaEnhancer X, please visit Telegram.</string>
+    <string name="license">لائسنس</string>
+    <string name="license_desc">یہ پروجیکٹ اپاچی لائسنس 2.0 کے تحت لائسنس یافتہ ہے - تفصیلات کے لیے LICENSE فائل دیکھیں۔\n\nWaEnhancer X کو مبشر دیو نے آزادانہ طور پر تیار کیا ہے۔ یہ WhatsApp Inc. یا Meta Platforms, Inc کے ساتھ منسلک، اس کی توثیق یا کسی بھی طرح سے وابستہ نہیں ہے۔ یہ پروجیکٹ تحقیق اور تعلیمی مقاصد کے لیے \"جیسا ہے\" فراہم کیا گیا ہے۔ اپنی ذمہ داری پر استعمال کریں۔ اس ٹول کا غلط استعمال قانونی نتائج کا باعث بن سکتا ہے۔</string>
+    <string name="show_message_device_source">میسج ڈیوائس کا ماخذ دکھائیں۔</string>
+    <string name="show_message_device_source_sum">یہ ظاہر کرتا ہے کہ آیا کوئی پیغام بنیادی ڈیوائس سے بھیجا گیا تھا یا کسی منسلک ڈیوائس سے</string>
+    <string name="message_sent_via_phone">یہ پیغام فون کے ذریعے بھیجا گیا تھا۔</string>
+    <string name="message_sent_via_linked_device">یہ پیغام لنکڈ ڈیوائس کے ذریعے بھیجا گیا تھا۔</string>
+    <string name="nav_home">گھر</string>
+    <string name="nav_controls">کنٹرول</string>
+    <string name="nav_media">میڈیا</string>
+    <string name="nav_automation">آٹومیشن</string>
+    <string name="nav_styles">انداز</string>
+    <string name="nav_search">تلاش کریں۔</string>
+    <string name="module_settings_title">ماڈیول کی ترتیبات</string>
+    <string name="app_theme_title">ایپ تھیم
+
+[32]] منتخب کریں کہ WAEX کیسا لگتا ہے۔</string>
+    <string name="app_theme_desc">Choose how WAEX looks</string>
+    <string name="choose_app_theme">ایپ تھیم کا انتخاب کریں۔</string>
+    <string name="theme_follow_system">نظام کی پیروی کریں۔</string>
+    <string name="theme_light">روشنی</string>
+    <string name="theme_dark">اندھیرا</string>
+    <string name="theme_monet">متحرک رنگ (مونیٹ)</string>
+    <string name="update_settings_title">اپ ڈیٹ کی ترتیبات</string>
+    <string name="update_settings_desc">چیک، انسٹالیشن اور ڈاون گریڈز کو ترتیب دیں۔</string>
+    <string name="app_language_title">ایپ کی زبان</string>
+    <string name="app_language_desc">ڈسپلے کی زبان تبدیل کریں۔</string>
+    <string name="choose_app_language">زبان کا انتخاب کریں۔</string>
+    <string name="language_default">سسٹم ڈیفالٹ</string>
+    <string name="action_back">واپس</string>
+    <string name="action_save">محفوظ کریں۔</string>
+    <string name="action_cancel">منسوخ کریں۔</string>
+    <string name="action_ok">ٹھیک ہے۔</string>
+    <string name="action_reset">دوبارہ ترتیب دیں۔</string>
+    <string name="action_delete">حذف کریں۔</string>
+    <string name="action_add">شامل کریں۔</string>
+    <string name="action_edit">ترمیم کریں۔</string>
+    <string name="action_apply">درخواست دیں۔</string>
+    <string name="action_search">تلاش کریں۔</string>
+    <string name="search_placeholder">تلاش کی خصوصیات اور ترجیحات...</string>
+    <string name="no_results_found">کوئی مماثل خصوصیات نہیں ملیں۔</string>
+    <string name="no_results_description">مختلف مطلوبہ الفاظ کے ساتھ تلاش کرنے کی کوشش کریں یا تمام ٹیبز میں خصوصیات کو براؤز کریں۔</string>
+    <string name="filter_all">تمام</string>
+    <string name="requires_pro">پرو کی ضرورت ہے۔</string>
+    <string name="pro_feature_tag">پرو</string>
+    <string name="dashboard_title">WaEnhancerX</string>
+    <string name="module_active">ماڈیول ایکٹو</string>
+    <string name="module_inactive">ماڈیول غیر فعال</string>
+    <string name="module_active_version">ماڈیول فعال • v%s</string>
+    <string name="module_inactive_version">ماڈیول غیر فعال • v%s</string>
+    <string name="unsupported_target">غیر تعاون یافتہ ہدف</string>
+    <string name="backup_btn">بیک اپ</string>
+    <string name="restore_btn">بحال کریں۔</string>
+    <string name="reset_settings_btn">ترتیبات کو دوبارہ ترتیب دیں۔</string>
+    <string name="reset_settings_confirm_title">تمام ترتیبات کو دوبارہ ترتیب دیں۔</string>
+    <string name="reset_settings_confirm_msg">کیا آپ واقعی تمام ماڈیول سیٹنگز کو ان کی ڈیفالٹ ویلیوز پر سیٹ کرنا چاہتے ہیں؟ تمام تخصیصات اور ترجیحات کو صاف کر دیا جائے گا۔</string>
+    <string name="system_diagnostics_title">نظام کی تشخیص</string>
+    <string name="live_health_overview">صحت کا براہ راست جائزہ</string>
+    <string name="view_diagnostic_details">تشخیصی تفصیلات دیکھیں</string>
+    <string name="supported_versions_catalog">تائید شدہ ورژن کیٹلاگ</string>
+    <string name="customization_coming_soon_title">حسب ضرورت</string>
+    <string name="customization_coming_soon_desc">حسب ضرورت ترتیبات جلد آرہی ہیں۔</string>
+    <string name="hooks_injected">ہکس انجیکشن
+
+[78] ہکس انجکشن نہیں</string>
+    <string name="hooks_not_injected">Hooks not injected</string>
+    <string name="view_all">سبھی دیکھیں</string>
+    <string name="title_conversation_messages">گفتگو اور پیغامات</string>
+    <string name="title_supported_versions">تائید شدہ ورژن</string>
+    <string name="title_filter_items">آئٹمز کو ID کے لحاظ سے فلٹر کریں۔</string>
+    <string name="title_floating_bottom_bar">تیرتی نیچے کی بار</string>
+    <string name="title_license_plan">لائسنس اور منصوبہ</string>
+    <string name="title_tasker_guide">ٹاسکر انٹیگریشن گائیڈ</string>
+    <string name="title_tasker_history">ٹاسکر پر عملدرآمد کی تاریخ</string>
+    <string name="title_audio_ai_summary">آڈیو اور اے آئی کا خلاصہ</string>
+    <string name="title_bootloader_spoofer">بوٹ لوڈر سپوفر</string>
+    <string name="title_system_health">نظام صحت</string>
+    <string name="title_changelog">چینج لاگ</string>
+    <string name="title_per_contact_privacy">فی رابطہ رازداری</string>
+    <string name="title_deleted_messages">حذف شدہ پیغامات والٹ</string>
+    <string name="feat_always_online_title">ہمیشہ آن لائن</string>
+    <string name="feat_always_online_desc">آپ کو آن لائن دکھائیں چاہے آپ WhatsApp کو چھوٹا کر دیں (اگر آپ اسے حالیہ سے ہٹا دیں تو کام نہیں کرے گا)</string>
+    <string name="feat_freezelastseen_title">منجمد آخری بار دیکھا
+
+آپ کا آخری بار دیکھا جانے والا وقت منجمد ہو جائے گا۔</string>
+    <string name="feat_freezelastseen_desc">Your last seen time will be frozen</string>
+    <string name="feat_ghostmode_t_title">ٹائپنگ چھپائیں۔
+
+صارفین یہ نہیں دیکھ سکتے کہ آپ ٹائپ کر رہے ہیں۔</string>
+    <string name="feat_ghostmode_t_desc">Users cannot see that you are typing</string>
+    <string name="feat_ghostmode_r_title">ریکارڈنگ آڈیو چھپائیں۔
+
+صارفین یہ نہیں دیکھ سکتے کہ آپ آڈیو ریکارڈ کر رہے ہیں۔</string>
+    <string name="feat_ghostmode_r_desc">Users cannot see that you are recording audio</string>
+    <string name="feat_stealth_status_view_title">اسٹیٹس ویو کو چھپائیں۔</string>
+    <string name="feat_stealth_status_view_desc">صارفین کو جانے بغیر اسٹیٹس دیکھیں</string>
+    <string name="feat_hide_read_receipts_title">بلیو ٹِکس چھپائیں۔</string>
+    <string name="feat_hide_read_receipts_desc">پیغامات کو بات چیت کی سکرین کے اندر صارفین کو جانے بغیر دیکھیں</string>
+    <string name="feat_hideread_group_title">گروپس میں بلیو ٹک چھپائیں۔</string>
+    <string name="feat_hideread_group_desc">گروپ اسکرین میں پیغامات کو صارفین کے علم میں لائے بغیر دیکھیں</string>
+    <string name="feat_blueonreply_title">جواب دینے پر بلیو ٹِکس بھیجیں۔</string>
+    <string name="feat_blueonreply_desc">پیغام کا جواب دینے کے بعد بلیو ٹِکس بھیجتا ہے۔</string>
+    <string name="feat_seentick_title">بلیو ٹک بھیجنے کے لیے بٹن دکھائیں۔</string>
+    <string name="feat_seentick_desc">بلیو ٹک بھیجنے کے لیے بٹن دکھائیں (پڑھے/دیکھے ہوئے کے بطور نشان زد کریں)</string>
+    <string name="feat_hide_delivery_receipts_title">چھپائیں ڈیلیور
+
+صارفین کو معلوم نہیں ہوگا کہ ان کے پیغامات آپ تک پہنچ چکے ہیں۔</string>
+    <string name="feat_hide_delivery_receipts_desc">Users will not know that their messages have been delivered to you</string>
+    <string name="feat_hide_seen_receipts_title">آڈیو کو چھپائیں۔
+
+سننے پر آڈیو ریڈنگ بھیجنے کو چھپاتا ہے۔</string>
+    <string name="feat_hide_seen_receipts_desc">Hides the sending of audio reading when listening to it</string>
+    <string name="feat_hideonceseen_title">ایک بار دیکھا جانے والا منظر چھپائیں۔
+
+اس منظر کو چھپائیں ایک میڈیا نے دیکھا ہے۔</string>
+    <string name="feat_hideonceseen_desc">Hide that view one media has been seen</string>
+    <string name="feat_anti_revoke_title">منسوخی مخالف پیغامات</string>
+    <string name="feat_anti_revoke_desc">آپ کے پیغامات کو حذف نہیں کیا جائے گا۔</string>
+    <string name="feat_hide_anti_revoke_title">چیٹ مینو میں Hide Anti-Revoke شامل کریں۔
+
+اس چیٹ کے لیے حذف شدہ پیغامات کو چھپانے کے لیے گفتگو کے مینو میں آپشن شامل کریں۔
+
+میرے منسوخ شدہ پیغامات رکھیں</string>
+    <string name="feat_hide_anti_revoke_desc">Add option to conversation menu to hide deleted messages for that chat</string>
+    <string name="feat_preserve_own_revoke_title">Keep My Revoked Messages</string>
+    <string name="feat_preserve_own_revoke_desc">وصول کنندگان کے لیے حذف کرتے وقت اپنی مقامی کاپی ڈیلیٹ فار ایورین کے بعد اپنے پاس رکھیں</string>
+    <string name="feat_antirevokestatus_title">اینٹی ڈیلیٹ اسٹیٹس</string>
+    <string name="feat_antirevokestatus_desc">وہ سٹیٹس دیکھیں جنہیں صارفین نے حذف کر دیا ہے۔</string>
+    <string name="feat_anti_view_once_title">ایک بار لا محدود دیکھیں</string>
+    <string name="feat_anti_view_once_desc">آپ کو ایک بار میڈیا کو متعدد بار دیکھنے کی اجازت دیتا ہے۔</string>
+    <string name="feat_locked_chats_enhancer_title">بہتر مقفل چیٹس</string>
+    <string name="feat_locked_chats_enhancer_desc">رابطہ کی فہرست سے اطلاعات اور رابطوں کو چھپا کر مقفل چیٹس کو بہتر بنائیں</string>
+    <string name="feat_typearchive_title">آرکائیو شدہ چیٹس کو چھپائیں۔</string>
+    <string name="feat_typearchive_desc">آرکائیو شارٹ کٹ کو چھپائیں اور محفوظ شدہ چیٹس کو کھولنے کا طریقہ منتخب کریں۔</string>
+    <string name="feat_dnd_mode_title">ڈی این ڈی موڈ
+
+جب ڈسٹرب نہ کریں موڈ آن ہو تو آپ پیغامات بھیجنے یا وصول کرنے سے قاصر ہوں گے۔</string>
+    <string name="feat_dnd_mode_desc">When Do Not Disturb mode is on, you will be unable to send or receive messages</string>
+    <string name="feat_hide_chats_title">لاک شدہ چیٹس کو چھپائیں۔</string>
+    <string name="feat_hide_chats_desc">مقفل چیٹس کو چھپائیں اور انہیں کھولنے کا طریقہ منتخب کریں۔</string>
+    <string name="feat_custom_privacy_title">اپنی مرضی کے مطابق رازداری فی رابطہ</string>
+    <string name="feat_custom_privacy_desc">رابطہ معلومات کی سکرین پر اپنی مرضی کے مطابق پرائیویسی بٹن کو چالو کریں۔
+
+[137]] بلاک کالز</string>
+    <string name="feat_call_privacy_title">Block Calls</string>
+    <string name="feat_call_privacy_desc">رازداری کی قسم کی بنیاد پر واٹس ایپ کالز کو مسدود کریں۔</string>
+    <string name="feat_autonext_status_title">آٹو اسکیپ اسٹیٹس کو غیر فعال کریں۔
+
+موجودہ حالت کو خود بخود اگلی حالت میں جانے سے روکتا ہے۔
+
+اپنی حیثیت دیکھ کر ٹوسٹ دکھائیں۔
+
+اگر کوئی آپ کی حیثیت دیکھتا ہے تو ٹوسٹ دکھاتا ہے۔
+
+[143] مخالف غائب ہونے والے پیغامات</string>
+    <string name="feat_autonext_status_desc">Prevents the current status from advancing automatically to the next one</string>
+    <string name="feat_toast_viewed_status_title">Show toast on viewed your status</string>
+    <string name="feat_toast_viewed_status_desc">Shows a toast if someone views your status</string>
+    <string name="feat_antidisappearing_title">Anti Disappearing Messages</string>
+    <string name="feat_antidisappearing_desc">آپ کے لیے عارضی پیغامات حذف نہیں کیے جائیں گے۔</string>
+    <string name="feat_toastdeleted_title">ڈیلیٹ میسج پر ٹوسٹ نوٹیفکیشن دکھائیں۔</string>
+    <string name="feat_toastdeleted_desc">اگر کوئی رابطہ کوئی پیغام حذف کرتا ہے تو ٹوسٹ کی اطلاع دکھائیں۔
+
+اپنے پیغام کو دیکھے جانے پر ٹوسٹ دکھائیں۔
+
+اگر کوئی آپ کا پیغام دیکھتا ہے تو ٹوسٹ دکھاتا ہے۔
+
+گھوسٹ موڈ بٹن دکھائیں۔
+
+ہوم اسکرین ٹول بار پر گھوسٹ موڈ بٹن دکھائیں۔
+
+ڈی این ڈی بٹن دکھائیں۔</string>
+    <string name="feat_toast_viewed_message_title">Show toast on viewed your message</string>
+    <string name="feat_toast_viewed_message_desc">Shows a toast if someone views your message</string>
+    <string name="feat_ghostmode_title">Show Ghost Mode Button</string>
+    <string name="feat_ghostmode_desc">Show a Ghost Mode button on the home screen toolbar</string>
+    <string name="feat_show_dndmode_title">Show DND Button</string>
+    <string name="feat_show_dndmode_desc">ہوم اسکرین ٹول بار پر ڈی این ڈی موڈ کے لیے بٹن دکھائیں۔
+
+ری اسٹارٹ بٹن کو فعال کریں۔</string>
+    <string name="feat_restartbutton_title">Enable Restart Button</string>
+    <string name="feat_restartbutton_desc">ایپ کو دوبارہ شروع کرنے کے لیے ہوم اسکرین میں بٹن شامل کریں۔
+
+WAEX بٹن کو فعال کریں۔
+
+Wa Enhancer کھولنے کے لیے ہوم اسکرین یا واٹس ایپ سیٹنگز میں بٹن شامل کریں۔</string>
+    <string name="feat_open_wae_title">Enable WAEX Button</string>
+    <string name="feat_open_wae_desc">Add button in Home Screen or WhatsApp Settings to open Wa Enhancer</string>
+    <string name="feat_message_bomber_title">پیغام بمبار</string>
+    <string name="feat_message_bomber_desc">واٹس ایپ چیٹ کے اندر سے پیغامات کی ایک مختصر، تاخیر سے ترتیب بھیجیں</string>
+    <string name="feat_message_device_source_title">پیغام آلہ کا ماخذ دکھائیں۔</string>
+    <string name="feat_message_device_source_desc">دکھاتا ہے کہ آیا کوئی پیغام بنیادی ڈیوائس سے بھیجا گیا تھا یا کسی منسلک ڈیوائس سے
+
+حذف کریں (میرے لیے)
+
+ڈیلیٹ فار می منتخب ہونے پر مقامی طور پر پیغامات کو برقرار رکھیں</string>
+    <string name="feat_preserve_delete_for_me_title">Delete (for me)</string>
+    <string name="feat_preserve_delete_for_me_desc">Retain messages locally when Delete for Me is selected</string>
+    <string name="feat_removeforwardlimit_title">فارورڈ کی حد کو ہٹا دیں۔</string>
+    <string name="feat_removeforwardlimit_desc">5 چیٹس (عام) اور 1 چیٹ (متعدد بار) کے لیے آگے کی حد کو ہٹا دیں۔
+
+[165] اسٹیکر بھیجنے سے پہلے تصدیق
+
+[166] اسٹیکر بھیجنے سے پہلے ایک ڈائیلاگ دکھائیں۔
+
+کاپی شدہ پیغامات سے ڈاک ٹکٹ ہٹا دیں۔
+
+ایک سے زیادہ پیغامات کاپی کرنے پر نام اور تاریخ کو ہٹا دیتا ہے۔
+
+رد عمل کے لیے ڈبل کلک کو فعال کریں۔</string>
+    <string name="feat_sticker_confirm_alert_title">Confirmation Before Sending Sticker</string>
+    <string name="feat_sticker_confirm_alert_desc">Show a dialog before sending the sticker</string>
+    <string name="feat_stamp_copied_message_title">Remove Stamp from Copied Messages</string>
+    <string name="feat_stamp_copied_message_desc">Removes name and date when copying more than one message</string>
+    <string name="feat_doubletap2like_title">Enable Double Click to React</string>
+    <string name="feat_doubletap2like_desc">پیغام پر رد عمل ظاہر کرنے کے لیے اس پر ڈبل کلک کرنے کے امکان کو چالو کرتا ہے۔</string>
+    <string name="feat_doubletap2like_emoji_title">کسٹم ری ایکشن ایموجی</string>
+    <string name="feat_doubletap2like_emoji_desc">پیغام پر ڈبل کلک کرنے پر بھیجے گئے ڈیفالٹ ایموجی کو تبدیل کریں۔
+
+پہلے پیغام پر جائیں
+
+گفتگو کی سکرین میں پہلا پیغام چھوڑنے کے لیے ایک بٹن شامل کریں۔</string>
+    <string name="feat_jump_to_first_message_title">Jump to First Message</string>
+    <string name="feat_jump_to_first_message_desc">Add a button to skip the first message in the conversations screen</string>
+    <string name="feat_copy_status_text_title">کاپی اسٹیٹس کو فعال کریں۔
+
+سٹیٹس کی تفصیل اور کیپشن کو پکڑ کر کاپی کرنے کے امکان کو چالو کرتا ہے۔</string>
+    <string name="feat_copy_status_text_desc">Activates the possibility of copying the description and caption of statuses by holding on them</string>
+    <string name="feat_inline_translation_title">گوگل ٹرانسلیٹ کو فعال کریں۔</string>
+    <string name="feat_inline_translation_desc">واٹس ایپ کے مقامی مترجم کو گوگل ٹرانسلیٹ سے بدل دیا۔</string>
+    <string name="feat_direct_chat_dialer_title">نئی چیٹ</string>
+    <string name="feat_direct_chat_dialer_desc">نمبروں کو رابطوں میں محفوظ کیے بغیر براہ راست پیغام بھیجیں۔</string>
+    <string name="feat_unlimited_pinned_chats_title">پن شدہ چیٹس کی حد کو بند کریں۔</string>
+    <string name="feat_unlimited_pinned_chats_desc">3 پن والی چیٹس کی حد کو غیر فعال کریں۔</string>
+    <string name="feat_broadcast_tag_title">چیٹ براڈکاسٹ آئیکن دکھائیں۔
+
+اگر رابطہ نے براڈکاسٹ کے ذریعے پیغام بھیجا ہے تو ایک آئیکن دکھاتا ہے۔
+
+ایڈمن گروپ آئیکن دکھائیں۔
+
+اس صارف کے نام کے آگے ایڈمن آئیکن دکھائیں جو گروپ ایڈمن ہو۔</string>
+    <string name="feat_broadcast_tag_desc">Shows an icon if the contact sent a message via broadcast</string>
+    <string name="feat_group_admin_tools_title">Show Admin Group Icon</string>
+    <string name="feat_group_admin_tools_desc">Show an admin icon next to the name of the user who is the group admin</string>
+    <string name="feat_call_type_controller_title">کال کی قسم کے انتخاب کو فعال کریں۔</string>
+    <string name="feat_call_type_controller_desc">منتخب کرنے کے لیے ایک آپشن دکھائیں کہ آیا آپ فون یا واٹس ایپ کے ذریعے کال کرنا چاہتے ہیں۔</string>
+    <string name="feat_status_text_composer_title">متن کی حیثیت کے لیے حسب ضرورت رنگ
+
+اپنی مرضی کے مطابق کرنے کے لیے اسٹیٹس میں کلر سلیکٹر کو دبائیں اور پکڑیں۔</string>
+    <string name="feat_status_text_composer_desc">Press and hold on the color selector in the status to customize it</string>
+    <string name="feat_status_downloader_title">اسٹیٹس ڈاؤن لوڈ اور شیئر کریں۔
+
+اسٹیٹس کو شیئر کرنے اور ڈاؤن لوڈ کرنے کے لیے دو بٹن دکھاتا ہے۔</string>
+    <string name="feat_status_downloader_desc">Shows two buttons to share and download status</string>
+    <string name="feat_media_upload_quality_title">ایچ ڈی کوالٹی کی تصاویر اور ویڈیوز
+
+ڈیفالٹ کے ذریعے ایچ ڈی کوالٹی میں تصاویر اور ویڈیوز بھیجیں۔</string>
+    <string name="feat_media_upload_quality_desc">Send images and videos in HD quality by default</string>
+    <string name="feat_send_audio_as_voice_status_title">آڈیو ٹو وائس اسٹیٹس
+
+ایک مقامی آڈیو فائل چنیں اور اسے آواز کی حیثیت کے طور پر شائع کریں۔</string>
+    <string name="feat_send_audio_as_voice_status_desc">Pick a local audio file and publish it as a voice status</string>
+    <string name="feat_status_video_splitter_title">اسٹیٹس ویڈیو سپلٹر
+
+طویل ویڈیوز کو 30، 60، یا 90 سیکنڈ اسٹیٹس کلپس میں تقسیم کریں</string>
+    <string name="feat_status_video_splitter_desc">Split long videos into 30, 60, or 90 second status clips</string>
+    <string name="feat_file_size_spoofer_title">فائل سائز سپوفر</string>
+    <string name="feat_file_size_spoofer_desc">واٹس ایپ کے بھیجنے کے پیش نظارہ سے وصول کنندہ کو دکھائی جانے والی فائل کا سائز سیٹ کریں۔</string>
+    <string name="feat_call_recording_title">کال ریکارڈنگ</string>
+    <string name="feat_call_recording_desc">آنے والی اور جانے والی کالز (وائس اور ویڈیو) کو آڈیو کے طور پر ریکارڈ کریں</string>
+    <string name="feat_download_profile_title">پروفائل فوٹو ڈاؤن لوڈ کریں۔</string>
+    <string name="feat_download_profile_desc">مکمل ریزولوشن پروفائل تصویریں براہ راست ڈاؤن لوڈ کریں۔</string>
+    <string name="feat_download_view_once_title">ایک بار ڈاؤن لوڈ کریں۔
+
+میڈیا کو ایک بار دیکھنے کے لیے ڈاؤن لوڈ کرنے کے لیے بٹن دکھائیں۔
+
+میڈیا پیش نظارہ کو فعال کریں۔</string>
+    <string name="feat_download_view_once_desc">Show button to download view once media</string>
+    <string name="feat_media_preview_title">Enable Media Preview</string>
+    <string name="feat_media_preview_desc">ایک عارضی فائل میں میڈیا کا پیش نظارہ کرنے کے لیے ایک بٹن شامل کریں۔</string>
+    <string name="feat_always_typing_title">ٹائپنگ چھپائیں۔
+
+صارفین یہ نہیں دیکھ سکتے کہ آپ ٹائپ کر رہے ہیں۔
+
+ٹاسکر آٹومیشن کو فعال کریں۔</string>
+    <string name="feat_always_typing_desc">Users cannot see that you are typing</string>
+    <string name="feat_tasker_integration_title">Enable Tasker Automation</string>
+    <string name="feat_tasker_integration_desc">ٹاسکر میں پیغامات وصول کرنے اور بھیجنے کے ارادے کا استعمال کرنے کے قابل بناتا ہے۔</string>
+    <string name="feat_voice_transcription_title">آڈیو ٹرانسکرپشن
+
+Groq AI یا AssemblyAI کے ساتھ WhatsApp آڈیو ٹرانسکرپشن کو فعال کریں۔</string>
+    <string name="feat_voice_transcription_desc">Enable WhatsApp audio transcription with Groq AI or AssemblyAI</string>
+    <string name="feat_bubble_colors_title">بلبلے کے رنگ تبدیل کریں۔</string>
+    <string name="feat_bubble_colors_desc">گفتگو کی سکرین پر بلبلے کا رنگ تبدیل کریں۔</string>
+    <string name="feat_custom_theme_title">کسٹم تھیم سی ایس ایس</string>
+    <string name="feat_custom_theme_desc">سی ایس ایس اسٹائل کا استعمال کرتے ہوئے اپنے واٹس ایپ کو حسب ضرورت بنائیں</string>
+    <string name="feat_custom_time_format_title">ٹائم اسٹیمپ پر سیکنڈ</string>
+    <string name="feat_custom_time_format_desc">واٹس ایپ میں کسی بھی ٹائم اسٹیمپ کے آگے سیکنڈ دکھائیں۔</string>
+    <string name="feat_custom_toolbar_title">نئی ترتیبات کا انداز
+
+ہوم اسکرین ٹول بار پر پروفائل فوٹو کے ساتھ سیٹنگز کے نئے انداز کو فعال کریں۔
+
+ڈیفالٹ ڈی پی آئی کو تبدیل کریں۔</string>
+    <string name="feat_custom_toolbar_desc">Enable the new settings style, with profile photo on home screen toolbar</string>
+    <string name="feat_custom_view_dpi_title">Change Default DPI</string>
+    <string name="feat_custom_view_dpi_desc">ایپلیکیشن کے لیے ڈی پی آئی سیٹنگ تبدیل کریں۔ ڈیفالٹ پر ری سیٹ کرنے کے لیے 0 استعمال کریں۔</string>
+    <string name="feat_seen_tick_customization_title">دیکھا ہوا ٹک دیکھیں
+
+اگر پیغام کا منظر وصول کنندہ کو بھیجا گیا تھا یا منفرد منظر دیکھا گیا تھا تو ایک آئیکن دکھائیں۔</string>
+    <string name="feat_seen_tick_customization_desc">Show an icon if the message view was sent to the recipient or unique view was seen</string>
+    <string name="feat_floating_bottom_bar_title">تیرتی نیچے کی بار</string>
+    <string name="feat_floating_bottom_bar_desc">iOS طرز کے تیرتے نیچے نیویگیشن بار کو فعال کریں۔
+
+WA Plus کو غیر مقفل کریں۔
+
+واٹس ایپ پلس کی آفیشل سبسکرپشن فیچرز کو غیر مقفل کریں بشمول ایپ آئیکنز، تھیمز اور پریمیم اسٹیکرز۔
+
+[231]] آئٹمز کو ID کے لحاظ سے فلٹر کریں۔</string>
+    <string name="feat_unlock_premium_customization_title">Unlock WA Plus</string>
+    <string name="feat_unlock_premium_customization_desc">Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.</string>
+    <string name="feat_filter_items_title">Filter Items By ID</string>
+    <string name="feat_filter_items_desc">مخصوص IDs سے مماثل واٹس ایپ ویوز کو ہٹائیں یا اپنی مرضی کے مطابق بنائیں (گون، رنگ تبدیل کریں، دھندلاپن، سائز تبدیل کریں)</string>
+    <string name="feat_custom_filters_title">حسب ضرورت ظاہری فلٹرز
+
+کسٹم ویو آئی ڈی فلٹر رولز کو فعال یا غیر فعال کریں۔</string>
+    <string name="feat_custom_filters_desc">Enable or disable custom view ID filter rules</string>
+    <string name="feat_dotonline_title">گفتگو کی فہرست میں آن لائن ڈاٹ دکھائیں۔
+
+ہوم اسکرین پر سبز آن لائن ڈاٹ دکھائیں۔
+
+آن لائن دکھائیں/گفتگو کی فہرست میں آخری بار دیکھا گیا۔
+
+آن لائن یا آخری بار ہوم اسکرین پر دیکھا گیا متن دکھائیں۔
+
+آن لائن رابطے پر ٹوسٹ دکھائیں۔
+
+جب کوئی رابطہ آن لائن ہو تو ٹوسٹ دکھائیں۔
+
+چینل کی سفارشات کو ہٹا دیں۔
+
+ٹیب اسٹیٹس سے چینل کی سفارشات کو ہٹا دیں۔
+
+قسم کے لیے فلٹر چیٹس کو فعال کریں۔</string>
+    <string name="feat_dotonline_desc">Show a green online dot on home screen</string>
+    <string name="feat_showonlinetext_title">Show Online/Last seen in Conversation List</string>
+    <string name="feat_showonlinetext_desc">Show a text online or last seen on home screen</string>
+    <string name="feat_typing_online_toasts_title">Show toast on contact online</string>
+    <string name="feat_typing_online_toasts_desc">Show a toast when a contact is online</string>
+    <string name="feat_channels_enhancements_title">Remove Channel Recomendations</string>
+    <string name="feat_channels_enhancements_desc">Remove Channel Recomendations from tab Status</string>
+    <string name="feat_chat_filters_title">Enable filter chats for type</string>
+    <string name="feat_chat_filters_desc">گروپس، رابطوں اور ان دیکھے پیغامات کے لیے چیٹس کو فلٹر کرنے کے اختیارات دکھائیں۔
+
+ہوم پر ٹیبز چھپائیں۔
+
+ہوم اسکرین پر ٹیبز کو چھپائیں جیسے اپ ڈیٹس، کمیونٹیز اور کالز
+
+ہوم اسکرین پر آئی جی اسٹیٹس کو فعال کریں۔
+
+ہوم اسکرین پر اسٹیٹس اسٹائل انسٹاگرام دکھائیں۔
+
+[249] الگ الگ گروپ</string>
+    <string name="feat_hide_ui_tabs_title">Hide Tabs on Home</string>
+    <string name="feat_hide_ui_tabs_desc">Hide tabs on the home screen such as Updates, Communities and Calls</string>
+    <string name="feat_instagram_status_layout_title">Enable IGStatus on Home Screen</string>
+    <string name="feat_instagram_status_layout_desc">Show status style Instagram in Home Screen</string>
+    <string name="feat_separate_groups_tabs_title">Separate Groups</string>
+    <string name="feat_separate_groups_tabs_desc">اپنی چیٹس کو اس لحاظ سے الگ کریں: گروپس، پرائیویٹ چیٹس، اسٹیٹس، کالز، کمیونٹیز
+
+کوئیک ایکشن ہوم مینو</string>
+    <string name="feat_quick_home_menu_title">Quick Action Home Menu</string>
+    <string name="feat_quick_home_menu_desc">Add quick actions to home long-press</string>
+    <string name="feat_contact_blocked_verify_title">بات چیت میں رابطے کی اضافی حیثیت دکھائیں۔</string>
+    <string name="feat_contact_blocked_verify_desc">یہ آپشن اس بات کی تصدیق کرتا ہے کہ آیا رابطہ نے آپ کو شامل کیا ہے یا عوامی پروفائل تصویر ہے۔</string>
+    <string name="feat_disable_sensor_proximity_title">قربت کے سینسر پر اسکرین کو غیر فعال کریں۔</string>
+    <string name="feat_disable_sensor_proximity_desc">پورے واٹس ایپ پر قربت کے سینسر پر اسکرین آف کو غیر فعال کریں۔
+
+[257] ہک انجکشن ٹوسٹ دکھائیں۔
+
+واٹس ایپ کھلنے پر انجیکشن ہکس کی اطلاع دکھائیں یا چھپائیں۔
+
+[259] دوبارہ شروع کرنے والی شیٹ دکھائیں۔
+
+ترجیحی تبدیلیوں کے بعد واٹس ایپ کو دوبارہ شروع کرنے کا اشارہ کریں تاکہ ہکس دوبارہ انجیکشن ہوجائیں
+
+تائید شدہ واٹس ایپ ورژن
+
+تصدیق شدہ واٹس ایپ اور ڈبلیو اے بزنس ورژنز اور وائلڈ کارڈز کا نظم کریں۔
+
+ورژن چیک کو غیر فعال کریں۔
+
+واٹس ایپ کے معاون ورژن چیک کو غیر فعال کر دیتا ہے۔</string>
+    <string name="feat_show_hook_toast_title">Show Hook Injection Toast</string>
+    <string name="feat_show_hook_toast_desc">Show or hide the injecting hooks notification when WhatsApp opens</string>
+    <string name="feat_show_restart_sheet_title">Show Restart Sheet</string>
+    <string name="feat_show_restart_sheet_desc">Prompt to restart WhatsApp after preference changes so hooks are re-injected</string>
+    <string name="feat_supported_versions_title">Supported WhatsApp Versions</string>
+    <string name="feat_supported_versions_desc">Manage verified WhatsApp and WA Business versions &amp; wildcards</string>
+    <string name="feat_bypass_version_check_title">Disable Version Check</string>
+    <string name="feat_bypass_version_check_desc">Disables the supported version check of WhatsApp</string>
+    <string name="feat_bootloader_spoofer_title">بوٹ لوڈر سپوفر</string>
+    <string name="feat_bootloader_spoofer_desc">واٹس ایپ کی سالمیت کی جانچ کے لیے سپوف کی تصدیق شدہ بوٹ کی تصدیق
+
+[267] لائسنس کی تصدیق اور چالو کرنا
+
+لائسنس کی کلید کے اندراج اور توثیق کا انتظام کرتا ہے۔
+
+[269] پرو فیچر مینجمنٹ</string>
+    <string name="feat_license_verification_title">License Verification &amp; Activation</string>
+    <string name="feat_license_verification_desc">Manages license key entry and validation</string>
+    <string name="feat_pro_features_unlock_title">Pro Feature Management</string>
+    <string name="feat_pro_features_unlock_desc">پریمیم فیچرز کی ڈائنامک لاکنگ/ان لاکنگ
+
+چیٹ اور گروپ یوٹیلیٹیز</string>
+    <string name="sec_chat_group_utilities">Chat &amp; Group Utilities</string>
+    <string name="sec_conversation_list_activity_presence">گفتگو کی فہرست سرگرمی اور موجودگی</string>
+    <string name="sec_visual_styles">بصری انداز</string>
+    <string name="sec_anti_revoke_deletion_defense">مخالف منسوخی اور حذف کرنے کا دفاع</string>
+    <string name="sec_advanced_rules_filtering">اعلی درجے کے قوانین اور فلٹرنگ</string>
+    <string name="sec_status_privacy">اسٹیٹس پرائیویسی</string>
+    <string name="sec_automation">آٹومیشن
+
+[278] پیغام کے کنٹرول
+
+میڈیا کوالٹی اور سٹیٹس</string>
+    <string name="sec_message_controls">Message Controls</string>
+    <string name="sec_media_quality_status">Media Quality &amp; Status</string>
+    <string name="sec_presence_online_visibility">موجودگی اور آن لائن مرئیت</string>
+    <string name="sec_message_protection_security">پیغام کا تحفظ اور سلامتی</string>
+    <string name="sec_home_menu_shortcuts">ہوم مینو شارٹ کٹس</string>
+    <string name="sec_premium">پریمیم</string>
+    <string name="sec_message_delivery_receipts">پیغام اور ترسیل کی رسیدیں</string>
+    <string name="sec_audio_ai">آڈیو اور اے آئی
+
+میڈیا یوٹیلٹی اور ڈاؤنلوڈر</string>
+    <string name="sec_media_utility_downloader">Media Utility &amp; Downloader</string>
+    <string name="sec_home_layout_navigation">ہوم لے آؤٹ اور نیویگیشن
+
+[288] یوٹیلٹیز اور ڈیٹا
+
+[289] سسٹم اور مطابقت</string>
+    <string name="sec_utilities_data">Utilities &amp; Data</string>
+    <string name="sec_system_compatibility">System &amp; Compatibility</string>
+</resources>

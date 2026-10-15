@@ -25,11 +25,16 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+
 typealias SearchablePreference = FeatureItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen() {
+    val context = LocalContext.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
@@ -38,11 +43,32 @@ fun SearchScreen() {
 
     var query by remember { mutableStateOf("") }
 
+    // Helper functions for localized feature text
+    fun getLocalizedTitle(item: FeatureItem): String {
+        val resId = context.resources.getIdentifier("feat_${item.key}_title", "string", context.packageName)
+        return if (resId != 0) context.getString(resId) else item.title
+    }
+
+    fun getLocalizedDesc(item: FeatureItem): String {
+        val resId = context.resources.getIdentifier("feat_${item.key}_desc", "string", context.packageName)
+        return if (resId != 0) context.getString(resId) else item.description
+    }
+
+    fun getLocalizedSection(section: String): String {
+        val secKey = "sec_" + section.lowercase()
+            .replace("&", "")
+            .replace("-", "_")
+            .split("\\s+".toRegex())
+            .filter { it.isNotEmpty() }
+            .joinToString("_")
+        val resId = context.resources.getIdentifier(secKey, "string", context.packageName)
+        return if (resId != 0) context.getString(resId) else section
+    }
+
     // Registry of all available preference items sourced from the unified FeatureCatalog
     val preferenceRegistry = FeatureCatalog.ALL_FEATURES
 
-
-    // Enhanced multi-token search filter: matches all query terms across title, description, section, key, and tabLabel
+    // Enhanced multi-token search filter: matches all query terms across localized title, desc, section, key
     val filteredPreferences = remember(query) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) {
@@ -50,14 +76,17 @@ fun SearchScreen() {
         } else {
             val terms = trimmed.lowercase().split("\\s+".toRegex()).filter { it.isNotEmpty() }
             preferenceRegistry.filter { pref ->
-                val haystack = "${pref.title} ${pref.description} ${pref.section} ${pref.key} ${pref.tabLabel}".lowercase()
+                val locTitle = getLocalizedTitle(pref)
+                val locDesc = getLocalizedDesc(pref)
+                val locSec = getLocalizedSection(pref.section)
+                val haystack = "$locTitle $locDesc $locSec ${pref.title} ${pref.description} ${pref.section} ${pref.key} ${pref.tabLabel}".lowercase()
                 terms.all { term -> haystack.contains(term) }
             }
         }
     }
 
     val groupedPreferences = remember(filteredPreferences) {
-        filteredPreferences.groupBy { it.section }
+        filteredPreferences.groupBy { getLocalizedSection(it.section) }
     }
 
     Scaffold(
@@ -92,7 +121,7 @@ fun SearchScreen() {
                         WaexSearchBar(
                             query = query,
                             onQueryChange = { query = it },
-                            placeholder = "Search features & preferences...",
+                            placeholder = stringResource(R.string.search_placeholder),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -110,8 +139,8 @@ fun SearchScreen() {
         ) {
             if (filteredPreferences.isEmpty()) {
                 WaexEmptyState(
-                    title = "No preferences found",
-                    description = "Try searching for a different keyword or feature name.",
+                    title = stringResource(R.string.no_results_found),
+                    description = stringResource(R.string.no_results_description),
                     icon = WaexIcons.Search,
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -193,20 +222,20 @@ fun SearchScreen() {
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             Text(
-                                                text = pref.title,
+                                                text = getLocalizedTitle(pref),
                                                 style = typography.bodyLg,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = colors.onSurface
                                             )
                                             Text(
-                                                text = pref.description,
+                                                text = getLocalizedDesc(pref),
                                                 style = typography.bodyMd,
                                                 color = colors.onSurfaceVariant,
                                                 fontSize = 12.sp,
                                                 lineHeight = 17.sp
                                             )
                                             Text(
-                                                text = "Section: ${pref.section}",
+                                                text = "Section: ${getLocalizedSection(pref.section)}",
                                                 style = typography.labelSm,
                                                 color = colors.primary,
                                                 fontSize = 11.sp,
