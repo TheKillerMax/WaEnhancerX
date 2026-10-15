@@ -88,6 +88,7 @@ def exposure(expr: str) -> bool:
 unsafe_samples = [
     'TAG + " messageId=" + keyId',
     'TAG + " stored " + jid',
+    'TAG + " Cannot dispatch: outgoing recipient is unavailable " + jid',
     'TAG + " failed: " + t.getMessage()',
     '"$TAG text=${textData}"',
     '"$TAG error=${t.message}"',
@@ -113,6 +114,11 @@ total = 0
 for rel, expected in FILES.items():
     src = (ROOT / rel).read_text(encoding="utf-8")
     calls = list(hook_logs(src))
+    # Upstream 93cc35d adds one reviewed, literal-only recipient failure diagnostic.
+    # Keep exact counts and scan every expression; do not allow arbitrary extra logs.
+    recipient_failure = 'TAG + " Cannot dispatch: outgoing recipient is unavailable"'
+    if rel.endswith('/BlueOnReplyHook.java') and recipient_failure in calls:
+        expected += 1
     assert len(calls) == expected, (
         f"{rel}: expected {expected} diagnostic callsites, got {len(calls)}"
     )
@@ -172,6 +178,12 @@ else:
     assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' in blue
     assert 'HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)' in blue
     assert 'lastHiddenConversationJid' in blue
+if 'Cannot dispatch: outgoing recipient is unavailable' in blue:
+    dispatch = blue.split('private static int sendPendingReadJobs(String jid)', 1)[1].split('private String extractRemoteJid(', 1)[0]
+    assert 'if (key == null)' in dispatch and 'return 0;' in dispatch
+    assert 'PENDING_JOBS.remove(key)' in dispatch or 'PENDING_JOBS.drain(key)' in dispatch
+    for unsafe_fallback in ('getUserPart(', 'lastHiddenConversationJid', 'PENDING_JOBS.size() == 1'):
+        assert unsafe_fallback not in dispatch, 'Recipient fallback restored: ' + unsafe_fallback
 assert 'getOrFindJobManager()' in blue
 assert 'SendE2EMessageJob/onRun' in blue
 assert "doApplyStatusDecoration(r, keyId, ts)" in anti
