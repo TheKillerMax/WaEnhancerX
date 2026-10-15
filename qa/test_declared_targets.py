@@ -49,7 +49,7 @@ private const val MODULE_PACKAGE="com.waenhancer"
 import android.content.Context
 fun main() {
  var n=0
- fun ck(label:String,value:Boolean) {check(value){label};n++}
+ fun ck(label:String,value:Boolean) {check(value){"ASSERTION|$label"};n++}
  val declared=listOf(SCOPE)
  val context=Context()
  ck("scope exact",DeclaredWhatsAppTargets.packages().toList()==declared)
@@ -77,6 +77,7 @@ fun main() {
         (out/'Test.kt').write_text(tests)
         cmd=['kotlinc','-language-version','2.0','-jvm-target','17','-cp',str(classes),*[str(p) for p in sorted(out.glob('*.kt'))],'-include-runtime','-d',str(out/'test.jar')]
         subprocess.run(cmd,check=True,timeout=120)
+        print("COMPILE_OK: production target policy",flush=True)
         subprocess.run(['java','-cp',str(out/'test.jar')+':'+str(classes),'com.waenhancer.utils.TestKt'],check=True,timeout=60)
     print('PASS: same selector at pre-Context entry; cached package discovery filtered, no installed-name scan')
 if __name__=='__main__':main()
