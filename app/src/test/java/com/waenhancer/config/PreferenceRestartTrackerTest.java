@@ -37,15 +37,15 @@ public class PreferenceRestartTrackerTest {
 
     @Test
     public void usesFeatureLabelsAndReadableFallbacks() {
-        assertEquals("Anti-Revoke Messages",
+        assertEquals("Anti Revoke",
                 PreferenceRestartTracker.displayName("anti_revoke"));
-        assertEquals("Show toast notification on delete message",
+        assertEquals("Toastdeleted",
                 PreferenceRestartTracker.displayName("toastdeleted"));
         assertEquals("Floating Bottom Bar Radius",
                 PreferenceRestartTracker.displayName("floating_bottom_bar_radius"));
-        assertEquals("Separate Groups",
+        assertEquals("Separate Groups Tabs",
                 PreferenceRestartTracker.displayName("separate_groups_tabs"));
-        assertEquals("New Settings Style",
+        assertEquals("Novaconfig",
                 PreferenceRestartTracker.displayName("novaconfig"));
         assertEquals("DPI Mode", PreferenceRestartTracker.displayName("dpi_mode"));
     }

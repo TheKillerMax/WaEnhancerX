@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='waex_feature_inventory_') as directory:
     root = Path(directory)
     java_root = root/'app/src/main/java/com/waenhancer'
     for rel, data in {
-        'config/FeatureCatalog.kt': 'FeatureItem("alpha", "Alpha", "desc")\nFeatureItem("beta", "Beta", "desc")',
+        'config/FeatureCatalog.kt': 'private val canonicalGroupOverrides = mapOf()',
         'config/PreferenceSchema.java': 'add(entries, "alpha", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);',
         'core/preferences/SettingsBackupCodec.kt': '"beta" to "alpha"',
         'xposed/features/AlphaHook.java': 'boolean yes = prefs.getBoolean("alpha", false);',
@@ -32,6 +32,9 @@ with tempfile.TemporaryDirectory(prefix='waex_feature_inventory_') as directory:
         file = java_root/rel
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(data)
+    asset = root/'app/src/main/assets/preference_catalog.json'
+    asset.parent.mkdir(parents=True, exist_ok=True)
+    asset.write_text('[{"id":"test","keys":["alpha","beta"]}]')
     found = inventory(root)
     assert found['catalog_count'] == 2
     assert found['schema_key_count'] == 1

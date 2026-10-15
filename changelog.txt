@@ -16,6 +16,7 @@
 - Fixed New Settings Style
 - Fixed IG style stories 
 - Fixed Remove License 
+- Fixed message sending becomes pending when module active
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings

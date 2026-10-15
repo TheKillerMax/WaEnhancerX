@@ -17,7 +17,6 @@ import json
 import re
 from pathlib import Path
 
-FEATURE = re.compile(r'FeatureItem\(\s*"([^"]+)"\s*,\s*"((?:\\.|[^"\\])*)"')
 SCHEMA = re.compile(
     r'add\(entries,\s*"([^"]+)",\s*Type\.([A-Z_]+),\s*'
     r'Sensitivity\.([A-Z_]+),\s*Store\.([A-Z_]+)\)'
@@ -27,17 +26,40 @@ ALIAS = re.compile(r'"([^"]+)"\s+to\s+"([^"]+)"')
 
 def inventory(root: Path) -> dict:
     java_root = root / 'app/src/main/java/com/waenhancer'
-    catalog_path = java_root / 'config/FeatureCatalog.kt'
+    catalog_path = root / 'app/src/main/assets/preference_catalog.json'
+    catalog_source_path = java_root / 'config/FeatureCatalog.kt'
     schema_path = java_root / 'config/PreferenceSchema.java'
     codec_path = java_root / 'core/preferences/SettingsBackupCodec.kt'
     catalog = catalog_path.read_text(encoding='utf-8')
+    catalog_source = catalog_source_path.read_text(encoding='utf-8')
     schema = schema_path.read_text(encoding='utf-8')
     codec = codec_path.read_text(encoding='utf-8')
-    features = [(m.group(1), m.group(2).replace('\\"', '"'),
-                 catalog.count('\n', 0, m.start()) + 1) for m in FEATURE.finditer(catalog)]
-    keys = [key for key, _, _ in features]
-    if not features or len(set(keys)) != len(keys):
-        raise ValueError('Empty catalog or duplicate feature keys')
+    groups = json.loads(catalog)
+    if not isinstance(groups, list):
+        raise ValueError('Preference catalog must be a JSON array')
+    override_block = re.search(
+        r'canonicalGroupOverrides\s*=\s*mapOf\((.*?)\n\s*\)',
+        catalog_source,
+        re.DOTALL,
+    )
+    canonical_overrides = dict(ALIAS.findall(override_block.group(1))) if override_block else {}
+    features = []
+    seen_keys = set()
+    for group in groups:
+        group_id = group.get('id') if isinstance(group, dict) else None
+        keys = group.get('keys') if isinstance(group, dict) else None
+        if not isinstance(group_id, str) or not isinstance(keys, list):
+            raise ValueError('Malformed preference catalog group')
+        for key in keys:
+            if not isinstance(key, str) or not key:
+                raise ValueError('Preference catalog contains a blank key')
+            if canonical_overrides.get(key, group_id) != group_id or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            marker = f'"{key}"'
+            features.append((key, group_id, catalog.count('\n', 0, catalog.find(marker)) + 1))
+    if not features:
+        raise ValueError('Empty catalog')
     definitions = [(m.group(1), m.group(2), m.group(3), m.group(4))
                    for m in SCHEMA.finditer(schema)]
     schema_map = {k: {'type': t, 'sensitivity': s, 'store': st}
