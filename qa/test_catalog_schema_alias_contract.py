@@ -29,8 +29,28 @@ SCHEMA_PATTERN = re.compile(r'add\(entries,\s*"([^"]+)"\s*,\s*Type\.([A-Z_]+)')
 ALIAS_PATTERN = re.compile(r'"([^"]+)"\s+to\s+"([^"]+)"')
 
 
-def parse_catalog(text):
-    return CATALOG_PATTERN.findall(text)
+import json
+
+ASSETS = ROOT / 'app/src/main/assets'
+
+
+def parse_catalog(text_or_path=None):
+    if text_or_path is not None and not str(text_or_path).strip().startswith('[') and not str(text_or_path).endswith('.json'):
+        # Check if legacy text contains FeatureItem
+        found = CATALOG_PATTERN.findall(text_or_path)
+        if found:
+            return found
+    catalog_file = ASSETS / 'preference_catalog.json'
+    data = json.loads(catalog_file.read_text(encoding='utf-8'))
+    # Replicate canonical deduplication from FeatureCatalog
+    keys = []
+    seen = set()
+    for group in data:
+        for k in group.get('keys', []):
+            if k not in seen:
+                seen.add(k)
+                keys.append(k)
+    return keys
 
 
 def parse_schema(text):
