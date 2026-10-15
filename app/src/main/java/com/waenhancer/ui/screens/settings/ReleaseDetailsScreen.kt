@@ -72,7 +72,7 @@ fun ReleaseDetailsScreen(tagName: String) {
                         color = colors.onSurfaceVariant
                     )
                     Spacer(Modifier.height(18.dp))
-                    ChangelogBodyView(item.body)
+                    ChangelogBodyView(item.body, initiallyExpanded = true)
                     Spacer(Modifier.height(20.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         val isDowngrade = ReleaseRepository.versionCode(item.version) < ReleaseRepository.versionCode(installedVersion)

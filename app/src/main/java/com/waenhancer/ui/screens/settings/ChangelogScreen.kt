@@ -253,12 +253,13 @@ private fun Badge(label: String, color: Color) {
 fun ChangelogBodyView(
     body: String,
     modifier: Modifier = Modifier,
-    maxItemsPerCategory: Int = Int.MAX_VALUE
+    maxItemsPerCategory: Int = Int.MAX_VALUE,
+    initiallyExpanded: Boolean = false
 ) {
     val sections = remember(body) { ChangelogParser.parse(body) }
-    val expandedStates = remember(sections) {
+    val expandedStates = remember(sections, initiallyExpanded) {
         mutableStateMapOf<String, Boolean>().apply {
-            sections.forEach { this[it.title] = false }
+            sections.forEach { this[it.title] = initiallyExpanded }
         }
     }
     val colors = WaexTheme.colors
@@ -280,7 +281,7 @@ fun ChangelogBodyView(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-                val expanded = expandedStates[section.title] ?: false
+                val expanded = expandedStates[section.title] ?: initiallyExpanded
                 ChangelogSectionRow(
                     section = section.copy(items = section.items.take(maxItemsPerCategory)),
                     expanded = expanded,
