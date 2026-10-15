@@ -52,6 +52,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.waenhancer.licensing.LicenseManager
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.xposed.utils.AppRestartHelper
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -228,6 +229,7 @@ fun LicenseActivationScreen() {
                             proStatus = LicenseManager.getProStatus(context)
                             planName = LicenseManager.getProPlanName(context)
                             Toast.makeText(context, "License removed from this device.", Toast.LENGTH_LONG).show()
+                            AppRestartHelper.restartWhatsAppAndModule(context)
                         }
 
                         override fun onError(msg: String?) {
@@ -501,9 +503,7 @@ fun LicenseActivationScreen() {
                                             isVerifying = false
                                             proStatus = "ACTIVE"
                                             planName = LicenseManager.getProPlanName(context)
-                                            // Rebuild the activity so every CompositionLocal and Pro-gated
-                                            // screen observes the new entitlement immediately.
-                                            (context as? android.app.Activity)?.recreate()
+                                            AppRestartHelper.restartWhatsAppAndModule(context)
                                         }
 
                                         override fun onError(msg: String?) {

@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import com.waenhancer.xposed.utils.AppRestartHelper
 
 @Composable
 fun LicenseActivationModal(
@@ -233,6 +234,7 @@ fun LicenseActivationModal(
                         override fun onSuccess(planName: String?, expiresAtStr: String?, tgUsername: String?) {
                             verifyState = "success"
                             onActivated()
+                            AppRestartHelper.restartWhatsAppAndModule(context)
                         }
 
                         override fun onError(message: String?) {

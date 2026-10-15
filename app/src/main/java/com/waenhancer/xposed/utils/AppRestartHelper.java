@@ -1,12 +1,17 @@
 package com.waenhancer.xposed.utils;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
+import android.os.SystemClock;
 import android.widget.Toast;
 import com.waenhancer.utils.WhatsAppPackageDetector;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -130,6 +135,85 @@ public final class AppRestartHelper {
         } catch (RejectedExecutionException failure) {
             RESTART_PENDING.set(false);
             toast(context, "Restart operation unavailable");
+        }
+    }
+
+    /** Restarts every installed WhatsApp target, then relaunches the WAEX manager process. */
+    public static void restartWhatsAppAndModule(Context context) {
+        if (context == null || !RESTART_PENDING.compareAndSet(false, true)) return;
+        final Context appContext = context.getApplicationContext() != null
+                ? context.getApplicationContext() : context;
+        toast(appContext, "Restarting WhatsApp and WAEX...");
+
+        try {
+            EXECUTOR.execute(() -> {
+                try {
+                    Set<String> discovered = WhatsAppPackageDetector.getSupportedPackages(appContext);
+                    Set<String> targets = discovered == null
+                            ? Collections.emptySet() : new LinkedHashSet<>(discovered);
+
+                    for (String packageName : targets) {
+                        if (!RestartTargetPolicy.isSupportedTarget(packageName, targets)
+                                || appContext.getPackageManager().getLaunchIntentForPackage(packageName) == null) {
+                            continue;
+                        }
+
+                        boolean stoppedByRoot = runRootCommand(
+                                RestartTargetPolicy.forceStopCommand(packageName, targets)) != null;
+                        if (stoppedByRoot) {
+                            runRootCommand(RestartTargetPolicy.launchCommand(packageName, targets));
+                        } else {
+                            Intent restart = new Intent(RESTART_ACTION);
+                            restart.setPackage(packageName);
+                            restart.putExtra("PKG", packageName);
+                            appContext.sendBroadcast(restart);
+                        }
+                    }
+
+                    MAIN.post(() -> relaunchModuleProcess(appContext));
+                } catch (Throwable error) {
+                    RESTART_PENDING.set(false);
+                    toast(appContext, "Unable to restart apps");
+                }
+            });
+        } catch (RejectedExecutionException failure) {
+            RESTART_PENDING.set(false);
+            toast(appContext, "Restart operation unavailable");
+        }
+    }
+
+    private static void relaunchModuleProcess(Context context) {
+        try {
+            Intent launchIntent = context.getPackageManager()
+                    .getLaunchIntentForPackage(context.getPackageName());
+            if (launchIntent == null || launchIntent.getComponent() == null) {
+                RESTART_PENDING.set(false);
+                toast(context, "Unable to relaunch WAEX");
+                return;
+            }
+            Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    context,
+                    9021,
+                    restartIntent,
+                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarmManager == null) {
+                RESTART_PENDING.set(false);
+                toast(context, "Unable to relaunch WAEX");
+                return;
+            }
+            alarmManager.set(
+                    AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + 500L,
+                    pendingIntent
+            );
+            Process.killProcess(Process.myPid());
+            System.exit(0);
+        } catch (Throwable error) {
+            RESTART_PENDING.set(false);
+            toast(context, "Unable to relaunch WAEX");
         }
     }
 

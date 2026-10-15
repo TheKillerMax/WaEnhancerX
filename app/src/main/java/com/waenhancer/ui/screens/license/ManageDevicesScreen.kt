@@ -68,6 +68,7 @@ import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.xposed.utils.AppRestartHelper
 import org.json.JSONArray
 
 data class ConnectedDeviceItem(
@@ -620,7 +621,7 @@ fun ManageDevicesScreen() {
                                             deviceToUnlink = null
                                             if (wasCurrent) {
                                                 Toast.makeText(context, "Current device unlinked. Reverted to Free tier.", Toast.LENGTH_LONG).show()
-                                                navController.popBack()
+                                                AppRestartHelper.restartWhatsAppAndModule(context)
                                             } else {
                                                 Toast.makeText(context, "Device unlinked successfully.", Toast.LENGTH_SHORT).show()
                                                 loadDevices(isPull = true)
