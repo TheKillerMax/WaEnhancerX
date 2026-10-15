@@ -246,36 +246,61 @@ public class HideReceiptsHook extends BaseFeature {
                     }
                 });
 
-                // Hook all methods on SendReadReceiptJob to cancel execution when tagged
-                for (Method m : sendJobClass.getDeclaredMethods()) {
-                    if (Modifier.isStatic(m.getModifiers())) continue;
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
-                            Object job = param.thisObject;
-                            if (job == null) return;
-
-                            Boolean hideStatus = (Boolean) XposedHelpers.getAdditionalInstanceField(job, "waex_hide_status_view");
-                            if (hideStatus != null && hideStatus) {
-                                param.setResult(null);
-                                return;
-                            }
-
-                            String jid = extractJidString(job, "jid");
-                            String participant = extractJidString(job, "participant");
-                            if (isStatusTarget(jid, participant)) {
-                                String target = (participant != null && !participant.contains("@broadcast")) ? participant : jid;
-                                if (shouldHideStatusView(target)) {
-                                    param.setResult(null);
-                                }
-                            }
-                        }
-                    });
+                // A job also declares retry, initialization and serialization methods.
+                // Suppress only its uniquely identified execution body, never every method.
+                final Class<?> resolvedJobClass = sendJobClass;
+                final Method executionMethod = resolveReadReceiptExecution(resolvedJobClass);
+                if (executionMethod == null) {
+                    XposedBridge.log(TAG + " Status receipt execution contract unavailable; job privacy coverage incomplete");
+                    return;
                 }
+                XposedBridge.hookMethod(executionMethod, new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (!ReceiptJobExecutionPolicy.isExecutionCall(
+                                resolvedJobClass, executionMethod, param.method,
+                                param.thisObject, param.args)) return;
+                        Object job = param.thisObject;
+                        if (Boolean.TRUE.equals(XposedHelpers.getAdditionalInstanceField(
+                                job, "waex_hide_status_view"))) {
+                            param.setResult(null);
+                            return;
+                        }
+                        String jid = extractJidString(job, "jid");
+                        String participant = extractJidString(job, "participant");
+                        if (isStatusTarget(jid, participant)) {
+                            String target = participant != null && !participant.contains("@broadcast")
+                                    ? participant : jid;
+                            if (shouldHideStatusView(target)) param.setResult(null);
+                        }
+                    }
+                });
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking SendReadReceiptJob: " + t.getMessage());
         }
+    }
+
+    private Method resolveReadReceiptExecution(final Class<?> jobClass) {
+        Method method = DexSearchEngine.getInstance().findMethodWithCache(
+                context, classLoader, "wpp_send_read_receipt_execution_v1",
+                (bridge, loader) -> {
+                    // The reviewed 2.26.39.79 body builds a "receipt" stanza and
+                    // handles receiptClass="status". No obfuscated method name is pinned.
+                    MethodDataList matches = bridge.findMethod(FindMethod.create()
+                            .matcher(MethodMatcher.create()
+                                    .declaredClass(jobClass.getName())
+                                    .paramCount(0)
+                                    .returnType("void")
+                                    .addUsingString("receipt", StringMatchType.Equals)
+                                    .addUsingString("status", StringMatchType.Equals)));
+                    if (matches.size() != 1) return null;
+                    Method candidate = matches.get(0).getMethodInstance(loader);
+                    return ReceiptJobExecutionPolicy.isExecutionMethod(jobClass, candidate)
+                            ? candidate : null;
+                });
+        // Revalidate descriptors restored from the positive cache as well.
+        return ReceiptJobExecutionPolicy.isExecutionMethod(jobClass, method) ? method : null;
     }
 
     private boolean isManualSeenTickEnabled() {
@@ -765,63 +790,52 @@ public class HideReceiptsHook extends BaseFeature {
      */
     private void hookSenderPlayed() {
         try {
-            DexSearchEngine engine = DexSearchEngine.getInstance();
-
-            // 1. Resolve SenderPlayed class via anchor string
-            Class<?> senderPlayedClass = engine.findClassWithCache(
-                    context,
-                    classLoader,
-                    "wpp_sender_played_class",
-                    (bridge, loader) -> {
-                        ClassData cd = bridge.findClass(FindClass.create()
-                                .matcher(ClassMatcher.create().usingStrings("sendmethods/sendClearDirty"))
-                        ).firstOrNull();
-                        return cd != null ? cd.getInstance(loader) : null;
-                    }
-            );
-
-            if (senderPlayedClass == null) {
-                XposedBridge.log(TAG + " WARNING: SenderPlayed class not found.");
+            Method dispatch = resolvePlayedReceiptDispatch();
+            if (dispatch == null) {
+                XposedBridge.log(TAG + " WARNING: Verified played dispatcher unavailable; audio/view-once privacy coverage is incomplete.");
                 return;
             }
-
-            // 2. Hook single-message played sender method
-            for (Method m : senderPlayedClass.getDeclaredMethods()) {
-                if (m.getParameterCount() == 1) {
-                    Class<?> pType = m.getParameterTypes()[0];
-                    // Parameter is FMessage or media message type
-                    if (!pType.isPrimitive() && !pType.getName().startsWith("java.lang.")) {
-                        XposedBridge.hookMethod(m, new XC_MethodHook() {
-                            @Override
-                            protected void beforeHookedMethod(MethodHookParam param) {
-                                Object msgObj = param.args[0];
-                                if (shouldSuppressPlayedReceipt(msgObj)) {
-                                    param.setResult(null);
-                                }
-                            }
-                        });
+            XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (!PlayedReceiptDispatchPolicy.isDispatchCall(
+                            dispatch, param.method, param.thisObject, param.args)) return;
+                    java.util.Set<?> messages = (java.util.Set<?>) param.args[0];
+                    // Retain existing played-batch privacy semantics. Media-kind classification
+                    // and mixed-batch granularity require an independently verified contract.
+                    if (!messages.isEmpty()
+                            && shouldSuppressPlayedReceipt(messages.iterator().next())) {
+                        param.setResult(null);
                     }
-                } else if (m.getParameterCount() > 0 && java.util.Set.class.isAssignableFrom(m.getParameterTypes()[0])) {
-                    // Hook batch/business set played sender method
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
-                            if (param.args[0] instanceof java.util.Set) {
-                                java.util.Set<?> set = (java.util.Set<?>) param.args[0];
-                                if (!set.isEmpty()) {
-                                    Object first = set.iterator().next();
-                                    if (shouldSuppressPlayedReceipt(first)) {
-                                        param.setResult(null);
-                                    }
-                                }
-                            }
-                        }
-                    });
                 }
-            }
+            });
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking sender played: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking sender played: " + t.getClass().getSimpleName());
         }
+    }
+
+    private Method resolvePlayedReceiptDispatch() {
+        Method method = DexSearchEngine.getInstance().findMethodWithCache(
+                context, classLoader, "wpp_played_batch_dispatch_v1",
+                (bridge, loader) -> {
+                    // sendClearDirty identifies a multi-purpose dispatcher, not a played method.
+                    // Require the actual constructor call edge observed for the receipt job.
+                    MethodDataList matches = bridge.findMethod(FindMethod.create()
+                            .matcher(MethodMatcher.create()
+                                    .returnType("void")
+                                    .paramCount(2)
+                                    .addParamType("java.util.Set")
+                                    .addParamType("boolean")
+                                    .addInvoke(MethodMatcher.create()
+                                            .declaredClass("com.whatsapp.messaging.receipts.jobqueue.job.SendPlayedReceiptJobV2")
+                                            .name("<init>")
+                                            .paramCount(2)
+                                            .addUsingString("played-receipt-v2-", StringMatchType.Equals))));
+                    if (matches.size() != 1) return null;
+                    Method candidate = matches.get(0).getMethodInstance(loader);
+                    return PlayedReceiptDispatchPolicy.isDispatchMethod(candidate) ? candidate : null;
+                });
+        return PlayedReceiptDispatchPolicy.isDispatchMethod(method) ? method : null;
     }
 
     private boolean shouldSuppressPlayedReceipt(Object msgObj) {
