@@ -20,11 +20,13 @@ import de.robv.android.xposed.XposedBridge
 import org.luckypray.dexkit.query.FindMethod
 import org.luckypray.dexkit.query.enums.StringMatchType
 import org.luckypray.dexkit.query.matchers.MethodMatcher
+import java.lang.ref.WeakReference
 import java.lang.reflect.Modifier
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Renders process-local presence events on currently bound conversation rows. */
@@ -36,7 +38,10 @@ class OnlinePresenceIndicatorsHook(
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val visibleRows = Collections.synchronizedMap(WeakHashMap<View, String>())
-    private val rowOverlays = Collections.synchronizedMap(WeakHashMap<View, FrameLayout>())
+    // Weak values matter: an overlay's parent retains its host row on Android.
+    private val rowOverlays = Collections.synchronizedMap(WeakHashMap<View, WeakReference<FrameLayout>>())
+    private val pendingBindings = Collections.synchronizedMap(WeakHashMap<View, Any>())
+    private val refreshPending = AtomicBoolean()
     private val showDot = isEnabled("dotonline", false)
     private val showText = isEnabled("showonlinetext", false)
     @Volatile private var subscriptionReceiver: Any? = null
@@ -83,28 +88,17 @@ class OnlinePresenceIndicatorsHook(
 
             XposedBridge.hookMethod(bindMethod, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    if (bindDiagnostics.get() == 0) {
-                        val summary = param.args?.mapIndexed { index, value ->
-                            "$index:${value?.javaClass?.name}=${try { value?.toString()?.take(180) } catch (_: Throwable) { "?" }}"
-                        }?.joinToString(" | ")
-                        param.args?.firstOrNull()?.let { contact ->
-                            val fields = contact.javaClass.declaredFields.mapNotNull { field ->
-                                try {
-                                    field.isAccessible = true
-                                    val value = field.get(contact)
-                                    "${field.name}:${field.type.name}=${value?.toString()?.take(100)}"
-                                } catch (_: Throwable) { null }
-                            }.joinToString(" | ")
-                        }
-                    }
+                    // Never reflectively stringify private contact objects for unused diagnostics.
                     val row = findConversationRow(param.thisObject)
                     val jid = findJid(param.args, 3)
                     if ((row == null || jid == null) && bindDiagnostics.getAndIncrement() < 5) {
-                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, jid=${jid ?: "missing"}, args=${param.args?.size ?: 0}")
+                        val hasContactId = jid != null
+                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, contactIdResolved=$hasContactId, args=${param.args?.size ?: 0}")
                     }
-                    if (row == null || jid == null) return
-                    if (jid.contains("@g.us")) return
-                    if (bindDiagnostics.getAndIncrement() < 5) {
+                    if (row == null) return
+                    if (param.hasThrowable() || jid == null || jid.contains("@g.us")) {
+                        queueBindRow(row, null)
+                        return
                     }
                     val contact = param.args?.firstOrNull()
                     subscriptionMethod?.let { method ->
@@ -118,28 +112,71 @@ class OnlinePresenceIndicatorsHook(
                         }
                     }
                     requestPresence(contact)
-                    row.post { bindRow(row, PresenceStateStore.normalize(jid)) }
+                    queueBindRow(row, PresenceStateStore.normalize(jid))
                 }
             })
-            PresenceStateStore.addListener { jid, state ->
-                mainHandler.post {
-                    val snapshot = synchronized(visibleRows) { visibleRows.entries.toList() }
-                    snapshot.forEach { (row, boundJid) ->
-                        if (boundJid == jid || identityAliases[jid] == boundJid) render(row, state)
-                    }
+            PresenceStateStore.addListener { _, _ -> queuePresenceRefresh() }
+        } catch (t: Throwable) {
+            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: ${t.javaClass.simpleName}")
+        }
+    }
+
+    private fun queuePresenceRefresh() {
+        // A burst of repeated observations needs one repaint, not an unbounded Handler queue.
+        if (!refreshPending.compareAndSet(false, true)) return
+        if (!mainHandler.post {
+            refreshPending.set(false)
+            val snapshot = synchronized(visibleRows) {
+                visibleRows.entries.map { it.key to it.value }
+            }
+            snapshot.forEach { (row, boundJid) ->
+                if (visibleRows[row] == boundJid && row.getTag(TAG_BOUND_JID) == boundJid) {
+                    render(row, stateForRow(boundJid))
                 }
             }
-        } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: $t")
+        }) refreshPending.set(false)
+    }
+
+    private fun queueBindRow(row: View, jid: String?) {
+        val token = Any()
+        synchronized(pendingBindings) {
+            pendingBindings[row] = token
+            // Invalidate before a queued observation can reuse the previous contact's row.
+            visibleRows.remove(row)
         }
+        val weakRow = WeakReference(row)
+        mainHandler.post {
+            val current = weakRow.get() ?: return@post
+            synchronized(pendingBindings) {
+                if (pendingBindings[current] !== token) return@post
+                pendingBindings.remove(current)
+                if (jid == null || jid.isEmpty()) clearRow(current) else bindRow(current, jid)
+            }
+        }
+    }
+
+    private fun clearRow(row: View) {
+        visibleRows.remove(row)
+        row.setTag(TAG_BOUND_JID, null)
+        render(row, null)
+    }
+
+    private fun stateForRow(jid: String): PresenceStateStore.State? {
+        // These are only explicit identity links recorded from the existing host path.
+        // Never infer a phone/LID mapping by stripping a suffix or comparing prefixes.
+        val keys = linkedSetOf(jid)
+        identityAliases.entries.forEach { (alias, canonical) ->
+            if (canonical == jid) keys.add(alias)
+        }
+        return PresenceStateStore.getLatest(keys)
     }
 
     private fun bindRow(row: View, jid: String) {
         val group = row as? ViewGroup ?: return
-        val overlay = ensureOverlay(group)
+        ensureOverlay(group)
         visibleRows[row] = jid
         row.setTag(TAG_BOUND_JID, jid)
-        render(row, PresenceStateStore.get(jid))
+        render(row, stateForRow(jid))
     }
 
     private fun requestPresence(contact: Any?) {
@@ -175,11 +212,9 @@ class OnlinePresenceIndicatorsHook(
             }
             method.isAccessible = true
             method.invoke(null, jidObject, null, token, receiver)
-            if (subscriptionDiagnostics.getAndIncrement() < 5) {
-            }
         } catch (t: Throwable) {
             if (subscriptionDiagnostics.getAndIncrement() < 5) {
-                XposedBridge.log("[WAEX][OnlinePresence] Presence request failed for $key: $t")
+                XposedBridge.log("[WAEX][OnlinePresence] Presence request failed: ${t.javaClass.simpleName}")
             }
         }
     }
@@ -202,7 +237,7 @@ class OnlinePresenceIndicatorsHook(
     }
 
     private fun ensureOverlay(row: ViewGroup): FrameLayout {
-        rowOverlays[row]?.let { return it }
+        rowOverlays[row]?.get()?.let { return it }
         val overlay = FrameLayout(row.context).apply {
             id = ID_OVERLAY
             isClickable = false
@@ -237,16 +272,27 @@ class OnlinePresenceIndicatorsHook(
         }
         row.overlay.add(overlay)
         val updateBounds = {
-            overlay.layout(0, 0, row.width, row.height)
+            layoutOverlay(row, overlay)
         }
         row.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateBounds() }
         row.post { updateBounds() }
-        rowOverlays[row] = overlay
+        rowOverlays[row] = WeakReference(overlay)
         return overlay
     }
 
+    private fun layoutOverlay(row: View, overlay: FrameLayout) {
+        // ViewGroupOverlay does not perform the normal measurement/layout pass for us.
+        overlay.layoutDirection = row.layoutDirection
+        overlay.measure(
+            View.MeasureSpec.makeMeasureSpec(row.width.coerceAtLeast(0), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(row.height.coerceAtLeast(0), View.MeasureSpec.EXACTLY)
+        )
+        overlay.layout(0, 0, row.width, row.height)
+        overlay.invalidate()
+    }
+
     private fun render(row: View, state: PresenceStateStore.State?) {
-        val overlay = rowOverlays[row] ?: return
+        val overlay = rowOverlays[row]?.get() ?: return
         overlay.findViewById<View>(ID_DOT)?.visibility = if (state?.online == true) View.VISIBLE else View.GONE
         overlay.findViewById<TextView>(ID_TEXT)?.let { text ->
             when {
@@ -259,6 +305,7 @@ class OnlinePresenceIndicatorsHook(
                 }
             }
         }
+        layoutOverlay(row, overlay)
     }
 
     /** Finds the bound conversation row rather than whichever View happens to be the first
@@ -347,7 +394,11 @@ class OnlinePresenceIndicatorsHook(
         if (identityAliases.size >= MAX_TRACKED_IDENTITIES && !identityAliases.containsKey(alias)) {
             identityAliases.clear()
         }
-        identityAliases[alias] = jid
+        // A conflicting link is not evidence that two different rows are one contact.
+        identityAliases.compute(alias) { _, previous ->
+            if (previous == null || previous == jid) jid else ""
+        }
+        queuePresenceRefresh()
     }
 
     companion object {
