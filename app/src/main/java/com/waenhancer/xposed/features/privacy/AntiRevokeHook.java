@@ -49,10 +49,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Anti-Revoke & Deleted Indicator Engine for Messages and Statuses.
@@ -69,9 +72,30 @@ public class AntiRevokeHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][AntiRevoke]";
 
-    private static final Map<String, Long> REVOKED_MESSAGES = new ConcurrentHashMap<>();
-    private static final Set<String> PRESERVED_OWN_ROW_IDS = ConcurrentHashMap.newKeySet();
-    private static final DateFormat TIME_FORMAT = DateFormat.getTimeInstance(DateFormat.SHORT);
+    // Persistent history stays in DelMessageStore; in-memory lookups are bounded.
+    private static final int MAX_RECENT_REVOKES = 4096;
+    private static final Map<String, Long> REVOKED_MESSAGES = Collections.synchronizedMap(
+            new LinkedHashMap<String, Long>(256, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<String, Long> eldest) {
+                    return size() > MAX_RECENT_REVOKES;
+                }
+            });
+    private static final Set<String> PRESERVED_OWN_ROW_IDS = Collections.synchronizedSet(
+            new LinkedHashSet<String>() {
+                @Override public boolean add(String value) {
+                    boolean added = super.add(value);
+                    if (size() > MAX_RECENT_REVOKES) {
+                        Iterator<String> it = iterator();
+                        if (it.hasNext()) { it.next(); it.remove(); }
+                    }
+                    return added;
+                }
+            });
+    private static final ThreadLocal<DateFormat> TIME_FORMAT = new ThreadLocal<DateFormat>() {
+        @Override protected DateFormat initialValue() {
+            return DateFormat.getTimeInstance(DateFormat.SHORT);
+        }
+    };
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     /** Resolved WhatsApp FMessage class — used to guard getView items. */
@@ -542,7 +566,9 @@ public class AntiRevokeHook extends BaseFeature {
                     if (msgType != null && msgType == 15) {
                         String keyId = cv.getAsString("key_id");
                         if (keyId != null) {
-                            boolean alreadyPreserved = REVOKED_MESSAGES.containsKey(keyId);
+                            // A bounded cache may evict the key; SQLite is authoritative.
+                            boolean alreadyPreserved = REVOKED_MESSAGES.containsKey(keyId)
+                                    || DelMessageStore.getInstance(context).getTimestampByMessageId(keyId) > 0L;
 
                             if (preserveOwnRevoke && alreadyPreserved) {
                                 // WhatsApp reuses the original message row ID for its local revoke
@@ -667,8 +693,12 @@ public class AntiRevokeHook extends BaseFeature {
         if (!"message".equals(table) && !"messages".equals(table)) return;
 
         ContentValues values = (ContentValues) valuesArg;
+        // Non-revoke INSERTs may reuse an explicit row ID. Never consume their
+        // pending reservation before WhatsApp writes the type-15 placeholder.
+        Integer messageType = values.getAsInteger("message_type");
         Long rowId = values.getAsLong("_id");
-        if (rowId != null && PRESERVED_OWN_ROW_IDS.remove(String.valueOf(rowId))) {
+        if (PreservedOwnRowIdPolicy.shouldStripPlaceholderId(
+                messageType, rowId, PRESERVED_OWN_ROW_IDS)) {
             values.remove("_id");
         }
     }
@@ -798,8 +828,9 @@ public class AntiRevokeHook extends BaseFeature {
                                 if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
 
                                 int pos = (int) p.args[0];
-                                ViewGroup row = (ViewGroup) p.getResult();
-                                if (row == null) return;
+                                Object renderedRow = p.getResult();
+                                if (!(renderedRow instanceof ViewGroup)) return;
+                                ViewGroup row = (ViewGroup) renderedRow;
 
                                 Object item;
                                 try {
@@ -850,11 +881,8 @@ public class AntiRevokeHook extends BaseFeature {
 
     // ─── Status Playback UI Hook ─────────────────────────────────────────
 
-    /**
-     * Thread-local map: records the most recently DB-read status keyId per thread.
-     * This allows reliable keyId lookup even when fragment field scanning fails.
-     */
-    private static final Map<Long, String> sStatusKeyByThread = new ConcurrentHashMap<>();
+    // Status-key DB fallback is consumed exactly once through StatusKeyHandoff.
+    // This prevents reusing the same key on subsequent status views on one thread.
 
     private void hookStatusPlaybackUI() {
         try {
@@ -1057,7 +1085,7 @@ public class AntiRevokeHook extends BaseFeature {
 
     /**
      * Hook SQLiteDatabase.rawQuery to record the keyId of status rows being read.
-     * Called before any UI update, so sStatusKeyByThread will hold the right keyId.
+     * Opportunistic fallback only; cross-thread query/fragment identity is not guaranteed.
      */
     private void hookStatusDbQueryReads() {
         try {
@@ -1090,7 +1118,7 @@ public class AntiRevokeHook extends BaseFeature {
                         if (!cursor.isBeforeFirst() && !cursor.isAfterLast()) {
                             String keyId = cursor.getString(keyIdCol);
                             if (isLikelyStatusKeyId(keyId)) {
-                                sStatusKeyByThread.put(Thread.currentThread().getId(), keyId);
+                                StatusKeyHandoff.record(keyId);
                             }
                         }
                     } catch (Throwable ignored) {}
@@ -1300,12 +1328,15 @@ public class AntiRevokeHook extends BaseFeature {
      */
     private void tryDecorateStatusFragment(Object fragment) {
         try {
+            // Consume the DB candidate even when the fragment has an exact key.
+            // Otherwise a previous status could be decorated using stale data.
+            String pendingDbKey = StatusKeyHandoff.consume();
             // Priority 1: extract from fragment fields (status-specific strict scan)
             String keyId = extractStatusKeyIdFromFragment(fragment);
 
-            // Priority 2: last DB-read keyId for this thread
+            // Priority 2: most recent unconsumed DB key from this thread
             if (keyId == null) {
-                keyId = sStatusKeyByThread.get(Thread.currentThread().getId());
+                keyId = pendingDbKey;
             }
 
             // Priority 3: fall back to general FMessage extraction
@@ -1786,7 +1817,7 @@ public class AntiRevokeHook extends BaseFeature {
 
             // Clickable deletion timestamp toast
             if (deletedTimestamp > 0) {
-                String formattedTime = TIME_FORMAT.format(new Date(deletedTimestamp));
+                String formattedTime = TIME_FORMAT.get().format(new Date(deletedTimestamp));
                 dateTextView.getPaint().setUnderlineText(true);
                 dateTextView.setOnClickListener(v ->
                         Toast.makeText(rowContext, "Deleted at: " + formattedTime, Toast.LENGTH_LONG).show()

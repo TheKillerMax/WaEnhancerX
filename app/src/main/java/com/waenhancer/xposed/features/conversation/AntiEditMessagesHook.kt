@@ -70,9 +70,10 @@ class AntiEditMessagesHook(
         private const val FIELD_ROW_ID = "waex_row_id"
         private const val FIELD_MSG_ID = "waex_msg_id"
         private const val FIELD_MSG_TEXT = "waex_msg_text"
-        private val messageTextCache = ConcurrentHashMap<String, String>()
         private val hookedAdapterClasses = ConcurrentHashMap.newKeySet<Class<*>>()
-        private val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
+        private val timeFormatter = object : ThreadLocal<DateFormat>() {
+            override fun initialValue(): DateFormat = DateFormat.getTimeInstance(DateFormat.SHORT)
+        }
         private val KEY_ID_REGEX = Pattern.compile("id=([A-Za-z0-9]+)")
     }
 
@@ -115,7 +116,6 @@ class AntiEditMessagesHook(
                                     val previous = editStore.getCurrentMessageFromWhatsApp(rowId, keyId)
                                     editStore.recordTransitionAsync(rowId, keyId, previous, newMessage, ts)
                                     if (!keyId.isNullOrEmpty()) {
-                                        messageTextCache[keyId] = newMessage
                                     }
                                 }
                             } catch (t: Throwable) {
@@ -276,7 +276,6 @@ class AntiEditMessagesHook(
                                             XposedHelpers.setAdditionalInstanceField(row, FIELD_MSG_ID, keyId)
                                             XposedHelpers.setAdditionalInstanceField(row, "waex_key_id", keyId)
                                             if (!msgText.isNullOrEmpty()) {
-                                                messageTextCache[keyId] = msgText
                                                 XposedHelpers.setAdditionalInstanceField(row, FIELD_MSG_TEXT, msgText)
                                             }
                                         }
@@ -453,7 +452,7 @@ class AntiEditMessagesHook(
             for (item in descendingList) {
                 val isFirst = (item.versionNumber == 1)
                 val isLatest = (item.versionNumber == totalVersions && totalVersions > 1)
-                val timeStr = if (item.timestamp > 0) timeFormatter.format(Date(item.timestamp)) else ""
+                val timeStr = if (item.timestamp > 0) timeFormatter.get().format(Date(item.timestamp)) else ""
 
                 val title = when {
                     isLatest -> "Version ${item.versionNumber} (Latest) • $timeStr"
