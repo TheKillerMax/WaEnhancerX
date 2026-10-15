@@ -332,4 +332,16 @@
     <string name="requires_pro_label">پرو درکار ہے</string>
     <string name="subtab_automation">آٹومیشن</string>
     <string name="subtab_audio_ai">آڈیو اور اے آئی</string>
+    <string name="tab_privacy">رازداری</string>
+    <string name="tab_conversation">گفتگو</string>
+    <string name="advanced_hubs_vaults">جدید حبس اور والٹس</string>
+    <string name="hub_per_contact_rules_title">ہر رابطے کے الگ اصول</string>
+    <string name="hub_per_contact_rules_desc">ہر رابطے کے لیے رازداری کے تفصیلی اصول ترتیب دیں</string>
+    <string name="hub_delete_for_me_title">\"میرے لیے حذف کریں\" پیغامات</string>
+    <string name="hub_delete_for_me_desc">محفوظ شدہ \"میرے لیے حذف شدہ\" چیٹس اور گروپ لاگز دیکھیں</string>
+    <string name="hub_calls_recording_title">کالز اور ریکارڈنگ ہب</string>
+    <string name="hub_calls_recording_desc">کال بلاکر، کالر پرائیویسی، ریکارڈنگ فارمیٹس اور لاگز</string>
+    <string name="dep_disabled_hide_blue_ticks">(غیر فعال: پہلے \"بلیو ٹکس چھپائیں\" آن کریں)</string>
+    <string name="title_call_configurations">کال کنفیگریشنز</string>
+    <string name="title_call_recordings">ریکارڈنگز</string>
 </resources>

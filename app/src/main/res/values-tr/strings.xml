@@ -321,4 +321,16 @@
     <string name="requires_pro_label">Pro Gerektirir</string>
     <string name="subtab_automation">Otomasyon</string>
     <string name="subtab_audio_ai">Ses ve Yapay Zeka</string>
+    <string name="tab_privacy">Gizlilik</string>
+    <string name="tab_conversation">Sohbet</string>
+    <string name="advanced_hubs_vaults">GELIŞMIŞ MERKEZLER VE KASALAR</string>
+    <string name="hub_per_contact_rules_title">Kişi Başına Kurallar</string>
+    <string name="hub_per_contact_rules_desc">Kişi başına ayrıntılı gizlilik kurallarını yapılandırın</string>
+    <string name="hub_delete_for_me_title">\"Benden Sil\" Mesajları</string>
+    <string name="hub_delete_for_me_desc">Korunan benden sil sohbetlerini ve grup günlüklerini görüntüleyin</string>
+    <string name="hub_calls_recording_title">Aramalar ve Kayıt Merkezi</string>
+    <string name="hub_calls_recording_desc">Arama engelleyici, arayan gizliliği, kayıt biçimleri ve günlükler</string>
+    <string name="dep_disabled_hide_blue_ticks">(Devre dışı: Önce \"Mavi Tikleri Gizle\" özelliğini açın)</string>
+    <string name="title_call_configurations">Arama Yapılandırmaları</string>
+    <string name="title_call_recordings">Kayıtlar</string>
 </resources>

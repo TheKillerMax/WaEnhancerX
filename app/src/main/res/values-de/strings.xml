@@ -326,4 +326,16 @@
     <string name="requires_pro_label">Erfordert Pro</string>
     <string name="subtab_automation">Automatisierung</string>
     <string name="subtab_audio_ai">Audio &amp; KI</string>
+    <string name="tab_privacy">Datenschutz</string>
+    <string name="tab_conversation">Unterhaltung</string>
+    <string name="advanced_hubs_vaults">ERWEITERTE HUBS &amp; TRESOR</string>
+    <string name="hub_per_contact_rules_title">Regeln pro Kontakt</string>
+    <string name="hub_per_contact_rules_desc">Detaillierte Datenschutzregeln pro Kontakt konfigurieren</string>
+    <string name="hub_delete_for_me_title">\"Für mich löschen\"-Nachrichten</string>
+    <string name="hub_delete_for_me_desc">Gespeicherte \"Für mich löschen\"-Chats und Gruppenprotokolle anzeigen</string>
+    <string name="hub_calls_recording_title">Anrufe &amp; Aufnahme Hub</string>
+    <string name="hub_calls_recording_desc">Anrufblocker, Anrufer-Datenschutz, Aufnahmeformate und Protokolle</string>
+    <string name="dep_disabled_hide_blue_ticks">(Deaktiviert: Zuerst \"Blaue Häkchen ausblenden\" aktivieren)</string>
+    <string name="title_call_configurations">Anrufkonfigurationen</string>
+    <string name="title_call_recordings">Aufnahmen</string>
 </resources>

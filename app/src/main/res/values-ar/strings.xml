@@ -321,4 +321,16 @@
     <string name="requires_pro_label">يتطلب برو</string>
     <string name="subtab_automation">الأتمتة</string>
     <string name="subtab_audio_ai">الصوت والذكاء الاصطناعي</string>
+    <string name="tab_privacy">الخصوصية</string>
+    <string name="tab_conversation">المحادثة</string>
+    <string name="advanced_hubs_vaults">المراكز المتقدمة والخزائن</string>
+    <string name="hub_per_contact_rules_title">قواعد لكل جهة اتصال</string>
+    <string name="hub_per_contact_rules_desc">تكوين قواعد خصوصية دقيقة لكل جهة اتصال</string>
+    <string name="hub_delete_for_me_title">رسائل \"الحذف لدي\"</string>
+    <string name="hub_delete_for_me_desc">عرض المحادثات وسجلات المجموعات المحفوظة المحذوفة لديك</string>
+    <string name="hub_calls_recording_title">مركز المكالمات والتسجيل</string>
+    <string name="hub_calls_recording_desc">حظر المكالمات، خصوصية المتصل، تنسيقات التسجيل والسجلات</string>
+    <string name="dep_disabled_hide_blue_ticks">(معطل: قم بتشغيل \"إخفاء الصحين الأزرقين\" أولاً)</string>
+    <string name="title_call_configurations">إعدادات المكالمات</string>
+    <string name="title_call_recordings">التسجيلات</string>
 </resources>

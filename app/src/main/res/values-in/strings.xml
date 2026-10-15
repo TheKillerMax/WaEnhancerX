@@ -321,4 +321,16 @@
     <string name="requires_pro_label">Memerlukan Pro</string>
     <string name="subtab_automation">Otomatisasi</string>
     <string name="subtab_audio_ai">Audio &amp; AI</string>
+    <string name="tab_privacy">Privasi</string>
+    <string name="tab_conversation">Percakapan</string>
+    <string name="advanced_hubs_vaults">PUSAT LANJUTAN &amp; BRANKAS</string>
+    <string name="hub_per_contact_rules_title">Aturan Per Kontak</string>
+    <string name="hub_per_contact_rules_desc">Konfigurasi aturan privasi terperinci per kontak</string>
+    <string name="hub_delete_for_me_title">Pesan \"Hapus untuk Saya\"</string>
+    <string name="hub_delete_for_me_desc">Lihat obrolan &amp; log grup yang disimpan dari hapus untuk saya</string>
+    <string name="hub_calls_recording_title">Pusat Panggilan &amp; Perekaman</string>
+    <string name="hub_calls_recording_desc">Pemblokir panggilan, privasi penelepon, format rekaman &amp; log</string>
+    <string name="dep_disabled_hide_blue_ticks">(Dinonaktifkan: Aktifkan \"Sembunyikan Centang Biru\" terlebih dahulu)</string>
+    <string name="title_call_configurations">Konfigurasi Panggilan</string>
+    <string name="title_call_recordings">Rekaman</string>
 </resources>

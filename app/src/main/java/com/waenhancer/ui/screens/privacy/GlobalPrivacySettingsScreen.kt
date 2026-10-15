@@ -281,7 +281,9 @@ fun GlobalPrivacySettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    listOf("privacy" to "Privacy", "conversation" to "Conversation").forEach { (tabId, label) ->
+                    val tabPrivacyLabel = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.tab_privacy)
+                    val tabConversationLabel = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.tab_conversation)
+                    listOf("privacy" to tabPrivacyLabel, "conversation" to tabConversationLabel).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -319,7 +321,7 @@ fun GlobalPrivacySettingsScreen(
                     .padding(horizontal = spacing.pageMargin)
             ) {
                 Text(
-                    text = "ADVANCED HUBS & VAULTS",
+                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.advanced_hubs_vaults),
                     style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurfaceVariant,
@@ -346,13 +348,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Per Contact Rules",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_per_contact_rules_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "Configure granular privacy rules per contact",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_per_contact_rules_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -385,13 +387,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "\"Delete For Me\" Messages",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_delete_for_me_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "View preserved delete-for-me chats & group logs",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_delete_for_me_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -424,13 +426,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "Calls & Recording Hub",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_calls_recording_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "Call blocker, caller privacy, recording formats & logs",
+                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_calls_recording_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -524,10 +526,12 @@ fun GlobalPrivacySettingsScreen(
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
+                                        val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
+                                        val depHint = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.dep_disabled_hide_blue_ticks)
                                         Text(
                                             text = when {
-                                                isLocked -> "$locDesc • Requires Pro"
-                                                isDependencyDisabled -> "$locDesc\n(Disabled: Turn on \"Hide Blue Ticks\" first)"
+                                                isLocked -> "$locDesc • $reqPro"
+                                                isDependencyDisabled -> "$locDesc\n$depHint"
                                                 else -> locDesc
                                             },
                                             style = typography.bodyMd,

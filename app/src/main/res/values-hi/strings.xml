@@ -321,4 +321,16 @@
     <string name="requires_pro_label">प्रो आवश्यक है</string>
     <string name="subtab_automation">ऑटोमेशन</string>
     <string name="subtab_audio_ai">ऑडियो और एआई</string>
+    <string name="tab_privacy">गोपनीयता</string>
+    <string name="tab_conversation">बातचीत</string>
+    <string name="advanced_hubs_vaults">उन्नत हब और वॉल्ट</string>
+    <string name="hub_per_contact_rules_title">प्रति संपर्क नियम</string>
+    <string name="hub_per_contact_rules_desc">प्रत्येक संपर्क के लिए विस्तृत गोपनीयता नियम कॉन्फ़िगर करें</string>
+    <string name="hub_delete_for_me_title">\"मेरे लिए हटाएं\" संदेश</string>
+    <string name="hub_delete_for_me_desc">सहेजे गए डिलीट-फॉर-मी चैट और समूह लॉग देखें</string>
+    <string name="hub_calls_recording_title">कॉल और रिकॉर्डिंग हब</string>
+    <string name="hub_calls_recording_desc">कॉल ब्लॉकर, कॉलर गोपनीयता, रिकॉर्डिंग प्रारूप और लॉग</string>
+    <string name="dep_disabled_hide_blue_ticks">(अक्षम: पहले \"नीले टिक छुपाएं\" चालू करें)</string>
+    <string name="title_call_configurations">कॉल कॉन्फ़िगरेशन</string>
+    <string name="title_call_recordings">रिकॉर्डिंग</string>
 </resources>

@@ -320,9 +320,10 @@ fun StylesSettingsScreen() {
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
+                                        val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
                                         Text(
                                             text = if (needsTypedEditor) "$locDesc • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
-                                                else if (isLocked) "$locDesc • Requires Pro" else locDesc,
+                                                else if (isLocked) "$locDesc • $reqPro" else locDesc,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp

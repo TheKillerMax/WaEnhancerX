@@ -332,4 +332,16 @@
     <string name="requires_pro_label">Requires Pro</string>
     <string name="subtab_automation">Automation</string>
     <string name="subtab_audio_ai">Audio &amp; AI</string>
+    <string name="tab_privacy">Privacy</string>
+    <string name="tab_conversation">Conversation</string>
+    <string name="advanced_hubs_vaults">ADVANCED HUBS &amp; VAULTS</string>
+    <string name="hub_per_contact_rules_title">Per Contact Rules</string>
+    <string name="hub_per_contact_rules_desc">Configure granular privacy rules per contact</string>
+    <string name="hub_delete_for_me_title">\"Delete For Me\" Messages</string>
+    <string name="hub_delete_for_me_desc">View preserved delete-for-me chats &amp; group logs</string>
+    <string name="hub_calls_recording_title">Calls &amp; Recording Hub</string>
+    <string name="hub_calls_recording_desc">Call blocker, caller privacy, recording formats &amp; logs</string>
+    <string name="dep_disabled_hide_blue_ticks">(Disabled: Turn on \"Hide Blue Ticks\" first)</string>
+    <string name="title_call_configurations">Call Configurations</string>
+    <string name="title_call_recordings">Recordings</string>
 </resources>

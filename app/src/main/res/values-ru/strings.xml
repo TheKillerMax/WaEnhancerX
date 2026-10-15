@@ -321,4 +321,16 @@
     <string name="requires_pro_label">Требуется Pro</string>
     <string name="subtab_automation">Автоматизация</string>
     <string name="subtab_audio_ai">Аудио и ИИ</string>
+    <string name="tab_privacy">Конфиденциальность</string>
+    <string name="tab_conversation">Беседа</string>
+    <string name="advanced_hubs_vaults">РАСШИРЕННЫЕ ХАБЫ И ХРАНИЛИЩА</string>
+    <string name="hub_per_contact_rules_title">Правила для каждого контакта</string>
+    <string name="hub_per_contact_rules_desc">Настройка индивидуальных правил конфиденциальности для каждого контакта</string>
+    <string name="hub_delete_for_me_title">Сообщения \"Удалить у меня\"</string>
+    <string name="hub_delete_for_me_desc">Просмотр сохраненных чатов и журналов групп, удаленных у себя</string>
+    <string name="hub_calls_recording_title">Хаб звонков и записей</string>
+    <string name="hub_calls_recording_desc">Блокировщик звонков, конфиденциальность, форматы записи и журналы</string>
+    <string name="dep_disabled_hide_blue_ticks">(Отключено: сначала включите \"Скрыть синие галочки\")</string>
+    <string name="title_call_configurations">Настройки вызовов</string>
+    <string name="title_call_recordings">Записи</string>
 </resources>

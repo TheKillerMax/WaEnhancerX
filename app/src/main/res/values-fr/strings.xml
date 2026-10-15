@@ -321,4 +321,16 @@
     <string name="requires_pro_label">Nécessite Pro</string>
     <string name="subtab_automation">Automatisation</string>
     <string name="subtab_audio_ai">Audio et IA</string>
+    <string name="tab_privacy">Confidentialité</string>
+    <string name="tab_conversation">Conversation</string>
+    <string name="advanced_hubs_vaults">HUBS AVANCÉS ET COFFRES</string>
+    <string name="hub_per_contact_rules_title">Règles par contact</string>
+    <string name="hub_per_contact_rules_desc">Configurer des règles de confidentialité granulaires par contact</string>
+    <string name="hub_delete_for_me_title">Messages \"Supprimer pour moi\"</string>
+    <string name="hub_delete_for_me_desc">Afficher les discussions et journaux conservés supprimés pour vous</string>
+    <string name="hub_calls_recording_title">Hub Appels et Enregistrement</string>
+    <string name="hub_calls_recording_desc">Bloqueur d\'appels, confidentialité de l\'appelant, formats et journaux</string>
+    <string name="dep_disabled_hide_blue_ticks">(Désactivé : activez d\'abord \"Masquer les coches bleues\")</string>
+    <string name="title_call_configurations">Configurations d\'appel</string>
+    <string name="title_call_recordings">Enregistrements</string>
 </resources>

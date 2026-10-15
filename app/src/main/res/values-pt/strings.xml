@@ -321,4 +321,16 @@
     <string name="requires_pro_label">Requer Pro</string>
     <string name="subtab_automation">Automação</string>
     <string name="subtab_audio_ai">Áudio e IA</string>
+    <string name="tab_privacy">Privacidade</string>
+    <string name="tab_conversation">Conversa</string>
+    <string name="advanced_hubs_vaults">HUBS AVANÇADOS E COFRES</string>
+    <string name="hub_per_contact_rules_title">Regras por Contato</string>
+    <string name="hub_per_contact_rules_desc">Configurar regras de privacidade detalhadas por contato</string>
+    <string name="hub_delete_for_me_title">Mensagens \"Apagar para Mim\"</string>
+    <string name="hub_delete_for_me_desc">Ver conversas e registros preservados de apagar para mim</string>
+    <string name="hub_calls_recording_title">Hub de Chamadas e Gravação</string>
+    <string name="hub_calls_recording_desc">Bloqueador de chamadas, privacidade de chamadas, formatos e registros</string>
+    <string name="dep_disabled_hide_blue_ticks">(Desativado: ative primeiro \"Ocultar tiques azuis\")</string>
+    <string name="title_call_configurations">Configurações de Chamada</string>
+    <string name="title_call_recordings">Gravações</string>
 </resources>
