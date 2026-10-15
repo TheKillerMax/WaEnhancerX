@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -78,8 +81,8 @@ fun ModuleSettingsScreen() {
                 .fillMaxSize()
                 .padding(insets)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = spacing.pageMargin, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = spacing.pageMargin, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ModuleSettingsTile(
                 title = stringResource(R.string.app_theme_title),
@@ -126,6 +129,9 @@ fun ModuleSettingsScreen() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // Keep a bounded viewport so all language choices remain scrollable,
+                    // including on compact screens and with larger accessibility text.
+                    .heightIn(max = 520.dp)
                     .navigationBarsPadding()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 24.dp),
@@ -202,30 +208,32 @@ fun ModuleSettingsScreen() {
                 )
             }
         ) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.choose_app_language),
-                    style = WaexTheme.typography.titleLg,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onSurface,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+                item {
+                    Text(
+                        text = stringResource(R.string.choose_app_language),
+                        style = WaexTheme.typography.titleLg,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.onSurface,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 10.dp)
+                    )
+                }
 
-                LocaleHelper.SUPPORTED_LANGUAGES.forEach { lang ->
+                items(LocaleHelper.SUPPORTED_LANGUAGES, key = { it.code }) { lang ->
                     val selected = lang.code == currentLangCode
                     Surface(
-                        shape = WaexTheme.radius.cardShape,
-                        color = if (selected) colors.primary.copy(alpha = 0.12f) else colors.surfaceContainerLow,
+                        shape = WaexTheme.radius.mdShape,
+                        color = if (selected) colors.primary.copy(alpha = 0.10f) else colors.surface,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
-                            if (selected) colors.primary else colors.outlineVariant
+                            if (selected) colors.primary.copy(alpha = 0.75f) else colors.outlineVariant.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.fillMaxWidth().clickable {
                             currentLangCode = lang.code
@@ -235,20 +243,20 @@ fun ModuleSettingsScreen() {
                         }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = lang.nativeName,
-                                    style = WaexTheme.typography.bodyLg,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    style = WaexTheme.typography.bodyMd,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                                     color = if (selected) colors.primary else colors.onSurface
                                 )
                                 if (lang.englishName != lang.nativeName) {
                                     Text(
                                         text = lang.englishName,
-                                        style = WaexTheme.typography.bodySm,
+                                        style = WaexTheme.typography.labelSm,
                                         color = colors.onSurfaceVariant
                                     )
                                 }
@@ -256,9 +264,9 @@ fun ModuleSettingsScreen() {
                             if (selected) {
                                 Icon(
                                     imageVector = WaexIcons.Check,
-                                    contentDescription = "Selected",
+                                    contentDescription = null,
                                     tint = colors.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -287,12 +295,12 @@ private fun ModuleSettingsTile(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(36.dp)
                     .background(colors.primary.copy(alpha = 0.14f), WaexTheme.radius.mdShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -300,27 +308,27 @@ private fun ModuleSettingsTile(
                     imageVector = icon,
                     contentDescription = null,
                     tint = colors.primary,
-                    modifier = Modifier.size(23.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = typography.bodyLg,
+                    style = typography.bodyMd,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.onSurface
                 )
                 Text(
                     text = description,
-                    style = typography.bodyMd,
+                    style = typography.bodySm,
                     color = colors.onSurfaceVariant
                 )
             }
             if (value != null) {
                 Text(
                     text = value,
-                    style = typography.bodyMd,
+                    style = typography.labelSm,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.primary,
                     modifier = Modifier.padding(start = 10.dp)
@@ -330,7 +338,7 @@ private fun ModuleSettingsTile(
                 imageVector = WaexIcons.ChevronRight,
                 contentDescription = null,
                 tint = colors.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp).size(20.dp)
+                modifier = Modifier.padding(start = 6.dp).size(16.dp)
             )
         }
     }
