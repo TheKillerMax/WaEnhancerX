@@ -11,7 +11,7 @@
 - Fixed Hide Archived Chats
 - Fixed Hide Locked Chats
 - Fixed New Settings Style
-- Fixed IGStatus style stories 
+- Fixed IG style stories 
 
 [Improvements]
 - Improved protection against WhatsApp changing protected WAEnhancerX data or clearing all settings
