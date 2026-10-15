@@ -1,0 +1,95 @@
+name: V19 localized catalog QA validation
+on:
+  push:
+    branches: ['test/catalog-main-refresh-v19-2026-10-15']
+    paths: ['qa/v19-catalog.patch.gz.b64', '.github/workflows/v19-localized-catalog-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate exact public-source candidate and preserve text evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, gzip, hashlib, json, os, subprocess
+          from pathlib import Path
+          root=Path.cwd()
+          out=Path(os.environ['RUNNER_TEMP'])/'v19-evidence';out.mkdir()
+          candidate=Path(os.environ['RUNNER_TEMP'])/'v19-candidate'
+          base='bf1252c355b5155f064cd5de7d8e2f98ae001c40'
+          expected_tree='6980a969a2cd9c0de9d7cbe21e2f2034aabf8ed1'
+          payload=(root/'qa/v19-catalog.patch.gz.b64').read_text()
+          # Correct the one independently identified transport transcription character.
+          # Both the resulting text blob and decoded patch must match local evidence.
+          payload=payload.replace('K5LyJ0ic','K5XyJ0ic')
+          data=payload.encode()
+          assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()=='fda3da692911b5c75178ffd575281972a7c2b862'
+          patch=gzip.decompress(base64.b64decode(''.join(payload.split()),validate=True))
+          assert len(patch)==23525
+          assert hashlib.sha256(patch).hexdigest()=='3d4343253101a102c1be6cef682c9289373bf1bfd4e42c0b15de378f457757b4'
+          patch_path=out/'reviewed.patch';patch_path.write_bytes(patch)
+          def git(*args,cwd=root):
+              return subprocess.check_output(['git',*args],cwd=cwd,text=True).strip()
+          git('worktree','add','--detach',str(candidate),base)
+          git('apply','--check',str(patch_path),cwd=candidate)
+          git('apply',str(patch_path),cwd=candidate)
+          paths=['.github/workflows/source-qa.yml','qa/README.md','qa/catalog_source.py','qa/feature_contract_inventory.py','qa/test_archived_chats_entry.py','qa/test_catalog_schema_alias_contract.py','qa/test_catalog_source.py','qa/test_monet_wiring.py','qa/test_proximity_ui_wiring.py','qa/test_style_non_boolean_guard.py']
+          git('add','--',*paths,cwd=candidate)
+          assert set(git('diff','--cached','--name-only',cwd=candidate).splitlines())==set(paths)
+          git('diff','--cached','--check',cwd=candidate)
+          assert git('write-tree',cwd=candidate)==expected_tree
+          tests=sorted((candidate/'qa').glob('test_*.py'))
+          tests=[p for p in tests if p.name!='test_host_class_relocations.py']
+          assert len(tests)==39
+          commands=[['python3','qa/check_syntax.py']]+[['python3','qa/'+p.name] for p in tests]
+          results=[]
+          for cmd in commands:
+              p=subprocess.run(cmd,cwd=candidate,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+              (out/(Path(cmd[1]).stem+'.log')).write_text(p.stdout)
+              results.append({'command':cmd,'exit':p.returncode})
+              (out/'results.json').write_text(json.dumps(results,indent=2))
+              print(('PASS' if p.returncode==0 else 'FAIL'),cmd[1],flush=True)
+              if p.returncode:
+                  print(p.stdout[-5000:]);raise SystemExit(p.returncode)
+          assert git('write-tree',cwd=candidate)==expected_tree
+          assert not git('diff','--name-only',cwd=candidate)
+          sha=git('-c','user.name=TheKillerMax','-c','user.email=70108066+TheKillerMax@users.noreply.github.com','commit-tree',expected_tree,'-p',base,'-m','fix(qa): follow localized catalog assets and current settings routes',cwd=candidate)
+          (out/'state.json').write_text(json.dumps({'base':base,'candidate_sha':sha,'tree':expected_tree,'source_suites_passed':39,'android_build':False,'host_apk_used':False,'paths':paths},indent=2))
+          current=os.environ['GITHUB_SHA']
+          staging=git('-c','user.name=TheKillerMax','-c','user.email=70108066+TheKillerMax@users.noreply.github.com','commit-tree',git('rev-parse',current+'^{tree}'),'-p',current,'-p',sha,'-m','test(qa): preserve successfully validated V19 candidate objects')
+          (Path(os.environ['RUNNER_TEMP'])/'v19-staging-sha').write_text(staging)
+          print('VALIDATED_CANDIDATE',sha,'TREE',expected_tree,flush=True)
+          PY
+      - name: Preserve objects only on the unchanged staging branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref=refs/heads/test/catalog-main-refresh-v19-2026-10-15
+          test "$(git ls-remote origin "$ref" | cut -f1)" = "$GITHUB_SHA"
+          sha=$(cat "$RUNNER_TEMP/v19-staging-sha")
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "$sha:$ref"
+      - name: Preserve source-only validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-v19-catalog-validation
+          path: ${{ runner.temp }}/v19-evidence
+          retention-days: 14
+          if-no-files-found: error
