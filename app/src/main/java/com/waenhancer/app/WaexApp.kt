@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.config.PreferenceRestartTracker
+import com.waenhancer.config.FeatureCatalog
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -23,6 +24,7 @@ class WaexApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        FeatureCatalog.initialize(this)
         val lang = com.waenhancer.utils.LocaleHelper.getSelectedLanguageCode(this)
         if (lang != "system") {
             com.waenhancer.utils.LocaleHelper.applyLanguage(this, lang)

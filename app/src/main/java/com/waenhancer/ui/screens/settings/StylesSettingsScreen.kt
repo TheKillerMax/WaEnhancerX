@@ -30,10 +30,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
 
 @Composable
@@ -48,7 +52,7 @@ fun StylesSettingsScreen() {
     var typedValueRevision by remember { mutableIntStateOf(0) }
 
     val navController = LocalWaexNavController.current
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -137,56 +141,19 @@ fun StylesSettingsScreen() {
     val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
     val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
 
-    val appearanceGroups = listOf(
-        StyleGroup(
-            "Visual Styles",
-            WaexIcons.Palette,
-            listOf(
-                StyleItem("Change Bubble Colors", "Change Bubble Color on Conversation Screen", "bubble_colors"),
-                StyleItem("Custom Theme CSS", "Customize your WhatsApp using CSS styles", "custom_theme"),
-                StyleItem("Seconds on Timestamp", "Show seconds next to any timestamp in the WhatsApp app", "custom_time_format"),
-                StyleItem("New Settings Style", "Enable the new settings style, with profile photo on home screen toolbar", "custom_toolbar"),
-                StyleItem("Change Default DPI", "Change the DPI setting for the application. Use 0 to reset to default.", "custom_view_dpi"),
-                StyleItem("View Seen Tick", "Show an icon if the message view was sent to the recipient or unique view was seen", "seen_tick_customization"),
-                StyleItem("Floating Bottom Bar", "Enable iOS-style floating bottom navigation bar", "floating_bottom_bar"),
-                StyleItem("Unlock WA Plus", "Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.", "unlock_premium_customization", isPro = true),
-                StyleItem("Filter Items By ID", "Remove or customize WhatsApp views matching specific IDs", "custom_filters")
-            )
-        )
-    )
-
-    val layoutGroups = listOf(
-        StyleGroup(
-            "Conversation List Activity & Presence",
-            WaexIcons.Security,
-            listOf(
-                StyleItem("Show Online Dot in Conversation List", "Show a green online dot on home screen", "dotonline"),
-                StyleItem("Show Online/Last seen in Conversation List", "Show a text online or last seen on home screen", "showonlinetext"),
-                StyleItem("Show toast on contact online", "Show a toast when a contact is online", "typing_online_toasts")
-            )
-        ),
-        StyleGroup(
-            "Home Layout & Navigation",
-            WaexIcons.GridView,
-            listOf(
-                StyleItem("Remove Channel Recomendations", "Remove Channel Recomendations from tab Status", "channels_enhancements"),
-                StyleItem("Enable filter chats for type", "Show options to filter chats for groups, contacts and unseen messages", "chat_filters"),
-                StyleItem("Hide Tabs on Home", "Hide tabs on the home screen such as Updates, Communities and Calls", "hide_ui_tabs"),
-                StyleItem("Enable IGStatus on Home Screen", "Show status style Instagram in Home Screen", "instagram_status_layout"),
-                StyleItem("Separate Groups", "Separate your chats by: Groups, Private Chats, Status, Calls, Communities", "separate_groups_tabs"),
-                StyleItem("Quick Action Home Menu", "Add quick actions to home long-press", "quick_home_menu")
-            )
-        ),
-        StyleGroup(
-            "Utilities & Data",
-            WaexIcons.Extension,
-            listOf(
-                StyleItem("Show Contact Added Status in Conversation", "This option verifies whether the contact added you or has a public profile photo", "contact_blocked_verify"),
-                StyleItem("Audio to Voice Status", "Pick a local audio file and publish it as a voice status", "send_audio_as_voice_status", isPro = true),
-                StyleItem("Disable Screen off on proximity sensor", "Disable Screen off on proximity sensor to the whole WhatsApp", "disable_sensor_proximity")
-            )
-        )
-    )
+    val appearanceGroups = remember {
+        FeatureCatalog.groupsFor(4, "appearance").map { StyleGroup(it.id, WaexIcons.Palette, it.items()) }
+    }
+    val layoutGroups = remember {
+        FeatureCatalog.groupsFor(4, "layout").map { group ->
+            val icon = when (group.id) {
+                "conversation_list_activity_presence" -> WaexIcons.Security
+                "home_layout_navigation" -> WaexIcons.GridView
+                else -> WaexIcons.Extension
+            }
+            StyleGroup(group.id, icon, group.items())
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -292,7 +259,7 @@ fun StylesSettingsScreen() {
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = group.title,
+                        text = LocalizationHelper.getLocalizedSectionTitle(context, group.title),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurfaceVariant
@@ -315,6 +282,8 @@ fun StylesSettingsScreen() {
                                 animationSpec = tween(durationMillis = 300),
                                 label = "highlight_bg"
                             )
+                            val locTitle = LocalizationHelper.getTitle(context, item)
+                            val locDesc = LocalizationHelper.getDesc(context, item)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -346,14 +315,14 @@ fun StylesSettingsScreen() {
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = item.label,
+                                            text = locTitle,
                                             style = typography.bodyLg,
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (needsTypedEditor) "${item.sublabel} • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
-                                                else if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (needsTypedEditor) "$locDesc • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
+                                                else if (isLocked) "$locDesc • Requires Pro" else locDesc,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -396,7 +365,7 @@ fun StylesSettingsScreen() {
                                         if (needsTypedEditor) {
                                             Icon(
                                                 imageVector = WaexIcons.ChevronRight,
-                                                contentDescription = "Configure ${item.label}",
+                                                contentDescription = "Configure $locTitle",
                                                 tint = colors.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -885,15 +854,9 @@ private fun typedStyleSummary(
 private data class StyleGroup(
     val title: String,
     val icon: ImageVector,
-    val items: List<StyleItem>
+    val items: List<FeatureItem>
 )
 
-private data class StyleItem(
-    val label: String,
-    val sublabel: String,
-    val key: String,
-    val isPro: Boolean = false
-)
 
 @Preview(showBackground = true)
 @Composable

@@ -24,6 +24,7 @@ import com.waenhancer.ui.components.WaexEmptyState
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -43,28 +44,6 @@ fun SearchScreen() {
 
     var query by remember { mutableStateOf("") }
 
-    // Helper functions for localized feature text
-    fun getLocalizedTitle(item: FeatureItem): String {
-        val resId = context.resources.getIdentifier("feat_${item.key}_title", "string", context.packageName)
-        return if (resId != 0) context.getString(resId) else item.title
-    }
-
-    fun getLocalizedDesc(item: FeatureItem): String {
-        val resId = context.resources.getIdentifier("feat_${item.key}_desc", "string", context.packageName)
-        return if (resId != 0) context.getString(resId) else item.description
-    }
-
-    fun getLocalizedSection(section: String): String {
-        val secKey = "sec_" + section.lowercase()
-            .replace("&", "")
-            .replace("-", "_")
-            .split("\\s+".toRegex())
-            .filter { it.isNotEmpty() }
-            .joinToString("_")
-        val resId = context.resources.getIdentifier(secKey, "string", context.packageName)
-        return if (resId != 0) context.getString(resId) else section
-    }
-
     // Registry of all available preference items sourced from the unified FeatureCatalog
     val preferenceRegistry = FeatureCatalog.ALL_FEATURES
 
@@ -76,17 +55,18 @@ fun SearchScreen() {
         } else {
             val terms = trimmed.lowercase().split("\\s+".toRegex()).filter { it.isNotEmpty() }
             preferenceRegistry.filter { pref ->
-                val locTitle = getLocalizedTitle(pref)
-                val locDesc = getLocalizedDesc(pref)
-                val locSec = getLocalizedSection(pref.section)
-                val haystack = "$locTitle $locDesc $locSec ${pref.title} ${pref.description} ${pref.section} ${pref.key} ${pref.tabLabel}".lowercase()
+                val locTitle = LocalizationHelper.getTitle(context, pref)
+                val locDesc = LocalizationHelper.getDesc(context, pref)
+                val locSec = LocalizationHelper.getSection(context, pref)
+                val locTab = LocalizationHelper.getTabTitle(context, pref.tabId)
+                val haystack = "$locTitle $locDesc $locSec $locTab ${pref.key}".lowercase()
                 terms.all { term -> haystack.contains(term) }
             }
         }
     }
 
     val groupedPreferences = remember(filteredPreferences) {
-        filteredPreferences.groupBy { getLocalizedSection(it.section) }
+        filteredPreferences.groupBy { LocalizationHelper.getSection(context, it) }
     }
 
     Scaffold(
@@ -162,13 +142,13 @@ fun SearchScreen() {
                         }
                         items(preferences, key = { it.key }) { pref ->
                             // Custom badge color per tab category
-                            val (badgeBg, badgeTextColor) = when (pref.tabLabel) {
-                                "Privacy" -> Color(0xFF1E88E5).copy(alpha = 0.12f) to Color(0xFF1E88E5)
-                                "Conversation" -> Color(0xFF8E24AA).copy(alpha = 0.12f) to Color(0xFF8E24AA)
-                                "Media" -> Color(0xFFFB8C00).copy(alpha = 0.12f) to Color(0xFFFB8C00)
-                                "Automation" -> Color(0xFF43A047).copy(alpha = 0.12f) to Color(0xFF43A047)
-                                "Styles" -> Color(0xFF00ACC1).copy(alpha = 0.12f) to Color(0xFF00ACC1)
-                                "Premium" -> Color(0xFFE53935).copy(alpha = 0.12f) to Color(0xFFE53935)
+                            val (badgeBg, badgeTextColor) = when (pref.tabId) {
+                                "privacy" -> Color(0xFF1E88E5).copy(alpha = 0.12f) to Color(0xFF1E88E5)
+                                "conversation" -> Color(0xFF8E24AA).copy(alpha = 0.12f) to Color(0xFF8E24AA)
+                                "media" -> Color(0xFFFB8C00).copy(alpha = 0.12f) to Color(0xFFFB8C00)
+                                "automation" -> Color(0xFF43A047).copy(alpha = 0.12f) to Color(0xFF43A047)
+                                "styles" -> Color(0xFF00ACC1).copy(alpha = 0.12f) to Color(0xFF00ACC1)
+                                "premium" -> Color(0xFFE53935).copy(alpha = 0.12f) to Color(0xFFE53935)
                                 else -> colors.primaryContainer to colors.primary
                             }
 
@@ -203,7 +183,7 @@ fun SearchScreen() {
                                             .padding(horizontal = 8.dp, vertical = 3.dp)
                                     ) {
                                         Text(
-                                            text = pref.tabLabel,
+                                            text = LocalizationHelper.getTabTitle(context, pref.tabId),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = badgeTextColor,
@@ -222,20 +202,20 @@ fun SearchScreen() {
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             Text(
-                                                text = getLocalizedTitle(pref),
+                                                text = LocalizationHelper.getTitle(context, pref),
                                                 style = typography.bodyLg,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = colors.onSurface
                                             )
                                             Text(
-                                                text = getLocalizedDesc(pref),
+                                                text = LocalizationHelper.getDesc(context, pref),
                                                 style = typography.bodyMd,
                                                 color = colors.onSurfaceVariant,
                                                 fontSize = 12.sp,
                                                 lineHeight = 17.sp
                                             )
                                             Text(
-                                                text = "Section: ${getLocalizedSection(pref.section)}",
+                                                text = "Section: ${LocalizationHelper.getSection(context, pref)}",
                                                 style = typography.labelSm,
                                                 color = colors.primary,
                                                 fontSize = 11.sp,

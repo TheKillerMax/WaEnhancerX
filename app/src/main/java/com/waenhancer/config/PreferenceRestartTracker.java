@@ -58,9 +58,6 @@ public final class PreferenceRestartTracker {
 
     @NonNull
     public static String displayName(@NonNull String key) {
-        String known = FeatureCatalog.getTitle(key);
-        if (known != null) return known;
-
         String[] words = key.replace('-', '_').split("_+");
         StringBuilder result = new StringBuilder();
         for (String word : words) {

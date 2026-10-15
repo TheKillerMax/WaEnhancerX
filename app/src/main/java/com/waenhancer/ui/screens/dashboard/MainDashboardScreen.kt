@@ -68,8 +68,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.waenhancer.app.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -246,9 +248,9 @@ fun MainDashboardScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = when {
-                                !isModuleActive -> "Module Inactive • v$moduleVersion"
-                                hasUnsupportedActiveApp -> "Module Active • v$moduleVersion • Unsupported Target"
-                                else -> "Module Active • v$moduleVersion"
+                                !isModuleActive -> stringResource(R.string.module_inactive_version, moduleVersion)
+                                hasUnsupportedActiveApp -> stringResource(R.string.module_active_version, "$moduleVersion • ${stringResource(R.string.unsupported_target)}")
+                                else -> stringResource(R.string.module_active_version, moduleVersion)
                             },
                             style = typography.bodyMd,
                             fontWeight = FontWeight.SemiBold,
@@ -561,7 +563,7 @@ fun MainDashboardScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "Backup", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                                Text(text = stringResource(R.string.backup_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
                             }
                         }
 
@@ -578,7 +580,7 @@ fun MainDashboardScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "Restore", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                                Text(text = stringResource(R.string.restore_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
                             }
                         }
                     }
@@ -603,7 +605,7 @@ fun MainDashboardScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Reset Settings",
+                                text = stringResource(R.string.reset_settings_btn),
                                 style = typography.bodyMd,
                                 fontWeight = FontWeight.Medium,
                                 color = colors.error
@@ -619,9 +621,9 @@ fun MainDashboardScreen(
         // Reset Settings Confirmation Sheet
         if (showResetSettingsDialog) {
             WaexConfirmationBottomSheet(
-                title = "Reset All Settings",
-                message = "Are you sure you want to reset all module settings to their default values? All customizations and preferences will be cleared.",
-                confirmLabel = "Reset Settings",
+                title = stringResource(R.string.reset_settings_confirm_title),
+                message = stringResource(R.string.reset_settings_confirm_msg),
+                confirmLabel = stringResource(R.string.reset_settings_btn),
                 destructive = true,
                 onDismiss = { showResetSettingsDialog = false },
                 onConfirm = {

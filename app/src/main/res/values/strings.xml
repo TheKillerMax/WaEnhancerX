@@ -159,6 +159,14 @@
     <string name="feat_open_wae_desc">Add button in Home Screen or WhatsApp Settings to open Wa Enhancer</string>
     <string name="feat_message_bomber_title">Message Bomber</string>
     <string name="feat_message_bomber_desc">Send a short, delayed sequence of messages from inside a WhatsApp chat</string>
+    <string name="feat_anti_edit_messages_title">Show Edited Message History</string>
+    <string name="feat_anti_edit_messages_desc">Show edited message history when clicking "Edited" on a message</string>
+    <string name="feat_revokeallmessages_title">Increase limit of "Delete for everyone" option</string>
+    <string name="feat_revokeallmessages_desc">Increases the limit to 3 days in the option to delete messages for everyone</string>
+    <string name="feat_hide_forwarded_tag_title">Hide "Forwarded" Tag</string>
+    <string name="feat_hide_forwarded_tag_desc">Forward messages without the tag "Forwarded"</string>
+    <string name="feat_removeseemore_title">Remove "See More" Button</string>
+    <string name="feat_removeseemore_desc">Disable "See More" button and show all long messages</string>
     <string name="feat_message_device_source_title">Show Message Device Source</string>
     <string name="feat_message_device_source_desc">Shows whether a message was sent from the primary device or a linked device</string>
     <string name="feat_preserve_delete_for_me_title">Delete (for me)</string>
@@ -290,4 +298,13 @@
     <string name="sec_home_layout_navigation">Home Layout &amp; Navigation</string>
     <string name="sec_utilities_data">Utilities &amp; Data</string>
     <string name="sec_system_compatibility">System &amp; Compatibility</string>
+    <string name="sec_security_vault">Security &amp; Vault</string>
+    <string name="sec_chat_navigation_shortcuts">Chat Navigation &amp; Shortcuts</string>
+    <string name="catalog_tab_privacy">Privacy</string>
+    <string name="catalog_tab_conversation">Conversation</string>
+    <string name="catalog_tab_media">Media</string>
+    <string name="catalog_tab_automation">Automation</string>
+    <string name="catalog_tab_styles">Styles</string>
+    <string name="catalog_tab_settings">Settings</string>
+    <string name="catalog_tab_premium">Premium</string>
 </resources>

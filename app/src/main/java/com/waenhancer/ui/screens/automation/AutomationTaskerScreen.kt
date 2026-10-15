@@ -65,11 +65,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
+import com.waenhancer.config.FeatureCatalog
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 
 
 @Composable
@@ -83,6 +85,7 @@ fun AutomationTaskerScreen() {
     var selectedTab by remember { mutableStateOf("automation") } // "automation" | "ai"
 
     val navController = LocalWaexNavController.current
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val itemCoordinates = remember { mutableStateMapOf<String, Float>() }
     var containerY by remember { mutableStateOf(0f) }
@@ -219,12 +222,12 @@ fun AutomationTaskerScreen() {
         if (selectedTab == "automation") {
             // Automation Cards
             val cards = listOf(
-                AutomationCardData("always_typing", WaexIcons.Lock, "Hide Typing", "Users cannot see that you are typing", alwaysTypingEnabled, false) {
+                AutomationCardData("always_typing", WaexIcons.Lock, alwaysTypingEnabled, FeatureCatalog.findByKey("always_typing")?.isPro ?: false) {
                     alwaysTypingEnabled = it
                     preferenceManager.putBoolean("always_typing", it)
                     preferenceManager.putBoolean("ghostmode_t", it)
                 },
-                AutomationCardData("tasker_integration", WaexIcons.AutoAwesome, "Enable Tasker Automation", "Enables using intents to receive and send messages in Tasker", taskerIntegrationEnabled, false) {
+                AutomationCardData("tasker_integration", WaexIcons.AutoAwesome, taskerIntegrationEnabled, FeatureCatalog.findByKey("tasker_integration")?.isPro ?: false) {
                     taskerIntegrationEnabled = it
                     preferenceManager.putBoolean("tasker_integration", it)
                 }
@@ -285,18 +288,21 @@ fun AutomationTaskerScreen() {
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
+                                val item = FeatureCatalog.findByKey(card.key)
+                                val locTitle = if (item != null) LocalizationHelper.getTitle(context, item) else LocalizationHelper.getLocalizedFeatureTitle(context, card.key)
+                                val locDesc = if (item != null) LocalizationHelper.getDesc(context, item) else LocalizationHelper.getLocalizedFeatureDesc(context, card.key)
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = card.title,
+                                        text = locTitle,
                                         style = typography.bodyLg,
                                         fontWeight = FontWeight.Bold,
                                         color = colors.onSurface
                                     )
                                     Text(
-                                        text = if (isLocked) "${card.desc} • Requires Pro" else card.desc,
+                                        text = if (isLocked) "$locDesc • Requires Pro" else locDesc,
                                         style = typography.bodyMd,
                                         color = colors.onSurfaceVariant,
                                         fontSize = 12.sp
@@ -646,27 +652,11 @@ fun AutomationTaskerScreen() {
 private data class AutomationCardData(
     val key: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val title: String,
-    val desc: String,
     val enabled: Boolean,
     val isPro: Boolean,
     val onCheckedChange: (Boolean) -> Unit
 )
 
-private data class VoiceFeatureData(
-    val label: String,
-    val sub: String,
-    val key: String,
-    val enabled: Boolean,
-    val onChecked: (Boolean) -> Unit
-)
-
-private data class TaskerFieldData(
-    val label: String,
-    val value: String,
-    val key: String,
-    val onValueChange: (String) -> Unit
-)
 
 @Preview(showBackground = true)
 @Composable

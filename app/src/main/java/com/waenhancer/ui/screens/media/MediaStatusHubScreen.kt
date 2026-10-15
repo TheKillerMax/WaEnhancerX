@@ -55,7 +55,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
 
 
@@ -148,29 +151,11 @@ fun MediaStatusHubScreen() {
     val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
     val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
 
-    val mediaGroups = listOf(
-        MediaGroup(
-            "Media Quality & Status",
-            WaexIcons.Image,
-            listOf(
-                MediaItem("Download and Share Status", "Shows two buttons to share and download status", "statusdowload"),
-                MediaItem("HD Quality Images & Videos", "Send images and videos in HD quality by default", "media_upload_quality"),
-                MediaItem("Audio to Voice Status", "Pick a local audio file and publish it as a voice status", "send_audio_as_voice_status", isPro = true)
-                ,MediaItem("Status Video Splitter", "Split long videos into 30, 60, or 90 second status clips", "status_video_splitter", isPro = true)
-                ,MediaItem("File Size Spoofer", "Set the file size displayed to the recipient from WhatsApp's send preview", "file_size_spoofer", isPro = true)
-            )
-        ),
-        MediaGroup(
-            "Media Utility & Downloader",
-            WaexIcons.Folder,
-            listOf(
-                MediaItem("Call Recording", "Record incoming and outgoing calls (Voice & Video) as audio", "call_recording"),
-                MediaItem("Download View Once", "Show button to download view once media", "downloadviewonce"),
-                MediaItem("Enable Media Preview", "Add a button to preview media in a temporary file", "media_preview"),
-                MediaItem("Download Profile Photo", "Download full-resolution profile pictures directly", "download_profile")
-            )
-        )
-    )
+    val mediaGroups = remember {
+        FeatureCatalog.groupsFor(2, null).map { group ->
+            MediaGroup(group.id, if (group.id == "media_quality_status") WaexIcons.Image else WaexIcons.Folder, group.items())
+        }
+    }
 
 
     Column(
@@ -258,7 +243,7 @@ fun MediaStatusHubScreen() {
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = group.title,
+                        text = LocalizationHelper.getLocalizedSectionTitle(context, group.title),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurfaceVariant
@@ -280,6 +265,8 @@ fun MediaStatusHubScreen() {
                                 animationSpec = tween(durationMillis = 300),
                                 label = "highlight_bg"
                             )
+                            val locTitle = LocalizationHelper.getTitle(context, item)
+                            val locDesc = LocalizationHelper.getDesc(context, item)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -309,13 +296,13 @@ fun MediaStatusHubScreen() {
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = item.label,
+                                            text = locTitle,
                                             style = typography.bodyLg,
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
                                         Text(
-                                            text = if (isLocked) "${item.sublabel} • Requires Pro" else item.sublabel,
+                                            text = if (isLocked) "$locDesc • Requires Pro" else locDesc,
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 12.sp
@@ -349,14 +336,7 @@ fun MediaStatusHubScreen() {
 private data class MediaGroup(
     val title: String,
     val icon: ImageVector,
-    val items: List<MediaItem>
-)
-
-private data class MediaItem(
-    val label: String,
-    val sublabel: String,
-    val key: String,
-    val isPro: Boolean = false
+    val items: List<FeatureItem>
 )
 
 @Preview(showBackground = true)
