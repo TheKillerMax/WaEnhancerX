@@ -18,4 +18,4 @@
 - Rootless setups such as LSPatch or Shizuku are not supported. They may behave unpredictably and increase the risk of WhatsApp or WhatsApp Business account restrictions, so please do not use them with WAEnhancerX.
 
 [Community contribution]
-- Thanks to @TheKillerMax for contributions through PRs #33, #34, and #37
+- Thanks to @TheKillerMax for contributions through PRs
