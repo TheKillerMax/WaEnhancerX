@@ -5,6 +5,8 @@ No Android build or LSPosed runtime behavior is implied by passing.
 """
 from pathlib import Path
 import subprocess
+import json
+import xml.etree.ElementTree as ET
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
@@ -21,7 +23,17 @@ assert 'preferenceManager.putPublicString("seentick", nextPlacement)' in ui
 assert 'preferenceManager.putString("seentick",' not in ui
 assert 'preferenceManager.putBoolean("seen_tick_customization"' not in ui
 assert 'ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement)' in ui
-assert '"Manual Blue Tick Button"' in cat and '"Manual Blue Tick Button"' in ui
+assert 'FeatureCatalog.groupsFor(4, "appearance")' in ui
+assert 'preference_catalog.json' in cat
+catalog = json.loads((root / 'app/src/main/assets/preference_catalog.json').read_text())
+assert any('seen_tick_customization' in g['keys'] and g['tabIndex'] == 4 for g in catalog)
+for resource in (root / 'app/src/main/res').glob('values*/strings.xml'):
+    entries = {e.attrib.get('name'): e.text for e in ET.parse(resource).getroot() if e.tag == 'string'}
+    assert entries.get('feat_seen_tick_customization_title')
+    assert entries.get('feat_seen_tick_customization_desc')
+    if resource.parent.name == 'values':
+        assert entries['feat_seen_tick_customization_title'] == 'Manual Blue Tick Button'
+        assert 'held read receipts' in entries['feat_seen_tick_customization_desc']
 for consumer in (blue, receipts):
     assert 'prefs.getAll().get("seentick")' in consumer
 assert 'if (!isHideBlueTicksEnabled()) return false;' in blue

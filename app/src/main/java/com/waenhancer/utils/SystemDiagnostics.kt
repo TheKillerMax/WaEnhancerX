@@ -8,6 +8,7 @@ import com.waenhancer.config.PreferenceStores
 import com.waenhancer.update.UpdateDownloader
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.ModuleStatus
+import java.io.File
 
 data class FrameworkInfo(val name: String, val packageName: String?, val version: String?, val api: Int?)
 
@@ -131,7 +132,7 @@ object SystemDiagnosticsReader {
         // Some devices permit the kernel flag to be read directly, but normal application
         // domains are commonly denied access by SELinux itself.
         runCatching {
-            normalizeSelinuxState(java.io.File("/sys/fs/selinux/enforce").readText())
+            normalizeSelinuxState(File("/sys/fs/selinux/enforce").readText())
         }.getOrNull()?.let { return it }
 
         // Android exposes the state internally on several platform versions. Reflection is kept

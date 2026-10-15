@@ -21,11 +21,14 @@ import com.waenhancer.xposed.features.conversation.StickerConfirmHook;
 import com.waenhancer.xposed.features.customization.ChannelRecommendationsFilterHook;
 import com.waenhancer.xposed.features.customization.ChatFilterDisplayHook;
 import com.waenhancer.xposed.features.customization.CustomDpiHook;
+import com.waenhancer.xposed.features.customization.CustomTimeHook;
 import com.waenhancer.xposed.features.customization.CssThemeHook;
 import com.waenhancer.xposed.features.customization.FilterItemsHook;
 import com.waenhancer.xposed.features.customization.FloatingBottomBarHook;
 import com.waenhancer.xposed.features.customization.OnlinePresenceIndicatorsHook;
 import com.waenhancer.xposed.features.customization.HideHomeTabsHook;
+import com.waenhancer.xposed.features.customization.IGStatusHook;
+import com.waenhancer.xposed.features.customization.NewSettingsStyleHook;
 import com.waenhancer.xposed.features.customization.SeparateGroupsHook;
 import com.waenhancer.xposed.features.homescreen.ChatListCustomizationsHook;
 import com.waenhancer.xposed.features.homescreen.HomeScreenHeaderActionsHook;
@@ -218,8 +221,11 @@ public final class FeatureRegistry {
         addFeature(ChannelRecommendationsFilterHook.class, "Customization", () -> new ChannelRecommendationsFilterHook(context, classLoader, prefs));
         addFeature(ChatFilterDisplayHook.class, "Customization", () -> new ChatFilterDisplayHook(context, classLoader, prefs));
         addFeature(CustomDpiHook.class, "Customization", () -> new CustomDpiHook(context, classLoader, prefs));
+        addFeature(CustomTimeHook.class, "Customization", () -> new CustomTimeHook(context, classLoader, prefs));
         addFeature(CssThemeHook.class, "Customization", () -> new CssThemeHook(context, classLoader, prefs));
         addFeature(HideHomeTabsHook.class, "Customization", () -> new HideHomeTabsHook(context, classLoader, prefs));
+        addFeature(IGStatusHook.class, "Customization", () -> new IGStatusHook(context, classLoader, prefs));
+        addFeature(NewSettingsStyleHook.class, "Customization", () -> new NewSettingsStyleHook(context, classLoader, prefs));
         addFeature(OnlinePresenceIndicatorsHook.class, "Customization", () -> new OnlinePresenceIndicatorsHook(context, classLoader, prefs));
         addFeature(SeparateGroupsHook.class, "Customization", () -> new SeparateGroupsHook(context, classLoader, prefs));
         addFeature(FloatingBottomBarHook.class, "Customization", () -> new FloatingBottomBarHook(context, classLoader, prefs));
@@ -248,8 +254,9 @@ public final class FeatureRegistry {
                     entry.status = "ACTIVE";
                 } catch (Throwable t) {
                     entry.status = "FAILED";
-                    entry.error = t.getMessage();
-                    XposedBridge.log("[WAEX] Error initializing feature [" + entry.name + "]: " + t.getMessage());
+                    entry.error = t.getMessage() != null ? t.getMessage() : t.getClass().getName();
+                    XposedBridge.log("[WAEX] Error initializing feature [" + entry.name + "]: " + entry.error);
+                    XposedBridge.log(t);
                 }
             }
         }

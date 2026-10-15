@@ -137,7 +137,7 @@ public class StatusDownloadHook extends BaseFeature {
                         try {
                             handleStatusMenuHook(param, contactClass, baseClass);
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + " Error handling status menu hook: " + t.getMessage());
+                            XposedBridge.log(TAG + " Error handling status menu hook: " + t.getClass().getSimpleName());
                         }
                     }
                 });
@@ -162,7 +162,7 @@ public class StatusDownloadHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error setting up status playback hook: " + t.getMessage());
+            XposedBridge.log(TAG + " Error setting up status playback hook: " + t.getClass().getSimpleName());
         }
     }
 
@@ -243,7 +243,7 @@ public class StatusDownloadHook extends BaseFeature {
                 try {
                     downloadCurrentStatus(sourceObject);
                 } catch (Throwable t) {
-                    XposedBridge.log(TAG + " Download error: " + t.getMessage());
+                    XposedBridge.log(TAG + " Download error: " + t.getClass().getSimpleName());
                     showToast(context, "Failed to download status: " + t.getMessage());
                 }
             });
@@ -348,7 +348,7 @@ public class StatusDownloadHook extends BaseFeature {
                 return statusList.get(currentIndex);
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error resolving current status item: " + t.getMessage());
+            XposedBridge.log(TAG + " Error resolving current status item: " + t.getClass().getSimpleName());
         }
         return null;
     }
@@ -437,7 +437,7 @@ public class StatusDownloadHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error resolving current status index: " + t.getMessage());
+            XposedBridge.log(TAG + " Error resolving current status index: " + t.getClass().getSimpleName());
         }
         return null;
     }
@@ -633,7 +633,7 @@ public class StatusDownloadHook extends BaseFeature {
                 }
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " saveMediaFile error: " + t.getMessage());
+            XposedBridge.log(TAG + " saveMediaFile error: " + t.getClass().getSimpleName());
             showToast(ctx, "Error saving status media: " + t.getMessage());
         }
     }

@@ -65,10 +65,14 @@ fun ReleaseDetailsScreen(tagName: String) {
         when {
             item != null -> LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(spacing.pageMargin), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
-                    Text(item.tagName, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
-                    Text(formatReleaseDate(item.publishedAt), style = typography.bodyMd, color = colors.onSurfaceVariant)
+                    Text(item.name, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+                    Text(
+                        "Version ${item.version}  •  ${formatReleaseDate(item.publishedAt)}",
+                        style = typography.bodyMd,
+                        color = colors.onSurfaceVariant
+                    )
                     Spacer(Modifier.height(18.dp))
-                    ChangelogBodyView(item.body)
+                    ChangelogBodyView(item.body, initiallyExpanded = true)
                     Spacer(Modifier.height(20.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         val isDowngrade = ReleaseRepository.versionCode(item.version) < ReleaseRepository.versionCode(installedVersion)
@@ -125,7 +129,7 @@ fun ReleaseDetailsScreen(tagName: String) {
         val isDowngrade = ReleaseRepository.versionCode(rel.version) < ReleaseRepository.versionCode(installedVersion)
         UpdateDownloadSheet(
             url = asset.downloadUrl,
-            version = "${rel.tagName} (${asset.buildTypeLabel})",
+            version = rel.version,
             useRoot = isDowngrade || preferences.getBoolean("root_auto_install", false),
             onDismiss = { activeDownload = null }
         )

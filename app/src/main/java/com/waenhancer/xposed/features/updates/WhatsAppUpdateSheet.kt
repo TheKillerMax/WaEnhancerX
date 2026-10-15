@@ -22,6 +22,7 @@ import com.waenhancer.update.ReleaseRepository
 import com.waenhancer.xposed.core.components.WaexBottomSheet
 import de.robv.android.xposed.XposedBridge
 import java.util.concurrent.atomic.AtomicBoolean
+import android.content.res.Configuration
 
 /**
  * Native in-WhatsApp Update BottomSheet using WhatsApp Design System (WDS) components.
@@ -308,8 +309,8 @@ object WhatsAppUpdateSheet {
 
     private fun isDarkTheme(context: Context): Boolean {
         return try {
-            val mode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            mode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val mode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            mode == Configuration.UI_MODE_NIGHT_YES
         } catch (_: Throwable) {
             true
         }

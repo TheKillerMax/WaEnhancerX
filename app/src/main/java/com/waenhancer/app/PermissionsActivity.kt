@@ -70,14 +70,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.waenhancer.core.preferences.WaexPreferenceManager
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import com.waenhancer.update.UpdateDownloader
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.utils.LocaleHelper
 
 enum class PermissionType {
     RUNTIME,
@@ -100,24 +108,48 @@ data class PermissionItem(
 class PermissionsActivity : ComponentActivity() {
 
     @Inject lateinit var preferenceManager: WaexPreferenceManager
+    @Volatile private var rootCheckComplete = false
+    @Volatile private var rootGranted = false
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (hasCompletedPermissionOnboarding() || areAllPermissionsGranted(this)) {
-            navigateToHome()
+        if (rootCheckComplete && rootGranted &&
+            (hasCompletedPermissionOnboarding() || areAllPermissionsGranted(this))) {
+            navigateToHome(rootGranted = true)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val startupSplash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        startupSplash.setKeepOnScreenCondition { !rootCheckComplete }
+
+        lifecycleScope.launch {
+            rootGranted = withContext(Dispatchers.IO) {
+                UpdateDownloader.hasRootAccess()
+            }
+            rootCheckComplete = true
+            continueAfterRootCheck()
+        }
+    }
+
+    private fun continueAfterRootCheck() {
+        if (!rootGranted) {
+            navigateToHome(rootGranted = false)
+            return
+        }
 
         val allPermissionsGranted = areAllPermissionsGranted(this)
         if (allPermissionsGranted) {
             preferenceManager.putBoolean(PREF_PERMISSION_ONBOARDING_COMPLETE, true)
         }
         if (hasCompletedPermissionOnboarding() || allPermissionsGranted) {
-            navigateToHome()
+            navigateToHome(rootGranted = true)
             return
         }
 
@@ -137,7 +169,7 @@ class PermissionsActivity : ComponentActivity() {
                     PermissionsScreen(
                         onContinue = {
                             preferenceManager.putBoolean(PREF_PERMISSION_ONBOARDING_COMPLETE, true)
-                            navigateToHome()
+                            navigateToHome(rootGranted = true)
                         }
                     )
                 }
@@ -145,7 +177,8 @@ class PermissionsActivity : ComponentActivity() {
         }
     }
 
-    private fun navigateToHome() {
+    private fun navigateToHome(rootGranted: Boolean) {
+        StartupRootAccess.publish(rootGranted)
         val intent = Intent(this, MainActivity::class.java).apply {
             if (this@PermissionsActivity.intent.extras != null) {
                 putExtras(this@PermissionsActivity.intent.extras!!)
@@ -447,7 +480,7 @@ fun PermissionsScreen(
             Surface(
                 color = colors.surface,
                 shadowElevation = 12.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
+                border = BorderStroke(1.dp, colors.outlineVariant)
             ) {
                 Column(
                     modifier = Modifier
@@ -554,7 +587,7 @@ fun PermissionsScreen(
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -615,7 +648,7 @@ fun PermissionsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = cardBg,
-                    border = androidx.compose.foundation.BorderStroke(
+                    border = BorderStroke(
                         1.dp,
                         if (isGranted) Color(0xFF22C55E).copy(alpha = 0.35f) else colors.outlineVariant
                     ),

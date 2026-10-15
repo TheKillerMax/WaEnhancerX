@@ -13,27 +13,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -54,12 +60,18 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.utils.UniversalVersionValidator
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.style.TextAlign
+import com.waenhancer.config.PreferenceStores
+import com.waenhancer.utils.WhatsAppPackageDetector
 
 /**
  * Universal Supported Versions Screen.
  * Dynamically displays all installed WhatsApp targets and allows 1-tap app selection
  * to add universal wildcard version rules without manual typing.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupportedVersionsScreen() {
     val context = LocalContext.current
@@ -70,7 +82,7 @@ fun SupportedVersionsScreen() {
     val radius = WaexTheme.radius
     val spacing = WaexTheme.spacing
 
-    val prefs = remember(context) { com.waenhancer.config.PreferenceStores.publicStore(context) }
+    val prefs = remember(context) { PreferenceStores.publicStore(context) }
 
     var isCustomizeEnabled by remember {
         mutableStateOf(prefManager.getBoolean("customize_supported_versions", false))
@@ -93,7 +105,7 @@ fun SupportedVersionsScreen() {
 
     // Dynamic list of detected WhatsApp packages & clones
     val detectedApps = remember(customVersionsList.size, isCustomizeEnabled, isBypassEnabled) {
-        com.waenhancer.utils.WhatsAppPackageDetector.detectWhatsAppApps(context)
+        WhatsAppPackageDetector.detectWhatsAppApps(context)
     }
 
     val unsupportedApps = detectedApps.filter { app ->
@@ -116,7 +128,7 @@ fun SupportedVersionsScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            contentPadding = PaddingValues(
                 horizontal = spacing.pageMargin,
                 vertical = 16.dp
             ),
@@ -175,7 +187,7 @@ fun SupportedVersionsScreen() {
                 Surface(
                     shape = radius.mdShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -284,7 +296,7 @@ fun SupportedVersionsScreen() {
                             contentColor = colors.surface
                         ),
                         shape = radius.smShape,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
                         Icon(
@@ -307,7 +319,7 @@ fun SupportedVersionsScreen() {
                     Surface(
                         shape = radius.mdShape,
                         color = colors.surfaceDim.copy(alpha = 0.5f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
@@ -315,7 +327,7 @@ fun SupportedVersionsScreen() {
                                 text = "No custom version rules added yet.\nTap \"Add Rule\" to select an unsupported app and automatically register its version branch.",
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -357,33 +369,43 @@ fun SupportedVersionsScreen() {
         }
     }
 
-    // App Selection Dialog for Adding Version Rule
+    // App Selection Sheet for Adding Version Rule
     if (showSelectAppDialog) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showSelectAppDialog = false },
-            title = {
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = colors.surface,
+            shape = radius.bottomSheetShape
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
                     text = "Select Unsupported App",
                     style = typography.headlineMd,
                     color = colors.onSurface,
                     fontWeight = FontWeight.Bold
                 )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Select an installed app to automatically generate and register its universal version rule:",
-                        style = typography.labelSm,
-                        color = colors.onSurfaceVariant
-                    )
+                Text(
+                    text = "Select an installed app to automatically generate and register its universal version rule:",
+                    style = typography.labelSm,
+                    color = colors.onSurfaceVariant
+                )
 
-                    unsupportedApps.forEach { app ->
+                unsupportedApps.forEach { app ->
                         val cleanVer = app.versionName.removePrefix("v")
                         val wildcard = UniversalVersionValidator.toWildcard(cleanVer)
                         Surface(
                             shape = radius.smShape,
                             color = colors.surfaceDim,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                            border = BorderStroke(1.dp, colors.outlineVariant),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -431,15 +453,17 @@ fun SupportedVersionsScreen() {
                                 }
                             }
                         }
-                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSelectAppDialog = false }) {
-                    Text("Cancel", color = colors.primary)
+
+                OutlinedButton(
+                    onClick = { showSelectAppDialog = false },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = radius.buttonShape
+                ) {
+                    Text("Cancel")
                 }
             }
-        )
+        }
     }
 }
 
@@ -459,7 +483,7 @@ private fun AppVersionStatusCard(
     Surface(
         shape = radius.mdShape,
         color = colors.surfaceDim,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             if (!isInstalled) colors.outlineVariant
             else if (isSupported) Color(0xFF10B981).copy(alpha = 0.4f)
@@ -547,7 +571,7 @@ private fun AppVersionStatusCard(
                     ),
                     shape = radius.smShape,
                     modifier = Modifier.fillMaxWidth().height(36.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                    contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -576,7 +600,7 @@ private fun VersionRuleItem(
     Surface(
         shape = radius.smShape,
         color = colors.surfaceDim,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+        border = BorderStroke(1.dp, colors.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

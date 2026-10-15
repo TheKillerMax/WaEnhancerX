@@ -81,6 +81,11 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.ClipData
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import com.waenhancer.app.R
 
 data class RecordedCallItem(
     val file: File,
@@ -173,7 +178,7 @@ fun CallsHubScreen() {
             }.apply {
                 type = "audio/*"
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                clipData = android.content.ClipData.newRawUri("Call recording", uris.first())
+                clipData = ClipData.newRawUri("Call recording", uris.first())
             }
             context.startActivity(Intent.createChooser(intent, "Share call recording"))
             clearRecordingSelection()
@@ -315,9 +320,15 @@ fun CallsHubScreen() {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
+                    val configsLabel = stringResource(R.string.title_call_configurations)
+                    val recordingsLabel = if (recordingsList.isNotEmpty()) {
+                        "${stringResource(R.string.title_call_recordings)} (${recordingsList.size})"
+                    } else {
+                        stringResource(R.string.title_call_recordings)
+                    }
                     listOf(
-                        "configs" to "Call Configurations",
-                        "recordings" to if (recordingsList.isNotEmpty()) "Recordings (${recordingsList.size})" else "Recordings"
+                        "configs" to configsLabel,
+                        "recordings" to recordingsLabel
                     ).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
@@ -381,7 +392,7 @@ fun CallsHubScreen() {
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                border = BorderStroke(1.dp, colors.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -470,7 +481,7 @@ fun CallsHubScreen() {
                                 Surface(
                                     shape = radius.bentoCardShape,
                                     color = colors.surfaceDim,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                    border = BorderStroke(1.dp, colors.outlineVariant),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -559,7 +570,7 @@ fun CallsHubScreen() {
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                border = BorderStroke(1.dp, colors.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -648,7 +659,7 @@ fun CallsHubScreen() {
                                 Surface(
                                     shape = radius.bentoCardShape,
                                     color = colors.surfaceDim,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                    border = BorderStroke(1.dp, colors.outlineVariant),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
@@ -803,7 +814,7 @@ fun CallsHubScreen() {
                                 text = "When WhatsApp calls are placed or received with Call Recording enabled, the audio files will appear here automatically.",
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 fontSize = 13.sp
                             )
                         }
@@ -823,7 +834,7 @@ fun CallsHubScreen() {
                                 Surface(
                                     shape = radius.bentoCardShape,
                                     color = if (isSelected || isPlaying) colors.primary.copy(alpha = 0.08f) else colors.surfaceDim,
-                                    border = androidx.compose.foundation.BorderStroke(
+                                    border = BorderStroke(
                                         1.dp,
                                         if (isSelected || isPlaying) colors.primary else colors.outlineVariant
                                     ),

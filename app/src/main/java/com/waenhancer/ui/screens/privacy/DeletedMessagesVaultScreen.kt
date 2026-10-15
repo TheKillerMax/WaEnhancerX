@@ -62,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
+import androidx.compose.ui.text.style.TextAlign
 
 data class PreservedMessage(
     val id: String,
@@ -238,7 +239,7 @@ fun DeletedMessagesVaultScreen() {
                                     text = "When messages are deleted via 'Delete For Me', they will be preserved and listed here.",
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -264,18 +265,22 @@ private fun loadRealPreservedChats(context: Context): List<PreservedChat> {
     val records = store.getAllPreservedMessages()
     if (records.isEmpty()) return emptyList()
 
-    val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
+    val dateTimeFormatter = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
     val chatsMap = mutableMapOf<String, MutableList<PreservedMessage>>()
     val chatNamesMap = mutableMapOf<String, String>()
     val chatGroupMap = mutableMapOf<String, Boolean>()
 
     for (rec in records) {
         val jid = if (rec.jid.isNullOrEmpty()) "Unknown" else rec.jid
-        val timeStr = if (rec.timestamp > 0) timeFormatter.format(Date(rec.timestamp)) else "Preserved"
+        val dateTimeStr = if (rec.timestamp > 0) {
+            dateTimeFormatter.format(Date(rec.timestamp))
+        } else {
+            "Preserved"
+        }
         val msg = PreservedMessage(
             id = rec.id,
             text = rec.text.ifBlank { "Preserved message" },
-            timestamp = timeStr,
+            timestamp = dateTimeStr,
             isFromMe = rec.isFromMe,
             senderName = if (rec.isGroup && !rec.isFromMe && rec.senderName.isNotBlank()) rec.senderName else null
         )

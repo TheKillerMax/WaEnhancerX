@@ -35,7 +35,7 @@ class MessageStore private constructor(private val context: Context) {
                     SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS
                 )
             } catch (ex: Exception) {
-                XposedBridge.log("[WAEX][MessageStore] Failed to open msgstore.db: ${ex.message}")
+                XposedBridge.log("[WAEX][MessageStore] Failed to open msgstore.db: ${ex.javaClass.simpleName}")
             }
         }
     }
@@ -60,7 +60,7 @@ class MessageStore private constructor(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            XposedBridge.log("[WAEX][MessageStore] getIdFromKey error: ${e.message}")
+            XposedBridge.log("[WAEX][MessageStore] getIdFromKey error: ${e.javaClass.simpleName}")
         }
         return -1L
     }
@@ -77,7 +77,7 @@ class MessageStore private constructor(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            XposedBridge.log("[WAEX][MessageStore] getMediaFromId error: ${e.message}")
+            XposedBridge.log("[WAEX][MessageStore] getMediaFromId error: ${e.javaClass.simpleName}")
         }
         return null
     }
@@ -113,7 +113,7 @@ class MessageStore private constructor(private val context: Context) {
                     return rootData
                 }
             } catch (t: Throwable) {
-                XposedBridge.log("[WAEX][MessageStore] findAccountDataDir error: ${t.message}")
+                XposedBridge.log("[WAEX][MessageStore] findAccountDataDir error: ${t.javaClass.simpleName}")
             }
             return context.filesDir?.parentFile ?: File("/data/data/com.whatsapp")
         }

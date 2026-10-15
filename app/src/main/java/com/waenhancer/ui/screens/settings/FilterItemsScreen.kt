@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.model.FilterItem
 import com.waenhancer.ui.components.WaexColorPickerDialog
+import com.waenhancer.ui.components.WaexConfirmationBottomSheet
 import com.waenhancer.ui.components.WaexEmptyState
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
@@ -301,31 +302,21 @@ fun FilterItemsScreen() {
         }
     }
 
-    // Delete Confirmation Dialog
+    // Delete Confirmation Sheet
     itemToDelete?.let { (index, item) ->
-        AlertDialog(
-            onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete Filter", style = typography.headlineMd) },
-            text = { Text("Are you sure you want to delete filter \"${item.id}\"?", style = typography.bodyMd) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (index in filtersList.indices) {
-                            filtersList.removeAt(index)
-                            saveFilters()
-                        }
-                        itemToDelete = null
-                    }
-                ) {
-                    Text("Delete", color = Color.Red, fontWeight = FontWeight.Bold)
+        WaexConfirmationBottomSheet(
+            title = "Delete Filter",
+            message = "Are you sure you want to delete filter \"${item.id}\"?",
+            confirmLabel = "Delete Filter",
+            destructive = true,
+            onDismiss = { itemToDelete = null },
+            onConfirm = {
+                if (index in filtersList.indices) {
+                    filtersList.removeAt(index)
+                    saveFilters()
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = colors.surface
+                itemToDelete = null
+            }
         )
     }
 

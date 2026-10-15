@@ -17,6 +17,7 @@ sealed class Screen(val route: String) {
     data class ReleaseDetails(val tagName: String) : Screen("release/$tagName")
     object About : Screen("about")
     object Stargazers : Screen("stargazers")
+    object ModuleSettings : Screen("module_settings")
     object UpdateSettings : Screen("update_settings")
     object SupportedVersions : Screen("supported_versions")
     object BootloaderSpoofer : Screen("bootloader_spoofer")

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import androidx.compose.ui.text.TextStyle
 
 
 @Composable
@@ -27,7 +28,7 @@ fun WaexTopBar(
     title: String,
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
-    titleStyle: androidx.compose.ui.text.TextStyle? = null,
+    titleStyle: TextStyle? = null,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val colors = WaexTheme.colors

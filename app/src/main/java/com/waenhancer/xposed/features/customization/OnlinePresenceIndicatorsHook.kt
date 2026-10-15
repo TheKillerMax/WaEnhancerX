@@ -26,6 +26,7 @@ import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import android.os.SystemClock
 
 /** Renders process-local presence events on currently bound conversation rows. */
 class OnlinePresenceIndicatorsHook(
@@ -83,29 +84,15 @@ class OnlinePresenceIndicatorsHook(
 
             XposedBridge.hookMethod(bindMethod, object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    if (bindDiagnostics.get() == 0) {
-                        val summary = param.args?.mapIndexed { index, value ->
-                            "$index:${value?.javaClass?.name}=${try { value?.toString()?.take(180) } catch (_: Throwable) { "?" }}"
-                        }?.joinToString(" | ")
-                        param.args?.firstOrNull()?.let { contact ->
-                            val fields = contact.javaClass.declaredFields.mapNotNull { field ->
-                                try {
-                                    field.isAccessible = true
-                                    val value = field.get(contact)
-                                    "${field.name}:${field.type.name}=${value?.toString()?.take(100)}"
-                                } catch (_: Throwable) { null }
-                            }.joinToString(" | ")
-                        }
-                    }
+                    // Never reflectively stringify private contact objects for unused diagnostics.
                     val row = findConversationRow(param.thisObject)
                     val jid = findJid(param.args, 3)
                     if ((row == null || jid == null) && bindDiagnostics.getAndIncrement() < 5) {
-                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, jid=${jid ?: "missing"}, args=${param.args?.size ?: 0}")
+                        val hasContactId = jid != null
+                        XposedBridge.log("[WAEX][OnlinePresence] Bind decode row=${row != null}, contactIdResolved=$hasContactId, args=${param.args?.size ?: 0}")
                     }
                     if (row == null || jid == null) return
                     if (jid.contains("@g.us")) return
-                    if (bindDiagnostics.getAndIncrement() < 5) {
-                    }
                     val contact = param.args?.firstOrNull()
                     subscriptionMethod?.let { method ->
                         if (contact != null && method.parameterTypes.size == 4) {
@@ -130,7 +117,7 @@ class OnlinePresenceIndicatorsHook(
                 }
             }
         } catch (t: Throwable) {
-            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: $t")
+            XposedBridge.log("[WAEX][OnlinePresence] Setup failed: ${t.javaClass.simpleName}")
         }
     }
 
@@ -148,7 +135,7 @@ class OnlinePresenceIndicatorsHook(
         if (contact == null || method.parameterTypes.size != 4) return
         val jidObject = findObjectOfType(contact, method.parameterTypes[0], 4, HashSet()) ?: return
         val key = jidObject.toString()
-        val now = android.os.SystemClock.uptimeMillis()
+        val now = SystemClock.uptimeMillis()
         val previous = subscriptions[key]
         if (previous != null && now - previous < 30_000L) return
         recordSubscription(key, now)
@@ -175,11 +162,9 @@ class OnlinePresenceIndicatorsHook(
             }
             method.isAccessible = true
             method.invoke(null, jidObject, null, token, receiver)
-            if (subscriptionDiagnostics.getAndIncrement() < 5) {
-            }
         } catch (t: Throwable) {
             if (subscriptionDiagnostics.getAndIncrement() < 5) {
-                XposedBridge.log("[WAEX][OnlinePresence] Presence request failed for $key: $t")
+                XposedBridge.log("[WAEX][OnlinePresence] Presence request failed: ${t.javaClass.simpleName}")
             }
         }
     }

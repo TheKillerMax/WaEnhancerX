@@ -30,7 +30,7 @@ object UpdateDownloader {
         .build()
 
     /** Reject corrupt, partial, and unrelated packages before offering installation. */
-    private fun isValidModuleApk(context: Context, file: File): Boolean {
+    private fun isValidModuleApk(context: Context, file: File, expectedVersion: String? = null): Boolean {
         if (!file.isFile || file.length() < 1024L) return false
         return runCatching {
             val validZip = ZipFile(file).use { archive ->
@@ -39,7 +39,9 @@ object UpdateDownloader {
             if (!validZip) return@runCatching false
             @Suppress("DEPRECATION")
             val packageInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
-            packageInfo?.packageName == context.packageName
+            packageInfo?.packageName == context.packageName &&
+                (expectedVersion == null || normalizeVersion(packageInfo.versionName.orEmpty())
+                    .equals(normalizeVersion(expectedVersion), ignoreCase = true))
         }.getOrDefault(false)
     }
 
@@ -52,17 +54,17 @@ object UpdateDownloader {
 
     fun hasRootAccess(): Boolean {
         val output = runRootCommand("id")
-        return output?.let { "uid=0" in it || "root" in it } == true
+        return output?.let { "uid=0" in it } == true
     }
 
-    fun downloadApk(context: Context, url: String, versionName: String, callback: DownloadCallback): Call? {
-        val safeVersion = versionName.replace(Regex("[^a-zA-Z0-9.-]"), "_")
+    fun downloadApk(context: Context, url: String, expectedVersion: String, callback: DownloadCallback): Call? {
+        val safeVersion = expectedVersion.replace(Regex("[^a-zA-Z0-9.-]"), "_")
         val segment = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
         val safeSegment = segment?.replace(Regex("[^a-zA-Z0-9._-]"), "_")
             ?.takeIf { it.endsWith(".apk", true) && !it.startsWith(".") && it.length <= 120 }
         val fileName = safeSegment ?: "WaEnhancerX_${safeVersion}.apk"
         val apkFile = File(context.cacheDir, fileName)
-        if (isValidModuleApk(context, apkFile)) {
+        if (isValidModuleApk(context, apkFile, expectedVersion)) {
             callback.onSuccess(apkFile)
             return null
         }
@@ -126,8 +128,8 @@ object UpdateDownloader {
                                 }
                             }
                         }
-                        if (!isValidModuleApk(context, staging)) {
-                            throw IOException("Downloaded file is not a valid WAEX APK")
+                        if (!isValidModuleApk(context, staging, expectedVersion)) {
+                            throw IOException("Downloaded APK does not match selected version $expectedVersion")
                         }
                         if (!staging.renameTo(apkFile)) throw IOException("Unable to save verified update")
                         callback.onSuccess(apkFile)
@@ -142,10 +144,10 @@ object UpdateDownloader {
         return call
     }
 
-    fun installApk(context: Context, apkFile: File) {
+    fun installApk(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
-        if (!isValidModuleApk(activity, apkFile)) {
-            Toast.makeText(activity, "Invalid WAEX update package", Toast.LENGTH_LONG).show()
+        if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.packageManager.canRequestPackageInstalls()) {
@@ -158,10 +160,10 @@ object UpdateDownloader {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    fun installApkWithRoot(context: Context, apkFile: File) {
+    fun installApkWithRoot(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
-        if (!isValidModuleApk(activity, apkFile)) {
-            Toast.makeText(activity, "Invalid WAEX update package", Toast.LENGTH_LONG).show()
+        if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
             return
         }
         Thread {
@@ -174,10 +176,19 @@ object UpdateDownloader {
                 try {
                     val target = shellQuote(temporary)
                     val source = shellQuote(apkFile.absolutePath)
-                    val size = runRootCommand("cat $source > $target && chmod 644 $target && wc -c < $target")
-                        ?.trim()?.toLongOrNull() ?: 0
-                    if (size > 1024) runRootCommand("pm install -r --user 0 $target", 70)
-                    else "Failed to copy verified APK to temporary storage"
+                    val copyResult = runRootCommand(
+                        "cat $source > $target && chmod 644 $target && wc -c < $target"
+                    )?.trim().orEmpty()
+                    val size = copyResult.toLongOrNull() ?: 0
+                    if (size > 1024) {
+                        // Package Manager requires -d when the APK has a lower versionCode.
+                        runRootCommand("pm install -r -d --user 0 $target", 70)
+                    }
+                    else if (copyResult.isNotEmpty()) {
+                        "Failed to copy verified APK: $copyResult"
+                    } else {
+                        "Failed to copy verified APK to temporary storage"
+                    }
                 } finally {
                     runRootCommand("rm -f -- ${shellQuote(temporary)}")
                 }
@@ -187,7 +198,11 @@ object UpdateDownloader {
                 if (success) {
                     Toast.makeText(activity, "Installation successful. Restarting...", Toast.LENGTH_LONG).show()
                     Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, 2000)
-                } else Toast.makeText(activity, "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unknown error" }}", Toast.LENGTH_LONG).show()
+                } else Toast.makeText(
+                    activity,
+                    "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unable to execute the root installer" }}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }.start()
     }
@@ -211,11 +226,16 @@ object UpdateDownloader {
         val finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
         if (!finished) {
             process.destroyForcibly()
-            return@runCatching null
+            return@runCatching "Root command timed out after ${timeoutSeconds}s"
         }
         drainer.join(500)
-        if (process.exitValue() != 0) return@runCatching null
-        synchronized(output) { output.toString().trim() }
+        val captured = synchronized(output) { output.toString().trim() }
+        if (process.exitValue() != 0) {
+            return@runCatching captured.ifEmpty {
+                "Root command failed with exit code ${process.exitValue()}"
+            }
+        }
+        captured
     }.getOrNull()
 
 }

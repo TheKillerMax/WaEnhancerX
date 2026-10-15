@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.license
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +20,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.components.WaexCard
+import com.waenhancer.ui.components.WaexConfirmationBottomSheet
 import com.waenhancer.ui.components.WaexInfoBanner
 import com.waenhancer.ui.components.WaexSectionHeader
 import com.waenhancer.ui.components.WaexTopBar
@@ -48,6 +52,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.waenhancer.licensing.LicenseManager
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.xposed.utils.AppRestartHelper
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,6 +63,18 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import com.waenhancer.ui.components.BannerType
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class PurchasePlan(
     val id: Int = 0,
@@ -73,7 +90,7 @@ data class PurchasePlan(
 @Composable
 fun LicenseActivationScreen() {
     val navController = LocalWaexNavController.current
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
@@ -84,6 +101,9 @@ fun LicenseActivationScreen() {
     var licenseKeyInput by remember { mutableStateOf("") }
     var isVerifying by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var showRemoveLicenseDialog by remember { mutableStateOf(false) }
+    var isRemovingLicense by remember { mutableStateOf(false) }
+    var removeLicenseError by remember { mutableStateOf("") }
 
     val fallbackPlans = remember {
         listOf(
@@ -111,7 +131,7 @@ fun LicenseActivationScreen() {
     var isLoadingPlans by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        val cachePrefs = context.getSharedPreferences("waex_plans_cache", android.content.Context.MODE_PRIVATE)
+        val cachePrefs = context.getSharedPreferences("waex_plans_cache", Context.MODE_PRIVATE)
         val cacheTime = cachePrefs.getLong("plans_cache_time", 0L)
         val cachedData = cachePrefs.getString("plans_cache_data", null)
         val currentTime = System.currentTimeMillis()
@@ -183,7 +203,7 @@ fun LicenseActivationScreen() {
     val isActive = "ACTIVE".equals(proStatus, ignoreCase = true)
     val isExpired = "EXPIRED".equals(proStatus, ignoreCase = true)
 
-    val prefs = context.getSharedPreferences("com.waenhancer_preferences", android.content.Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("com.waenhancer_preferences", Context.MODE_PRIVATE)
     val maskedKey = remember(proStatus) {
         val storedKey = prefs.getString("license_key", "") ?: ""
         if (storedKey.length > 4) {
@@ -195,6 +215,66 @@ fun LicenseActivationScreen() {
     val expiresAt = remember(proStatus) { prefs.getLong("expires_at", 0L) }
     val linkedDevicesCount = remember(proStatus) { prefs.getInt("linked_devices_count", 1) }
     val deviceLimit = remember(proStatus) { prefs.getInt("device_limit", 2) }
+
+    if (showRemoveLicenseDialog) {
+        WaexConfirmationBottomSheet(
+            title = "Remove License?",
+            message = "This will unlink this device, remove the saved license, and return WAEX to the Free tier.",
+            confirmLabel = "Remove License",
+            destructive = true,
+            confirmEnabled = !isRemovingLicense,
+            onDismiss = {
+                if (!isRemovingLicense) {
+                    showRemoveLicenseDialog = false
+                    removeLicenseError = ""
+                }
+            },
+            onConfirm = {
+                isRemovingLicense = true
+                removeLicenseError = ""
+                LicenseManager.unlinkDevice(
+                    context,
+                    object : LicenseManager.UnlinkCallback {
+                        override fun onSuccess() {
+                            isRemovingLicense = false
+                            showRemoveLicenseDialog = false
+                            proStatus = LicenseManager.getProStatus(context)
+                            planName = LicenseManager.getProPlanName(context)
+                            Toast.makeText(context, "License removed from this device.", Toast.LENGTH_LONG).show()
+                            AppRestartHelper.restartWhatsAppAndModule(context)
+                        }
+
+                        override fun onError(msg: String?) {
+                            isRemovingLicense = false
+                            removeLicenseError = msg ?: "Unable to remove the license. Please try again."
+                        }
+                    }
+                )
+            },
+            supportingContent = {
+                if (removeLicenseError.isNotEmpty()) {
+                    Text(
+                        text = removeLicenseError,
+                        style = typography.labelSm,
+                        color = colors.error
+                    )
+                }
+            },
+            confirmContent = {
+                if (isRemovingLicense) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Removing…")
+                } else {
+                    Text("Remove License", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -230,7 +310,7 @@ fun LicenseActivationScreen() {
                             Text(text = "Status", style = typography.bodyMd, color = colors.onSurfaceVariant)
                             Text(text = "Active Pro", style = typography.bodyLg, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
                         }
-                        androidx.compose.material3.HorizontalDivider(color = colors.outlineVariant)
+                        HorizontalDivider(color = colors.outlineVariant)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -244,8 +324,8 @@ fun LicenseActivationScreen() {
                         ) {
                             Text(text = "Expires", style = typography.bodyMd, color = colors.onSurfaceVariant)
                             val expiryText = if (expiresAt > 0) {
-                                val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
-                                sdf.format(java.util.Date(expiresAt))
+                                val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                                sdf.format(Date(expiresAt))
                             } else "Lifetime Access"
                             Text(text = expiryText, style = typography.bodyMd, color = colors.onSurface)
                         }
@@ -263,7 +343,7 @@ fun LicenseActivationScreen() {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(text = "License Key", style = typography.bodyMd, color = colors.onSurfaceVariant)
-                            Text(text = maskedKey, style = typography.bodyMd, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, color = colors.onSurface)
+                            Text(text = maskedKey, style = typography.bodyMd, fontFamily = FontFamily.Monospace, color = colors.onSurface)
                         }
                     }
                 }
@@ -297,6 +377,27 @@ fun LicenseActivationScreen() {
                     }
                 }
 
+                OutlinedButton(
+                    onClick = {
+                        removeLicenseError = ""
+                        showRemoveLicenseDialog = true
+                    },
+                    shape = radius.buttonShape,
+                    border = BorderStroke(1.dp, Color(0xFFF44336)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Clear,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Remove License", fontWeight = FontWeight.SemiBold)
+                }
+
             } else {
                 // ─── FREE / EXPIRED ACTIVATION FORM ───
                 WaexSectionHeader(
@@ -307,7 +408,7 @@ fun LicenseActivationScreen() {
                 if (isExpired) {
                     WaexInfoBanner(
                         message = "Your license period has ended. Pro features are currently locked.",
-                        bannerType = com.waenhancer.ui.components.BannerType.ERROR,
+                        bannerType = BannerType.ERROR,
                         title = "Subscription Expired"
                     )
                 }
@@ -357,7 +458,7 @@ fun LicenseActivationScreen() {
                                         Text(
                                             text = "WAEX-XXXX-XXXX-XXXX",
                                             style = typography.bodyMd.copy(
-                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                fontFamily = FontFamily.Monospace,
                                                 letterSpacing = 1.sp
                                             ),
                                             color = colors.onSurfaceVariant.copy(alpha = 0.45f)
@@ -367,14 +468,14 @@ fun LicenseActivationScreen() {
                                         value = licenseKeyInput,
                                         onValueChange = {
                                             if (!isVerifying) {
-                                                licenseKeyInput = it.uppercase(java.util.Locale.US)
+                                                licenseKeyInput = it.uppercase(Locale.US)
                                                 errorMessage = ""
                                             }
                                         },
                                         enabled = !isVerifying,
                                         singleLine = true,
                                         textStyle = typography.bodyMd.copy(
-                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            fontFamily = FontFamily.Monospace,
                                             fontWeight = FontWeight.SemiBold,
                                             letterSpacing = 1.sp,
                                             color = if (isVerifying) colors.onSurface.copy(alpha = 0.5f) else colors.onSurface
@@ -398,7 +499,7 @@ fun LicenseActivationScreen() {
                         // Verify Button
                         Button(
                             onClick = {
-                                val trimmedKey = licenseKeyInput.trim().uppercase(java.util.Locale.US)
+                                val trimmedKey = licenseKeyInput.trim().uppercase(Locale.US)
                                 if (!LicenseManager.isValidLicensePattern(trimmedKey)) {
                                     errorMessage = "Invalid key format. Expected: WAEX-XXXX-XXXX-XXXX"
                                     return@Button
@@ -414,9 +515,7 @@ fun LicenseActivationScreen() {
                                             isVerifying = false
                                             proStatus = "ACTIVE"
                                             planName = LicenseManager.getProPlanName(context)
-                                            // Rebuild the activity so every CompositionLocal and Pro-gated
-                                            // screen observes the new entitlement immediately.
-                                            (context as? android.app.Activity)?.recreate()
+                                            AppRestartHelper.restartWhatsAppAndModule(context)
                                         }
 
                                         override fun onError(msg: String?) {
@@ -437,7 +536,7 @@ fun LicenseActivationScreen() {
                             enabled = licenseKeyInput.isNotBlank() && !isVerifying
                         ) {
                             if (isVerifying) {
-                                androidx.compose.material3.CircularProgressIndicator(
+                                CircularProgressIndicator(
                                     color = colors.onPrimary,
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp
@@ -513,10 +612,10 @@ fun LicenseActivationScreen() {
                                     .clip(radius.bentoCardShape)
                                     .clickable {
                                         try {
-                                            val intent = android.content.Intent(
-                                                android.content.Intent.ACTION_VIEW,
-                                                android.net.Uri.parse("https://t.me/waenhancerx_bot?start=subscribe")
-                                            ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                            val intent = Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse("https://t.me/waenhancerx_bot?start=subscribe")
+                                            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                                             context.startActivity(intent)
                                         } catch (ignored: Exception) {}
                                     }
@@ -548,7 +647,7 @@ fun LicenseActivationScreen() {
                                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = plan.badge.uppercase(java.util.Locale.US),
+                                                    text = plan.badge.uppercase(Locale.US),
                                                     style = typography.labelSm.copy(fontSize = 10.sp),
                                                     fontWeight = FontWeight.Bold,
                                                     color = colors.onPrimary
@@ -566,7 +665,7 @@ fun LicenseActivationScreen() {
                                             Text(
                                                 text = "$${plan.originalPrice}",
                                                 style = typography.bodySm.copy(
-                                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                                    textDecoration = TextDecoration.LineThrough
                                                 ),
                                                 color = colors.onSurfaceVariant
                                             )
@@ -612,10 +711,10 @@ fun LicenseActivationScreen() {
                         .clip(radius.smShape)
                         .clickable {
                             try {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse("https://t.me/waenhancerx_bot")
-                                ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://t.me/waenhancerx_bot")
+                                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                                 context.startActivity(intent)
                             } catch (ignored: Exception) {}
                         }
@@ -673,7 +772,7 @@ fun LicenseActivationScreen() {
                             style = typography.labelSm,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
@@ -681,11 +780,11 @@ fun LicenseActivationScreen() {
                             style = typography.labelSm,
                             fontWeight = FontWeight.Bold,
                             color = colors.primary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
+                    HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
 
                     data class ComparisonFeature(
                         val name: String,
@@ -748,7 +847,7 @@ fun LicenseActivationScreen() {
                                 style = typography.bodyMd,
                                 fontWeight = if (item.freeVal == "✓") FontWeight.Bold else FontWeight.Medium,
                                 color = if (item.freeVal == "✓") Color(0xFF4CAF50) else if (item.freeVal == "✗") colors.onSurfaceVariant.copy(alpha = 0.4f) else colors.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
@@ -756,12 +855,12 @@ fun LicenseActivationScreen() {
                                 style = typography.bodyMd,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.primary,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 modifier = Modifier.weight(1f)
                             )
                         }
                         if (idx < comparisonRows.lastIndex) {
-                            androidx.compose.material3.HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
+                            HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant)
                         }
                     }
                 }

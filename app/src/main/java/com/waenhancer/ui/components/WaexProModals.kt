@@ -38,13 +38,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import com.waenhancer.xposed.utils.AppRestartHelper
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
+import com.waenhancer.licensing.LicenseManager
+import java.util.Locale
 
 @Composable
 fun LicenseActivationModal(
     onDismiss: () -> Unit,
     onActivated: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
@@ -167,7 +174,7 @@ fun LicenseActivationModal(
                 value = licenseKey,
                 onValueChange = { input ->
                     if (verifyState != "verifying") {
-                        licenseKey = input.uppercase(java.util.Locale.US)
+                        licenseKey = input.uppercase(Locale.US)
                         verifyState = "idle"
                         errorMessage = ""
                     }
@@ -211,13 +218,13 @@ fun LicenseActivationModal(
         // Activation Button
         Button(
             onClick = {
-                val trimmedKey = licenseKey.trim().uppercase(java.util.Locale.US)
+                val trimmedKey = licenseKey.trim().uppercase(Locale.US)
                 if (trimmedKey.isEmpty()) {
                     verifyState = "error"
                     errorMessage = "Please enter your license key."
                     return@Button
                 }
-                if (!com.waenhancer.licensing.LicenseManager.isValidLicensePattern(trimmedKey)) {
+                if (!LicenseManager.isValidLicensePattern(trimmedKey)) {
                     verifyState = "error"
                     errorMessage = "Invalid key format. Expected: WAEX-XXXX-XXXX-XXXX"
                     return@Button
@@ -226,13 +233,14 @@ fun LicenseActivationModal(
                 verifyState = "verifying"
                 errorMessage = ""
 
-                com.waenhancer.licensing.LicenseManager.verifyLicense(
+                LicenseManager.verifyLicense(
                     context,
                     trimmedKey,
-                    object : com.waenhancer.licensing.LicenseManager.LicenseCallback {
+                    object : LicenseManager.LicenseCallback {
                         override fun onSuccess(planName: String?, expiresAtStr: String?, tgUsername: String?) {
                             verifyState = "success"
                             onActivated()
+                            AppRestartHelper.restartWhatsAppAndModule(context)
                         }
 
                         override fun onError(message: String?) {
@@ -281,15 +289,15 @@ fun LicenseActivationModal(
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
                     try {
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://t.me/waenhancerx_bot")
-                        ).apply { addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK) }
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://t.me/waenhancerx_bot")
+                        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
                         context.startActivity(intent)
                     } catch (ignored: Exception) {}
                 }
