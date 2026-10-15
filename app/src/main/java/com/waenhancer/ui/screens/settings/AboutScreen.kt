@@ -83,6 +83,8 @@ import java.net.URL
 import java.security.MessageDigest
 import java.text.NumberFormat
 import java.util.concurrent.ConcurrentHashMap
+import androidx.collection.LruCache
+import com.waenhancer.config.PreferenceStores
 
 data class GitHubContributor(
     val login: String,
@@ -112,7 +114,7 @@ data class RepoStats(
 )
 
 object AvatarCache {
-    private val memoryCache = androidx.collection.LruCache<String, Bitmap>(150)
+    private val memoryCache = LruCache<String, Bitmap>(150)
     private val loadLocks = ConcurrentHashMap<String, Any>()
 
     fun get(url: String): Bitmap? = memoryCache.get(url)
@@ -242,7 +244,7 @@ fun AboutScreen() {
     // Fetch Contributors
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val prefs = com.waenhancer.config.PreferenceStores.cacheStore(context, com.waenhancer.config.PreferenceStores.GITHUB_API_CACHE)
+            val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_API_CACHE)
             val lastFetch = prefs.getLong("last_fetch", 0)
             val cachedJson = prefs.getString("contributors_json", null)
 
@@ -290,7 +292,7 @@ fun AboutScreen() {
         contributionsStats = null
 
         coroutineScope.launch(Dispatchers.IO) {
-            val prefs = com.waenhancer.config.PreferenceStores.cacheStore(context, com.waenhancer.config.PreferenceStores.GITHUB_USER_CACHE)
+            val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_USER_CACHE)
             val lastFetch = prefs.getLong("${contributor.login}_time", 0)
             val cachedJson = prefs.getString("${contributor.login}_json", null)
 
@@ -349,7 +351,7 @@ fun AboutScreen() {
         showContributionsView = true
 
         coroutineScope.launch(Dispatchers.IO) {
-            val prefs = com.waenhancer.config.PreferenceStores.cacheStore(context, com.waenhancer.config.PreferenceStores.GITHUB_USER_CACHE)
+            val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_USER_CACHE)
             val lastFetch = prefs.getLong("repo_stats_time", 0)
             val cachedJson = prefs.getString("repo_stats_json", null)
 

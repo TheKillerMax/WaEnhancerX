@@ -62,6 +62,11 @@ import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
 
 
 @Composable
@@ -95,7 +100,7 @@ fun MediaStatusHubScreen() {
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val mediaKeys = remember {
         listOf(
             "statusdowload", "status_downloader", "videoquality", "imagequality",
@@ -150,8 +155,8 @@ fun MediaStatusHubScreen() {
         }
     }
 
-    val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-    val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+    val isPro = LocalIsPro.current
+    val onActivatePro = LocalOnActivatePro.current
 
     val mediaGroups = remember {
         FeatureCatalog.groupsFor(2, null).map { group ->
@@ -174,11 +179,11 @@ fun MediaStatusHubScreen() {
         Surface(
             shape = radius.bentoCardShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
-                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.CallRecordingSettings) }
+                .clickable { navController.navigateTo(Screen.CallRecordingSettings) }
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -255,7 +260,7 @@ fun MediaStatusHubScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
@@ -303,7 +308,7 @@ fun MediaStatusHubScreen() {
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
-                                        val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
+                                        val reqPro = stringResource(R.string.requires_pro_label)
                                         Text(
                                             text = if (isLocked) "$locDesc • $reqPro" else locDesc,
                                             style = typography.bodyMd,

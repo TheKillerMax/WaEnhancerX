@@ -48,6 +48,7 @@ import com.waenhancer.update.UpdateDownloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun UpdateSettingsScreen() {
@@ -89,7 +90,7 @@ fun UpdateSettingsScreen() {
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.surfaceDim,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {

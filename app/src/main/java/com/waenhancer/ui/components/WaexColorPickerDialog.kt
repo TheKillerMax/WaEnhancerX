@@ -1,5 +1,6 @@
 package com.waenhancer.ui.components
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,7 +72,7 @@ fun WaexColorPickerDialog(
     var parsedColor by remember(selectedColorHex) {
         mutableStateOf(
             try {
-                Color(android.graphics.Color.parseColor(selectedColorHex))
+                Color(AndroidColor.parseColor(selectedColorHex))
             } catch (_: Throwable) {
                 Color(0xFFEF4444)
             }
@@ -80,7 +81,7 @@ fun WaexColorPickerDialog(
 
     val hsv = remember(parsedColor) {
         val hsvArray = FloatArray(3)
-        android.graphics.Color.colorToHSV(parsedColor.toArgb(), hsvArray)
+        AndroidColor.colorToHSV(parsedColor.toArgb(), hsvArray)
         hsvArray
     }
 
@@ -89,7 +90,7 @@ fun WaexColorPickerDialog(
     var value by remember(parsedColor) { mutableFloatStateOf(hsv[2]) }
 
     fun updateFromHsv(h: Float, s: Float, v: Float) {
-        val argb = android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))
+        val argb = AndroidColor.HSVToColor(floatArrayOf(h, s, v))
         val hex = String.format("#%06X", 0xFFFFFF and argb)
         selectedColorHex = hex
         parsedColor = Color(argb)
@@ -140,7 +141,7 @@ fun WaexColorPickerDialog(
                             selectedColorHex = cleanInput
                             try {
                                 if (cleanInput.length == 7) {
-                                    parsedColor = Color(android.graphics.Color.parseColor(cleanInput))
+                                    parsedColor = Color(AndroidColor.parseColor(cleanInput))
                                 }
                             } catch (_: Throwable) {}
                         },
@@ -171,7 +172,7 @@ fun WaexColorPickerDialog(
                 ) {
                     PRESET_COLORS.forEach { hex ->
                         val presetColor = try {
-                            Color(android.graphics.Color.parseColor(hex))
+                            Color(AndroidColor.parseColor(hex))
                         } catch (_: Throwable) {
                             Color.Red
                         }

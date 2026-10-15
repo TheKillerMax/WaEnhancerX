@@ -50,6 +50,9 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.utils.LocaleHelper
+import android.app.Activity
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,7 +152,7 @@ fun ModuleSettingsScreen() {
                     Surface(
                         shape = WaexTheme.radius.cardShape,
                         color = if (selected) colors.primary.copy(alpha = 0.12f) else colors.surfaceContainerLow,
-                        border = androidx.compose.foundation.BorderStroke(
+                        border = BorderStroke(
                             1.dp,
                             if (selected) colors.primary else colors.outlineVariant
                         ),
@@ -214,7 +217,7 @@ fun ModuleSettingsScreen() {
                     .navigationBarsPadding()
                     .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 item {
                     Text(
@@ -231,7 +234,7 @@ fun ModuleSettingsScreen() {
                     Surface(
                         shape = WaexTheme.radius.mdShape,
                         color = if (selected) colors.primary.copy(alpha = 0.10f) else colors.surface,
-                        border = androidx.compose.foundation.BorderStroke(
+                        border = BorderStroke(
                             1.dp,
                             if (selected) colors.primary.copy(alpha = 0.75f) else colors.outlineVariant.copy(alpha = 0.7f)
                         ),
@@ -239,7 +242,7 @@ fun ModuleSettingsScreen() {
                             currentLangCode = lang.code
                             LocaleHelper.applyLanguage(context, lang.code)
                             showLanguageSheet = false
-                            (context as? android.app.Activity)?.recreate()
+                            (context as? Activity)?.recreate()
                         }
                     ) {
                         Row(
@@ -291,7 +294,7 @@ private fun ModuleSettingsTile(
     Surface(
         shape = WaexTheme.radius.cardShape,
         color = colors.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+        border = BorderStroke(1.dp, colors.outlineVariant),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Row(

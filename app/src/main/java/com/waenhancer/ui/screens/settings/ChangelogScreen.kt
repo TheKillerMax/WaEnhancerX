@@ -71,6 +71,9 @@ import io.noties.markwon.Markwon
 import io.noties.markwon.html.HtmlPlugin
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.update.normalizeVersion
 
 @Composable
 fun ChangelogScreen() {
@@ -133,13 +136,13 @@ fun ChangelogScreen() {
             ) {
                 if (releases.isEmpty()) item { Text("No releases found.", color = colors.onSurfaceVariant) }
                 items(releases, key = { it.tagName }) { release ->
-                    val installed = release.version.equals(com.waenhancer.update.normalizeVersion(installedVersion), true)
+                    val installed = release.version.equals(normalizeVersion(installedVersion), true)
                     val comparison = ReleaseRepository.versionCode(release.version).compareTo(ReleaseRepository.versionCode(installedVersion))
                     val allowDowngrade = preferences.getBoolean("downgrades_enabled", false)
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceContainerLow,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth().clickable { navController.navigateTo(Screen.ReleaseDetails(release.tagName)) }
                     ) {
                         Column(Modifier.padding(20.dp)) {
@@ -177,7 +180,7 @@ fun ChangelogScreen() {
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim,
-                                border = androidx.compose.foundation.BorderStroke(
+                                border = BorderStroke(
                                     1.dp,
                                     colors.outlineVariant.copy(alpha = 0.5f)
                                 ),
@@ -381,6 +384,6 @@ internal fun formatReleaseDate(value: String): String = try {
     SimpleDateFormat("MMM dd, yyyy", Locale.US).format(input.parse(value)!!)
 } catch (_: Exception) { value.substringBefore('T') }
 
-internal fun openUrl(context: android.content.Context, url: String) {
+internal fun openUrl(context: Context, url: String) {
     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }

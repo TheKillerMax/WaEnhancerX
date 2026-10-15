@@ -29,6 +29,8 @@ import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.shape.CircleShape
+import com.waenhancer.ui.designsystem.WaexIcons
 
 @Composable
 fun BootloaderSpooferScreen() {
@@ -87,7 +89,7 @@ fun BootloaderSpooferScreen() {
                 Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     if (syncing) CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp, color = statusColor)
-                    else Surface(Modifier.size(12.dp), shape = androidx.compose.foundation.shape.CircleShape, color = statusColor) {}
+                    else Surface(Modifier.size(12.dp), shape = CircleShape, color = statusColor) {}
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(when {
                             syncing -> "Refreshing managed keybox"
@@ -198,7 +200,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
                 modifier = Modifier
                     .padding(top = 10.dp, bottom = 6.dp)
                     .size(width = 36.dp, height = 4.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clip(CircleShape)
                     .background(colors.outlineVariant.copy(alpha = 0.6f))
             )
         }
@@ -234,14 +236,14 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .clip(CircleShape)
                         .background(colors.surfaceDim)
-                        .border(1.dp, colors.outlineVariant.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                        .border(1.dp, colors.outlineVariant.copy(alpha = 0.5f), CircleShape)
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = com.waenhancer.ui.designsystem.WaexIcons.Clear,
+                        imageVector = WaexIcons.Clear,
                         contentDescription = "Close",
                         tint = colors.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -282,7 +284,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
 
                     Box(
                         modifier = Modifier
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(scoreColor.copy(alpha = 0.15f))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
@@ -414,12 +416,12 @@ private fun AuditCard(title: String, score: Int, maximum: Int, checks: List<Pair
                     Box(
                         modifier = Modifier
                             .size(18.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(if (passed) Color(0xFF10B981).copy(alpha = 0.15f) else colors.error.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (passed) com.waenhancer.ui.designsystem.WaexIcons.Check else com.waenhancer.ui.designsystem.WaexIcons.Clear,
+                            imageVector = if (passed) WaexIcons.Check else WaexIcons.Clear,
                             contentDescription = null,
                             tint = if (passed) Color(0xFF10B981) else colors.error,
                             modifier = Modifier.size(11.dp)

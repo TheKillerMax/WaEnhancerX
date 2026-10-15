@@ -47,6 +47,9 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
+import android.R
+import android.content.ContentValues
+import android.graphics.drawable.GradientDrawable
 
 /**
  * Anti-Edit Messages Feature for WhatsApp.
@@ -191,14 +194,14 @@ class AntiEditMessagesHook(
                 "insertWithOnConflict",
                 String::class.java,
                 String::class.java,
-                android.content.ContentValues::class.java,
+                ContentValues::class.java,
                 Int::class.javaPrimitiveType,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (!isFeatureEnabled()) return
                         val table = param.args.getOrNull(0) as? String ?: return
                         if (table == "message_edit_info" || table == "message_add_on" || table == "message_add_on_edit_info") {
-                            val values = param.args.getOrNull(2) as? android.content.ContentValues ?: return
+                            val values = param.args.getOrNull(2) as? ContentValues ?: return
                             val keyId = values.getAsString("original_key_id") ?: values.getAsString("key_id")
                             var rowId = values.getAsLong("message_row_id") ?: 0L
                             val editedText = values.getAsString("edited_text")
@@ -463,7 +466,7 @@ class AntiEditMessagesHook(
                 val color = if (isLatest) 0xFF21C063.toInt() else 0xFF00A884.toInt()
 
                 val cardView = createHistoryCard(currentActivity, title, item.textData, color, dp)
-                val bodyTextView = cardView.findViewById<TextView>(android.R.id.text1)
+                val bodyTextView = cardView.findViewById<TextView>(R.id.text1)
                 if (bodyTextView != null) {
                     cardTextViews.add(bodyTextView to item)
                 }
@@ -529,7 +532,7 @@ class AntiEditMessagesHook(
         val itemBox = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            background = android.graphics.drawable.GradientDrawable().apply {
+            background = GradientDrawable().apply {
                 setColor(0x18888888)
                 cornerRadius = dp(12).toFloat()
             }
@@ -548,7 +551,7 @@ class AntiEditMessagesHook(
         itemBox.addView(headerView)
 
         val bodyView = TextView(activity).apply {
-            id = android.R.id.text1
+            id = R.id.text1
             text = body
             textSize = 15f
             setTextIsSelectable(true)

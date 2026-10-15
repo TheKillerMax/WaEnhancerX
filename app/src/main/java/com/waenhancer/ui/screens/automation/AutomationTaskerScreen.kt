@@ -74,6 +74,13 @@ import androidx.compose.runtime.LaunchedEffect
 import com.waenhancer.config.FeatureCatalog
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
 
 
 @Composable
@@ -122,7 +129,7 @@ fun AutomationTaskerScreen() {
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
 
     // Automation states
     var alwaysTypingEnabled by remember { mutableStateOf(preferenceManager.getBoolean("always_typing", preferenceManager.getBoolean("ghostmode_t", false))) }
@@ -151,7 +158,7 @@ fun AutomationTaskerScreen() {
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -204,7 +211,7 @@ fun AutomationTaskerScreen() {
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -242,8 +249,8 @@ fun AutomationTaskerScreen() {
                     .padding(horizontal = spacing.pageMargin),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-                val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+                val isPro = LocalIsPro.current
+                val onActivatePro = LocalOnActivatePro.current
 
                 cards.forEach { card ->
                     val isLocked = card.isPro && !isPro
@@ -256,7 +263,7 @@ fun AutomationTaskerScreen() {
                     Surface(
                         shape = radius.bentoCardShape,
                         color = highlightBgColor,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier
                             .fillMaxWidth()
                             .onGloballyPositioned { coordinates ->
@@ -332,7 +339,7 @@ fun AutomationTaskerScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = spacing.pageMargin)
@@ -365,7 +372,7 @@ fun AutomationTaskerScreen() {
                                     .weight(1f)
                                     .clip(radius.defaultShape)
                                     .background(colors.primary.copy(alpha = 0.1f))
-                                    .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.TaskerGuide) }
+                                    .clickable { navController.navigateTo(Screen.TaskerGuide) }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -382,7 +389,7 @@ fun AutomationTaskerScreen() {
                                     .clip(radius.defaultShape)
                                     .background(colors.surface)
                                     .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                                    .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.TaskerHistory) }
+                                    .clickable { navController.navigateTo(Screen.TaskerHistory) }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -418,7 +425,7 @@ fun AutomationTaskerScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = highlightBgColor,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { coordinates ->
@@ -477,7 +484,7 @@ fun AutomationTaskerScreen() {
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -654,7 +661,7 @@ fun AutomationTaskerScreen() {
 
 private data class AutomationCardData(
     val key: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val enabled: Boolean,
     val isPro: Boolean,
     val onCheckedChange: (Boolean) -> Unit

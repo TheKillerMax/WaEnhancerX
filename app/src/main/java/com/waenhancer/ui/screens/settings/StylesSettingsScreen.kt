@@ -39,6 +39,15 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+import com.waenhancer.core.preferences.WaexPreferenceManager
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
 
 @Composable
 fun StylesSettingsScreen() {
@@ -87,7 +96,7 @@ fun StylesSettingsScreen() {
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val stylesKeys = remember {
         listOf(
             "bubble_colors", "custom_theme", "custom_time_format", "custom_toolbar",
@@ -138,8 +147,8 @@ fun StylesSettingsScreen() {
     }
 
 
-    val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-    val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+    val isPro = LocalIsPro.current
+    val onActivatePro = LocalOnActivatePro.current
 
     val appearanceGroups = remember {
         FeatureCatalog.groupsFor(4, "appearance").map { StyleGroup(it.id, WaexIcons.Palette, it.items()) }
@@ -169,7 +178,7 @@ fun StylesSettingsScreen() {
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -222,7 +231,7 @@ fun StylesSettingsScreen() {
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -269,7 +278,7 @@ fun StylesSettingsScreen() {
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
@@ -320,7 +329,7 @@ fun StylesSettingsScreen() {
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
-                                        val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
+                                        val reqPro = stringResource(R.string.requires_pro_label)
                                         Text(
                                             text = if (needsTypedEditor) "$locDesc • ${typedStyleSummary(item.key, preferenceManager, typedValueRevision)}"
                                                 else if (isLocked) "$locDesc • $reqPro" else locDesc,
@@ -336,7 +345,7 @@ fun StylesSettingsScreen() {
                                         if (item.key == "floating_bottom_bar") {
                                             IconButton(
                                                 onClick = {
-                                                    navController.navigateTo(com.waenhancer.ui.navigation.Screen.FloatingBottomBarCustomizer)
+                                                    navController.navigateTo(Screen.FloatingBottomBarCustomizer)
                                                 },
                                                 modifier = Modifier.size(36.dp)
                                             ) {
@@ -351,7 +360,7 @@ fun StylesSettingsScreen() {
                                         if (item.key == "custom_filters") {
                                             IconButton(
                                                 onClick = {
-                                                    navController.navigateTo(com.waenhancer.ui.navigation.Screen.FilterItems)
+                                                    navController.navigateTo(Screen.FilterItems)
                                                 },
                                                 modifier = Modifier.size(36.dp)
                                             ) {
@@ -414,11 +423,11 @@ fun StylesSettingsScreen() {
 @Composable
 private fun TypedStyleEditorDialog(
     key: String,
-    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    preferenceManager: WaexPreferenceManager,
     onDismiss: () -> Unit,
     onSaved: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val completeSave: (Boolean) -> Unit = { saved ->
         if (saved) {
             onSaved()
@@ -841,7 +850,7 @@ private fun isValidCustomCss(css: String): Boolean {
 
 private fun typedStyleSummary(
     key: String,
-    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    preferenceManager: WaexPreferenceManager,
     @Suppress("UNUSED_PARAMETER") revision: Int
 ): String = when (key) {
     "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"

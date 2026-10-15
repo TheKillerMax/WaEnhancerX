@@ -24,6 +24,8 @@ import de.robv.android.xposed.XposedHelpers
 import java.util.Collections
 import java.util.WeakHashMap
 import kotlin.math.roundToInt
+import android.graphics.drawable.ColorDrawable
+import android.util.TypedValue
 
 /** Applies CSS-like rules to WhatsApp views without requiring a theme package. */
 class CssThemeHook(
@@ -133,7 +135,7 @@ class CssThemeHook(
                         view.alpha = it.coerceIn(0f, 1f)
                     }
                     "background", "background-color" -> applyBackground(view, value)
-                    "foreground" -> parseColor(view, value)?.let { view.foreground = android.graphics.drawable.ColorDrawable(it) }
+                    "foreground" -> parseColor(view, value)?.let { view.foreground = ColorDrawable(it) }
                     "width" -> view.layoutParams?.let { params ->
                         resolveDimension(view, value, true)?.let { params.width = it; requestLayout = true }
                     }
@@ -156,7 +158,7 @@ class CssThemeHook(
                     "color-filter" -> applyColorFilter(view, value)
                     "color" -> if (view is TextView) parseColor(view, value)?.let(view::setTextColor)
                     "font-size" -> if (view is TextView) parseDimension(view, value)?.let {
-                        view.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, it.toFloat())
+                        view.setTextSize(TypedValue.COMPLEX_UNIT_PX, it.toFloat())
                     }
                     "font-weight" -> if (view is TextView) {
                         val style = if (value.lowercase() in setOf("bold", "600", "700", "800", "900")) Typeface.BOLD else Typeface.NORMAL
@@ -193,7 +195,7 @@ class CssThemeHook(
 
     private fun applyRoundedBackground(view: View, value: String) {
         val radius = parseDimension(view, value)?.toFloat() ?: return
-        val currentColor = (view.background as? android.graphics.drawable.ColorDrawable)?.color ?: Color.TRANSPARENT
+        val currentColor = (view.background as? ColorDrawable)?.color ?: Color.TRANSPARENT
         view.background = GradientDrawable().apply { setColor(currentColor); cornerRadius = radius }
     }
 

@@ -97,6 +97,9 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.Build
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,13 +175,13 @@ fun MainDashboardScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
-        val receiver = object : android.content.BroadcastReceiver() {
+        val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 refreshTrigger++
             }
         }
-        val filter = android.content.IntentFilter("com.waenhancer.ACTION_TARGET_APP_ACTIVE")
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
+        val filter = IntentFilter("com.waenhancer.ACTION_TARGET_APP_ACTIVE")
+        if (Build.VERSION.SDK_INT >= 33) {
             context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             context.registerReceiver(receiver, filter)

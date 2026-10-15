@@ -90,6 +90,30 @@ import com.waenhancer.ui.screens.settings.ModuleSettingsScreen
 import com.waenhancer.ui.screens.settings.UpdateSettingsScreen
 import com.waenhancer.ui.screens.settings.SupportedVersionsScreen
 import com.waenhancer.ui.screens.settings.BootloaderSpooferScreen
+import android.app.Activity
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+import com.waenhancer.core.preferences.WaexPreferenceManager
+import com.waenhancer.notices.NoticeItem
+import com.waenhancer.notices.NoticeRepository
+import com.waenhancer.ui.components.NoticeBottomSheet
+import com.waenhancer.ui.components.UpdateAvailableBottomSheet
+import com.waenhancer.ui.components.UpdateDownloadSheet
+import com.waenhancer.ui.screens.automation.TaskerGuideScreen
+import com.waenhancer.ui.screens.automation.TaskerHistoryScreen
+import com.waenhancer.ui.screens.privacy.DeletedMessagesVaultScreen
+import com.waenhancer.ui.screens.search.SearchScreen
+import com.waenhancer.ui.screens.settings.CallRecordingSettingsScreen
+import com.waenhancer.ui.screens.settings.FilterItemsScreen
+import com.waenhancer.ui.screens.settings.FloatingBottomBarCustomizerScreen
+import com.waenhancer.ui.screens.settings.StylesSettingsScreen
+import com.waenhancer.update.UpdateCheckCoordinator
+import com.waenhancer.utils.ContactNameResolver
 
 class WaexNavController(initialScreen: Screen = Screen.MainDashboard) {
 
@@ -176,7 +200,7 @@ val LocalIsPro = staticCompositionLocalOf { false }
 
 val LocalOnActivatePro = staticCompositionLocalOf<() -> Unit> { {} }
 
-val LocalWaexPreferenceManager = staticCompositionLocalOf<com.waenhancer.core.preferences.WaexPreferenceManager> {
+val LocalWaexPreferenceManager = staticCompositionLocalOf<WaexPreferenceManager> {
     error("No WaexPreferenceManager provided")
 }
 
@@ -184,14 +208,14 @@ val LocalWaexPreferenceManager = staticCompositionLocalOf<com.waenhancer.core.pr
 enum class BottomTab(
     val id: String,
     val labelRes: Int,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val icon: ImageVector,
     val screen: Screen
 ) {
-    HOME("home", com.waenhancer.app.R.string.nav_home, WaexIcons.GridView, Screen.MainDashboard),
-    PRIVACY("privacy", com.waenhancer.app.R.string.nav_controls, WaexIcons.Security, Screen.GlobalPrivacySettings),
-    MEDIA("media", com.waenhancer.app.R.string.nav_media, WaexIcons.Image, Screen.MediaStatusHub),
-    AUTOMATION("automation", com.waenhancer.app.R.string.nav_automation, WaexIcons.AutoAwesome, Screen.AutomationTasker),
-    STYLES("styles", com.waenhancer.app.R.string.nav_styles, WaexIcons.Palette, Screen.StylesSettings)
+    HOME("home", R.string.nav_home, WaexIcons.GridView, Screen.MainDashboard),
+    PRIVACY("privacy", R.string.nav_controls, WaexIcons.Security, Screen.GlobalPrivacySettings),
+    MEDIA("media", R.string.nav_media, WaexIcons.Image, Screen.MediaStatusHub),
+    AUTOMATION("automation", R.string.nav_automation, WaexIcons.AutoAwesome, Screen.AutomationTasker),
+    STYLES("styles", R.string.nav_styles, WaexIcons.Palette, Screen.StylesSettings)
 }
 
 @Composable
@@ -202,18 +226,18 @@ fun MainContainerScreen() {
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val preferenceManager = LocalWaexPreferenceManager.current
     var licenseState by remember { mutableStateOf(if ("ACTIVE".equals(LicenseManager.getProStatus(context), ignoreCase = true)) "pro" else "free") }
     val isPro = licenseState == "pro"
     var activeModal by remember { mutableStateOf<String?>(null) } // "license" | "file-spoofer" | "message-bomber" | "status-splitter" | null
-    var activeNotice by remember { mutableStateOf<com.waenhancer.notices.NoticeItem?>(null) }
+    var activeNotice by remember { mutableStateOf<NoticeItem?>(null) }
 
     LaunchedEffect(Unit) {
-        val notice = com.waenhancer.notices.NoticeRepository.getActiveNotice(context, preferenceManager)
+        val notice = NoticeRepository.getActiveNotice(context, preferenceManager)
         if (notice != null) {
             activeNotice = notice
-            com.waenhancer.notices.NoticeRepository.markNoticeShown(context, notice)
+            NoticeRepository.markNoticeShown(context, notice)
         }
     }
 
@@ -228,7 +252,7 @@ fun MainContainerScreen() {
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(navController.currentScreen) {
+    LaunchedEffect(navController.currentScreen) {
         if (navController.currentScreen == Screen.PerContactPrivacyList) {
             contactPrivacyList.clear()
             contactPrivacyList.addAll(loadContactPrivacyList(context, preferenceManager))
@@ -265,10 +289,10 @@ fun MainContainerScreen() {
         } else {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBackPressTime < 2000) {
-                (context as? android.app.Activity)?.finish()
+                (context as? Activity)?.finish()
             } else {
                 lastBackPressTime = currentTime
-                android.widget.Toast.makeText(context, "Press back again to exit", android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -315,13 +339,13 @@ fun MainContainerScreen() {
 
     val title = when (currentScreen) {
         Screen.MainDashboard -> "WaEnhancerX"
-        Screen.SystemHealth -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_system_health)
-        Screen.BootloaderSpoofer -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_bootloader_spoofer)
-        Screen.GlobalPrivacySettings -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_controls)
-        Screen.MediaStatusHub -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_media)
-        Screen.AutomationTasker -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_automation)
-        Screen.StylesSettings -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.nav_styles)
-        Screen.PerContactPrivacyList -> androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_per_contact_privacy)
+        Screen.SystemHealth -> stringResource(R.string.title_system_health)
+        Screen.BootloaderSpoofer -> stringResource(R.string.title_bootloader_spoofer)
+        Screen.GlobalPrivacySettings -> stringResource(R.string.nav_controls)
+        Screen.MediaStatusHub -> stringResource(R.string.nav_media)
+        Screen.AutomationTasker -> stringResource(R.string.nav_automation)
+        Screen.StylesSettings -> stringResource(R.string.nav_styles)
+        Screen.PerContactPrivacyList -> stringResource(R.string.title_per_contact_privacy)
         else -> "WaEnhancerX"
     }
 
@@ -465,7 +489,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.stargazers_title), style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = stringResource(R.string.stargazers_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -485,7 +509,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.module_settings_title), style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = stringResource(R.string.module_settings_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -505,7 +529,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_supported_versions), style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = stringResource(R.string.title_supported_versions), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -519,7 +543,7 @@ fun MainContainerScreen() {
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 Icon(WaexIcons.Security, contentDescription = null,
                                                     tint = colors.primary, modifier = Modifier.size(16.dp))
-                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.title_bootloader_spoofer), style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = stringResource(R.string.title_bootloader_spoofer), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -540,7 +564,7 @@ fun MainContainerScreen() {
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
-                                                Text(text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.about_title), style = typography.bodyMd, color = colors.onSurface)
+                                                Text(text = stringResource(R.string.about_title), style = typography.bodyMd, color = colors.onSurface)
                                             }
                                         },
                                         onClick = {
@@ -569,7 +593,7 @@ fun MainContainerScreen() {
                     Surface(
                         shape = CircleShape,
                         color = colors.surface,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         shadowElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -656,14 +680,14 @@ fun MainContainerScreen() {
                                         ) {
                                             Icon(
                                                 imageVector = tab.icon,
-                                                contentDescription = androidx.compose.ui.res.stringResource(tab.labelRes),
+                                                contentDescription = stringResource(tab.labelRes),
                                                 tint = contentColor,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = androidx.compose.ui.res.stringResource(tab.labelRes),
+                                            text = stringResource(tab.labelRes),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Medium,
                                             color = contentColor,
@@ -869,7 +893,7 @@ fun MainContainerScreen() {
                         .clickable(enabled = false) { }
                         .clip(radius.bottomSheetShape),
                     color = colors.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
+                    border = BorderStroke(1.dp, colors.outlineVariant)
                 ) {
                     Column(
                         modifier = Modifier
@@ -891,19 +915,19 @@ fun MainContainerScreen() {
 
         // Material 3 Remote Notice Bottom Sheet
         activeNotice?.let { notice ->
-            com.waenhancer.ui.components.NoticeBottomSheet(
+            NoticeBottomSheet(
                 notice = notice,
                 onDismiss = { activeNotice = null }
             )
         }
 
         // Available Update Bottom Sheet
-        val availableUpdate by com.waenhancer.update.UpdateCheckCoordinator.availableRelease.collectAsState()
+        val availableUpdate by UpdateCheckCoordinator.availableRelease.collectAsState()
         var downloadingUrl by remember { mutableStateOf<String?>(null) }
         var downloadingVersion by remember { mutableStateOf<String?>(null) }
 
         availableUpdate?.let { update ->
-            com.waenhancer.ui.components.UpdateAvailableBottomSheet(
+            UpdateAvailableBottomSheet(
                 release = update,
                 onUpdateNow = {
                     val asset = update.defaultAsset
@@ -913,14 +937,14 @@ fun MainContainerScreen() {
                     } else {
                         navController.navigateTo(Screen.ReleaseDetails(update.tagName))
                     }
-                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                    UpdateCheckCoordinator.dismissInAppUpdate()
                 },
                 onViewDetails = {
-                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                    UpdateCheckCoordinator.dismissInAppUpdate()
                     navController.navigateTo(Screen.ReleaseDetails(update.tagName))
                 },
                 onDismiss = {
-                    com.waenhancer.update.UpdateCheckCoordinator.dismissInAppUpdate()
+                    UpdateCheckCoordinator.dismissInAppUpdate()
                 }
             )
         }
@@ -928,7 +952,7 @@ fun MainContainerScreen() {
         downloadingUrl?.let { url ->
             val version = downloadingVersion ?: "latest"
             val useRoot = preferenceManager.getBoolean("root_auto_install", false)
-            com.waenhancer.ui.components.UpdateDownloadSheet(
+            UpdateDownloadSheet(
                 url = url,
                 version = version,
                 useRoot = useRoot,
@@ -972,8 +996,8 @@ fun WaexAppNavigation(
         Screen.AutomationTasker -> AutomationTaskerScreen()
         Screen.AudioTranscription -> AudioTranscriptionScreen()
         Screen.LicenseActivation -> LicenseActivationScreen()
-        Screen.Search -> com.waenhancer.ui.screens.search.SearchScreen()
-        Screen.StylesSettings -> com.waenhancer.ui.screens.settings.StylesSettingsScreen()
+        Screen.Search -> SearchScreen()
+        Screen.StylesSettings -> StylesSettingsScreen()
         Screen.PerContactPrivacyList -> PerContactPrivacyListScreen(
             contacts = contactPrivacyList,
             onClearContact = onClearContact,
@@ -987,13 +1011,13 @@ fun WaexAppNavigation(
         Screen.ModuleSettings -> ModuleSettingsScreen()
         Screen.UpdateSettings -> UpdateSettingsScreen()
         Screen.SupportedVersions -> SupportedVersionsScreen()
-        Screen.DeletedMessages -> com.waenhancer.ui.screens.privacy.DeletedMessagesVaultScreen()
-        Screen.CallRecordingSettings -> com.waenhancer.ui.screens.settings.CallRecordingSettingsScreen()
-        Screen.TaskerGuide -> com.waenhancer.ui.screens.automation.TaskerGuideScreen()
-        Screen.TaskerHistory -> com.waenhancer.ui.screens.automation.TaskerHistoryScreen()
+        Screen.DeletedMessages -> DeletedMessagesVaultScreen()
+        Screen.CallRecordingSettings -> CallRecordingSettingsScreen()
+        Screen.TaskerGuide -> TaskerGuideScreen()
+        Screen.TaskerHistory -> TaskerHistoryScreen()
         Screen.ManageDevices -> ManageDevicesScreen()
-        Screen.FloatingBottomBarCustomizer -> com.waenhancer.ui.screens.settings.FloatingBottomBarCustomizerScreen()
-        Screen.FilterItems -> com.waenhancer.ui.screens.settings.FilterItemsScreen()
+        Screen.FloatingBottomBarCustomizer -> FloatingBottomBarCustomizerScreen()
+        Screen.FilterItems -> FilterItemsScreen()
         is Screen.InjectedHooks -> InjectedHooksScreen(packageName = currentScreen.packageName, appName = currentScreen.appName)
     }
 }
@@ -1014,7 +1038,7 @@ data class ContactPrivacy(
     val endHour: Int = 18
 )
 
-fun loadContactPrivacyList(context: android.content.Context, preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager): List<ContactPrivacy> {
+fun loadContactPrivacyList(context: Context, preferenceManager: WaexPreferenceManager): List<ContactPrivacy> {
     val list = mutableListOf<ContactPrivacy>()
     val all = preferenceManager.all ?: return list
     val seen = mutableSetOf<String>()
@@ -1033,7 +1057,7 @@ fun loadContactPrivacyList(context: android.content.Context, preferenceManager: 
                 val rawStoredName = json.optString("name", "")
                 val phoneHint = json.optString("phone", "")
 
-                val resolvedName = com.waenhancer.utils.ContactNameResolver.resolveName(context, jid, rawStoredName, phoneHint)
+                val resolvedName = ContactNameResolver.resolveName(context, jid, rawStoredName, phoneHint)
 
                 list.add(
                     ContactPrivacy(

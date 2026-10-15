@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
+import android.content.SharedPreferences
 
 object UpdateCheckCoordinator {
     const val TRIGGER_MODULE = "module"
@@ -100,7 +101,7 @@ object UpdateCheckCoordinator {
         else -> 24L * 60L * 60L * 1000L
     }
 
-    private fun shouldSuppressIgnored(prefs: android.content.SharedPreferences, version: String, now: Long): Boolean {
+    private fun shouldSuppressIgnored(prefs: SharedPreferences, version: String, now: Long): Boolean {
         if (prefs.getString("ignored_version", "").orEmpty() != version) return false
         val ignoredAt = prefs.getLong("ignored_timestamp", 0L)
         return when (prefs.getString("update_ignored_behavior", "next_release")) {

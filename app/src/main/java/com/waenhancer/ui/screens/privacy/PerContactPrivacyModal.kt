@@ -45,6 +45,9 @@ import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.components.WaexSwitchPreference
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.ContactPrivacy
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.TextButton
 
 @Composable
 fun PerContactPrivacyModal(
@@ -301,7 +304,7 @@ fun PerContactPrivacyModal(
                             
                             // Active hours selector for Scheduled Rules
                             if (scopeId == "scheduled") {
-                                androidx.compose.animation.AnimatedVisibility(
+                                AnimatedVisibility(
                                     visible = isSelected
                                 ) {
                                     Column(
@@ -327,12 +330,12 @@ fun PerContactPrivacyModal(
                                         ) {
                                             Text(text = "Start Hour", style = typography.bodyMd, color = colors.onSurface)
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                androidx.compose.material3.TextButton(
+                                                TextButton(
                                                     onClick = {
                                                         startHour = (startHour - 1 + 24) % 24
                                                     },
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
-                                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
+                                                    contentPadding = PaddingValues(4.dp),
+                                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
                                                 ) {
                                                     Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                                 }
@@ -343,12 +346,12 @@ fun PerContactPrivacyModal(
                                                     color = colors.primary,
                                                     modifier = Modifier.padding(horizontal = 8.dp)
                                                 )
-                                                androidx.compose.material3.TextButton(
+                                                TextButton(
                                                     onClick = {
                                                         startHour = (startHour + 1) % 24
                                                     },
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
-                                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
+                                                    contentPadding = PaddingValues(4.dp),
+                                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
                                                 ) {
                                                     Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                                 }
@@ -363,12 +366,12 @@ fun PerContactPrivacyModal(
                                         ) {
                                             Text(text = "End Hour", style = typography.bodyMd, color = colors.onSurface)
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                androidx.compose.material3.TextButton(
+                                                TextButton(
                                                     onClick = {
                                                         endHour = (endHour - 1 + 24) % 24
                                                     },
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
-                                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
+                                                    contentPadding = PaddingValues(4.dp),
+                                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
                                                 ) {
                                                     Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                                 }
@@ -379,12 +382,12 @@ fun PerContactPrivacyModal(
                                                     color = colors.primary,
                                                     modifier = Modifier.padding(horizontal = 8.dp)
                                                 )
-                                                androidx.compose.material3.TextButton(
+                                                TextButton(
                                                     onClick = {
                                                         endHour = (endHour + 1) % 24
                                                     },
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
-                                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
+                                                    contentPadding = PaddingValues(4.dp),
+                                                    colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurfaceVariant)
                                                 ) {
                                                     Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                                 }

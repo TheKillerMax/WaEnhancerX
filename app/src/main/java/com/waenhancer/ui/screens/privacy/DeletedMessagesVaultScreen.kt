@@ -62,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
+import androidx.compose.ui.text.style.TextAlign
 
 data class PreservedMessage(
     val id: String,
@@ -238,7 +239,7 @@ fun DeletedMessagesVaultScreen() {
                                     text = "When messages are deleted via 'Delete For Me', they will be preserved and listed here.",
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }

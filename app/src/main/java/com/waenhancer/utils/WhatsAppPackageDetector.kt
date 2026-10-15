@@ -16,6 +16,7 @@ import com.waenhancer.app.R
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.xposed.utils.ModuleStatus
 import org.json.JSONArray
+import java.io.File
 
 data class InjectedHookItem(
     val name: String,
@@ -204,7 +205,7 @@ object WhatsAppPackageDetector {
     fun currentBootCount(context: Context): Int = runCatching {
         Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
     }.getOrElse {
-        runCatching { java.io.File("/proc/sys/kernel/random/boot_id").readText().trim().hashCode() }
+        runCatching { File("/proc/sys/kernel/random/boot_id").readText().trim().hashCode() }
             .getOrDefault(-1)
     }
 

@@ -5,6 +5,8 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import java.util.Locale
+import android.content.res.Resources
+import com.waenhancer.config.PreferenceStores
 
 object LocaleHelper {
 
@@ -26,7 +28,7 @@ object LocaleHelper {
     )
 
     fun getSelectedLanguageCode(context: Context): String {
-        val prefs = com.waenhancer.config.PreferenceStores.publicStore(context)
+        val prefs = PreferenceStores.publicStore(context)
         return prefs.getString(PREF_APP_LANGUAGE, "system") ?: "system"
     }
 
@@ -36,15 +38,15 @@ object LocaleHelper {
     }
 
     fun applyLanguage(context: Context, langCode: String) {
-        val prefs = com.waenhancer.config.PreferenceStores.publicStore(context)
+        val prefs = PreferenceStores.publicStore(context)
         prefs.edit().putString(PREF_APP_LANGUAGE, langCode).apply()
 
         val locale = if (langCode == "system") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                android.content.res.Resources.getSystem().configuration.locales[0]
+                Resources.getSystem().configuration.locales[0]
             } else {
                 @Suppress("DEPRECATION")
-                android.content.res.Resources.getSystem().configuration.locale
+                Resources.getSystem().configuration.locale
             }
         } else if (langCode == "in") {
             Locale("in", "ID")

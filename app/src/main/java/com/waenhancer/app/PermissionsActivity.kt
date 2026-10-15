@@ -84,6 +84,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.utils.LocaleHelper
 
 enum class PermissionType {
     RUNTIME,
@@ -110,7 +112,7 @@ class PermissionsActivity : ComponentActivity() {
     @Volatile private var rootGranted = false
 
     override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(com.waenhancer.utils.LocaleHelper.wrapContext(newBase))
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -478,7 +480,7 @@ fun PermissionsScreen(
             Surface(
                 color = colors.surface,
                 shadowElevation = 12.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
+                border = BorderStroke(1.dp, colors.outlineVariant)
             ) {
                 Column(
                     modifier = Modifier
@@ -585,7 +587,7 @@ fun PermissionsScreen(
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceDim,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -646,7 +648,7 @@ fun PermissionsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = cardBg,
-                    border = androidx.compose.foundation.BorderStroke(
+                    border = BorderStroke(
                         1.dp,
                         if (isGranted) Color(0xFF22C55E).copy(alpha = 0.35f) else colors.outlineVariant
                     ),

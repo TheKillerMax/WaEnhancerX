@@ -29,6 +29,8 @@ import com.waenhancer.utils.LocalizationHelper
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.waenhancer.app.R
+import androidx.compose.foundation.BorderStroke
+import com.waenhancer.ui.navigation.Screen
 
 typealias SearchablePreference = FeatureItem
 
@@ -155,7 +157,7 @@ fun SearchScreen() {
                             Surface(
                                 shape = radius.bentoCardShape,
                                 color = colors.surfaceDim,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                                border = BorderStroke(1.dp, colors.outlineVariant),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Box(
@@ -163,7 +165,7 @@ fun SearchScreen() {
                                         .fillMaxWidth()
                                         .clickable {
                                             if (pref.key == "pro_features_unlock" || pref.key == "license_verification") {
-                                                navController.navigateTo(com.waenhancer.ui.navigation.Screen.LicenseActivation)
+                                                navController.navigateTo(Screen.LicenseActivation)
                                             } else {
                                                 navController.navigateToPreference(
                                                     tabIndex = pref.tabIndex,

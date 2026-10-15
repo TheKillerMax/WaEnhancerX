@@ -33,6 +33,7 @@ import com.waenhancer.ui.navigation.LocalIsPro
 import com.waenhancer.ui.navigation.LocalOnActivatePro
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -629,7 +630,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                                 color = if (isSelected) colors.primary else colors.onSurfaceVariant,
                                                 modifier = Modifier.fillMaxWidth(),
-                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }

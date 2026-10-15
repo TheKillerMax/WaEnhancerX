@@ -26,6 +26,7 @@ import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import android.os.SystemClock
 
 /** Renders process-local presence events on currently bound conversation rows. */
 class OnlinePresenceIndicatorsHook(
@@ -134,7 +135,7 @@ class OnlinePresenceIndicatorsHook(
         if (contact == null || method.parameterTypes.size != 4) return
         val jidObject = findObjectOfType(contact, method.parameterTypes[0], 4, HashSet()) ?: return
         val key = jidObject.toString()
-        val now = android.os.SystemClock.uptimeMillis()
+        val now = SystemClock.uptimeMillis()
         val previous = subscriptions[key]
         if (previous != null && now - previous < 30_000L) return
         recordSubscription(key, now)

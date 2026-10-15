@@ -88,6 +88,9 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.sin
 import kotlin.random.Random
+import android.content.Context
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 
 private const val PROJECT_URL = "https://github.com/WaEnhancerX/WaEnhancerX"
 private const val STARGAZERS_DATA_URL = "https://waex.mubashar.dev/api/stargazers"
@@ -689,14 +692,14 @@ private fun SupportersConfettiOverlay(progress: Float) {
             val y = -piece.size + localProgress * (size.height + piece.size * 3f)
             val color = palette[piece.colorIndex].copy(alpha = fade)
 
-            rotate(piece.rotation + localProgress * 540f, pivot = androidx.compose.ui.geometry.Offset(x, y)) {
+            rotate(piece.rotation + localProgress * 540f, pivot = Offset(x, y)) {
                 if (piece.circular) {
-                    drawCircle(color = color, radius = piece.size * 0.45f, center = androidx.compose.ui.geometry.Offset(x, y))
+                    drawCircle(color = color, radius = piece.size * 0.45f, center = Offset(x, y))
                 } else {
                     drawRect(
                         color = color,
-                        topLeft = androidx.compose.ui.geometry.Offset(x - piece.size / 2f, y - piece.size / 3f),
-                        size = androidx.compose.ui.geometry.Size(piece.size, piece.size * 0.66f)
+                        topLeft = Offset(x - piece.size / 2f, y - piece.size / 3f),
+                        size = Size(piece.size, piece.size * 0.66f)
                     )
                 }
             }
@@ -704,7 +707,7 @@ private fun SupportersConfettiOverlay(progress: Float) {
     }
 }
 
-private fun loadStargazers(context: android.content.Context, forceRefresh: Boolean): Result<StargazersSnapshot> = runCatching {
+private fun loadStargazers(context: Context, forceRefresh: Boolean): Result<StargazersSnapshot> = runCatching {
     val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_API_CACHE)
     val cachedJson = prefs.getString("stargazers_json_v3", null)
     val cachedSnapshot = cachedJson?.let { runCatching { parseStargazers(it) }.getOrNull() }
@@ -768,7 +771,7 @@ private fun parseStargazers(json: String): StargazersSnapshot {
 }
 
 private suspend fun loadStargazerProfile(
-    context: android.content.Context,
+    context: Context,
     login: String
 ): Result<StargazerProfile> = withContext(Dispatchers.IO) {
     runCatching {

@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.privacy
 
+import android.graphics.Color as AndroidColor
 import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
@@ -61,6 +62,17 @@ import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.res.stringResource
+import com.waenhancer.app.R
+import com.waenhancer.ui.components.WaexColorPickerDialog
+import com.waenhancer.ui.components.WaexEmojiPickerDialog
+import com.waenhancer.ui.navigation.LocalIsPro
+import com.waenhancer.ui.navigation.LocalOnActivatePro
+import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy
 
 
 @Composable
@@ -110,7 +122,7 @@ fun GlobalPrivacySettingsScreen(
         }
     }
 
-    val preferenceManager = com.waenhancer.ui.navigation.LocalWaexPreferenceManager.current
+    val preferenceManager = LocalWaexPreferenceManager.current
     val privacyKeys = remember {
         listOf(
             "always_online", "online_status_indicator", "freeze_last_seen", "freezelastseen",
@@ -216,7 +228,7 @@ fun GlobalPrivacySettingsScreen(
     var deletedMessageColor by remember(preferenceManager) {
         // The persisted preference has schema type INT; older releases wrote hex text.
         mutableStateOf(
-            com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(
+            DeletedIndicatorPreferencePolicy.toColorHex(
                 preferenceManager.getAll()["deleted_message_color"]
             )
         )
@@ -241,7 +253,7 @@ fun GlobalPrivacySettingsScreen(
         Surface(
             shape = radius.mdShape,
             color = colors.surfaceDim,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+            border = BorderStroke(1.dp, colors.outlineVariant),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.pageMargin)
@@ -281,8 +293,8 @@ fun GlobalPrivacySettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    val tabPrivacyLabel = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.tab_privacy)
-                    val tabConversationLabel = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.tab_conversation)
+                    val tabPrivacyLabel = stringResource(R.string.tab_privacy)
+                    val tabConversationLabel = stringResource(R.string.tab_conversation)
                     listOf("privacy" to tabPrivacyLabel, "conversation" to tabConversationLabel).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
@@ -296,7 +308,7 @@ fun GlobalPrivacySettingsScreen(
                                 .fillMaxHeight()
                                 .weight(1f)
                                 .clickable(
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) { selectedTab = tabId },
                             contentAlignment = Alignment.Center
@@ -321,7 +333,7 @@ fun GlobalPrivacySettingsScreen(
                     .padding(horizontal = spacing.pageMargin)
             ) {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.advanced_hubs_vaults),
+                    text = stringResource(R.string.advanced_hubs_vaults),
                     style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurfaceVariant,
@@ -331,7 +343,7 @@ fun GlobalPrivacySettingsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -339,7 +351,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.PerContactPrivacyList) }
+                                .clickable { navController.navigateTo(Screen.PerContactPrivacyList) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -348,13 +360,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_per_contact_rules_title),
+                                    text = stringResource(R.string.hub_per_contact_rules_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_per_contact_rules_desc),
+                                    text = stringResource(R.string.hub_per_contact_rules_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -378,7 +390,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.DeletedMessages) }
+                                .clickable { navController.navigateTo(Screen.DeletedMessages) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -387,13 +399,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_delete_for_me_title),
+                                    text = stringResource(R.string.hub_delete_for_me_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_delete_for_me_desc),
+                                    text = stringResource(R.string.hub_delete_for_me_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -417,7 +429,7 @@ fun GlobalPrivacySettingsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { navController.navigateTo(com.waenhancer.ui.navigation.Screen.CallRecordingSettings) }
+                                .clickable { navController.navigateTo(Screen.CallRecordingSettings) }
                                 .padding(horizontal = 18.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -426,13 +438,13 @@ fun GlobalPrivacySettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_calls_recording_title),
+                                    text = stringResource(R.string.hub_calls_recording_title),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.hub_calls_recording_desc),
+                                    text = stringResource(R.string.hub_calls_recording_desc),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     fontSize = 12.sp
@@ -470,11 +482,11 @@ fun GlobalPrivacySettingsScreen(
                 Surface(
                     shape = radius.bentoCardShape,
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    val isPro = com.waenhancer.ui.navigation.LocalIsPro.current
-                    val onActivatePro = com.waenhancer.ui.navigation.LocalOnActivatePro.current
+                    val isPro = LocalIsPro.current
+                    val onActivatePro = LocalOnActivatePro.current
 
                     Column {
                         group.items.forEachIndexed { index, item ->
@@ -526,8 +538,8 @@ fun GlobalPrivacySettingsScreen(
                                             fontWeight = FontWeight.Medium,
                                             color = colors.onSurface
                                         )
-                                        val reqPro = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.requires_pro_label)
-                                        val depHint = androidx.compose.ui.res.stringResource(com.waenhancer.app.R.string.dep_disabled_hide_blue_ticks)
+                                        val reqPro = stringResource(R.string.requires_pro_label)
+                                        val depHint = stringResource(R.string.dep_disabled_hide_blue_ticks)
                                         Text(
                                             text = when {
                                                 isLocked -> "$locDesc • $reqPro"
@@ -873,7 +885,7 @@ fun GlobalPrivacySettingsScreen(
                                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                                 ) {
                                                     val parsedCurrentColor = try {
-                                                        Color(android.graphics.Color.parseColor(deletedMessageColor))
+                                                        Color(AndroidColor.parseColor(deletedMessageColor))
                                                     } catch (_: Throwable) {
                                                         Color(0xFFEF4444)
                                                     }
@@ -1086,7 +1098,7 @@ fun GlobalPrivacySettingsScreen(
                                 }
 
                                 if (showEmojiPicker) {
-                                    com.waenhancer.ui.components.WaexEmojiPickerDialog(
+                                    WaexEmojiPickerDialog(
                                         initialEmoji = currentEmoji,
                                         onEmojiSelected = { emoji ->
                                             currentEmoji = emoji
@@ -1109,14 +1121,14 @@ fun GlobalPrivacySettingsScreen(
     }
 
     if (showColorPickerDialog) {
-        com.waenhancer.ui.components.WaexColorPickerDialog(
+        WaexColorPickerDialog(
             initialColorHex = deletedMessageColor,
             onColorSelected = { selectedHex ->
-                val colorInt = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toArgbOrNull(selectedHex)
+                val colorInt = DeletedIndicatorPreferencePolicy.toArgbOrNull(selectedHex)
                 if (colorInt != null) {
                     // Store the schema's INT ARGB form; do not strand hex strings on disk.
                     preferenceManager.putInt("deleted_message_color", colorInt)
-                    deletedMessageColor = com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy.toColorHex(colorInt)
+                    deletedMessageColor = DeletedIndicatorPreferencePolicy.toColorHex(colorInt)
                     settingsState["anti_revoke_indicator_dummy"] = !(settingsState["anti_revoke_indicator_dummy"] ?: false)
                 }
             },

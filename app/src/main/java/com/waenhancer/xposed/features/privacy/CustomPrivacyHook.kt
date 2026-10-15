@@ -35,6 +35,9 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONObject
+import android.R
+import android.content.res.Configuration
+import com.waenhancer.utils.ContactNameResolver
 
 /**
  * Native in-WhatsApp Per-Contact Privacy Hook with authentic WDS (WhatsApp Design System) UI elements.
@@ -195,7 +198,7 @@ class CustomPrivacyHook(
             }
 
             if (targetContainer == null) {
-                val root = activity.findViewById<ViewGroup>(android.R.id.content)
+                val root = activity.findViewById<ViewGroup>(R.id.content)
                 targetContainer = findFirstSuitableContainer(root)
             }
 
@@ -227,15 +230,15 @@ class CustomPrivacyHook(
     }
 
     private fun extractJid(activity: Activity): String {
-        return com.waenhancer.utils.ContactNameResolver.extractJidFromActivity(activity)
+        return ContactNameResolver.extractJidFromActivity(activity)
     }
 
     private fun extractDisplayName(activity: Activity, jid: String, fallbackNumber: String): String {
-        return com.waenhancer.utils.ContactNameResolver.resolveFromActivity(activity, jid, fallbackNumber)
+        return ContactNameResolver.resolveFromActivity(activity, jid, fallbackNumber)
     }
 
     private fun createInfoScreenTileView(activity: Activity, onClick: () -> Unit): View {
-        val isDark = (activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDark = (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         val itemLayout = LinearLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -262,7 +265,7 @@ class CustomPrivacyHook(
                 marginEnd = dp(activity, 16)
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageResource(android.R.drawable.ic_lock_lock)
+            setImageResource(R.drawable.ic_lock_lock)
             setColorFilter(if (isDark) 0xFF8696A0.toInt() else 0xFF667781.toInt())
         }
         itemLayout.addView(iconView)
@@ -294,7 +297,7 @@ class CustomPrivacyHook(
     }
 
     private fun showCustomPrivacyBottomSheet(activity: Activity, jid: String) {
-        val isDark = (activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDark = (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val cleanNumber = jid.substringBefore("@").substringBefore(":")
         val existingJson = getContactPrivacy(prefs, jid) ?: JSONObject()
 
@@ -455,7 +458,7 @@ class CustomPrivacyHook(
                 val switchComp = clazz.getConstructor(Context::class.java).newInstance(context) as CompoundButton
                 val greenColor = 0xFF25D366.toInt()
                 val grayColor = 0xFF74787A.toInt()
-                val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+                val states = arrayOf(intArrayOf(R.attr.state_checked), intArrayOf())
                 val trackColors = intArrayOf(0x6625D366.toInt(), 0x3374787A.toInt())
                 val thumbColors = intArrayOf(greenColor, grayColor)
                 XposedHelpers.callMethod(switchComp, "setTrackTintList", ColorStateList(states, trackColors))
@@ -465,7 +468,7 @@ class CustomPrivacyHook(
                 Switch(context).apply {
                     val greenColor = 0xFF25D366.toInt()
                     val grayColor = 0xFF74787A.toInt()
-                    val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+                    val states = arrayOf(intArrayOf(R.attr.state_checked), intArrayOf())
                     val trackColors = intArrayOf(0x6625D366.toInt(), 0x3374787A.toInt())
                     val thumbColors = intArrayOf(greenColor, grayColor)
                     trackTintList = ColorStateList(states, trackColors)

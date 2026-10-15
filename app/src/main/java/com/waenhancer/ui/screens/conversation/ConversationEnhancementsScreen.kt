@@ -34,6 +34,11 @@ import com.waenhancer.ui.navigation.LocalOnActivatePro
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import com.waenhancer.ui.components.WaexEmojiPickerDialog
+import com.waenhancer.ui.components.WaexPreferenceItem
 
 @Composable
 fun ConversationEnhancementsScreen() {
@@ -260,19 +265,19 @@ fun ConversationEnhancementsScreen() {
                             mutableStateOf(preferenceManager.getString("doubletap2like_emoji", "👍").ifBlank { "👍" })
                         }
 
-                        com.waenhancer.ui.components.WaexPreferenceItem(
+                        WaexPreferenceItem(
                             title = "Custom Reaction",
                             description = "Change the default emoji sent when double-clicking ($currentEmoji)",
                             icon = WaexIcons.Palette,
                             onClick = { showEmojiPicker = true },
                             showDivider = false,
                             trailing = {
-                                androidx.compose.material3.Surface(
-                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                Surface(
+                                    shape = CircleShape,
                                     color = colors.surfaceContainerHighest,
                                     modifier = Modifier.padding(end = 4.dp)
                                 ) {
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = currentEmoji,
                                         style = typography.titleMd,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -282,7 +287,7 @@ fun ConversationEnhancementsScreen() {
                         )
 
                         if (showEmojiPicker) {
-                            com.waenhancer.ui.components.WaexEmojiPickerDialog(
+                            WaexEmojiPickerDialog(
                                 initialEmoji = currentEmoji,
                                 onEmojiSelected = { emoji ->
                                     currentEmoji = emoji

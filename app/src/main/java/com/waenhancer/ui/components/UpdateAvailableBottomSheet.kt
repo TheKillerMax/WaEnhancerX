@@ -49,6 +49,7 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.update.ChangelogParser
 import com.waenhancer.update.ChangelogSection
 import com.waenhancer.update.WaexRelease
+import androidx.compose.foundation.BorderStroke
 
 /**
  * Modern In-App Update Modal Bottom Sheet for WaEnhancerX.
@@ -139,7 +140,7 @@ fun UpdateAvailableBottomSheet(
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.surfaceDim,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp, max = 280.dp)

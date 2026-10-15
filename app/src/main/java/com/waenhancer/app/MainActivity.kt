@@ -33,6 +33,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import android.content.Context
+import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.utils.LocaleHelper
 
 internal object StartupRootAccess {
     @Volatile private var pendingResult: Boolean? = null
@@ -50,8 +53,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var preferenceManager: WaexPreferenceManager
 
-    override fun attachBaseContext(newBase: android.content.Context) {
-        super.attachBaseContext(com.waenhancer.utils.LocaleHelper.wrapContext(newBase))
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
     }
 
     private var currentNavController: WaexNavController? = null
@@ -65,9 +68,9 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         val releaseTag = releaseTagFrom(intent)
         if (releaseTag != null) {
-            currentNavController?.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+            currentNavController?.navigateTo(Screen.ReleaseDetails(releaseTag))
         } else if (intent.getStringExtra("target_screen") == "supported_versions") {
-            currentNavController?.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+            currentNavController?.navigateTo(Screen.SupportedVersions)
         }
     }
 
@@ -119,9 +122,9 @@ class MainActivity : ComponentActivity() {
                             currentNavController = controller
                             val releaseTag = releaseTagFrom(intent)
                             if (releaseTag != null) {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.ReleaseDetails(releaseTag))
+                                controller.navigateTo(Screen.ReleaseDetails(releaseTag))
                             } else if (intent?.getStringExtra("target_screen") == "supported_versions") {
-                                controller.navigateTo(com.waenhancer.ui.navigation.Screen.SupportedVersions)
+                                controller.navigateTo(Screen.SupportedVersions)
                             }
                             controller
                         }

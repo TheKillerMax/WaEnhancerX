@@ -41,6 +41,7 @@ import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun TaskerGuideScreen() {
@@ -79,7 +80,7 @@ fun TaskerGuideScreen() {
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.primary.copy(alpha = 0.08f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.primary.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.2f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -107,7 +108,7 @@ fun TaskerGuideScreen() {
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.surfaceDim,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -165,7 +166,7 @@ fun TaskerGuideScreen() {
             Surface(
                 shape = radius.bentoCardShape,
                 color = colors.surfaceDim,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {

@@ -8,6 +8,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import java.util.Locale
 
 data class WaexAsset(
     val name: String,
@@ -28,7 +29,7 @@ data class WaexAsset(
         get() {
             if (size <= 0) return ""
             val mb = size / (1024.0 * 1024.0)
-            return String.format(java.util.Locale.US, "%.1f MB", mb)
+            return String.format(Locale.US, "%.1f MB", mb)
         }
 }
 
