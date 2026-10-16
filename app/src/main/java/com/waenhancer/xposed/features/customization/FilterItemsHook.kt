@@ -17,6 +17,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONArray
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Filter Items By ID Hook:
@@ -31,7 +32,19 @@ class FilterItemsHook(
 
     override val name: String = "FilterItems"
 
-    private val targetMap = HashMap<Int, FilterItem>()
+    @Volatile private var targetMap: Map<Int, FilterItem> = emptyMap()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val reloadQueued = AtomicBoolean(false)
+    private val reloadTask = Runnable {
+        reloadQueued.set(false)
+        reloadFilters()
+    }
+
+    private fun scheduleReload() {
+        if (reloadQueued.compareAndSet(false, true) && !mainHandler.post(reloadTask)) {
+            reloadQueued.set(false)
+        }
+    }
     private val visibilityMask = 0x0000000C
 
     override fun hook() {
@@ -128,7 +141,7 @@ class FilterItemsHook(
             if (key == null || key == "filter_items" || key == "custom_filters"
                 || key.startsWith("pro_entitlement_") || key == "waex_pro_active"
             ) {
-                reloadFilters()
+                scheduleReload()
             }
         }
 
@@ -145,23 +158,16 @@ class FilterItemsHook(
     private fun reloadFilters() {
         val filterItemsRaw = prefs.getString("filter_items", null) ?: ""
         val isEnabled = isEnabled("custom_filters", true)
-
-        targetMap.clear()
+        val next = HashMap<Int, FilterItem>()
         if (isEnabled && filterItemsRaw.isNotBlank()) {
-            val itemsList = parseFilters(filterItemsRaw)
-            for (item in itemsList) {
-                val resourceName = normalizeResourceIdName(item.id)
-                val id = getResourceId(resourceName)
-                if (id > 0) {
-                    targetMap[id] = item
-                }
+            for (item in parseFilters(filterItemsRaw)) {
+                val id = getResourceId(normalizeResourceIdName(item.id))
+                if (id > 0) next[id] = item
             }
         }
-
-        Handler(Looper.getMainLooper()).post {
-            ActivityTracker.getCurrentActivity()?.let { activity ->
-                applyFiltersToActivity(activity)
-            }
+        targetMap = java.util.Collections.unmodifiableMap(next)
+        mainHandler.post {
+            ActivityTracker.getCurrentActivity()?.let(::applyFiltersToActivity)
         }
     }
 
@@ -219,7 +225,7 @@ class FilterItemsHook(
     }
 
     private fun applyFiltersToActivity(activity: Activity) {
-        if (activity.isFinishing || activity.isDestroyed) return
+        if (targetMap.isEmpty() || activity.isFinishing || activity.isDestroyed) return
         val root = activity.window?.decorView ?: return
         applyFiltersRecursively(root)
 
@@ -235,16 +241,17 @@ class FilterItemsHook(
     }
 
     private fun applyFiltersRecursively(view: View) {
+        val rules = targetMap
+        if (rules.isEmpty()) return
+        applyFiltersRecursively(view, rules)
+    }
+
+    private fun applyFiltersRecursively(view: View, rules: Map<Int, FilterItem>) {
         val id = view.id
-        if (id > 0) {
-            val item = targetMap[id]
-            if (item != null) {
-                applyFilterToView(view, item)
-            }
-        }
+        if (id > 0) rules[id]?.let { applyFilterToView(view, it) }
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
-                applyFiltersRecursively(view.getChildAt(i))
+                applyFiltersRecursively(view.getChildAt(i), rules)
             }
         }
     }
