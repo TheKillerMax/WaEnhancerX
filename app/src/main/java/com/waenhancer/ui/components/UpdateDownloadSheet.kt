@@ -19,6 +19,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import com.waenhancer.update.UpdateDownloadSession
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,45 +39,75 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismiss: () -> Unit) {
+fun UpdateDownloadSheet(
+    url: String, version: String, useRoot: Boolean, onDismiss: () -> Unit,
+    expectedSha256: String? = null, expectedSize: Long = 0L
+) {
     val context = LocalContext.current
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var downloadProgress by remember(url) { mutableIntStateOf(0) }
-    var downloadedBytes by remember(url) { mutableLongStateOf(0L) }
-    var downloadTotalBytes by remember(url) { mutableLongStateOf(0L) }
-    var call by remember(url) { mutableStateOf<Call?>(null) }
+    var downloadProgress by remember(context, url, version, useRoot, expectedSha256, expectedSize) { mutableIntStateOf(0) }
+    var downloadedBytes by remember(context, url, version, useRoot, expectedSha256, expectedSize) { mutableLongStateOf(0L) }
+    var downloadTotalBytes by remember(context, url, version, useRoot, expectedSha256, expectedSize) { mutableLongStateOf(0L) }
+    val session = remember(context, url, version, useRoot, expectedSha256, expectedSize) { UpdateDownloadSession() }
+    val dismiss by rememberUpdatedState(onDismiss)
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
-    DisposableEffect(url) {
-        call = UpdateDownloader.downloadApk(context, url, version, object : UpdateDownloader.DownloadCallback {
+    DisposableEffect(session) {
+        val latest = AtomicReference<Triple<Int, Long, Long>?>(null)
+        val pendingProgress = AtomicBoolean(false)
+        val progressTask = Runnable {
+            pendingProgress.set(false)
+            val update = latest.getAndSet(null)
+            if (session.isActive() && update != null) {
+                downloadProgress = update.first
+                downloadedBytes = update.second
+                downloadTotalBytes = update.third
+            }
+        }
+        val call = UpdateDownloader.downloadApk(context, url, version, object : UpdateDownloader.DownloadCallback {
             override fun onProgress(progress: Int, currentBytes: Long, totalBytes: Long) {
-                mainHandler.post {
-                    downloadProgress = progress
-                    downloadedBytes = currentBytes
-                    downloadTotalBytes = totalBytes
+                synchronized(progressTask) {
+                    if (!session.isActive()) return
+                    latest.set(Triple(progress, currentBytes, totalBytes))
+                    if (pendingProgress.compareAndSet(false, true) && !mainHandler.post(progressTask)) {
+                        pendingProgress.set(false)
+                        latest.set(null)
+                    }
                 }
             }
             override fun onSuccess(apkFile: File) {
-                mainHandler.post {
-                    onDismiss()
-                    if (useRoot) {
-                        UpdateDownloader.installApkWithRoot(context, apkFile, version)
-                    } else {
-                        UpdateDownloader.installApk(context, apkFile, version)
+                if (!mainHandler.post {
+                    if (!session.claimTerminal()) {
+                        if (session.isCancelled()) apkFile.delete()
+                        return@post
                     }
+                    mainHandler.removeCallbacks(progressTask)
+                    try {
+                        if (useRoot) UpdateDownloader.installApkWithRoot(context, apkFile, version)
+                        else UpdateDownloader.installApk(context, apkFile, version)
+                    } finally { dismiss() }
+                }) {
+                    session.cancel()
+                    apkFile.delete()
                 }
             }
             override fun onFailure(error: Exception) {
                 mainHandler.post {
-                    onDismiss()
+                    if (!session.claimTerminal()) return@post
+                    mainHandler.removeCallbacks(progressTask)
+                    dismiss()
                     Toast.makeText(context, "Download failed: ${error.message}", Toast.LENGTH_LONG).show()
                 }
             }
-        })
-        // Cancel network work when the sheet is dismissed or recomposed for a new URL.
-        onDispose { call?.cancel() }
+        }, expectedSha256, expectedSize)
+        session.attach { call?.cancel() }
+        onDispose {
+            session.cancel()
+            mainHandler.removeCallbacks(progressTask)
+            latest.set(null)
+        }
     }
 
     ModalBottomSheet(
@@ -100,7 +134,7 @@ fun UpdateDownloadSheet(url: String, version: String, useRoot: Boolean, onDismis
                 style = typography.bodyMd,
                 color = colors.onSurfaceVariant
             )
-            OutlinedButton(onClick = { call?.cancel(); onDismiss() }, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+            OutlinedButton(onClick = { session.cancel(); dismiss() }, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
         }
     }
 }

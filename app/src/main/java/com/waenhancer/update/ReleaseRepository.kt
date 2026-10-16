@@ -14,6 +14,7 @@ data class WaexAsset(
     val name: String,
     val downloadUrl: String,
     val size: Long,
+    val sha256: String? = null,
 ) {
     val isDebug: Boolean
         get() = name.contains("debug", ignoreCase = true)
@@ -131,7 +132,13 @@ object ReleaseRepository {
                         .takeIf(::isOfficialReleaseAssetUrl)
                     if (assetName.endsWith(".apk", ignoreCase = true) &&
                         assetUrl != null && assetMatchesRelease(assetName, versionFromTag(tag))) {
-                        add(WaexAsset(assetName, assetUrl, asset.optLong("size")))
+                        // A missing digest is a legacy asset; a malformed advertised digest is not.
+                        val sha256 = try {
+                            UpdateTransferPolicy.parseAssetDigest(
+                                if (asset.isNull("digest")) null else asset.getString("digest")
+                            )
+                        } catch (_: Exception) { continue }
+                        add(WaexAsset(assetName, assetUrl, asset.optLong("size"), sha256))
                     }
                 }
             }
