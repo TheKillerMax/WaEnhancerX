@@ -66,10 +66,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.waenhancer.app.BuildConfig
 import com.waenhancer.app.R
 import com.waenhancer.config.PreferenceStores
@@ -433,6 +437,7 @@ fun StargazersScreen() {
                 }
             } else {
                 items(filteredStargazers, key = { it.login }) { stargazer ->
+                    val isDev = stargazer.login.equals(BuildConfig.DEV_GH.trim(), ignoreCase = true)
                     Surface(
                         shape = radius.bentoCardShape,
                         color = colors.surfaceContainerLow,
@@ -445,26 +450,53 @@ fun StargazersScreen() {
                                 selectedStargazer = stargazer
                             }
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            AsyncAvatarImage(
-                                url = stargazer.avatarUrl,
-                                contentDescription = "${stargazer.login}'s avatar",
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Column(
                                 modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                            )
-                            Spacer(Modifier.height(9.dp))
-                            Text(
-                                text = stargazer.login,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                AsyncAvatarImage(
+                                    url = stargazer.avatarUrl,
+                                    contentDescription = "${stargazer.login}'s avatar",
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                )
+                                Spacer(Modifier.height(9.dp))
+                                Text(
+                                    text = stargazer.login,
+                                    style = typography.bodyMd,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            if (isDev) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = colors.surfaceContainerHighest,
+                                    border = BorderStroke(1.dp, colors.outlineVariant),
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 8.dp, end = 8.dp)
+                                        .size(24.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "</>",
+                                            style = typography.labelSm,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                            color = colors.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -497,12 +529,36 @@ fun StargazersScreen() {
                     )
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = selectedProfile?.name?.ifEmpty { stargazer.login } ?: stargazer.login,
-                            style = typography.headlineMd,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = selectedProfile?.name?.ifEmpty { stargazer.login } ?: stargazer.login,
+                                style = typography.headlineMd,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.onSurface
+                            )
+                            if (stargazer.login.equals(BuildConfig.DEV_GH.trim(), ignoreCase = true)) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = colors.surfaceContainerHighest,
+                                    border = BorderStroke(1.dp, colors.outlineVariant),
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "</>",
+                                            style = typography.labelSm,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                            color = colors.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         Text(
                             text = "@${stargazer.login}",
                             style = typography.bodyMd,
