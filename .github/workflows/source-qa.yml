@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/check_syntax.py
+          python3 qa/check_syntax.py --root app/src/main/java
 
       - name: Test the fail-closed syntax checker itself
         shell: bash
@@ -108,6 +108,24 @@ jobs:
             test -f qa/test_dynamic_menu_resources.py
           fi
 
+      - name: Require stability tests when their implementations are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f app/src/main/java/com/waenhancer/update/UpdateTransferPolicy.kt ]]; then
+            test -f qa/test_update_download_contract.py
+            test -f qa/test_update_session.py
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
+            test -f qa/test_runtime_observation_clock.py
+          fi
+          if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
+            test -f qa/test_filter_work.py
+          fi
+          if grep -q 'release failed:' app/src/main/java/com/waenhancer/xposed/features/media/CallRecordingHook.java; then
+            test -f qa/test_recorder_cleanup.py
+          fi
+
       - name: Run additional source-only QA suites when merged
         shell: bash
         run: |
@@ -151,6 +169,11 @@ jobs:
             qa/test_declared_targets.py \
             qa/test_runtime_diagnostics.py \
             qa/test_dynamic_menu_resources.py \
+            qa/test_update_download_contract.py \
+            qa/test_update_session.py \
+            qa/test_runtime_observation_clock.py \
+            qa/test_filter_work.py \
+            qa/test_recorder_cleanup.py \
             qa/test_db_migrations.py; do
             if [[ -f "$test_script" ]]; then
               echo "::group::$test_script"
@@ -248,5 +271,59 @@ jobs:
         with:
           name: runtime-framework-evidence
           path: ${{ runner.temp }}/waex-runtime-framework/evidence
+          retention-days: 14
+          if-no-files-found: error
+
+  stability-framework:
+    name: Stability / real Android Views and Compose runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Select only implementations actually present and require their fixtures
+        id: modes
+        shell: bash
+        run: |
+          set -euo pipefail
+          modes=""
+          if [[ -f app/src/main/java/com/waenhancer/update/UpdateTransferPolicy.kt ]]; then
+            modes="$modes update"; test -f qa/fixtures/StabilityUpdateTest.kt
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
+            modes="$modes clock"; test -f qa/fixtures/StabilityClockTest.kt
+          fi
+          if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
+            modes="$modes filter"; test -f qa/fixtures/StabilityFilterTest.kt
+          fi
+          if [[ -n "$modes" ]]; then test -f qa/verify_stability_framework.py; fi
+          echo "modes=$modes" >> "$GITHUB_OUTPUT"
+          if [[ -z "$modes" ]]; then echo '::notice::Stability production changes absent; no stability framework tests executed.'; fi
+      - uses: actions/setup-java@v4
+        if: steps.modes.outputs.modes != ''
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Execute compiled production sources with real framework dependencies
+        if: steps.modes.outputs.modes != ''
+        shell: bash
+        env:
+          MODES: ${{ steps.modes.outputs.modes }}
+        run: |
+          set -euo pipefail
+          if [[ "$MODES" == ' update clock filter' ]]; then
+            python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all"
+          else
+            for mode in $MODES; do
+              python3 qa/verify_stability_framework.py --mode "$mode" --out "$RUNNER_TEMP/waex-stability/$mode"
+            done
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.modes.outputs.modes != ''
+        with:
+          name: stability-framework-evidence
+          path: ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
