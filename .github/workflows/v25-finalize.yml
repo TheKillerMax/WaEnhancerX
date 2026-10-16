@@ -1,0 +1,45 @@
+name: V25 final standalone and integrated stability acceptance
+on:
+  push:
+    paths: ['.github/workflows/v25-finalize.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate exact code and preserve candidate objects on the test branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '203503857e5ad494900a9e3ff17c2a53044c3971dd6d66fd6896b906ec4eee09  qa/v25-finalize.py' | sha256sum --check
+          python3 qa/v25-finalize.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v25-final-validation
+          path: |
+            ${{ runner.temp }}/v25-final-evidence
+            ${{ runner.temp }}/v25-final-framework/evidence
+            ${{ runner.temp }}/v25-final-runtime/evidence
+            ${{ runner.temp }}/v25-old-clock/evidence
+            ${{ runner.temp }}/v25-standalone-update/evidence
+            ${{ runner.temp }}/v25-standalone-filter/evidence
+            ${{ runner.temp }}/v25-standalone-clock/evidence
+            ${{ runner.temp }}/v25-final-presence/*.json
+            ${{ runner.temp }}/v25-final-presence/*.log
+            ${{ runner.temp }}/v25-final-presence/*/*.log
+          retention-days: 14
+          if-no-files-found: error
