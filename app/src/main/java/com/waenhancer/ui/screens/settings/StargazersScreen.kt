@@ -47,15 +47,22 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -156,6 +163,7 @@ fun StargazersScreen() {
     var searchQuery by remember { mutableStateOf("") }
     val confettiProgress = remember { Animatable(0f) }
     val supportSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
     val filteredStargazers = remember(stargazers, searchQuery) {
         val query = searchQuery.trim()
         if (query.isEmpty()) stargazers
@@ -540,21 +548,43 @@ fun StargazersScreen() {
                                 color = colors.onSurface
                             )
                             if (stargazer.login.equals(BuildConfig.DEV_GH.trim(), ignoreCase = true)) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = colors.surfaceContainerHighest,
-                                    border = BorderStroke(1.dp, colors.outlineVariant),
-                                    modifier = Modifier.size(24.dp)
+                                val sheetDevTooltipState = rememberTooltipState()
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                                    tooltip = {
+                                        PlainTooltip(
+                                            containerColor = colors.surfaceContainerHighest,
+                                            contentColor = colors.onSurface
+                                        ) {
+                                            Text(
+                                                text = "Developer",
+                                                style = typography.labelSm,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    },
+                                    state = sheetDevTooltipState
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "</>",
-                                            style = typography.labelSm,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp,
-                                            color = colors.primary
-                                        )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = colors.surfaceContainerHighest,
+                                        border = BorderStroke(1.dp, colors.outlineVariant),
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clickable {
+                                                scope.launch { sheetDevTooltipState.show() }
+                                            }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = "</>",
+                                                style = typography.labelSm,
+                                                fontFamily = FontFamily.Monospace,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp,
+                                                color = colors.primary
+                                            )
+                                        }
                                     }
                                 }
                             }
