@@ -1,0 +1,46 @@
+diff --git a/qa/fixtures/StabilityClockTest.kt b/qa/fixtures/StabilityClockTest.kt
+index 0618115..175d487 100644
+--- a/qa/fixtures/StabilityClockTest.kt
++++ b/qa/fixtures/StabilityClockTest.kt
+@@ -41,7 +41,7 @@ class StabilityClockTest {
+         val owner = TestOwner().apply { registry.currentState = Lifecycle.State.STARTED }
+         val clock = BroadcastFrameClock()
+         val recomposer = Recomposer(coroutineContext + clock)
+-        val loop = launch { recomposer.runRecomposeAndApplyChanges() }
++        val loop = launch(clock) { recomposer.runRecomposeAndApplyChanges() }
+         val composition = Composition(EmptyApplier(), recomposer)
+         val trigger = mutableStateOf(0)
+         val seen = mutableListOf<RuntimeObservationTime>()
+diff --git a/qa/fixtures/StabilityFilterTest.kt b/qa/fixtures/StabilityFilterTest.kt
+index d15c6ae..bfc779c 100644
+--- a/qa/fixtures/StabilityFilterTest.kt
++++ b/qa/fixtures/StabilityFilterTest.kt
+@@ -30,7 +30,7 @@ private class CountingPreferences(private val base: SharedPreferences) : SharedP
+ @LooperMode(LooperMode.Mode.PAUSED)
+ class StabilityFilterTest {
+     private val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
+-        override fun getPackageName() = "com.waenhancer.fixture"
++        override fun getPackageName() = resources.getResourcePackageName(R.id.fixture_target)
+     }
+     private fun invoke(hook: FilterItemsHook, method: String, types: Array<Class<*>> = emptyArray(), vararg args: Any) {
+         hook.javaClass.getDeclaredMethod(method, *types).also { it.isAccessible = true }.invoke(hook, *args)
+@@ -43,6 +43,7 @@ class StabilityFilterTest {
+         assertEquals(0, view.idReads)
+     }
+     @Test fun realJsonRulesAffectOnlyMatchingViews() {
++        assertEquals(R.id.fixture_target, context.resources.getIdentifier("fixture_target", "id", context.packageName))
+         val prefs = context.getSharedPreferences("matching", 0)
+         assertTrue(prefs.edit().clear().putString("filter_items", "[{\"id\":\"fixture_target\",\"behavior\":\"gone\"}]").commit())
+         val hook = FilterItemsHook(context, context.classLoader, prefs)
+diff --git a/qa/test_recorder_cleanup.py b/qa/test_recorder_cleanup.py
+index 2fa98b5..a97e56c 100644
+--- a/qa/test_recorder_cleanup.py
++++ b/qa/test_recorder_cleanup.py
+@@ -54,6 +54,7 @@ public class RecorderCleanupProbe {
+ (a.out/'RecorderCleanupProbe.java').write_text(program)
+ with (a.out/'compile.log').open('w') as f:r=subprocess.run(['javac','--release','17','-d',str(a.out),str(a.out/'RecorderCleanupProbe.java')],stdout=f,stderr=subprocess.STDOUT,timeout=30)
+ r.check_returncode()
++print("COMPILE_OK", flush=True)
+ with (a.out/'behavior.log').open('w') as f:r=subprocess.run(['java','-cp',str(a.out),'RecorderCleanupProbe'],stdout=f,stderr=subprocess.STDOUT,timeout=30)
+ print((a.out/'behavior.log').read_text());r.check_returncode()
+ (a.out/'source-identity.json').write_text(json.dumps({'path':str(s.relative_to(a.root)),'sha256':hashlib.sha256(s.read_bytes()).hexdigest(),'extracted_methods':['stopRecorder','releaseRecorder','closeDestination'],'limitations':'Exact method bodies; field environment, MediaRecorder, Context/IPC and file descriptor are explicit doubles; no Android cleanup or microphone observation.'},indent=2))
