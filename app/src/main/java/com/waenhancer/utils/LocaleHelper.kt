@@ -15,6 +15,7 @@ object LocaleHelper {
     val SUPPORTED_LANGUAGES = listOf(
         LanguageOption("system", "Follow System", "System Default"),
         LanguageOption("en", "English", "English"),
+        LanguageOption("zh-CN", "Chinese (Simplified)", "简体中文"),
         LanguageOption("es", "Spanish", "Español"),
         LanguageOption("ar", "Arabic", "العربية"),
         LanguageOption("pt", "Portuguese", "Português"),
