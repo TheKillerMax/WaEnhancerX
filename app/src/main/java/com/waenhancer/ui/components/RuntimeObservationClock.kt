@@ -19,14 +19,15 @@ data class RuntimeObservationTime(val wall: Long, val elapsed: Long)
 @Composable
 fun rememberRuntimeObservationClock(): RuntimeObservationTime {
     val owner = LocalLifecycleOwner.current
-    var now by remember { mutableStateOf(RuntimeObservationTime(System.currentTimeMillis(), SystemClock.elapsedRealtime())) }
+    var pulse by remember { mutableStateOf(0L) }
     LaunchedEffect(owner) {
         owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
-                now = RuntimeObservationTime(System.currentTimeMillis(), SystemClock.elapsedRealtime())
+                pulse++
                 delay(5_000L)
             }
         }
     }
-    return now
+    // Reading the pulse subscribes composition; time itself must never be remembered.
+    return pulse.let { RuntimeObservationTime(System.currentTimeMillis(), SystemClock.elapsedRealtime()) }
 }
