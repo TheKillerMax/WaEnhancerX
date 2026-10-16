@@ -85,7 +85,6 @@ fun SystemHealthScreen() {
         }
         runtimeSnapshot = refreshed
     }
-    val observationTime = rememberRuntimeObservationClock()
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -121,6 +120,7 @@ fun SystemHealthScreen() {
                 WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
                     .filter { it.isInstalled }
             }
+            val observationTime = rememberRuntimeObservationClock()
             val targetApps = reportedApps.map {
                 TargetRuntimePresentation.asOf(it, observationTime.wall, observationTime.elapsed)
             }

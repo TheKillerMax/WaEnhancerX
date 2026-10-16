@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.os.SystemClock
+import com.waenhancer.xposed.utils.RootCommandRunner
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -27,6 +29,7 @@ object UpdateDownloader {
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)
+        .followSslRedirects(false)
         .build()
 
     /** Reject corrupt, partial, and unrelated packages before offering installation. */
@@ -57,87 +60,74 @@ object UpdateDownloader {
         return output?.let { "uid=0" in it } == true
     }
 
-    fun downloadApk(context: Context, url: String, expectedVersion: String, callback: DownloadCallback): Call? {
-        val safeVersion = expectedVersion.replace(Regex("[^a-zA-Z0-9.-]"), "_")
-        val segment = runCatching { Uri.parse(url).lastPathSegment }.getOrNull()
-        val safeSegment = segment?.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            ?.takeIf { it.endsWith(".apk", true) && !it.startsWith(".") && it.length <= 120 }
-        val fileName = safeSegment ?: "WaEnhancerX_${safeVersion}.apk"
-        val apkFile = File(context.cacheDir, fileName)
-        if (isValidModuleApk(context, apkFile, expectedVersion)) {
-            callback.onSuccess(apkFile)
+    fun downloadApk(
+        context: Context, url: String, expectedVersion: String, callback: DownloadCallback,
+        expectedSha256: String? = null, expectedSize: Long = 0L
+    ): Call? {
+        val request: Request
+        val integrity: UpdateTransferPolicy
+        try {
+            request = Request.Builder().url(url).build()
+            require(request.url.scheme == "https") { "Updates must use HTTPS" }
+            integrity = UpdateTransferPolicy(expectedSha256, expectedSize)
+        } catch (error: Exception) {
+            callback.onFailure(IOException("Invalid update request", error))
             return null
         }
-        apkFile.delete() // Never reuse a truncated or unrelated cached download.
-        val request = runCatching { Request.Builder().url(url).build() }.getOrElse {
-            callback.onFailure(IOException("Invalid update URL", it))
-            return null
-        }
-        if (request.url.scheme != "https") {
-            callback.onFailure(IOException("Updates must be downloaded over HTTPS"))
-            return null
-        }
+        // Same-version assets may be republished. Never trust a filename/version cache.
         val call = httpClient.newCall(request)
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (!call.isCanceled()) callback.onFailure(e)
             }
-
             override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    // OkHttp can follow redirects, including an HTTPS -> HTTP redirect.
-                    // Never install an update transferred over an insecure final hop.
-                    if (response.request.url.scheme != "https") {
-                        callback.onFailure(IOException("Update redirect left HTTPS"))
-                        return
-                    }
-                    if (!response.isSuccessful) {
-                        callback.onFailure(IOException("Update service returned HTTP ${response.code}"))
-                        return
-                    }
-                    val body = response.body ?: run {
-                        callback.onFailure(IOException("Empty update download"))
-                        return
-                    }
-                    if (body.contentLength() > 300L * 1024 * 1024) {
-                        callback.onFailure(IOException("Update exceeds size limit"))
-                        return
-                    }
-                    // Unique temp path: concurrent updates cannot overwrite one another.
-                    var temporary: File? = null
-                    try {
-                        val staging = File.createTempFile("waex_download_", ".partial.apk", context.cacheDir)
-                        temporary = staging
+                var staging: File? = null
+                var handedOff = false
+                try {
+                    response.use {
+                        if (call.isCanceled()) return
+                        if (response.request.url.scheme != "https") throw IOException("Update redirect left HTTPS")
+                        if (!response.isSuccessful) throw IOException("Update service returned HTTP ${response.code}")
+                        val body = response.body ?: throw IOException("Empty update download")
+                        val total = body.contentLength()
+                        if (total > UpdateTransferPolicy.MAX_BYTES) throw IOException("Update exceeds size limit")
+                        if (expectedSize > 0 && total >= 0 && total != expectedSize) throw IOException("Selected asset size mismatch")
+                        val file = File.createTempFile("waex_download_", ".apk", context.cacheDir)
+                        staging = file
+                        val progress = UpdateProgressGate()
                         body.byteStream().use { input ->
-                            FileOutputStream(staging).use { output ->
-                                val total = body.contentLength()
+                            FileOutputStream(file).use { output ->
                                 val buffer = ByteArray(32768)
-                                var current = 0L
                                 while (true) {
                                     if (call.isCanceled()) throw IOException("Download cancelled")
                                     val read = input.read(buffer)
                                     if (read < 0) break
                                     if (read == 0) continue
-                                    current += read
-                                    if (current > 300L * 1024 * 1024) throw IOException("Update exceeds size limit")
+                                    integrity.append(buffer, read)
                                     output.write(buffer, 0, read)
-                                    callback.onProgress(
-                                        if (total > 0) (current * 100 / total).toInt().coerceIn(0, 100) else 0,
-                                        current, total
-                                    )
+                                    if (progress.allow(SystemClock.elapsedRealtime())) {
+                                        callback.onProgress(
+                                            if (total > 0) (integrity.bytes * 100 / total).toInt().coerceIn(0, 99) else 0,
+                                            integrity.bytes, total
+                                        )
+                                    }
                                 }
                             }
                         }
-                        if (!isValidModuleApk(context, staging, expectedVersion)) {
-                            throw IOException("Downloaded APK does not match selected version $expectedVersion")
-                        }
-                        if (!staging.renameTo(apkFile)) throw IOException("Unable to save verified update")
-                        callback.onSuccess(apkFile)
-                    } catch (e: Exception) {
-                        if (!call.isCanceled()) callback.onFailure(e)
-                    } finally {
-                        temporary?.delete()
+                        if (call.isCanceled()) return
+                        integrity.finish(total)
+                        if (!isValidModuleApk(context, file, expectedVersion)) throw IOException("APK does not match selected version")
+                        if (call.isCanceled()) return
+                        callback.onProgress(100, integrity.bytes, total)
+                        if (call.isCanceled()) return
+                        // Unique final path: a later request cannot replace these verified bytes.
+                        handedOff = true
+                        callback.onSuccess(file)
                     }
+                } catch (error: Exception) {
+                    if (!handedOff && !call.isCanceled()) callback.onFailure(error)
+                } finally {
+                    if (!handedOff) staging?.delete()
                 }
             }
         })
@@ -180,7 +170,7 @@ object UpdateDownloader {
                         "cat $source > $target && chmod 644 $target && wc -c < $target"
                     )?.trim().orEmpty()
                     val size = copyResult.toLongOrNull() ?: 0
-                    if (size > 1024) {
+                    if (size == apkFile.length() && size > 1024) {
                         // Package Manager requires -d when the APK has a lower versionCode.
                         runRootCommand("pm install -r -d --user 0 $target", 70)
                     }
@@ -208,35 +198,8 @@ object UpdateDownloader {
     }
 
     /** Drain subprocess output concurrently so timeout still works when su hangs. */
-    private fun runRootCommand(command: String, timeoutSeconds: Long = 8): String? = runCatching {
-        val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
-        val output = StringBuilder()
-        val drainer = Thread {
-            runCatching {
-                process.inputStream.bufferedReader().use { reader ->
-                    while (true) {
-                        val line = reader.readLine() ?: break
-                        synchronized(output) {
-                            if (output.length < 8192) output.append(line.take(8192 - output.length)).append('\n')
-                        }
-                    }
-                }
-            }
-        }.apply { isDaemon = true; start() }
-        val finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
-        if (!finished) {
-            process.destroyForcibly()
-            return@runCatching "Root command timed out after ${timeoutSeconds}s"
-        }
-        drainer.join(500)
-        val captured = synchronized(output) { output.toString().trim() }
-        if (process.exitValue() != 0) {
-            return@runCatching captured.ifEmpty {
-                "Root command failed with exit code ${process.exitValue()}"
-            }
-        }
-        captured
-    }.getOrNull()
+    private fun runRootCommand(command: String, timeoutSeconds: Long = 8): String? =
+        RootCommandRunner.run(command, TimeUnit.SECONDS.toMillis(timeoutSeconds))
 
 }
 
