@@ -41,7 +41,7 @@ google-services.json
 
 # Local investigation material and generated documentation
 /references/
-/docs/
+/private_docs/
 /.agents/
 /tools/
 

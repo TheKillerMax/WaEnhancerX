@@ -159,6 +159,8 @@ fun StargazersScreen() {
     var isLoadingProfile by remember { mutableStateOf(false) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var showSupportSheet by remember { mutableStateOf(false) }
+    val currentUserGithubLogin = remember(context) { activeProGithubLogin(context) }
+    var currentUserProfile by remember { mutableStateOf<StargazerProfile?>(null) }
     var isSearchVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val confettiProgress = remember { Animatable(0f) }
@@ -168,6 +170,15 @@ fun StargazersScreen() {
         val query = searchQuery.trim()
         if (query.isEmpty()) stargazers
         else stargazers.filter { it.login.contains(query, ignoreCase = true) }
+    }
+    val currentUserStargazer = remember(stargazers, currentUserGithubLogin) {
+        stargazers.firstOrNull { it.login.equals(currentUserGithubLogin, ignoreCase = true) }
+    }
+
+    LaunchedEffect(currentUserGithubLogin) {
+        if (currentUserGithubLogin.isEmpty()) return@LaunchedEffect
+        loadStargazerProfile(context, currentUserGithubLogin)
+            .onSuccess { currentUserProfile = it }
     }
 
     LaunchedEffect(Unit) {
@@ -233,14 +244,39 @@ fun StargazersScreen() {
                             tint = colors.onSurface
                         )
                     }
-                    IconButton(onClick = { showSupportSheet = true }) {
-                        Text(
-                            text = "🫵",
-                            style = typography.headlineMd,
-                            modifier = Modifier
-                                .padding(bottom = 2.dp)
-                                .semantics { contentDescription = "Join the supporters list" }
-                        )
+                    if (currentUserProfile != null) {
+                        IconButton(
+                            onClick = {
+                                val profile = currentUserProfile ?: return@IconButton
+                                selectedProfile = profile
+                                profileError = null
+                                selectedStargazer = currentUserStargazer ?: GitHubStargazer(
+                                    login = profile.login,
+                                    avatarUrl = profile.avatarUrl,
+                                    profileUrl = profile.profileUrl,
+                                    starredAt = ""
+                                )
+                            }
+                        ) {
+                            AsyncAvatarImage(
+                                url = currentUserProfile?.avatarUrl.orEmpty(),
+                                contentDescription = "Open your GitHub profile",
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, colors.outlineVariant, CircleShape)
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = { showSupportSheet = true }) {
+                            Text(
+                                text = "🫵",
+                                style = typography.headlineMd,
+                                modifier = Modifier
+                                    .padding(bottom = 2.dp)
+                                    .semantics { contentDescription = "Join the supporters list" }
+                            )
+                        }
                     }
                 }
             )
@@ -597,13 +633,25 @@ fun StargazersScreen() {
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    text = "Supporting since ${formatUpdatedAt(stargazer.starredAt).ifEmpty { "date unavailable" }}",
-                    style = typography.bodyMd,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.primary
-                )
+                val isCurrentProUser = stargazer.login.equals(currentUserGithubLogin, ignoreCase = true)
+                val isCurrentUserStargazer = isCurrentProUser && currentUserStargazer != null
+                if (isCurrentUserStargazer) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "Thank you for being a Pro subscriber and a WaEnhancerX stargazer!",
+                        style = typography.bodyLg,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.primary
+                    )
+                } else if (stargazer.starredAt.isNotBlank()) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "Supporting since ${formatUpdatedAt(stargazer.starredAt).ifEmpty { "date unavailable" }}",
+                        style = typography.bodyMd,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.primary
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
 
                 if (isLoadingProfile) {
@@ -867,6 +915,16 @@ private fun sortStargazers(context: Context, rawList: List<GitHubStargazer>): Li
     }
 
     return result
+}
+
+private fun activeProGithubLogin(context: Context): String {
+    if (!"ACTIVE".equals(LicenseManager.getProStatus(context), ignoreCase = true)) return ""
+    return LicenseManager.getSharedPreferences(context)
+        .getString("gh_username", "")
+        ?.trim()
+        .orEmpty()
+        .takeUnless { it.equals("null", ignoreCase = true) }
+        .orEmpty()
 }
 
 private fun parseStargazers(json: String): StargazersSnapshot {
