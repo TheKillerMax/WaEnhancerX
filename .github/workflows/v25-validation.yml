@@ -1,0 +1,78 @@
+name: V25 exact stability and performance validation
+on:
+  push:
+    paths: ['.github/workflows/v25-validation.yml']
+permissions:
+  contents: read
+jobs:
+  validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check transfer and exact Git tree before executing candidate code
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,gzip,hashlib,os,subprocess
+          from pathlib import Path
+          root=Path.cwd();out=Path(os.environ['RUNNER_TEMP'])/'v25-evidence';out.mkdir()
+          parts=''.join((root/f'qa/v25-transfer-{i}.txt').read_text().strip() for i in range(1,7))
+          packed=base64.b64decode(parts,validate=True)
+          assert hashlib.sha256(packed).hexdigest()=='9a8fb4896164ab68e1a6585985bf87a63095b272a6d83d3a7d7fee737a927cd1','Transfer checksum failed; candidate code NOT executed'
+          patch=gzip.decompress(packed)
+          assert hashlib.sha256(patch).hexdigest()=='2066f646f9e827fb1d6d8c6a073e58579210757832becdc2e4891e54e6318ad9'
+          (out/'candidate.patch').write_bytes(patch)
+          candidate=Path(os.environ['RUNNER_TEMP'])/'v25-candidate'
+          subprocess.run(['git','worktree','add','--detach',str(candidate),'a4778e55c106ebaa1e12ac74a07bfd5b613d2fae'],check=True)
+          subprocess.run(['git','apply','--index',str(out/'candidate.patch')],cwd=candidate,check=True)
+          tree=subprocess.check_output(['git','write-tree'],cwd=candidate,text=True).strip()
+          assert tree=='14cc51f172fc3e6aeca72f31a7ab43350dd60e1e',tree
+          (out/'validated-input-tree.txt').write_text(tree+'\n')
+          PY
+      - name: Execute source JVM and real Android Compose regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/v25-candidate"
+          python3 - <<'PY'
+          import subprocess,os,json,time
+          from pathlib import Path
+          out=Path(os.environ['RUNNER_TEMP'])/'v25-evidence'
+          results=[]
+          commands=[['python3',str(p)] for p in sorted(Path('qa').glob('test_*.py')) if p.name!='test_host_class_relocations.py']
+          commands+=[['python3','qa/check_syntax.py','--root','app/src/main/java'],['python3','qa/verify_stability_framework.py','--out',os.environ['RUNNER_TEMP']+'/v25-framework'],['python3','qa/android_presence_row_test.py','--out',os.environ['RUNNER_TEMP']+'/v25-presence']]
+          for cmd in commands:
+            start=time.monotonic();name=Path(cmd[1]).stem
+            print('RUN '+name,flush=True)
+            with (out/(name+'.log')).open('w') as log:
+              try:r=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=1000);rc=r.returncode
+              except subprocess.TimeoutExpired:rc=-1
+            results.append({'command':cmd,'returncode':rc,'seconds':round(time.monotonic()-start,2)})
+            (out/'results.json').write_text(json.dumps(results,indent=2))
+            if rc:print((out/(name+'.log')).read_text()[-18000:],flush=True)
+          assert all(x['returncode']==0 for x in results),[x for x in results if x['returncode']]
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v25-exact-validation
+          path: |
+            ${{ runner.temp }}/v25-evidence
+            ${{ runner.temp }}/v25-framework/evidence
+            ${{ runner.temp }}/v25-presence/*.json
+            ${{ runner.temp }}/v25-presence/*.log
+            ${{ runner.temp }}/v25-presence/*/*.log
+          retention-days: 14
+          if-no-files-found: error
