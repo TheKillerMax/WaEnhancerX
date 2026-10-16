@@ -70,8 +70,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.waenhancer.app.BuildConfig
 import com.waenhancer.app.R
 import com.waenhancer.config.PreferenceStores
+import com.waenhancer.licensing.LicenseManager
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
@@ -180,7 +182,7 @@ fun StargazersScreen() {
         errorMessage = null
         val result = withContext(Dispatchers.IO) { loadStargazers(context, forceRefresh = refreshKey > 0) }
         result.onSuccess { snapshot ->
-            stargazers = snapshot.stargazers
+            stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
             updateIntervalHours = snapshot.updateIntervalHours
         }.onFailure {
@@ -742,6 +744,44 @@ private fun loadStargazers(context: Context, forceRefresh: Boolean): Result<Star
 
 private fun StargazersSnapshot.hasStarredAt(): Boolean =
     stargazers.isNotEmpty() && stargazers.all { it.starredAt.isNotBlank() }
+
+private fun sortStargazers(context: Context, rawList: List<GitHubStargazer>): List<GitHubStargazer> {
+    if (rawList.isEmpty()) return rawList
+
+    val devGh = BuildConfig.DEV_GH.trim()
+    val isPro = "ACTIVE".equals(LicenseManager.getProStatus(context), ignoreCase = true)
+    val userPrefs = LicenseManager.getSharedPreferences(context)
+    val userGh = if (isPro) {
+        val gh = userPrefs.getString("gh_username", "")?.trim().orEmpty()
+        if (gh.isNotBlank() && !gh.equals("null", ignoreCase = true)) gh else ""
+    } else ""
+
+    val devStargazer = if (devGh.isNotEmpty()) {
+        rawList.firstOrNull { it.login.equals(devGh, ignoreCase = true) }
+    } else null
+
+    val userStargazer = if (userGh.isNotEmpty() && !userGh.equals(devGh, ignoreCase = true)) {
+        rawList.firstOrNull { it.login.equals(userGh, ignoreCase = true) }
+    } else null
+
+    val result = ArrayList<GitHubStargazer>(rawList.size)
+    if (devStargazer != null) {
+        result.add(devStargazer)
+    }
+    if (userStargazer != null) {
+        result.add(userStargazer)
+    }
+
+    for (item in rawList) {
+        val isDev = devStargazer != null && item.login.equals(devStargazer.login, ignoreCase = true)
+        val isUser = userStargazer != null && item.login.equals(userStargazer.login, ignoreCase = true)
+        if (!isDev && !isUser) {
+            result.add(item)
+        }
+    }
+
+    return result
+}
 
 private fun parseStargazers(json: String): StargazersSnapshot {
     val trimmedJson = json.trim()

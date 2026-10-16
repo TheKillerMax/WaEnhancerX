@@ -41,7 +41,7 @@ object SettingsBackupCodec {
     private val BLOCKED_KEYS = Collections.unmodifiableSet(
         hashSetOf(
             "keybox", "keybox_xml", "private_key", "certificate", "certificates",
-            "license_key", "license_token", "tg_username", "encrypted_config",
+            "license_key", "license_token", "tg_username", "gh_username", "encrypted_config",
             "is_pro_verified", "expires_at", "pro_plugin_path", "pro_plugin_lib_path",
             "github_token", "gh_public_token", "tasker_secret", "installation_id",
             "module_heartbeat", "last_crash", "crash_stacktrace"

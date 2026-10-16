@@ -33,6 +33,9 @@ android {
         require(configuredVersionCode > lastV1VersionCode) {
             "VERSION_CODE must be greater than the latest v1 version code ($lastV1VersionCode) to support upgrades."
         }
+
+        val devGh = project.findProperty("DEV_GH")?.toString()?.trim() ?: "mubashardev"
+        buildConfigField("String", "DEV_GH", "\"$devGh\"")
     }
 
     signingConfigs {
@@ -97,6 +100,7 @@ android {
     
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

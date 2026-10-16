@@ -212,6 +212,10 @@ fun LicenseActivationScreen() {
         } else storedKey
     }
     val tgUser = remember(proStatus) { prefs.getString("tg_username", "") ?: "" }
+    val ghUser = remember(proStatus) {
+        val raw = prefs.getString("gh_username", "") ?: ""
+        if (raw.isNotBlank() && !raw.equals("null", ignoreCase = true)) raw else ""
+    }
     val expiresAt = remember(proStatus) { prefs.getLong("expires_at", 0L) }
     val linkedDevicesCount = remember(proStatus) { prefs.getInt("linked_devices_count", 1) }
     val deviceLimit = remember(proStatus) { prefs.getInt("device_limit", 2) }
@@ -336,6 +340,15 @@ fun LicenseActivationScreen() {
                             ) {
                                 Text(text = "Telegram Account", style = typography.bodyMd, color = colors.onSurfaceVariant)
                                 Text(text = "@$tgUser", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.primary)
+                            }
+                        }
+                        if (ghUser.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "GitHub Account", style = typography.bodyMd, color = colors.onSurfaceVariant)
+                                Text(text = "@$ghUser", style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.primary)
                             }
                         }
                         Row(
