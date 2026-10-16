@@ -197,20 +197,24 @@ public final class CallRecordingHook extends BaseFeature {
 
     private synchronized void stopRecorder(String reason) {
         if (!recording.getAndSet(false)) return;
+        MediaRecorder active = recorder;
+        recorder = null;
         boolean valid = false;
         try {
-            MediaRecorder active = recorder;
-            recorder = null;
             if (active != null) {
                 active.stop();
                 valid = true;
-                active.release();
             }
         } catch (Throwable failure) {
-            XposedBridge.log(TAG + " stop failed: " + failure);
-            releaseRecorder(false);
+            XposedBridge.log(TAG + " stop failed: " + failure.getClass().getSimpleName());
         } finally {
-            closeDestination(!valid);
+            try {
+                if (active != null) active.release();
+            } catch (Throwable failure) {
+                XposedBridge.log(TAG + " release failed: " + failure.getClass().getSimpleName());
+            } finally {
+                closeDestination(!valid);
+            }
         }
     }
 
