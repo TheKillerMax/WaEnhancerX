@@ -39,6 +39,9 @@ jobs:
           subprocess.run(['git','apply','--index',str(out/'candidate.patch')],cwd=candidate,check=True)
           tree=subprocess.check_output(['git','write-tree'],cwd=candidate,text=True).strip()
           assert tree=='14cc51f172fc3e6aeca72f31a7ab43350dd60e1e',tree
+          subprocess.run(['git','apply','--index',str(root/'qa/v25-framework-fixture-fix.patch')],cwd=candidate,check=True)
+          tree=subprocess.check_output(['git','write-tree'],cwd=candidate,text=True).strip()
+          assert tree=='d47d440ecdc5ea4967e0f1dafd1d57e1ae238d8a',tree
           (out/'validated-input-tree.txt').write_text(tree+'\n')
           PY
       - name: Execute source JVM and real Android Compose regressions
