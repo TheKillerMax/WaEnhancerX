@@ -1,0 +1,138 @@
+name: V32 HMA display localization validation
+on:
+  push:
+    branches: ['test/full-review-v32-2026-10-17']
+    paths: ['.github/workflows/v32-hma-locale-check.yml']
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply exact display-only changes and require the reviewed Git tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach 8b7dceb404abf7f06ecf67828a35f98619fb8613
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, xml.sax.saxutils as xml
+          R=Path.cwd()
+          items=[
+          ('not_configured','Not configured in HMA scope','No está incluida en el ámbito de HMA'),
+          ('visible','Active in HMA, module visible','Activa en HMA; el módulo es visible'),
+          ('allowlist_invisible','Hidden via Whitelist mode (in invisible apps list)','Oculto por la lista de permitidos (incluido entre las aplicaciones no visibles)'),
+          ('allowlist_missing','Hidden via Whitelist mode (module not included in visible apps)','Oculto por la lista de permitidos (el módulo no está entre las aplicaciones visibles)'),
+          ('blocklist_extra','Hidden via Blacklist mode (in additional apps to hide)','Oculto por la lista de bloqueados (incluido entre las aplicaciones adicionales que se ocultan)'),
+          ('template','Hidden by blacklist template "%1$s"','Oculto por la plantilla de bloqueo «%1$s»'),
+          ('preset','Hidden by HMA "xposed" preset','Oculto por el ajuste predefinido «xposed» de HMA')]
+          def j(s): return json.dumps(s,ensure_ascii=False)
+          p=R/'app/src/main/java/com/waenhancer/utils/InternalLabels.java';s=p.read_text()
+          method='''    /** Only locally generated HMA reasons; preserve template names and unknown payloads. */
+              public static String hmaReason(String value) {
+                  if (value == null) return "";
+                  final String prefix = "Hidden by blacklist template \\\"";
+                  if (value.startsWith(prefix) && value.endsWith("\\\"") && value.length() > prefix.length()) {
+                      String template = value.substring(prefix.length(), value.length() - 1);
+                      return UiText.get(R.string.waex_ui_hma_reason_template,
+                              "Hidden by blacklist template \\\"%1$s\\\"", template);
+                  }
+                  switch (value) {
+          '''
+          for key,en,es in items:
+              if key!='template': method+=f'            case {j(en)}: return UiText.get(R.string.waex_ui_hma_reason_{key}, {j(en)});\n'
+          method+='''            default: return value;
+                  }
+              }
+          '''
+          marker='    public static String text(String value) {'
+          assert s.count(marker)==1
+          p.write_text(s.replace(marker,method+marker))
+          p=R/'app/src/main/java/com/waenhancer/ui/screens/dashboard/MainDashboardScreen.kt';s=p.read_text()
+          assert s.count('text = item.reason,')==2
+          p.write_text(s.replace('text = item.reason,','text = InternalLabels.hmaReason(item.reason),'))
+          for folder,index in [('values',1),('values-es',2),('values-b+es+419',2)]:
+              p=R/'app/src/main/res'/folder/'ui_strings.xml';s=p.read_text()
+              lines='\n'.join(f'    <string name="waex_ui_hma_reason_{i[0]}">{xml.escape(i[index]).replace(chr(34),chr(92)+chr(34))}</string>' for i in items)
+              p.write_text(s.replace('</resources>',lines+'\n</resources>'))
+          p=R/'qa/test_es419_runtime.py';s=p.read_text();anchor=' ok(PreferenceLabels.text("disable_sensor_proximity").contains("proximidad"),"catalog restart title");'
+          assert s.count(anchor)==1
+          checks=''
+          for key,en,es in items:
+              if key!='template': checks+=f' ok(InternalLabels.hmaReason({j(en)}).equals({j(es)}),"HMA {key}");\n'
+          checks+=''' String template="Mine %1$s \\\" 50%";
+           ok(InternalLabels.hmaReason("Hidden by blacklist template \\\""+template+"\\\"").equals("Oculto por la plantilla de bloqueo «"+template+"»"),"template stays literal");
+           ok(InternalLabels.hmaReason("unrecognized local reason").equals("unrecognized local reason"),"unknown reason unchanged");
+           ok(InternalLabels.hmaReason("Hidden by blacklist template \\\"unfinished").equals("Hidden by blacklist template \\\"unfinished"),"malformed template unchanged");
+           p.values.put("app_language","en");
+           ok(InternalLabels.hmaReason("Hidden by blacklist template \\\""+template+"\\\"").equals("Hidden by blacklist template \\\""+template+"\\\""),"default template preserved");
+           p.values.put("app_language","es-419");
+          '''
+          p.write_text(s.replace(anchor,anchor+'\n'+checks))
+          p=R/'qa/test_es419_localization.py';s=p.read_text();anchor='# Negative controls: a missing slot, malformed token and bidi marker must be recognized.'
+          p.write_text(s.replace(anchor,'''dashboard=(SRC/'com/waenhancer/ui/screens/dashboard/MainDashboardScreen.kt').read_text()
+          assert 'text = InternalLabels.hmaReason(item.reason)' in dashboard
+          assert 'text = item.reason,' not in dashboard, 'HMA reason must be localized at its display boundary'
+          '''+anchor))
+          p=R/'qa/framework_localization.py';s=p.read_text();p.write_text(s.replace("HELPERS = ('UiText.java', 'DisplayLocalePolicy.java')","HELPERS = ('UiText.java', 'DisplayLocalePolicy.java', 'InternalLabels.java')"))
+          p=R/'qa/fixtures/LocalizationResourcesTest.kt';s=p.read_text();marker='    @Test fun systemLanguageAndUnreadablePreferenceDoNotMutateSettings() {'
+          method='''    @Test fun locallyGeneratedHmaReasonsAreLocalizedWithoutChangingTemplateNames() {
+                  val c = module(); UiText.initialize(c, prefs("es-419"))
+                  assertEquals("No está incluida en el ámbito de HMA", InternalLabels.hmaReason("Not configured in HMA scope"))
+                  assertEquals("Activa en HMA; el módulo es visible", InternalLabels.hmaReason("Active in HMA, module visible"))
+                  assertEquals("Oculto por el ajuste predefinido «xposed» de HMA", InternalLabels.hmaReason("Hidden by HMA \\\"xposed\\\" preset"))
+                  val name = "Mine %1\\$s \\\" 50%"
+                  assertEquals("Oculto por la plantilla de bloqueo «$name»", InternalLabels.hmaReason("Hidden by blacklist template \\\"$name\\\""))
+                  assertEquals("unknown reason", InternalLabels.hmaReason("unknown reason"))
+                  assertEquals("Hidden by blacklist template \\\"unfinished", InternalLabels.hmaReason("Hidden by blacklist template \\\"unfinished"))
+              }
+          '''
+          assert s.count(marker)==1;p.write_text(s.replace(marker,method+marker))
+          p=R/'qa/verify_runtime_framework.py';s=p.read_text().replace('tests==(9 if localized else 3)','tests==(10 if localized else 3)').replace("'locale_resource_tests':6 if localized else 0","'locale_resource_tests':7 if localized else 0");p.write_text(s)
+          PY
+          git add -A
+          git diff --cached --check
+          test "$(git write-tree)" = '7004626ad8e5b6b242d89a95b7a6a01ac57a62d6'
+      - name: Run source and actual Android resource tests
+        run: |
+          set -euo pipefail
+          python3 qa/test_es419_localization.py
+          python3 qa/test_es419_runtime.py
+          python3 qa/verify_runtime_framework.py --out "$RUNNER_TEMP/v32-hma-locale"
+      - name: Store only reviewed public text blobs without moving a branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import subprocess,os,json,pathlib,urllib.request
+          files=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert len(files)==10
+          out=[]
+          for path in files:
+              content=pathlib.Path(path).read_text()
+              expected=subprocess.check_output(['git','hash-object',path],text=True).strip()
+              request=urllib.request.Request('https://api.github.com/repos/TheKillerMax/WaEnhancerX/git/blobs',data=json.dumps({'content':content,'encoding':'utf-8'}).encode(),headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'},method='POST')
+              with urllib.request.urlopen(request,timeout=45) as response: result=json.load(response)
+              assert result['sha']==expected
+              out.append({'path':path,'sha':expected,'mode':'100644','type':'blob'})
+          pathlib.Path(os.environ['RUNNER_TEMP'],'v32-hma-locale','evidence','blobs.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v32-hma-localization
+          path: ${{ runner.temp }}/v32-hma-locale/evidence
+          retention-days: 7
