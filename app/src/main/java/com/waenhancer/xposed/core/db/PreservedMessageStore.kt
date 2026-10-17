@@ -174,22 +174,18 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
     }
 
     fun getContactNameByJid(jid: String): String? {
+        val exact = com.waenhancer.utils.ContactIdentityPolicy.canonicalJid(jid) ?: return null
         try {
-            val db = readableDatabase
-            val user = jid.substringBefore("@").substringBefore(":")
-            val cleanJid = if (jid.contains("@")) jid else "$jid@s.whatsapp.net"
-            db.rawQuery(
-                "SELECT $COL_NAME FROM $TABLE_NAME WHERE ($COL_JID = ? OR $COL_JID LIKE ? OR $COL_JID LIKE ?) AND $COL_NAME IS NOT NULL AND $COL_NAME != '' LIMIT 1",
-                arrayOf(cleanJid, "%$user%", "%$user@%")
+            readableDatabase.rawQuery(
+                "SELECT DISTINCT $COL_NAME FROM $TABLE_NAME WHERE $COL_JID = ? AND $COL_NAME IS NOT NULL AND $COL_NAME != '' LIMIT 2",
+                arrayOf(exact)
             ).use { cursor ->
-                if (cursor != null && cursor.moveToFirst()) {
-                    val name = cursor.getString(0)
-                    if (!name.isNullOrBlank() && !name.all { it.isDigit() || it == '+' }) {
-                        return name
-                    }
-                }
+                if (cursor == null || !cursor.moveToFirst()) return null
+                val name = cursor.getString(0)?.trim()
+                if (cursor.moveToNext()) return null
+                if (!name.isNullOrBlank() && !name.all { it.isDigit() || it == '+' }) return name
             }
-        } catch (ignored: Throwable) {}
+        } catch (_: Exception) { }
         return null
     }
 }
