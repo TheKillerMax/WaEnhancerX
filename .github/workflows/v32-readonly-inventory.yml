@@ -1,0 +1,87 @@
+name: V32 repository evidence
+on:
+  push:
+    branches: ['test/review-v32-2026-10-17']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect public metadata and selected failure logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json,os,time,pathlib,concurrent.futures,hashlib
+          out=pathlib.Path('evidence'); errors=[]
+          def get(path):
+              url=path if path.startswith('https://') else 'https://api.github.com/'+path
+              req=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'WAEX-review'})
+              with urllib.request.urlopen(req,timeout=45) as r:return json.load(r)
+          def save(name,data):
+              p=out/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(data,ensure_ascii=False,indent=2))
+          def pages(path,key=None):
+              items=[];p=1
+              while True:
+                  d=get(path+('&' if '?' in path else '?')+'per_page=100&page='+str(p)); a=d[key] if key else d
+                  items.extend(a)
+                  if len(a)<100:break
+                  p+=1
+              return items
+          up='WaEnhancerX/WaEnhancerX';fork='TheKillerMax/WaEnhancerX'
+          main=get('repos/'+up+'/git/ref/heads/main');save('main.json',main)
+          save('tree.json',get('repos/'+up+'/git/trees/'+main['object']['sha']+'?recursive=1'))
+          issues=pages('repos/'+up+'/issues?state=all');save('issues-and-prs.json',issues)
+          prs=pages('repos/'+up+'/pulls?state=all');save('prs.json',prs)
+          def pr_info(p):
+              n=p['number'];root='repos/'+up+'/pulls/'+str(n)
+              try:
+                  save('prs/'+str(n)+'.json',get(root));save('prs/'+str(n)+'-files.json',pages(root+'/files'))
+                  save('prs/'+str(n)+'-reviews.json',pages(root+'/reviews'));save('prs/'+str(n)+'-inline.json',pages(root+'/comments'))
+              except Exception as e:errors.append({'pr':n,'error':str(e)})
+          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:list(pool.map(pr_info,prs))
+          for i in issues:
+              if i.get('comments',0):
+                  try:save('comments/'+str(i['number'])+'.json',pages('repos/'+up+'/issues/'+str(i['number'])+'/comments'))
+                  except Exception as e:errors.append({'comments':i['number'],'error':str(e)})
+          for repo,tag in [(up,'upstream'),(fork,'fork')]:
+              try:
+                  save(tag+'-branches.json',pages('repos/'+repo+'/branches'))
+                  save(tag+'-releases.json',pages('repos/'+repo+'/releases'))
+                  runs=pages('repos/'+repo+'/actions/runs','workflow_runs');save(tag+'-runs.json',runs)
+                  # All run metadata, latest-attempt jobs for every run; log only latest failed run per branch/workflow.
+                  def job(r):
+                      try:save(tag+'-jobs/'+str(r['id'])+'.json',pages('repos/'+repo+'/actions/runs/'+str(r['id'])+'/jobs','jobs'))
+                      except Exception as e:errors.append({'job_run':r['id'],'error':str(e)})
+                  with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:list(pool.map(job,runs))
+                  seen=set()
+                  for r in runs:
+                      key=(r['head_branch'],r['path'])
+                      if key in seen:continue
+                      seen.add(key)
+                      if r['conclusion']!='failure':continue
+                      jf=out/(tag+'-jobs')/(str(r['id'])+'.json')
+                      if not jf.exists():continue
+                      for j in json.loads(jf.read_text()):
+                          if j['conclusion']!='failure':continue
+                          try:
+                              req=urllib.request.Request('https://api.github.com/repos/'+repo+'/actions/jobs/'+str(j['id'])+'/logs',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'User-Agent':'WAEX-review'})
+                              with urllib.request.urlopen(req,timeout=45) as response:data=response.read()
+                              p=out/(tag+'-failure-logs')/(str(j['id'])+'.txt');p.parent.mkdir(exist_ok=True);p.write_bytes(data)
+                          except Exception as e:errors.append({'log_job':j['id'],'error':str(e)})
+              except Exception as e:errors.append({'repository':repo,'error':str(e)})
+          save('errors.json',errors)
+          save('manifest.json',{'collected_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'files':{str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file()}})
+          print('issues',sum('pull_request' not in i for i in issues),'prs',len(prs),'errors',len(errors))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v32-repository-evidence
+          path: evidence/
+          retention-days: 7
