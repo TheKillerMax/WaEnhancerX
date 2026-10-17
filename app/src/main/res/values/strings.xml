@@ -241,8 +241,8 @@
     <string name="feat_unlock_premium_customization_desc">Unlock official WhatsApp Plus subscription features including app icons, themes, and premium stickers.</string>
     <string name="feat_filter_items_title">Filter Items By ID</string>
     <string name="feat_filter_items_desc">Remove or customize WhatsApp views matching specific IDs (Gone, Change Color, Opacity, Resize)</string>
-    <string name="feat_custom_filters_title">Custom Appearance Filters</string>
-    <string name="feat_custom_filters_desc">Enable or disable custom view ID filter rules</string>
+    <string name="feat_custom_filters_title">Filter Items By ID</string>
+    <string name="feat_custom_filters_desc">Remove or customize WhatsApp views matching specific IDs (Gone, Change Color, Opacity, Resize)</string>
     <string name="feat_dotonline_title">Show Online Dot in Conversation List</string>
     <string name="feat_dotonline_desc">Show a green online dot on home screen</string>
     <string name="feat_showonlinetext_title">Show Online/Last seen in Conversation List</string>

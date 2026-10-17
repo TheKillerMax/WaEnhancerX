@@ -150,7 +150,7 @@ class WaexNavController(initialScreen: Screen = Screen.MainDashboard) {
             navigateTo(Screen.LicenseActivation)
             return
         }
-        if (preferenceKey == "filter_items") {
+        if (preferenceKey == "filter_items" || preferenceKey == "custom_filters") {
             navigateTo(Screen.FilterItems)
             return
         }

@@ -2,6 +2,9 @@
 - Fixed missing texts or resources from category titles or descriptions
 - Fixed some menu icons were not visible in release mode
 - Fixed showing unreleated apps in home list
+- Fixed Hide Forwarded
+- Fixed Filter Item by ID
+- Fixed chat screen ui lags
 
 [Improvements]
 - Improved Call recorder

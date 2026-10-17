@@ -90,7 +90,6 @@ WaEnhancerX V2 is an independent, clean-room rewrite engineered from the ground 
 - **CSS-like View Engine:** Fine-tune bubble colors, radiuses, and backgrounds with declarative rules.
 - **Meta AI Cleanup:** Hide intrusive Meta AI icons, floating action buttons, and chat entries.
 - **Material You (Monet):** Dynamic color theming aligned with system wallpaper palettes.
-- **WA Plus / Pro Enhancements:** Native UI toggles and layout modifications.
 
 </td>
 <td width="33%" valign="top">

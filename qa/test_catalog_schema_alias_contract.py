@@ -66,7 +66,7 @@ def main():
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)
-    assert count == 93, 'Catalog size changed; review and update feature acceptance matrix'
+    assert count == 92, 'Catalog size changed; review and update feature acceptance matrix'
     assert missing in (13, 14), f'Unexpected intentionally non-schema keys: {missing}'
     # Negative fixtures: an unknown catalog entry, wrong alias, or promotion
     # of license/navigation keys to writable preferences must be rejected.

@@ -241,8 +241,8 @@
     <string name="feat_unlock_premium_customization_desc">واٹس ایپ پلس کی آفیشل سبسکرپشن فیچرز کو غیر مقفل کریں بشمول ایپ آئیکنز، تھیمز اور پریمیم اسٹیکرز۔</string>
     <string name="feat_filter_items_title">آئٹمز کو ID کے لحاظ سے فلٹر کریں۔</string>
     <string name="feat_filter_items_desc">مخصوص IDs سے مماثل واٹس ایپ ویوز کو ہٹائیں یا اپنی مرضی کے مطابق بنائیں (گون، رنگ تبدیل کریں، دھندلاپن، سائز تبدیل کریں)</string>
-    <string name="feat_custom_filters_title">حسب ضرورت ظاہری فلٹرز</string>
-    <string name="feat_custom_filters_desc">کسٹم ویو آئی ڈی فلٹر رولز کو فعال یا غیر فعال کریں۔</string>
+    <string name="feat_custom_filters_title">آئٹمز کو ID کے لحاظ سے فلٹر کریں۔</string>
+    <string name="feat_custom_filters_desc">مخصوص IDs سے مماثل واٹس ایپ ویوز کو ہٹائیں یا اپنی مرضی کے مطابق بنائیں (گون، رنگ تبدیل کریں، دھندلاپن، سائز تبدیل کریں)</string>
     <string name="feat_dotonline_title">گفتگو کی فہرست میں آن لائن ڈاٹ دکھائیں۔</string>
     <string name="feat_dotonline_desc">ہوم اسکرین پر سبز آن لائن ڈاٹ دکھائیں۔</string>
     <string name="feat_showonlinetext_title">آن لائن دکھائیں/گفتگو کی فہرست میں آخری بار دیکھا گیا۔</string>
