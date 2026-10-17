@@ -73,20 +73,10 @@ object HmaDiagnostics {
             return HmaReport(HmaState.NOT_ACTIVE)
         }
 
-        // Read configuration file
-        val configJson = readHmaConfigJson()
-        if (configJson == null) {
+        val allConfigs = readAllHmaConfigs()
+        if (allConfigs.isEmpty()) {
             return HmaReport(HmaState.NOT_CONFIGURED)
         }
-
-        val config = try {
-            JSONObject(configJson)
-        } catch (_: Exception) {
-            return HmaReport(HmaState.NOT_CONFIGURED)
-        }
-
-        val templates = config.optJSONObject("templates") ?: JSONObject()
-        val scope = config.optJSONObject("scope") ?: JSONObject()
 
         // Known module package identifiers to check for concealment
         val currentPackage = context.packageName
@@ -104,8 +94,23 @@ object HmaDiagnostics {
 
         for (pkg in packagesToCheck) {
             val appLabel = resolveAppLabel(context, pkg)
-            val scopeObj = scope.optJSONObject(pkg)
-            if (scopeObj == null) {
+            var foundInAnyScope = false
+            var primaryBlockReason: String? = null
+
+            for ((_, config) in allConfigs) {
+                val templates = config.optJSONObject("templates") ?: JSONObject()
+                val scope = config.optJSONObject("scope") ?: JSONObject()
+                val scopeObj = scope.optJSONObject(pkg) ?: continue
+
+                foundInAnyScope = true
+                val blockReason = checkScopeBlockReason(scopeObj, templates, moduleSignatures)
+                if (blockReason != null) {
+                    primaryBlockReason = blockReason
+                    break
+                }
+            }
+
+            if (!foundInAnyScope) {
                 details.add(
                     TargetIsolationDetail(
                         packageName = pkg,
@@ -114,18 +119,14 @@ object HmaDiagnostics {
                         reason = "Not configured in HMA scope"
                     )
                 )
-                continue
-            }
-
-            val blockReason = checkScopeBlockReason(scopeObj, templates, moduleSignatures)
-            if (blockReason != null) {
+            } else if (primaryBlockReason != null) {
                 blockedList.add(pkg)
                 details.add(
                     TargetIsolationDetail(
                         packageName = pkg,
                         appName = appLabel,
                         isBlocking = true,
-                        reason = blockReason
+                        reason = primaryBlockReason
                     )
                 )
             } else {
@@ -161,12 +162,19 @@ object HmaDiagnostics {
         }
     }
 
+    private val KNOWN_HMA_PACKAGES = setOf(
+        "com.tsng.hidemyapplist",
+        "org.frknkrc44.hma_oss",
+        "com.google.android.hmal"
+    )
+
     private fun isHmaInstalledAndActive(context: Context): Boolean {
-        // 1. Zygisk variant check
+        // 1. Zygisk module directory check
         val zygiskCheck = AppRestartHelper.runRootCommand(
-            "[ -d $HMA_ZYGISK_PATH ] && [ ! -f $HMA_ZYGISK_PATH/disable ] && echo active"
+            "[ -d $HMA_ZYGISK_PATH ] && [ ! -f $HMA_ZYGISK_PATH/disable ] && echo active; " +
+                    "ls -d /data/adb/modules/*hma* 2>/dev/null; true"
         )
-        if (zygiskCheck?.contains("active") == true) {
+        if (zygiskCheck?.contains("active") == true || zygiskCheck?.contains("hma") == true) {
             return true
         }
 
@@ -183,7 +191,7 @@ object HmaDiagnostics {
             val copyCmd = "cp $LSP_CONFIG_DB ${cacheDb.absolutePath} 2>/dev/null; " +
                     "cp $LSP_CONFIG_DB-wal ${walDb.absolutePath} 2>/dev/null; " +
                     "cp $LSP_CONFIG_DB-shm ${shmDb.absolutePath} 2>/dev/null; " +
-                    "chmod 666 ${cacheDb.absolutePath} ${walDb.absolutePath} ${shmDb.absolutePath} 2>/dev/null"
+                    "chmod 666 ${cacheDb.absolutePath} ${walDb.absolutePath} ${shmDb.absolutePath} 2>/dev/null; true"
             AppRestartHelper.runRootCommand(copyCmd)
 
             if (cacheDb.exists()) {
@@ -193,11 +201,44 @@ object HmaDiagnostics {
             }
         }
 
-        // 3. Check if HMA config file exists directly as an additional check
-        val configExists = AppRestartHelper.runRootCommand(
-            "[ -f $HMA_CONFIG_GLOB ] || [ -f $HMA_ALT_CONFIG ] && echo exists"
-        )
-        return configExists?.contains("exists") == true
+        // 3. Installed package manager check dynamically for any HMA / HMAL packages
+        val installedHmaPackages = getInstalledHmaPackages(context)
+        if (installedHmaPackages.isNotEmpty()) {
+            return true
+        }
+
+        // 4. Check if any HMA config file exists directly
+        val configPaths = findAllHmaConfigPaths()
+        return configPaths.isNotEmpty()
+    }
+
+    /**
+     * Dynamically discovers all installed HMA / HMAL packages on the system.
+     */
+    private fun getInstalledHmaPackages(context: Context): List<String> {
+        val packages = mutableSetOf<String>()
+        try {
+            val pm = context.packageManager
+            val installed = pm.getInstalledPackages(0).map { it.packageName }
+            for (pkg in installed) {
+                val lower = pkg.lowercase()
+                if (lower.contains("hidemyapp") || lower.contains("hma") || lower.endsWith(".hmal")) {
+                    packages.add(pkg)
+                }
+            }
+        } catch (_: Exception) {}
+
+        // Also query via root package manager in case package visibility is restricted
+        val pmCmd = "pm list packages 2>/dev/null | grep -iE 'hma|hidemyapp' | cut -d: -f2; true"
+        val pmOut = AppRestartHelper.runRootCommand(pmCmd)
+        if (!pmOut.isNullOrBlank()) {
+            pmOut.lines()
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .forEach { packages.add(it) }
+        }
+
+        return packages.toList()
     }
 
     private fun isHmaEnabledInLspDb(dbFile: File): Boolean {
@@ -205,8 +246,8 @@ object HmaDiagnostics {
         return try {
             db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val cursor = db.rawQuery(
-                "SELECT 1 FROM modules WHERE module_pkg_name LIKE ? AND enabled = 1 LIMIT 1",
-                arrayOf("%hidemyapplist%")
+                "SELECT 1 FROM modules WHERE (module_pkg_name LIKE '%hidemyapp%' OR module_pkg_name LIKE '%hma%') AND enabled = 1 LIMIT 1",
+                null
             )
             val exists = cursor.moveToFirst()
             cursor.close()
@@ -218,31 +259,46 @@ object HmaDiagnostics {
         }
     }
 
-
-    private fun readHmaConfigJson(): String? {
-        val path = findHmaConfigPath() ?: return null
-        val out = AppRestartHelper.runRootCommand("cat $path 2>/dev/null")
-        if (!out.isNullOrBlank() && out.startsWith("{")) {
-            return out
+    /**
+     * Reads all available HMA / HMAL configurations across the device.
+     */
+    private fun readAllHmaConfigs(): List<Pair<String, JSONObject>> {
+        val paths = findAllHmaConfigPaths()
+        val configs = mutableListOf<Pair<String, JSONObject>>()
+        for (path in paths) {
+            val out = AppRestartHelper.runRootCommand("cat $path 2>/dev/null")
+            if (!out.isNullOrBlank() && out.trimStart().startsWith("{")) {
+                try {
+                    configs.add(path to JSONObject(out))
+                } catch (_: Exception) {}
+            }
         }
-        return null
+        return configs
     }
 
-    private fun findHmaConfigPath(): String? {
-        val cmd = "find /data/misc -maxdepth 2 -name 'config.json' -path '*/hide_my_applist*' 2>/dev/null; " +
-                "[ -f $HMA_ALT_CONFIG ] && echo $HMA_ALT_CONFIG; true"
-        val out = AppRestartHelper.runRootCommand(cmd) ?: return null
-        return out.lines().map { it.trim() }.firstOrNull { it.isNotBlank() && it.endsWith("config.json") }
+    /**
+     * Finds all valid HMA / HMAL configuration paths across system directories,
+     * zygisk data directories, and app-internal private files.
+     */
+    private fun findAllHmaConfigPaths(): List<String> {
+        val findCmd = "find /data/misc /data/system /data/adb /data/user/0 /data/data -name 'config.json' " +
+                "\\( -path '*hide_my_applist*' -o -path '*hma*' \\) 2>/dev/null; true"
+        val out = AppRestartHelper.runRootCommand(findCmd) ?: return emptyList()
+        return out.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() && it.endsWith("config.json") }
+            .distinct()
     }
 
     /**
      * Fixes HMA isolation settings for the specified [targetPackage] by removing
-     * any blocking rules (such as 'xposed' preset or module package in extra lists / blacklist templates).
+     * any blocking rules across all found HMA config files (such as 'xposed' preset,
+     * module in blacklist extra list/template, or adding module to whitelist extra list/template
+     * when whitelist mode is enabled).
      */
     suspend fun fixTargetIsolation(context: Context, targetPackage: String): Boolean = withContext(Dispatchers.IO) {
-        val configPath = findHmaConfigPath() ?: return@withContext false
-        val currentJsonStr = AppRestartHelper.runRootCommand("cat $configPath 2>/dev/null") ?: return@withContext false
-        if (!currentJsonStr.startsWith("{")) return@withContext false
+        val configPaths = findAllHmaConfigPaths()
+        if (configPaths.isEmpty()) return@withContext false
 
         val moduleSignatures = setOf(
             context.packageName,
@@ -250,85 +306,119 @@ object HmaDiagnostics {
             "com.waenhancer.debug"
         )
 
-        try {
-            val root = JSONObject(currentJsonStr)
-            val scope = root.optJSONObject("scope") ?: return@withContext false
-            val targetScope = scope.optJSONObject(targetPackage)
+        var anySuccess = false
 
-            if (targetScope != null) {
-                // 1. Remove module package from extraAppList
-                targetScope.optJSONArray("extraAppList")?.let { arr ->
-                    val filtered = JSONArray()
-                    for (i in 0 until arr.length()) {
-                        val v = arr.optString(i)
-                        if (v !in moduleSignatures) filtered.put(v)
+        for (configPath in configPaths) {
+            val currentJsonStr = AppRestartHelper.runRootCommand("cat $configPath 2>/dev/null") ?: continue
+            if (!currentJsonStr.trimStart().startsWith("{")) continue
+
+            try {
+                val root = JSONObject(currentJsonStr)
+                val scope = root.optJSONObject("scope") ?: continue
+                val targetScope = scope.optJSONObject(targetPackage) ?: continue
+
+                val useWhitelist = targetScope.optBoolean("useWhitelist", false)
+
+                if (useWhitelist) {
+                    // Whitelist mode: To make module visible, module package MUST be in extraAppList
+                    val extraAppList = targetScope.optJSONArray("extraAppList") ?: JSONArray().also {
+                        targetScope.put("extraAppList", it)
                     }
-                    targetScope.put("extraAppList", filtered)
+                    val currentApps = (0 until extraAppList.length()).map { extraAppList.optString(it) }.toMutableSet()
+                    currentApps.add(context.packageName)
+                    val newArr = JSONArray()
+                    currentApps.forEach { newArr.put(it) }
+                    targetScope.put("extraAppList", newArr)
+
+                    // Also remove from extraOppositeAppList if present
+                    targetScope.optJSONArray("extraOppositeAppList")?.let { arr ->
+                        val filtered = JSONArray()
+                        for (i in 0 until arr.length()) {
+                            val v = arr.optString(i)
+                            if (v !in moduleSignatures) filtered.put(v)
+                        }
+                        targetScope.put("extraOppositeAppList", filtered)
+                    }
+                } else {
+                    // Blacklist mode: remove module package from extraAppList
+                    targetScope.optJSONArray("extraAppList")?.let { arr ->
+                        val filtered = JSONArray()
+                        for (i in 0 until arr.length()) {
+                            val v = arr.optString(i)
+                            if (v !in moduleSignatures) filtered.put(v)
+                        }
+                        targetScope.put("extraAppList", filtered)
+                    }
+
+                    // Remove "xposed" preset from applyPresets
+                    targetScope.optJSONArray("applyPresets")?.let { arr ->
+                        val filtered = JSONArray()
+                        for (i in 0 until arr.length()) {
+                            val v = arr.optString(i)
+                            if (!v.equals("xposed", ignoreCase = true)) filtered.put(v)
+                        }
+                        targetScope.put("applyPresets", filtered)
+                    }
                 }
 
-                // 2. Remove module package from extraOppositeAppList
-                targetScope.optJSONArray("extraOppositeAppList")?.let { arr ->
-                    val filtered = JSONArray()
-                    for (i in 0 until arr.length()) {
-                        val v = arr.optString(i)
-                        if (v !in moduleSignatures) filtered.put(v)
-                    }
-                    targetScope.put("extraOppositeAppList", filtered)
-                }
-
-                // 3. Remove "xposed" preset from applyPresets
-                targetScope.optJSONArray("applyPresets")?.let { arr ->
-                    val filtered = JSONArray()
-                    for (i in 0 until arr.length()) {
-                        val v = arr.optString(i)
-                        if (!v.equals("xposed", ignoreCase = true)) filtered.put(v)
-                    }
-                    targetScope.put("applyPresets", filtered)
-                }
-            }
-
-            // 4. Remove module package from any blacklist templates
-            val templates = root.optJSONObject("templates")
-            if (templates != null) {
-                val keys = templates.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val template = templates.optJSONObject(key) ?: continue
-                    val isWhitelist = template.optBoolean("isWhitelist", false)
-                    if (!isWhitelist) {
-                        template.optJSONArray("appList")?.let { arr ->
-                            val filtered = JSONArray()
-                            for (i in 0 until arr.length()) {
-                                val v = arr.optString(i)
-                                if (v !in moduleSignatures) filtered.put(v)
+                // Remove module from any blacklist templates
+                val templates = root.optJSONObject("templates")
+                if (templates != null) {
+                    val keys = templates.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val template = templates.optJSONObject(key) ?: continue
+                        val isWhitelist = template.optBoolean("isWhitelist", false)
+                        if (!isWhitelist) {
+                            template.optJSONArray("appList")?.let { arr ->
+                                val filtered = JSONArray()
+                                for (i in 0 until arr.length()) {
+                                    val v = arr.optString(i)
+                                    if (v !in moduleSignatures) filtered.put(v)
+                                }
+                                template.put("appList", filtered)
                             }
-                            template.put("appList", filtered)
                         }
                     }
                 }
-            }
 
-            // Encode JSON to base64 to avoid quoting/escaping issues in shell
-            val b64 = android.util.Base64.encodeToString(root.toString().toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-            val tmpConfig = "$configPath.tmp"
+                // Write modified JSON using base64 pipeline directly into config file
+                val b64 = android.util.Base64.encodeToString(
+                    root.toString().toByteArray(Charsets.UTF_8),
+                    android.util.Base64.NO_WRAP
+                )
+                val tmpConfig = "$configPath.tmp"
 
-            val writeScript = "echo '$b64' | base64 -d > $tmpConfig && " +
-                    "mv $tmpConfig $configPath && " +
-                    "chmod 600 $configPath && " +
-                    "chown system:system $configPath; " +
-                    "killall org.frknkrc44.hma_oss 2>/dev/null; " +
-                    "am force-stop org.frknkrc44.hma_oss 2>/dev/null; " +
-                    "true"
+                // Preserve original owner/group and SELinux label
+                val writeScript = "OWNER=\$(stat -c '%u:%g' $configPath 2>/dev/null); " +
+                        "echo '$b64' | base64 -d > $tmpConfig && " +
+                        "[ -n \"\$OWNER\" ] && chown \$OWNER $tmpConfig 2>/dev/null; " +
+                        "chmod 600 $tmpConfig 2>/dev/null; " +
+                        "restorecon $tmpConfig 2>/dev/null; " +
+                        "mv -f $tmpConfig $configPath && " +
+                        "[ -n \"\$OWNER\" ] && chown \$OWNER $configPath 2>/dev/null; " +
+                        "chmod 600 $configPath 2>/dev/null; " +
+                        "restorecon $configPath 2>/dev/null; true"
 
-            val result = AppRestartHelper.runRootCommand(writeScript)
-            val writtenOk = result != null
-
-            // Clear cached diagnostic result so next check reflects new state
-            cachedResult.set(null)
-            writtenOk
-        } catch (_: Exception) {
-            false
+                val writeResult = AppRestartHelper.runRootCommand(writeScript)
+                if (writeResult != null) {
+                    anySuccess = true
+                }
+            } catch (_: Exception) {}
         }
+
+        // Dynamically force-stop all installed HMA / HMAL packages & kill processes
+        val installedHmas = getInstalledHmaPackages(context)
+        val forceStopCmds = installedHmas.joinToString("; ") { "am force-stop $it 2>/dev/null" }
+        val killScript = "pkill -f hidemyapplist 2>/dev/null; " +
+                "pkill -f hma 2>/dev/null; " +
+                "for p in \$(pm list packages 2>/dev/null | grep -iE 'hma|hidemyapp' | cut -d: -f2); do am force-stop \"\$p\" 2>/dev/null; done; " +
+                if (forceStopCmds.isNotBlank()) "$forceStopCmds; true" else "true"
+        AppRestartHelper.runRootCommand(killScript)
+
+        // Clear cached diagnostic result so next check reflects new state
+        cachedResult.set(null)
+        anySuccess
     }
 
     private fun checkScopeBlockReason(
@@ -345,29 +435,48 @@ object HmaDiagnostics {
             if (extraOppositeAppList.any { it in moduleSignatures }) {
                 return "Hidden via Whitelist mode (in invisible apps list)"
             }
+
+            // Check if any applied whitelist template allows the module
+            val appliedTemplates = scopeObj.optJSONArray("applyTemplates")?.toStringSet() ?: emptySet()
+            var allowedByTemplate = false
+            for (templateName in appliedTemplates) {
+                val template = templates.optJSONObject(templateName) ?: continue
+                val isTemplateWhitelist = template.optBoolean("isWhitelist", false)
+                val templateApps = template.optJSONArray("appList")?.toStringSet() ?: emptySet()
+                if (isTemplateWhitelist && templateApps.any { it in moduleSignatures }) {
+                    allowedByTemplate = true
+                    break
+                }
+            }
+
+            // In Whitelist mode, if the module is NOT explicitly allowed (neither in extraAppList nor in a whitelist template), it is hidden!
+            val allowedInExtra = extraAppList.any { it in moduleSignatures }
+            if (!allowedInExtra && !allowedByTemplate) {
+                return "Hidden via Whitelist mode (module not included in visible apps)"
+            }
         } else {
             // Blacklist mode: if module is in extraAppList, it is hidden/blocked
             if (extraAppList.any { it in moduleSignatures }) {
                 return "Hidden via Blacklist mode (in additional apps to hide)"
             }
-        }
 
-        // Check applied templates
-        val appliedTemplates = scopeObj.optJSONArray("applyTemplates")?.toStringSet() ?: emptySet()
-        for (templateName in appliedTemplates) {
-            val template = templates.optJSONObject(templateName) ?: continue
-            val isTemplateWhitelist = template.optBoolean("isWhitelist", false)
-            val templateApps = template.optJSONArray("appList")?.toStringSet() ?: emptySet()
+            // Check applied blacklist templates
+            val appliedTemplates = scopeObj.optJSONArray("applyTemplates")?.toStringSet() ?: emptySet()
+            for (templateName in appliedTemplates) {
+                val template = templates.optJSONObject(templateName) ?: continue
+                val isTemplateWhitelist = template.optBoolean("isWhitelist", false)
+                val templateApps = template.optJSONArray("appList")?.toStringSet() ?: emptySet()
 
-            if (!isTemplateWhitelist && templateApps.any { it in moduleSignatures }) {
-                return "Hidden by blacklist template \"$templateName\""
+                if (!isTemplateWhitelist && templateApps.any { it in moduleSignatures }) {
+                    return "Hidden by blacklist template \"$templateName\""
+                }
             }
-        }
 
-        // Check presets (e.g. "xposed" preset hides all Xposed modules / manager)
-        val appliedPresets = scopeObj.optJSONArray("applyPresets")?.toStringSet() ?: emptySet()
-        if (appliedPresets.any { it.equals("xposed", ignoreCase = true) }) {
-            return "Hidden by HMA \"xposed\" preset"
+            // Check presets (e.g. "xposed" preset hides all Xposed modules / manager)
+            val appliedPresets = scopeObj.optJSONArray("applyPresets")?.toStringSet() ?: emptySet()
+            if (appliedPresets.any { it.equals("xposed", ignoreCase = true) }) {
+                return "Hidden by HMA \"xposed\" preset"
+            }
         }
 
         return null

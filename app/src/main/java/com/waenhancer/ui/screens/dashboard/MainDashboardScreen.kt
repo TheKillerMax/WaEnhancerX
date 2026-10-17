@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -244,7 +245,6 @@ fun MainDashboardScreen(
     var showCustomizationSoon by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
     var showHmaDetailSheet by remember { mutableStateOf(false) }
-    var hmaTargetToFix by remember { mutableStateOf<Pair<String, String>?>(null) }
     var isFixingHma by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -719,27 +719,12 @@ fun MainDashboardScreen(
         if (showHmaDetailSheet && hmaStatus != null) {
             HmaDetailsBottomSheet(
                 report = hmaStatus!!,
-                onFixTarget = { pkg, name ->
-                    hmaTargetToFix = pkg to name
-                },
-                onDismiss = { showHmaDetailSheet = false }
-            )
-        }
-
-        // HMA Fix Confirmation Bottom Sheet
-        if (hmaTargetToFix != null) {
-            val (targetPkg, targetName) = hmaTargetToFix!!
-            WaexConfirmationBottomSheet(
-                title = stringResource(R.string.diag_hma_fix_title),
-                message = stringResource(R.string.diag_hma_fix_message, targetName),
-                confirmLabel = stringResource(R.string.diag_hma_btn_fix),
-                confirmEnabled = !isFixingHma,
-                onConfirm = {
+                isFixing = isFixingHma,
+                onFixTarget = { targetPkg ->
                     isFixingHma = true
                     coroutineScope.launch {
                         val success = HmaDiagnostics.fixTargetIsolation(context, targetPkg)
                         isFixingHma = false
-                        hmaTargetToFix = null
                         if (success) {
                             Toast.makeText(
                                 context,
@@ -756,9 +741,7 @@ fun MainDashboardScreen(
                         }
                     }
                 },
-                onDismiss = {
-                    if (!isFixingHma) hmaTargetToFix = null
-                }
+                onDismiss = { showHmaDetailSheet = false }
             )
         }
     }
@@ -768,7 +751,8 @@ fun MainDashboardScreen(
 @Composable
 private fun HmaDetailsBottomSheet(
     report: HmaDiagnostics.HmaReport,
-    onFixTarget: (String, String) -> Unit,
+    onFixTarget: (String) -> Unit,
+    isFixing: Boolean = false,
     onDismiss: () -> Unit
 ) {
     val colors = WaexTheme.colors
@@ -779,8 +763,10 @@ private fun HmaDetailsBottomSheet(
     val activeTargets = remember(report) { report.targetDetails.filter { it.isBlocking } }
     val cleanTargets = remember(report) { report.targetDetails.filter { !it.isBlocking } }
 
+    var targetToConfirm by remember { mutableStateOf<HmaDiagnostics.TargetIsolationDetail?>(null) }
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isFixing) onDismiss() },
         sheetState = sheetState,
         containerColor = colors.surface,
         dragHandle = {
@@ -815,6 +801,84 @@ private fun HmaDetailsBottomSheet(
                     style = typography.bodySm,
                     color = colors.onSurfaceVariant
                 )
+            }
+
+            // Inline Confirmation Card if a target was selected for fix
+            if (targetToConfirm != null) {
+                val current = targetToConfirm!!
+                Surface(
+                    shape = radius.mdShape,
+                    color = colors.primary.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.diag_hma_fix_title),
+                            style = typography.titleMd,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.diag_hma_fix_message, current.appName),
+                            style = typography.bodySm,
+                            color = colors.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { targetToConfirm = null },
+                                enabled = !isFixing,
+                                shape = radius.smShape,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(android.R.string.cancel),
+                                    style = typography.labelSm
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    val pkg = current.packageName
+                                    targetToConfirm = null
+                                    onFixTarget(pkg)
+                                },
+                                enabled = !isFixing,
+                                shape = radius.smShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.primary,
+                                    contentColor = colors.onPrimary
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                            ) {
+                                if (isFixing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = colors.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(
+                                        text = stringResource(R.string.diag_hma_btn_fix),
+                                        style = typography.labelSm,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if (activeTargets.isNotEmpty()) {
@@ -874,7 +938,8 @@ private fun HmaDetailsBottomSheet(
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
-                                onClick = { onFixTarget(item.packageName, item.appName) },
+                                onClick = { targetToConfirm = item },
+                                enabled = !isFixing,
                                 shape = radius.smShape,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                                 colors = ButtonDefaults.buttonColors(
@@ -1206,21 +1271,19 @@ private fun DashboardDiagnosticRow(
     val scope = rememberCoroutineScope()
     val tooltipState = rememberTooltipState()
 
-    val rowModifier = Modifier
-        .fillMaxWidth()
-        .then(
-            if (onClick != null) {
-                Modifier
-                    .clip(radius.smShape)
-                    .clickable(onClick = onClick)
-                    .padding(vertical = 10.dp, horizontal = 4.dp)
-            } else {
-                Modifier.padding(vertical = 12.dp)
-            }
-        )
-
     Row(
-        modifier = rowModifier,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(radius.smShape)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clickable(onClick = onClick)
+                        .padding(vertical = 10.dp, horizontal = 4.dp)
+                } else {
+                    Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
+                }
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -1265,7 +1328,7 @@ private fun DashboardDiagnosticRow(
                     modifier = Modifier
                         .size(24.dp)
                         .clickable {
-                            if (onClick != null && healthy == false) {
+                            if (onClick != null) {
                                 onClick()
                             } else {
                                 scope.launch { tooltipState.show() }
