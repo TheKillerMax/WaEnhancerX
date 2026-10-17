@@ -1,46 +1,74 @@
 package com.waenhancer.utils
 
+import android.os.SystemClock
 import com.waenhancer.xposed.utils.AppRestartHelper
+import java.util.Collections
 
+/** A successful, timestamped process observation, not proof of hook initialization. */
 data class XposedRuntimeSnapshot(
-    val runningPids: Map<String, Set<Int>>
-)
-
-internal fun parseXposedRuntimeSnapshot(output: String): XposedRuntimeSnapshot {
-    val packagePattern = Regex("[A-Za-z0-9_.]+")
-    val running = linkedMapOf<String, Set<Int>>()
-    output.lineSequence().forEach { line ->
-        if (line.startsWith("PID|")) {
-            val parts = line.split('|', limit = 3)
-            if (parts.size == 3 && packagePattern.matches(parts[1])) {
-                running[parts[1]] = parts[2].split(' ')
-                    .mapNotNull(String::toIntOrNull)
-                    .filter { it > 0 }
-                    .toSet()
-            }
-        }
-    }
-    return XposedRuntimeSnapshot(runningPids = running)
+    val runningPids: Map<String, Set<Int>>,
+    val observedAtElapsed: Long = SystemClock.elapsedRealtime(),
+    val complete: Boolean = true
+) {
+    fun pidsFor(packageName: String, nowElapsed: Long): Set<Int>? =
+        if (complete && isRecentTimestamp(observedAtElapsed, nowElapsed)) runningPids[packageName] else null
 }
 
-/** Root-assisted view of currently running target processes. */
+private val processPackagePattern = Regex("[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+")
+
+internal fun parseXposedRuntimeSnapshot(output: String): XposedRuntimeSnapshot {
+    val running = linkedMapOf<String, Set<Int>>()
+    var valid = true
+    output.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+        val parts = line.split('|', limit = 3)
+        if (parts.size != 3 || parts[0] != "PID" || parts[1].length > 255 ||
+            !processPackagePattern.matches(parts[1]) || parts[1] in running) {
+            valid = false
+        } else {
+            val tokens = parts[2].trim().takeIf { it.isNotEmpty() }?.split(Regex("\\s+")).orEmpty()
+            val pids = tokens.mapNotNull(String::toIntOrNull)
+            if (pids.size != tokens.size || pids.any { it <= 0 }) valid = false
+            running[parts[1]] = Collections.unmodifiableSet(LinkedHashSet(pids))
+        }
+    }
+    return XposedRuntimeSnapshot(Collections.unmodifiableMap(running), complete = valid)
+}
+
+/** Root-assisted observations. An unavailable/truncated probe must never mean no running process. */
 object XposedRuntimeInspector {
-    private val validPackage = Regex("[A-Za-z0-9_.]+")
+    @Volatile private var cachedSnapshot: XposedRuntimeSnapshot? = null
 
-    @Volatile
-    private var cachedSnapshot: XposedRuntimeSnapshot? = null
+    fun cached(): XposedRuntimeSnapshot? = cachedSnapshot?.takeIf {
+        it.complete && isRecentTimestamp(it.observedAtElapsed, SystemClock.elapsedRealtime())
+    }
 
-    fun cached(): XposedRuntimeSnapshot? = cachedSnapshot
-
+    @Synchronized
     fun inspect(packageNames: Collection<String>): XposedRuntimeSnapshot? {
-        val packages = packageNames.filter { validPackage.matches(it) }.distinct()
-        val command = packages.joinToString("\n") { pkg ->
-            "pids=\$(pidof $pkg 2>/dev/null || true); printf 'PID|$pkg|%s\\n' \"\$pids\""
+        val packages = packageNames.distinct()
+        if (packages.any { it.length > 255 || !processPackagePattern.matches(it) }) {
+            cachedSnapshot = null
+            return null
         }
-        if (command.isBlank()) return XposedRuntimeSnapshot(emptyMap()).also {
-            cachedSnapshot = it
+        if (packages.isEmpty()) return XposedRuntimeSnapshot(emptyMap()).also { cachedSnapshot = it }
+        val startedAtElapsed = SystemClock.elapsedRealtime()
+        val command = "command -v pidof >/dev/null 2>&1 || exit 127\n" + packages.joinToString("\n") { pkg ->
+            "pids=\$(pidof $pkg 2>/dev/null); rc=\$?; " +
+                "case \"\$rc\" in 0) [ -n \"\$pids\" ] || exit 2;; " +
+                "1) [ -z \"\$pids\" ] || exit 2;; *) exit 2;; esac; " +
+                "printf 'PID|$pkg|%s\\n' \"\$pids\""
         }
-        val output = AppRestartHelper.runRootCommand(command) ?: return null
-        return parseXposedRuntimeSnapshot(output).also { cachedSnapshot = it }
+        val completedCommand = command + "\nprintf 'END|WAEX_PROCESS_SNAPSHOT\\n'"
+        val output = try { AppRestartHelper.runRootCommand(completedCommand) }
+            catch (_: RuntimeException) { null }
+            catch (_: LinkageError) { null }
+        val lines = output?.lineSequence()?.filter { it.isNotBlank() }?.toList()
+        val result = lines?.takeIf { it.lastOrNull() == "END|WAEX_PROCESS_SNAPSHOT" }
+            ?.dropLast(1)?.joinToString("\n")?.let(::parseXposedRuntimeSnapshot)
+            ?.copy(observedAtElapsed = startedAtElapsed)?.takeIf {
+                it.complete && it.runningPids.keys == packages.toSet() &&
+                    isRecentTimestamp(startedAtElapsed, SystemClock.elapsedRealtime())
+            }
+        cachedSnapshot = result // A failed new observation invalidates old cached proof.
+        return result
     }
 }

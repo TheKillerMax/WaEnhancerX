@@ -14,72 +14,65 @@ object UniversalVersionValidator {
 
     private const val MODULE_PACKAGE = "com.waenhancer"
 
+    enum class Decision(val allowed: Boolean) {
+        BUILTIN_RULE(true), CUSTOM_RULE(true), EXPLICIT_BYPASS(true),
+        UNSUPPORTED(false), RULES_UNAVAILABLE(false), VERSION_UNAVAILABLE(false),
+        PREFERENCES_UNAVAILABLE(false)
+    }
+
     /**
-     * Dynamically retrieves the universal built-in supported versions from arrays.xml.
+     * Only read a resource in the module namespace. A numeric R ID is not portable
+     * to the host Resources. null means unavailable; it is not a valid empty range.
      */
-    @JvmStatic
-    fun getBuiltinSupportedVersions(context: Context?): List<String> {
-        if (context == null) return emptyList()
+    private fun readBuiltinRules(context: Context?): List<String>? {
+        if (context == null) return null
         return try {
-            val moduleContext = if (context.packageName == MODULE_PACKAGE) {
-                context
-            } else {
-                try {
-                    context.createPackageContext(MODULE_PACKAGE, Context.CONTEXT_IGNORE_SECURITY)
-                } catch (_: Throwable) {
-                    context
-                }
-            }
-            val resId = moduleContext.resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
-            if (resId != 0) {
-                moduleContext.resources.getStringArray(resId).toList()
-            } else {
-                context.resources.getStringArray(R.array.universal_supported_versions).toList()
-            }
-        } catch (_: Throwable) {
-            emptyList()
+            val moduleContext = if (context.packageName == MODULE_PACKAGE) context
+                else context.createPackageContext(MODULE_PACKAGE, Context.CONTEXT_IGNORE_SECURITY)
+            if (moduleContext.packageName != MODULE_PACKAGE) return null
+            val resources = moduleContext.resources
+            val namedId = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
+            // The static reference also keeps this array reachable in optimized builds.
+            val id = if (namedId != 0) namedId else R.array.universal_supported_versions
+            if (resources.getResourceName(id) != "$MODULE_PACKAGE:array/universal_supported_versions") return null
+            val rules = resources.getStringArray(id).map { it.trim() }
+            val syntax = Regex("[0-9]+(?:\\.[0-9]+)+(?:\\.(?:xx|\\*))?", RegexOption.IGNORE_CASE)
+            rules.takeIf { it.isNotEmpty() && it.all(syntax::matches) }
+        } catch (_: RuntimeException) {
+            null
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        } catch (_: LinkageError) {
+            null
         }
     }
 
-    /**
-     * Checks whether [versionName] is supported based on arrays.xml defaults, user custom additions,
-     * or bypass flags across ALL WhatsApp packages.
-     */
     @JvmStatic
-    fun isSupported(
-        context: Context?,
-        versionName: String?,
-        prefs: SharedPreferences?
-    ): Boolean {
-        if (versionName.isNullOrBlank()) return false
+    fun getBuiltinSupportedVersions(context: Context?): List<String> = readBuiltinRules(context).orEmpty()
 
-        // Check if user enabled "Bypass Version Check"
-        val bypass = prefs?.getBoolean("bypass_version_check", false) ?: false
-        if (bypass) return true
-
+    /** A rules decision, not a claim that native methods or every feature were tested. */
+    @JvmStatic
+    fun evaluate(context: Context?, versionName: String?, prefs: SharedPreferences?): Decision {
+        if (versionName.isNullOrBlank()) return Decision.VERSION_UNAVAILABLE
         val cleanVer = versionName.trim().removePrefix("v")
-
-        // 1. Check dynamically loaded universal system versions from arrays.xml
-        val systemVersions = getBuiltinSupportedVersions(context)
-        for (sysVer in systemVersions) {
-            if (matches(cleanVer, sysVer)) {
-                return true
-            }
+        if (cleanVer.isBlank()) return Decision.VERSION_UNAVAILABLE
+        return try {
+            if (prefs?.getBoolean("bypass_version_check", false) == true) return Decision.EXPLICIT_BYPASS
+            val rules = readBuiltinRules(context)
+            if (rules?.any { matches(cleanVer, it) } == true) return Decision.BUILTIN_RULE
+            if (prefs?.getBoolean("customize_supported_versions", false) == true &&
+                getCustomVersions(prefs).any { matches(cleanVer, it) }) return Decision.CUSTOM_RULE
+            if (rules == null) Decision.RULES_UNAVAILABLE else Decision.UNSUPPORTED
+        } catch (_: RuntimeException) {
+            Decision.PREFERENCES_UNAVAILABLE
+        } catch (_: LinkageError) {
+            Decision.PREFERENCES_UNAVAILABLE
         }
-
-        // 2. Check user-defined custom versions if enabled
-        val customizeEnabled = prefs != null && prefs.getBoolean("customize_supported_versions", false)
-        if (customizeEnabled) {
-            val customVersions = getCustomVersions(prefs)
-            for (customVer in customVersions) {
-                if (matches(cleanVer, customVer)) {
-                    return true
-                }
-            }
-        }
-
-        return false
     }
+
+    @JvmStatic
+    fun isSupported(context: Context?, versionName: String?, prefs: SharedPreferences?): Boolean =
+        evaluate(context, versionName, prefs).allowed
 
     /**
      * Backward-compatible overload for existing call-sites
