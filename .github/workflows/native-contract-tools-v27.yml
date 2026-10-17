@@ -1,0 +1,46 @@
+name: V27 public desktop analysis tools
+on:
+  push:
+    branches: ['test/native-contract-tools-v27-2026-10-16']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop-dexkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: LuckyPray/DexKit
+          ref: ffa6c51c38fe3ecfddb18d8949c30c48dbfbfd6a
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build unmodified pinned desktop JNI and fetch its matching public APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waex-tools"
+          git rev-parse HEAD > "$RUNNER_TEMP/waex-tools/source-commit.txt"
+          cmake -S dexkit/src/main/cpp -B "$RUNNER_TEMP/dexkit-build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISABLE_DEXKIT_LOG=ON 2>&1 | tee "$RUNNER_TEMP/waex-tools/configure.log"
+          cmake --build "$RUNNER_TEMP/dexkit-build" --parallel 2 2>&1 | tee "$RUNNER_TEMP/waex-tools/build.log"
+          cp "$RUNNER_TEMP/dexkit-build/libdexkit.so" "$RUNNER_TEMP/waex-tools/"
+          curl --fail --location --proto '=https' 'https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar' -o "$RUNNER_TEMP/dexkit.aar"
+          unzip -p "$RUNNER_TEMP/dexkit.aar" classes.jar > "$RUNNER_TEMP/waex-tools/dexkit-2.2.0.jar"
+          curl --fail --location --proto '=https' 'https://repo.maven.apache.org/maven2/com/google/flatbuffers/flatbuffers-java/23.5.26/flatbuffers-java-23.5.26.jar' -o "$RUNNER_TEMP/waex-tools/flatbuffers-java-23.5.26.jar"
+          curl --fail --location --proto '=https' 'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.0/kotlin-stdlib-2.2.0.jar' -o "$RUNNER_TEMP/waex-tools/kotlin-stdlib-2.2.0.jar"
+          cd "$RUNNER_TEMP/waex-tools"
+          sha256sum *.so *.jar > SHA256SUMS
+          ldd libdexkit.so > native-dependencies.txt
+          printf '%s\n' 'Only public tools are included. No WhatsApp APK, private module, user data or signing material was uploaded or examined in this job.' > SCOPE.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v27-public-desktop-dexkit
+          path: ${{ runner.temp }}/waex-tools
+          if-no-files-found: error
+          retention-days: 7
