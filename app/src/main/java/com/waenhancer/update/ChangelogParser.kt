@@ -1,5 +1,8 @@
 package com.waenhancer.update
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 /**
  * Represents a categorized changelog section (e.g. Added, Fixed, Removed, Improvements).
  */
@@ -39,7 +42,7 @@ object ChangelogParser {
                 sections.add(ChangelogSection(title, currentItems.toList()))
             } else if (title == null && currentItems.isNotEmpty()) {
                 // Intro text or ungrouped text
-                sections.add(ChangelogSection("Overview", currentItems.toList()))
+                sections.add(ChangelogSection(UiText.get(R.string.waex_ui_overview_d4b1ea57, "Overview"), currentItems.toList()))
             }
             currentItems.clear()
         }

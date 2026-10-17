@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.search
 
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -94,7 +96,7 @@ fun SearchScreen() {
                         ) {
                             Icon(
                                 imageVector = WaexIcons.Back,
-                                contentDescription = "Back",
+                                contentDescription = UiText.get(R.string.action_back, "Back"),
                                 tint = colors.onBackground,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -217,7 +219,7 @@ fun SearchScreen() {
                                                 lineHeight = 17.sp
                                             )
                                             Text(
-                                                text = "Section: ${LocalizationHelper.getSection(context, pref)}",
+                                                text = UiText.get(R.string.waex_ui_section_1_s_ab7f31a7, "Section: %1\$s", LocalizationHelper.getSection(context, pref)),
                                                 style = typography.labelSm,
                                                 color = colors.primary,
                                                 fontSize = 11.sp,

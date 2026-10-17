@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep this public display contract when release optimizers inline the helper. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/waex_ui_*,@plurals/waex_recordings_deleted" />

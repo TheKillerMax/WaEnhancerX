@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.privacy
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -71,7 +74,7 @@ fun PreservedChatDetailsScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = WaexIcons.Back,
-                                contentDescription = "Back",
+                                contentDescription = UiText.get(R.string.action_back, "Back"),
                                 tint = colors.onSurface
                             )
                         }
@@ -113,7 +116,7 @@ fun PreservedChatDetailsScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = if (chat.isGroup) "Group • ${chat.messages.size} preserved" else "${chat.messages.size} preserved messages",
+                                text = if (chat.isGroup) UiText.get(R.string.waex_ui_group_1_s_preserved_29347f6b, "Group • %1\$s preserved", chat.messages.size) else UiText.get(R.string.waex_ui_1_s_preserved_messages_74d3a032, "%1\$s preserved messages", chat.messages.size),
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant
                             )
@@ -197,7 +200,7 @@ private fun PreservedMessageBubble(
             ) {
                 // In group received messages, show sender name if available
                 if (isGroup && !isSent) {
-                    val authorName = message.senderName?.takeIf { it.isNotBlank() } ?: "Participant"
+                    val authorName = message.senderName?.takeIf { it.isNotBlank() } ?: UiText.get(R.string.waex_ui_participant_554f4235, "Participant")
                     Text(
                         text = authorName,
                         style = typography.labelSm,

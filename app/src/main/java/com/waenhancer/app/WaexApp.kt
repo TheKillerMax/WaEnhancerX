@@ -28,6 +28,7 @@ class WaexApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.waenhancer.utils.UiText.initialize(this, PreferenceStores.publicStore(this))
         FeatureCatalog.initialize(this)
         val lang = LocaleHelper.getSelectedLanguageCode(this)
         if (lang != "system") {

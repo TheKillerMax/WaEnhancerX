@@ -1,5 +1,8 @@
 package com.waenhancer.update
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -137,12 +140,12 @@ object UpdateDownloader {
     fun installApk(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
         if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
-            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, UiText.get(R.string.waex_ui_apk_does_not_match_selected_version_1_2285cdd0, "APK does not match selected version %1\$s", expectedVersion), Toast.LENGTH_LONG).show()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.packageManager.canRequestPackageInstalls()) {
             activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")))
-            Toast.makeText(activity, "Please allow WaEnhancer X to install apps", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, UiText.get(R.string.waex_ui_please_allow_waenhancer_x_to_install_a_cde29fd6, "Please allow WaEnhancer X to install apps"), Toast.LENGTH_LONG).show()
             return
         }
         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", apkFile)
@@ -153,7 +156,7 @@ object UpdateDownloader {
     fun installApkWithRoot(context: Context, apkFile: File, expectedVersion: String) {
         val activity = context.findActivity() ?: return
         if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
-            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, UiText.get(R.string.waex_ui_apk_does_not_match_selected_version_1_2285cdd0, "APK does not match selected version %1\$s", expectedVersion), Toast.LENGTH_LONG).show()
             return
         }
         Thread {
@@ -186,11 +189,11 @@ object UpdateDownloader {
             val success = result?.trim()?.startsWith("Success", ignoreCase = true) == true
             activity.runOnUiThread {
                 if (success) {
-                    Toast.makeText(activity, "Installation successful. Restarting...", Toast.LENGTH_LONG).show()
+                    Toast.makeText(activity, UiText.get(R.string.waex_ui_installation_successful_restarting_dbd45bac, "Installation successful. Restarting..."), Toast.LENGTH_LONG).show()
                     Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, 2000)
                 } else Toast.makeText(
                     activity,
-                    "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unable to execute the root installer" }}",
+                    UiText.get(R.string.waex_ui_root_installation_failed_1_s_eb2c4718, "Root installation failed: %1\$s", result?.trim().orEmpty().ifEmpty { UiText.get(R.string.waex_ui_unable_to_execute_the_root_installer_798f1547, "Unable to execute the root installer") }),
                     Toast.LENGTH_LONG
                 ).show()
             }

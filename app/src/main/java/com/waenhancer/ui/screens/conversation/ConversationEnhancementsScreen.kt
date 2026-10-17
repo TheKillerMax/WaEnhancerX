@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.conversation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -98,7 +101,7 @@ fun ConversationEnhancementsScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Conversation & Messages",
+                title = UiText.get(R.string.title_conversation_messages, "Conversation & Messages"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -117,8 +120,8 @@ fun ConversationEnhancementsScreen() {
         ) {
             // Section 1: Message Protection & Controls
             WaexSectionHeader(
-                title = "Message Protection & Controls",
-                subtitle = "Preserve edits, prevent limits, and safeguard messages"
+                title = UiText.get(R.string.waex_ui_message_protection_controls_ecb4dab0, "Message Protection & Controls"),
+                subtitle = UiText.get(R.string.waex_ui_preserve_edits_prevent_limits_and_safe_6139d177, "Preserve edits, prevent limits, and safeguard messages")
             )
 
             WaexCard(modifier = Modifier.fillMaxWidth()) {
@@ -130,8 +133,8 @@ fun ConversationEnhancementsScreen() {
                         label = "bomber_highlight_bg"
                     )
                     WaexSwitchPreference(
-                        title = "Message Bomber · Pro",
-                        description = "Send a short, delayed sequence of messages from inside a WhatsApp chat",
+                        title = UiText.get(R.string.waex_ui_message_bomber_pro_33022491, "Message Bomber · Pro"),
+                        description = UiText.get(R.string.feat_message_bomber_desc, "Send a short, delayed sequence of messages from inside a WhatsApp chat"),
                         checked = isPro && (stateMap["message_bomber"] ?: false),
                         onCheckedChange = { enabled ->
                             if (isPro) onToggle("message_bomber", enabled) else onActivatePro()
@@ -152,8 +155,8 @@ fun ConversationEnhancementsScreen() {
                         label = "ae_highlight_bg"
                     )
                     WaexSwitchPreference(
-                        title = "Show Edited Message History",
-                        description = "Show edited message history when clicking \"Edited\" on a message",
+                        title = UiText.get(R.string.feat_anti_edit_messages_title, "Show Edited Message History"),
+                        description = UiText.get(R.string.feat_anti_edit_messages_desc, "Show edited message history when clicking \"Edited\" on a message"),
                         checked = stateMap["anti_edit_messages"] ?: false,
                         onCheckedChange = { onToggle("anti_edit_messages", it) },
                         icon = WaexIcons.Lock,
@@ -172,8 +175,8 @@ fun ConversationEnhancementsScreen() {
                         label = "mds_highlight_bg"
                     )
                     WaexSwitchPreference(
-                        title = "Show Message Device Source",
-                        description = "Shows whether a message was sent from the primary device or a linked device",
+                        title = UiText.get(R.string.feat_message_device_source_title, "Show Message Device Source"),
+                        description = UiText.get(R.string.feat_message_device_source_desc, "Shows whether a message was sent from the primary device or a linked device"),
                         checked = stateMap["message_device_source"] ?: false,
                         onCheckedChange = { onToggle("message_device_source", it) },
                         icon = WaexIcons.Extension,
@@ -186,64 +189,64 @@ fun ConversationEnhancementsScreen() {
                             }
                     )
                     WaexSwitchPreference(
-                        title = "Delete (for me)",
-                        description = "Retain messages locally when Delete for Me is pressed",
+                        title = UiText.get(R.string.feat_preserve_delete_for_me_title, "Delete (for me)"),
+                        description = UiText.get(R.string.waex_ui_retain_messages_locally_when_delete_fo_83f67a27, "Retain messages locally when Delete for Me is pressed"),
                         checked = stateMap["preserve_delete_for_me"] ?: false,
                         onCheckedChange = { onToggle("preserve_delete_for_me", it) },
                         icon = WaexIcons.Security,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Keep My Revoked Messages",
-                        description = "Keep your local copy after Delete for Everyone while deleting it for recipients",
+                        title = UiText.get(R.string.feat_preserve_own_revoke_title, "Keep My Revoked Messages"),
+                        description = UiText.get(R.string.feat_preserve_own_revoke_desc, "Keep your local copy after Delete for Everyone while deleting it for recipients"),
                         checked = stateMap["preserve_own_revoke"] ?: false,
                         onCheckedChange = { onToggle("preserve_own_revoke", it) },
                         icon = WaexIcons.Security,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Increase limit of \"Delete for everyone\" option",
-                        description = "Increases the limit to 3 days in the option to delete messages for everyone",
+                        title = UiText.get(R.string.feat_revokeallmessages_title, "Increase limit of \"Delete for everyone\" option"),
+                        description = UiText.get(R.string.feat_revokeallmessages_desc, "Increases the limit to 3 days in the option to delete messages for everyone"),
                         checked = stateMap["revokeallmessages"] ?: false,
                         onCheckedChange = { onToggle("revokeallmessages", it) },
                         icon = WaexIcons.Refresh,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Hide \"Forwarded\" Tag",
-                        description = "Forward messages without the tag \"Forwarded\"",
+                        title = UiText.get(R.string.feat_hide_forwarded_tag_title, "Hide \"Forwarded\" Tag"),
+                        description = UiText.get(R.string.feat_hide_forwarded_tag_desc, "Forward messages without the tag \"Forwarded\""),
                         checked = stateMap["hide_forwarded_tag"] ?: false,
                         onCheckedChange = { onToggle("hide_forwarded_tag", it) },
                         icon = WaexIcons.Share,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Remove Forward Limit",
-                        description = "Remove forward limit for 5 chats (normal) and 1 chat (multiple times)",
+                        title = UiText.get(R.string.feat_removeforwardlimit_title, "Remove Forward Limit"),
+                        description = UiText.get(R.string.feat_removeforwardlimit_desc, "Remove forward limit for 5 chats (normal) and 1 chat (multiple times)"),
                         checked = stateMap["removeforwardlimit"] ?: false,
                         onCheckedChange = { onToggle("removeforwardlimit", it) },
                         icon = WaexIcons.Share,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Confirmation Before Sending Sticker",
-                        description = "Show a dialog before sending the sticker",
+                        title = UiText.get(R.string.feat_sticker_confirm_alert_title, "Confirmation Before Sending Sticker"),
+                        description = UiText.get(R.string.feat_sticker_confirm_alert_desc, "Show a dialog before sending the sticker"),
                         checked = stateMap["sticker_confirm_alert"] ?: false,
                         onCheckedChange = { onToggle("sticker_confirm_alert", it) },
                         icon = WaexIcons.Settings,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Remove \"See More\" Button",
-                        description = "Disable \"See More\" button and show all long message",
+                        title = UiText.get(R.string.feat_removeseemore_title, "Remove \"See More\" Button"),
+                        description = UiText.get(R.string.waex_ui_disable_see_more_button_and_show_all_l_74a0a668, "Disable \"See More\" button and show all long message"),
                         checked = stateMap["removeseemore"] ?: false,
                         onCheckedChange = { onToggle("removeseemore", it) },
                         icon = WaexIcons.Info,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Remove Stamp from Copied Messages",
-                        description = "Removes name and date when copying more than one message",
+                        title = UiText.get(R.string.feat_stamp_copied_message_title, "Remove Stamp from Copied Messages"),
+                        description = UiText.get(R.string.feat_stamp_copied_message_desc, "Removes name and date when copying more than one message"),
                         checked = stateMap["stamp_copied_message"] ?: false,
                         onCheckedChange = { onToggle("stamp_copied_message", it) },
                         icon = WaexIcons.Folder,
@@ -251,8 +254,8 @@ fun ConversationEnhancementsScreen() {
                     )
                     val doubleTapEnabled = stateMap["doubletap2like"] ?: false
                     WaexSwitchPreference(
-                        title = "Enable Double Click to React",
-                        description = "Activates the possibility of double-clicking on the message to react it",
+                        title = UiText.get(R.string.feat_doubletap2like_title, "Enable Double Click to React"),
+                        description = UiText.get(R.string.feat_doubletap2like_desc, "Activates the possibility of double-clicking on the message to react it"),
                         checked = doubleTapEnabled,
                         onCheckedChange = { onToggle("doubletap2like", it) },
                         icon = WaexIcons.AutoAwesome,
@@ -266,8 +269,8 @@ fun ConversationEnhancementsScreen() {
                         }
 
                         WaexPreferenceItem(
-                            title = "Custom Reaction",
-                            description = "Change the default emoji sent when double-clicking ($currentEmoji)",
+                            title = UiText.get(R.string.waex_ui_custom_reaction_9a565091, "Custom Reaction"),
+                            description = UiText.get(R.string.waex_ui_change_the_default_emoji_sent_when_dou_9ed5b05d, "Change the default emoji sent when double-clicking (%1\$s)", currentEmoji),
                             icon = WaexIcons.Palette,
                             onClick = { showEmojiPicker = true },
                             showDivider = false,
@@ -302,55 +305,55 @@ fun ConversationEnhancementsScreen() {
 
             // Section 2: Chat Navigation & Shortcuts
             WaexSectionHeader(
-                title = "Chat Navigation & Shortcuts",
-                subtitle = "Fast navigation and conversation productivity tools"
+                title = UiText.get(R.string.sec_chat_navigation_shortcuts, "Chat Navigation & Shortcuts"),
+                subtitle = UiText.get(R.string.waex_ui_fast_navigation_and_conversation_produ_83302a70, "Fast navigation and conversation productivity tools")
             )
 
             WaexCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     WaexSwitchPreference(
-                        title = "Jump to First Message",
-                        description = "Add a button to skip the first message in the conversations screen",
+                        title = UiText.get(R.string.feat_jump_to_first_message_title, "Jump to First Message"),
+                        description = UiText.get(R.string.feat_jump_to_first_message_desc, "Add a button to skip the first message in the conversations screen"),
                         checked = stateMap["jump_to_first_message"] ?: false,
                         onCheckedChange = { onToggle("jump_to_first_message", it) },
                         icon = WaexIcons.Play,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Disable Pinned Chats Limit",
-                        description = "Disable limit of 3 pinned chats",
+                        title = UiText.get(R.string.feat_unlimited_pinned_chats_title, "Disable Pinned Chats Limit"),
+                        description = UiText.get(R.string.feat_unlimited_pinned_chats_desc, "Disable limit of 3 pinned chats"),
                         checked = stateMap["unlimited_pinned_chats"] ?: false,
                         onCheckedChange = { onToggle("unlimited_pinned_chats", it) },
                         icon = WaexIcons.Lock,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Show chat broadcast icon",
-                        description = "Shows an icon if the contact sent a message via broadcast",
+                        title = UiText.get(R.string.feat_broadcast_tag_title, "Show chat broadcast icon"),
+                        description = UiText.get(R.string.feat_broadcast_tag_desc, "Shows an icon if the contact sent a message via broadcast"),
                         checked = stateMap["broadcast_tag"] ?: false,
                         onCheckedChange = { onToggle("broadcast_tag", it) },
                         icon = WaexIcons.Notifications,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "New Chat",
-                        description = "Message numbers directly without saving them to contacts",
+                        title = UiText.get(R.string.feat_direct_chat_dialer_title, "New Chat"),
+                        description = UiText.get(R.string.feat_direct_chat_dialer_desc, "Message numbers directly without saving them to contacts"),
                         checked = stateMap["direct_chat_dialer"] ?: false,
                         onCheckedChange = { onToggle("direct_chat_dialer", it) },
                         icon = WaexIcons.Contacts,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Enable Google Translate",
-                        description = "Replaces Whatsapp's native translator with Google Translate",
+                        title = UiText.get(R.string.feat_inline_translation_title, "Enable Google Translate"),
+                        description = UiText.get(R.string.feat_inline_translation_desc, "Replaces Whatsapp's native translator with Google Translate"),
                         checked = stateMap["inline_translation"] ?: false,
                         onCheckedChange = { onToggle("inline_translation", it) },
                         icon = WaexIcons.Extension,
                         showDivider = true
                     )
                     WaexSwitchPreference(
-                        title = "Enable Copy Status",
-                        description = "Activates the possibility of copying the description and caption of statuses by holding on them",
+                        title = UiText.get(R.string.feat_copy_status_text_title, "Enable Copy Status"),
+                        description = UiText.get(R.string.feat_copy_status_text_desc, "Activates the possibility of copying the description and caption of statuses by holding on them"),
                         checked = stateMap["copy_status_text"] ?: false,
                         onCheckedChange = { onToggle("copy_status_text", it) },
                         icon = WaexIcons.Folder,

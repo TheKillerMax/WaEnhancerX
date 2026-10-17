@@ -1,5 +1,9 @@
 package com.waenhancer.xposed.features.customization;
 
+
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.view.MenuItem;
@@ -217,7 +221,7 @@ public final class SeparateGroupsHook extends BaseFeature {
                         || !CharSequence.class.isAssignableFrom(method.getReturnType())) continue;
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        if ((int) param.args[0] == GROUPS) param.setResult("Groups");
+                        if ((int) param.args[0] == GROUPS) param.setResult(UiText.get(R.string.waex_ui_groups_39bbb719, "Groups"));
                     }
                 });
             }
@@ -239,7 +243,7 @@ public final class SeparateGroupsHook extends BaseFeature {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
                         MenuItem item = (MenuItem) param.getResult();
                         if (item != null && item.getItemId() == GROUPS) {
-                            item.setTitle("Groups");
+                            item.setTitle(UiText.get(R.string.waex_ui_groups_39bbb719, UiText.get(R.string.waex_ui_groups_39bbb719, "Groups")));
                             item.setIcon(communities);
                             item.setCheckable(true);
                         }

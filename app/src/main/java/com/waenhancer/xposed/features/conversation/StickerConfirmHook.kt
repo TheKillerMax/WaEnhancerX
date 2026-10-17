@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.conversation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.view.Gravity
@@ -69,8 +72,8 @@ class StickerConfirmHook(
         val drawable = stickerImageView?.drawable
 
         val bottomSheet = WaexBottomSheet(currentActivity).asBottomSheet()
-        bottomSheet.setTitle("Send Sticker?")
-        bottomSheet.setMessage("Do you want to send this sticker to the chat?")
+        bottomSheet.setTitle(UiText.get(R.string.waex_ui_send_sticker_29e230ec, "Send Sticker?"))
+        bottomSheet.setMessage(UiText.get(R.string.waex_ui_do_you_want_to_send_this_sticker_to_th_962b373b, "Do you want to send this sticker to the chat?"))
 
         if (drawable != null) {
             val previewContainer = LinearLayout(currentActivity).apply {
@@ -88,10 +91,10 @@ class StickerConfirmHook(
             bottomSheet.setView(previewContainer)
         }
 
-        bottomSheet.setPositiveButton("Send") { _, _ ->
+        bottomSheet.setPositiveButton(UiText.get(R.string.waex_ui_send_f6f4688f, "Send")) { _, _ ->
             onConfirmListener?.onClick(view)
         }
-        bottomSheet.setNegativeButton("Cancel", null)
+        bottomSheet.setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), null)
 
         bottomSheet.show()
     }

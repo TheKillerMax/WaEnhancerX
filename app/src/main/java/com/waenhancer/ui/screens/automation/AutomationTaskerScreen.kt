@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.automation
 
+import com.waenhancer.utils.UiText
+
 import com.waenhancer.app.R
 import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
@@ -457,13 +459,13 @@ fun AutomationTaskerScreen() {
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "Audio Transcription",
+                                text = UiText.get(R.string.feat_voice_transcription_title, "Audio Transcription"),
                                 style = typography.bodyLg,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.onSurface
                             )
                             Text(
-                                text = "Enable WhatsApp audio transcription with Groq AI or AssemblyAI",
+                                text = UiText.get(R.string.feat_voice_transcription_desc, "Enable WhatsApp audio transcription with Groq AI or AssemblyAI"),
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 12.sp
@@ -494,7 +496,7 @@ fun AutomationTaskerScreen() {
                             // Provider Dropdown selection
                             Column {
                                 Text(
-                                    text = "AI Transcription Provider",
+                                    text = UiText.get(R.string.waex_ui_ai_transcription_provider_39d10f0b, "AI Transcription Provider"),
                                     style = typography.labelSm,
                                     color = colors.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 6.dp)
@@ -535,7 +537,7 @@ fun AutomationTaskerScreen() {
                             if (transcriptionProvider == "Groq") {
                                 Column {
                                     Text(
-                                        text = "Groq API Key",
+                                        text = UiText.get(R.string.waex_ui_groq_api_key_af3ea8bb, "Groq API Key"),
                                         style = typography.labelSm,
                                         color = colors.onSurfaceVariant,
                                         modifier = Modifier.padding(bottom = 6.dp)
@@ -571,7 +573,7 @@ fun AutomationTaskerScreen() {
                             } else {
                                 Column {
                                     Text(
-                                        text = "AssemblyAI API Key",
+                                        text = UiText.get(R.string.waex_ui_assemblyai_api_key_1a41b574, "AssemblyAI API Key"),
                                         style = typography.labelSm,
                                         color = colors.onSurfaceVariant,
                                         modifier = Modifier.padding(bottom = 6.dp)
@@ -616,7 +618,7 @@ fun AutomationTaskerScreen() {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text(text = "Connection Status", style = typography.bodyMd, color = colors.onSurfaceVariant)
+                                        Text(text = UiText.get(R.string.waex_ui_connection_status_3693e288, "Connection Status"), style = typography.bodyMd, color = colors.onSurfaceVariant)
                                         if (assemblyStatus == "ok") {
                                             Icon(
                                                 imageVector = WaexIcons.Success,
@@ -624,7 +626,7 @@ fun AutomationTaskerScreen() {
                                                 tint = Color(0xFF22C55E),
                                                 modifier = Modifier.size(13.dp)
                                             )
-                                            Text(text = "Connected", style = typography.labelSm, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
+                                            Text(text = UiText.get(R.string.waex_ui_connected_22965568, "Connected"), style = typography.labelSm, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
                                         } else if (assemblyStatus == "verifying") {
                                             CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = colors.primary)
                                         }
@@ -646,7 +648,7 @@ fun AutomationTaskerScreen() {
                                         ),
                                         modifier = Modifier.height(36.dp)
                                     ) {
-                                        Text(text = "Test", style = typography.bodyMd)
+                                        Text(text = UiText.get(R.string.waex_ui_test_532eaabd, "Test"), style = typography.bodyMd)
                                     }
                                 }
                             }

@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -57,7 +60,7 @@ fun WaexTopBar(
                     ) {
                         Icon(
                             imageVector = WaexIcons.Back,
-                            contentDescription = "Back",
+                            contentDescription = UiText.get(R.string.action_back, "Back"),
                             tint = colors.onSurface
                         )
                     }

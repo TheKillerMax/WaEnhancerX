@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Public display/resource contract. Static checks do not certify every runtime screen."""
+from pathlib import Path
+import re
+from collections import Counter
+from xml.etree import ElementTree as ET
+from localization_support import entries, android_text
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT/'app/src/main/java'
+base=entries(ROOT,'values');es=entries(ROOT,'values-es');latam=entries(ROOT,'values-b+es+419')
+assert base.keys()==es.keys()==latam.keys(), 'Missing/extra Spanish resources'
+assert es==latam, 'Spanish fallback and explicit es-419 diverged'
+PATTERN=re.compile(r'%(?:(\d+)\$)?[-#+ 0,(]*\d*(?:\.\d+)?([sdif])')
+checks=0
+for key,(source,formatted) in base.items():
+    target=latam[key][0]
+    assert target.strip(),key
+    assert not re.search('[\u202a-\u202e\u2066-\u2069\ufffd]',target),f'Unexpected bidi/replacement character: {key}'
+    if formatted:
+        def slots(text):
+            seq=0;result=[]
+            for index,typ in PATTERN.findall(text.replace('%%','')):
+                if not index:seq+=1;index=str(seq)
+                result.append((int(index),typ))
+            return Counter(result)
+        assert slots(source)==slots(target),(key,slots(source),slots(target))
+    assert source.count('\n') == target.count('\n'), f'Changed paragraph breaks: {key}'
+    checks+=1
+for folder in ['values','values-es','values-b+es+419']:
+    plural=ET.parse(ROOT/'app/src/main/res'/folder/'ui_strings.xml').getroot().find("plurals[@name='waex_recordings_deleted']")
+    assert plural is not None and {e.attrib['quantity'] for e in plural}=={'one','other'}
+    assert all('%1$d' in ''.join(e.itertext()) for e in plural)
+# Every new static R reference is defined. Keep original English only as explicit fallback.
+for path in SRC.rglob('*'):
+    if path.suffix not in ['.kt','.java']:continue
+    text=path.read_text()
+    for key in re.findall(r'R\.string\.(waex_ui_[a-z0-9_]+)',text):assert key in base,(path,key)
+locale=(SRC/'com/waenhancer/utils/LocaleHelper.kt').read_text()
+assert 'LanguageOption("es-419"' in locale
+assert 'DisplayLocalePolicy.canonicalCode' in locale
+picker=(SRC/'com/waenhancer/ui/screens/settings/ModuleSettingsScreen.kt').read_text()
+assert 'text = lang.englishName' not in picker
+assert 'getLanguageExplanation(lang.code)' in picker
+assert 'listOf("System", "Light", "Dark")' in picker, 'Do not translate stored theme values'
+assert 'putString(PREF_APP_LANGUAGE, langCode)' in locale
+bridge=(SRC/'com/waenhancer/xposed/bridge/HookProvider.java').read_text()
+assert 'new HashMap<String, Object>(prefs.getAll())' in bridge, 'Retain existing language snapshot path'
+assert 'UiText.initialize(appContext, bridgeClient)' in (SRC/'com/waenhancer/xposed/MainHook.java').read_text()
+assert 'UiText.initialize(this, PreferenceStores.publicStore(this))' in (SRC/'com/waenhancer/app/WaexApp.kt').read_text()
+helper=(SRC/'com/waenhancer/utils/UiText.java').read_text()
+assert 'Locale.setDefault' not in helper
+assert 'getResourcePackageName' in helper and 'createPackageContext(MODULE_PACKAGE, 0)' in helper
+assert 'getIdentifier(' not in helper, 'No repeated dynamic resource-name lookups'
+assert 'arguments.length == 0' in helper
+assert not re.search(r'preferences\.(?:edit|put|remove)',helper), 'Display helper must be read-only'
+keep = ET.parse(ROOT/'app/src/main/res/raw/waex_localized_ui_keep.xml').getroot()
+kept=keep.attrib['{http://schemas.android.com/tools}keep'].split(',')
+assert '@string/waex_ui_*' in kept and '@plurals/waex_recordings_deleted' in kept
+# Key enums, JIDs, SQL, cryptographic labels and selectors are intentionally not language strings.
+media=(SRC/'com/waenhancer/xposed/features/media/MediaPreviewHook.kt').read_text()
+for k in ['WhatsApp Image Keys','WhatsApp Video Keys','WhatsApp Audio Keys','WhatsApp Document Keys']:
+    assert f'"{k}".toByteArray(Charsets.UTF_8)' in media
+schema=(SRC/'com/waenhancer/config/PreferenceSchema.java').read_text()
+assert 'UiText' not in schema
+catalog=(ROOT/'app/src/main/assets/preference_catalog.json').read_text()
+assert 'disable_sensor_proximity' in catalog
+# Negative controls: a missing slot, malformed token and bidi marker must be recognized.
+for wrong in ['Sin variable', '%2$s', '%1$d']:
+    assert slots('Count: %1$s') != slots(wrong)
+assert re.search('[\u202a-\u202e\u2066-\u2069\ufffd]','a\u202eb')
+print(f'PASS: {checks} string keys in default/es/es-419, positional formats, paragraphs, plurals, routing and stable keys; 4 negative controls')

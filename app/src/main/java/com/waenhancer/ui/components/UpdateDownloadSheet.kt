@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.widget.Toast
 import android.os.Handler
 import android.os.Looper
@@ -98,7 +101,7 @@ fun UpdateDownloadSheet(
                     if (!session.claimTerminal()) return@post
                     mainHandler.removeCallbacks(progressTask)
                     dismiss()
-                    Toast.makeText(context, "Download failed: ${error.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, UiText.get(R.string.waex_ui_download_failed_1_s_1f37f501, "Download failed: %1\$s", error.message), Toast.LENGTH_LONG).show()
                 }
             }
         }, expectedSha256, expectedSize)
@@ -122,7 +125,7 @@ fun UpdateDownloadSheet(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Downloading update", style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+            Text(UiText.get(R.string.waex_ui_downloading_update_01436823, "Downloading update"), style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
             LinearProgressIndicator(
                 progress = { downloadProgress / 100f },
                 modifier = Modifier.fillMaxWidth(),
@@ -134,7 +137,7 @@ fun UpdateDownloadSheet(
                 style = typography.bodyMd,
                 color = colors.onSurfaceVariant
             )
-            OutlinedButton(onClick = { session.cancel(); dismiss() }, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+            OutlinedButton(onClick = { session.cancel(); dismiss() }, modifier = Modifier.fillMaxWidth()) { Text(UiText.get(R.string.action_cancel, "Cancel")) }
         }
     }
 }

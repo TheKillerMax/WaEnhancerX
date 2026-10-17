@@ -145,7 +145,13 @@ public void show(){shown++;}}'''
                     'ui/screens/settings/StyleNonBooleanPreferencePolicy.java'):
             sources.append(str(SRC/rel))
         subprocess.run(['javac','--release','17','-d',td,*sources],check=True,timeout=60)
-        kt=out/'TestManual.kt';kt.write_text(TEST.replace('__PRODUCTION__',update))
+        # Production callback uses the module's localized, presentation-only warning.
+        # Keep its exact body but provide explicit resource adapters for this JVM probe.
+        import re
+        ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',update)))
+        r_stub='object R {object string {'+ ''.join(f'const val {name} = {0x7f060100+i};' for i,name in enumerate(ids))+'}}\n'
+        ui_stub='object UiText {fun get(id:Int, fallback:String, vararg args:Any?):String = if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)}\n'
+        kt=out/'TestManual.kt';kt.write_text(TEST.replace('__PRODUCTION__',update).replace('class Ui(',r_stub+ui_stub+'class Ui('))
         jar=out/'test.jar'
         subprocess.run(['kotlinc',str(kt),'-classpath',td,'-jvm-target','17','-include-runtime','-d',str(jar)],check=True,timeout=90)
         subprocess.run(['java','-cp',str(jar)+os.pathsep+td,'TestManualKt'],check=True,timeout=60)

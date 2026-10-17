@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,17 +62,17 @@ fun ReleaseDetailsScreen(tagName: String) {
     LaunchedEffect(tagName, retry) {
         error = null
         runCatching { ReleaseRepository.fetchRelease(tagName) }
-            .onSuccess { release = it; if (it == null) error = "Release not found." }
-            .onFailure { error = it.message ?: "Unable to load release." }
+            .onSuccess { release = it; if (it == null) error = UiText.get(R.string.waex_ui_release_not_found_2df35e7c, "Release not found.") }
+            .onFailure { error = it.message ?: UiText.get(R.string.waex_ui_unable_to_load_release_f214dab0, "Unable to load release.") }
     }
-    Scaffold(topBar = { WaexTopBar("Release Details", onBackClick = { nav.popBack() }) }, containerColor = colors.background) { insets ->
+    Scaffold(topBar = { WaexTopBar(UiText.get(R.string.waex_ui_release_details_7a63d360, "Release Details"), onBackClick = { nav.popBack() }) }, containerColor = colors.background) { insets ->
         val item = release
         when {
             item != null -> LazyColumn(Modifier.fillMaxSize().padding(insets), contentPadding = PaddingValues(spacing.pageMargin), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
                     Text(item.name, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
                     Text(
-                        "Version ${item.version}  •  ${formatReleaseDate(item.publishedAt)}",
+                        UiText.get(R.string.waex_ui_version_1_s_2_s_3bc79b6b, "Version %1\$s  •  %2\$s", item.version, formatReleaseDate(item.publishedAt)),
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant
                     )
@@ -113,22 +116,22 @@ fun ReleaseDetailsScreen(tagName: String) {
                                 modifier = Modifier.weight(1f)
                             ) {
                                 val buttonText = when {
-                                    canSwitchMode -> if (BuildConfig.DEBUG) "Switch to Release" else "Switch to Debug"
-                                    isInstalled -> "Reinstall APK"
-                                    isDowngrade -> "Downgrade"
-                                    else -> "Install APK"
+                                    canSwitchMode -> if (BuildConfig.DEBUG) UiText.get(R.string.waex_l10n_switch_release, "Switch to Release") else UiText.get(R.string.waex_l10n_switch_debug, "Switch to Debug")
+                                    isInstalled -> UiText.get(R.string.waex_l10n_reinstall_apk, "Reinstall APK")
+                                    isDowngrade -> UiText.get(R.string.waex_ui_downgrade_d955b7e8, "Downgrade")
+                                    else -> UiText.get(R.string.waex_ui_install_apk_6f672034, "Install APK")
                                 }
                                 Text(buttonText)
                             }
                         }
-                        if (item.htmlUrl.isNotBlank()) OutlinedButton(onClick = { openUrl(context, item.htmlUrl) }, modifier = Modifier.weight(1f)) { Text("Release page") }
+                        if (item.htmlUrl.isNotBlank()) OutlinedButton(onClick = { openUrl(context, item.htmlUrl) }, modifier = Modifier.weight(1f)) { Text(UiText.get(R.string.waex_ui_release_page_6ba4c7eb, "Release page")) }
                     }
                 }
             }
             error != null -> Column(Modifier.fillMaxSize().padding(insets).padding(spacing.pageMargin), Arrangement.Center, Alignment.CenterHorizontally) {
                 Text(error!!, color = colors.onSurfaceVariant)
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { retry++ }) { Text("Try again") }
+                Button(onClick = { retry++ }) { Text(UiText.get(R.string.waex_ui_try_again_d8b8392e, "Try again")) }
             }
             else -> Box(Modifier.fillMaxSize().padding(insets), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = colors.primary) }
         }

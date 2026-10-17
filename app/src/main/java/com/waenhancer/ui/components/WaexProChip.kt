@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -132,7 +135,7 @@ fun WaexProChip(
         ) {
             Icon(
                 imageVector = WaexIcons.Lock,
-                contentDescription = "Locked Pro feature",
+                contentDescription = UiText.get(R.string.waex_ui_locked_pro_feature_8239ac16, "Locked Pro feature"),
                 tint = lockedContentColor,
                 modifier = Modifier.size(9.dp)
             )

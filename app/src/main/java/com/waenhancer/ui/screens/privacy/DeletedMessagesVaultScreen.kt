@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.privacy
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.Manifest
 import android.content.Context
 import android.net.Uri
@@ -146,7 +149,7 @@ fun DeletedMessagesVaultScreen() {
             Scaffold(
                 topBar = {
                     WaexTopBar(
-                        title = "\"Delete For Me\" Messages",
+                        title = UiText.get(R.string.hub_delete_for_me_title, "\"Delete For Me\" Messages"),
                         onBackClick = { navController.popBack() },
                         actions = {
                             Row(
@@ -179,7 +182,7 @@ fun DeletedMessagesVaultScreen() {
                                 .padding(horizontal = spacing.pageMargin, vertical = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            listOf("individuals" to "Individuals", "groups" to "Groups").forEach { (tabId, label) ->
+                            listOf("individuals" to UiText.get(R.string.waex_ui_individuals_d64d3d99, "Individuals"), "groups" to UiText.get(R.string.waex_ui_groups_39bbb719, "Groups")).forEach { (tabId, label) ->
                                 val active = selectedTab == tabId
                                 Box(
                                     modifier = Modifier
@@ -231,12 +234,12 @@ fun DeletedMessagesVaultScreen() {
                                     )
                                 }
                                 Text(
-                                    text = if (selectedTab == "individuals") "No preserved individual chats" else "No preserved group chats",
+                                    text = if (selectedTab == "individuals") UiText.get(R.string.waex_ui_no_preserved_individual_chats_0491329d, "No preserved individual chats") else UiText.get(R.string.waex_ui_no_preserved_group_chats_29845d70, "No preserved group chats"),
                                     style = typography.headlineMd,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "When messages are deleted via 'Delete For Me', they will be preserved and listed here.",
+                                    text = UiText.get(R.string.waex_ui_when_messages_are_deleted_via_delete_f_439b7068, "When messages are deleted via 'Delete For Me', they will be preserved and listed here."),
                                     style = typography.bodyMd,
                                     color = colors.onSurfaceVariant,
                                     textAlign = TextAlign.Center
@@ -271,15 +274,15 @@ private fun loadRealPreservedChats(context: Context): List<PreservedChat> {
     val chatGroupMap = mutableMapOf<String, Boolean>()
 
     for (rec in records) {
-        val jid = if (rec.jid.isNullOrEmpty()) "Unknown" else rec.jid
+        val jid = if (rec.jid.isNullOrEmpty()) UiText.get(R.string.waex_ui_unknown_b764cdc0, "Unknown") else rec.jid
         val dateTimeStr = if (rec.timestamp > 0) {
             dateTimeFormatter.format(Date(rec.timestamp))
         } else {
-            "Preserved"
+            UiText.get(R.string.waex_ui_preserved_9d31b48b, "Preserved")
         }
         val msg = PreservedMessage(
             id = rec.id,
-            text = rec.text.ifBlank { "Preserved message" },
+            text = rec.text.ifBlank { UiText.get(R.string.waex_ui_preserved_message_547f6da1, "Preserved message") },
             timestamp = dateTimeStr,
             isFromMe = rec.isFromMe,
             senderName = if (rec.isGroup && !rec.isFromMe && rec.senderName.isNotBlank()) rec.senderName else null
@@ -443,9 +446,9 @@ private fun WhatsAppChatListItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val prefix = if (lastMsg?.isFromMe == true) "You: " else ""
+                    val prefix = if (lastMsg?.isFromMe == true) UiText.get(R.string.waex_ui_you_7b1aab93, "You: ") else ""
                     Text(
-                        text = "$prefix${lastMsg?.text ?: "No messages"}",
+                        text = "$prefix${lastMsg?.text ?: UiText.get(R.string.waex_ui_no_messages_a06faf26, "No messages")}",
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant,
                         maxLines = 1,

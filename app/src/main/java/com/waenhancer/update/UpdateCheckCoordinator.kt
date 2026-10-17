@@ -1,5 +1,7 @@
 package com.waenhancer.update
 
+import com.waenhancer.utils.UiText
+
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -131,7 +133,7 @@ object UpdateCheckCoordinator {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         manager.notify(NOTIFICATION_ID, NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_waex_download)
-            .setContentTitle("WAEX ${release.version} is available")
+            .setContentTitle(UiText.get(R.string.waex_ui_waex_1_s_is_available_8b796483, "WAEX %1\$s is available", release.version))
             .setContentText(release.name)
             .setStyle(NotificationCompat.BigTextStyle().bigText(release.body.take(500)))
             .setContentIntent(pending)

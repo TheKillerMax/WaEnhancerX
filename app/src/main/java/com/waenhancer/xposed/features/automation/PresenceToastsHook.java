@@ -1,5 +1,9 @@
 package com.waenhancer.xposed.features.automation;
 
+
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -111,7 +115,7 @@ public class PresenceToastsHook extends BaseFeature {
                             if (!PresenceStateStore.isCurrentOnline(event.jid, transitionId)) return;
                             try {
                                 String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
-                                showToastSafely(name + " is online", () -> isOnlineToastEnabled()
+                                showToastSafely(name + UiText.get(R.string.waex_ui_is_online_e0992fa5, " is online"), () -> isOnlineToastEnabled()
                                         && PresenceStateStore.isCurrentOnline(event.jid, transitionId));
                             } catch (RuntimeException | LinkageError ignored) { /* Optional name lookup. */ }
                         });
@@ -182,7 +186,7 @@ public class PresenceToastsHook extends BaseFeature {
                             if (rawJid != null && !rawJid.isEmpty()) {
                                 asyncExecutor.execute(() -> {
                                     String contactName = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
-                                    showToastSafely(contactName + " viewed your status");
+                                    showToastSafely(contactName + UiText.get(R.string.waex_ui_viewed_your_status_44b3e59c, " viewed your status"));
                                 });
                             }
                         }
@@ -269,13 +273,13 @@ public class PresenceToastsHook extends BaseFeature {
                 if (receiptType == 13 && statusToast) {
                     emitToastWithThrottle(rawJid, "status", () -> {
                         String name = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
-                        return name + " viewed your status";
+                        return name + UiText.get(R.string.waex_ui_viewed_your_status_44b3e59c, " viewed your status");
                     });
                 } else if ((receiptType == 13 || receiptType == 5) && msgToast) {
                     // Type 5 / 13 for read message receipt
                     emitToastWithThrottle(rawJid, "msg", () -> {
                         String name = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
-                        return name + " viewed your message";
+                        return name + UiText.get(R.string.waex_ui_viewed_your_message_1fbdce3c, " viewed your message");
                     });
                 }
             }
@@ -309,8 +313,8 @@ public class PresenceToastsHook extends BaseFeature {
 
         TOAST_EXECUTOR.execute(() -> {
             try {
-                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : "A contact";
-                String text = name + " deleted a message";
+                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : UiText.get(R.string.waex_ui_a_contact_f7f0de9a, "A contact");
+                String text = name + UiText.get(R.string.waex_ui_deleted_a_message_475dad17, " deleted a message");
                 handler.post(() -> {
                     try {
                         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();

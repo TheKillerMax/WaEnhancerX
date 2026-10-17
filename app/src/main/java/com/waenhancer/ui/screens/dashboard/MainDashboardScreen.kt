@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.dashboard
 
+import com.waenhancer.utils.UiText
+
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -132,26 +134,26 @@ fun MainDashboardScreen(
     ) { uri ->
         if (uri != null) {
             runCatching { preferenceManager.exportSettings(uri) }
-                .onSuccess { Toast.makeText(context, "$it settings backed up", Toast.LENGTH_SHORT).show() }
-                .onFailure { Toast.makeText(context, "Backup failed: ${it.message}", Toast.LENGTH_LONG).show() }
+                .onSuccess { Toast.makeText(context, UiText.get(R.string.waex_ui_1_s_settings_backed_up_1a3f7819, "%1\$s settings backed up", it), Toast.LENGTH_SHORT).show() }
+                .onFailure { Toast.makeText(context, UiText.get(R.string.waex_ui_backup_failed_1_s_5a9e913e, "Backup failed: %1\$s", it.message), Toast.LENGTH_LONG).show() }
         }
     }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { preferenceManager.importSettings(uri) }
-                .onSuccess { Toast.makeText(context, "$it settings restored. Restart WhatsApp to apply.", Toast.LENGTH_LONG).show() }
-                .onFailure { Toast.makeText(context, "Restore failed: ${it.message}", Toast.LENGTH_LONG).show() }
+                .onSuccess { Toast.makeText(context, UiText.get(R.string.waex_ui_1_s_settings_restored_restart_whatsapp_09d38d41, "%1\$s settings restored. Restart WhatsApp to apply.", it), Toast.LENGTH_LONG).show() }
+                .onFailure { Toast.makeText(context, UiText.get(R.string.waex_ui_restore_failed_1_s_995c8df5, "Restore failed: %1\$s", it.message), Toast.LENGTH_LONG).show() }
         }
     }
     val startBackup = {
         val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
         runCatching { backupLauncher.launch("WAEX-settings-$stamp.waex") }
-            .onFailure { Toast.makeText(context, "Could not open file picker: ${it.message}", Toast.LENGTH_LONG).show() }
+            .onFailure { Toast.makeText(context, UiText.get(R.string.waex_ui_could_not_open_file_picker_1_s_5bc514b4, "Could not open file picker: %1\$s", it.message), Toast.LENGTH_LONG).show() }
         Unit
     }
     val startRestore = {
         runCatching { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
-            .onFailure { Toast.makeText(context, "Could not open file picker: ${it.message}", Toast.LENGTH_LONG).show() }
+            .onFailure { Toast.makeText(context, UiText.get(R.string.waex_ui_could_not_open_file_picker_1_s_5bc514b4, "Could not open file picker: %1\$s", it.message), Toast.LENGTH_LONG).show() }
         Unit
     }
 
@@ -336,7 +338,7 @@ fun MainDashboardScreen(
                                 TargetRuntimePresentation.Severity.REVIEW -> colors.error
                                 TargetRuntimePresentation.Severity.UNKNOWN -> colors.onSurfaceVariant
                             }
-                            val statusText = status.text
+                            val statusText = com.waenhancer.utils.InternalLabels.text(status.text)
                             val statusTextColor = statusDotColor
 
                             Surface(
@@ -455,7 +457,7 @@ fun MainDashboardScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = WaexIcons.Refresh,
-                                                    contentDescription = "Restart App",
+                                                    contentDescription = UiText.get(R.string.waex_ui_restart_app_07fe185c, "Restart App"),
                                                     tint = colors.onSurfaceVariant,
                                                     modifier = Modifier.size(15.dp)
                                                 )
@@ -647,7 +649,7 @@ fun MainDashboardScreen(
                     preferenceManager.remove("dummy_notify")
                     refreshTrigger++
                     showResetSettingsDialog = false
-                    Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, UiText.get(R.string.waex_ui_all_settings_reset_to_default_75452587, "All settings reset to default"), Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -854,7 +856,7 @@ private fun TargetCompatibilityBottomSheet(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = targetSummary.text,
+                            text = com.waenhancer.utils.InternalLabels.text(targetSummary.text),
                             style = typography.bodyMd,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
@@ -1002,12 +1004,15 @@ private fun TargetCompatibilityBottomSheet(
                             val detailStatusText = when {
                                 isAppReady && app.injectedHooks.isNotEmpty() -> {
                                     val activeCount = app.injectedHooks.count { it.status == "ACTIVE" }
-                                    "Injected & active ($activeCount/${app.injectedHooks.size} hooks active)"
+                                    UiText.get(R.string.waex_l10n_detail_active,
+                                        "Injected & active (%1\$d/%2\$d hooks active)", activeCount, app.injectedHooks.size)
                                 }
-                                isAppReady -> "Injected • Initialization reported complete"
-                                !app.isHooked -> app.injectionEvidence.label
-                                app.runtimeStatus != "READY" -> "Injected • Initialization: ${TargetRuntimePresentation.initialization(app)}"
-                                else -> "Injected • Bridge: ${TargetRuntimePresentation.bridge(app)}"
+                                isAppReady -> com.waenhancer.utils.InternalLabels.text("Injected • Initialization reported complete")
+                                !app.isHooked -> com.waenhancer.utils.InternalLabels.text(app.injectionEvidence.label)
+                                app.runtimeStatus != "READY" -> UiText.get(R.string.waex_l10n_detail_init,
+                                    "Injected • Initialization: %1\$s", com.waenhancer.utils.InternalLabels.text(TargetRuntimePresentation.initialization(app)))
+                                else -> UiText.get(R.string.waex_l10n_detail_bridge,
+                                    "Injected • Bridge: %1\$s", com.waenhancer.utils.InternalLabels.text(TargetRuntimePresentation.bridge(app)))
                             }
 
                             Text(
@@ -1443,15 +1448,13 @@ private fun DashboardDiagnosticsCard(
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_framework),
-                value = diagnostics?.framework?.name ?: stringResource(R.string.diag_framework_detecting),
-                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" },
-                isLoading = diagnostics == null,
-                showValueText = true
+                value = diagnostics?.framework?.name?.let { com.waenhancer.utils.InternalLabels.text(it) } ?: stringResource(R.string.diag_framework_detecting),
+                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_compatibility),
-                value = targetSummary.text,
+                value = com.waenhancer.utils.InternalLabels.text(targetSummary.text),
                 healthy = targetSummary.healthy,
                 isLoading = false,
                 onClick = onOpenTargetCompatibility
@@ -1482,12 +1485,12 @@ private fun DashboardDiagnosticsCard(
             ) {
                 DiagnosticMetric(
                     label = stringResource(R.string.diag_label_android),
-                    value = diagnostics?.let { "API ${it.sdk}" } ?: "—",
+                    value = diagnostics?.let { UiText.get(R.string.waex_ui_api_1_s_7ed74ebc, "API %1\$s", it.sdk) } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
                     label = stringResource(R.string.diag_label_selinux),
-                    value = diagnostics?.selinux ?: "—",
+                    value = diagnostics?.selinux?.let { com.waenhancer.utils.InternalLabels.text(it) } ?: "—",
                     modifier = Modifier.weight(1f)
                 )
                 DiagnosticMetric(
@@ -1766,7 +1769,7 @@ fun InjectedHookRow(hook: InjectedHookItem) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = hook.name,
+                        text = com.waenhancer.utils.InternalLabels.text(hook.name),
                         style = typography.bodyMd,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.onSurface,
@@ -1782,7 +1785,7 @@ fun InjectedHookRow(hook: InjectedHookItem) {
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = hook.category,
+                            text = com.waenhancer.utils.InternalLabels.text(hook.category),
                             style = typography.labelSm,
                             fontSize = 10.sp,
                             color = colors.onSurfaceVariant
@@ -1804,7 +1807,7 @@ fun InjectedHookRow(hook: InjectedHookItem) {
                 if (!hook.error.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Error: ${hook.error}",
+                        text = UiText.get(R.string.waex_ui_error_1_s_81a2d6c7, "Error: %1\$s", hook.error),
                         style = typography.labelSm,
                         fontSize = 10.sp,
                         color = colors.error,
@@ -1817,7 +1820,7 @@ fun InjectedHookRow(hook: InjectedHookItem) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Text(
-                text = if (isSuccess) "Active" else "Failed",
+                text = if (isSuccess) UiText.get(R.string.diag_status_active, "Active") else UiText.get(R.string.waex_ui_failed_031a8f0f, "Failed"),
                 style = typography.labelSm,
                 fontWeight = FontWeight.Medium,
                 color = dotColor,

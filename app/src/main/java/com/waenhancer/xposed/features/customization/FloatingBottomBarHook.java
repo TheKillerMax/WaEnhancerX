@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.customization;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -1203,7 +1206,7 @@ public class FloatingBottomBarHook extends BaseFeature {
             View child = bar.getChildAt(i);
             if (!(child instanceof ViewGroup)) continue;
             ViewGroup menu = (ViewGroup) child;
-            if (menu.getChildCount() < 2 || !containsText(menu.getChildAt(1), "Groups")) continue;
+            if (menu.getChildCount() < 2 || !(containsText(menu.getChildAt(1), "Groups") || containsText(menu.getChildAt(1), UiText.get(R.string.waex_ui_groups_39bbb719, "Groups")))) continue;
 
             boolean firstReconciliation = !forcedSelectedTabs.containsKey(menu);
             int selectedIndex;

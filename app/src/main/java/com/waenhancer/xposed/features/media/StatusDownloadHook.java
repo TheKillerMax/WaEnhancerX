@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.media;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -220,7 +223,7 @@ public class StatusDownloadHook extends BaseFeature {
                 Menu.NONE,
                 MENU_ID_STATUS_DOWNLOAD,
                 Menu.NONE,
-                isTextStatus ? "Copy text" : "Download"
+                isTextStatus ? UiText.get(R.string.waex_ui_copy_text_b0ac9cea, "Copy text") : UiText.get(R.string.waex_ui_download_d6eafe82, "Download")
         );
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
@@ -244,7 +247,7 @@ public class StatusDownloadHook extends BaseFeature {
                     downloadCurrentStatus(sourceObject);
                 } catch (Throwable t) {
                     XposedBridge.log(TAG + " Download error: " + t.getClass().getSimpleName());
-                    showToast(context, "Failed to download status: " + t.getMessage());
+                    showToast(context, UiText.get(R.string.waex_ui_failed_to_download_status_19426d76, "Failed to download status: ") + t.getMessage());
                 }
             });
             return true;
@@ -260,7 +263,7 @@ public class StatusDownloadHook extends BaseFeature {
         } else {
             showToast(
                     context,
-                    "Please wait until the status finishes downloading, then try again",
+                    UiText.get(R.string.waex_ui_please_wait_until_the_status_finishes_0ef2b7ff, "Please wait until the status finishes downloading, then try again"),
                     Toast.LENGTH_LONG
             );
         }
@@ -606,7 +609,7 @@ public class StatusDownloadHook extends BaseFeature {
                             while ((len = in.read(buf)) > 0) {
                                 out.write(buf, 0, len);
                             }
-                            showToast(ctx, "Status saved to Gallery (WAEX)");
+                            showToast(ctx, UiText.get(R.string.waex_ui_status_saved_to_gallery_waex_9f345669, "Status saved to Gallery (WAEX)"));
                             return;
                         }
                     }
@@ -628,13 +631,13 @@ public class StatusDownloadHook extends BaseFeature {
                     while ((len = in.read(buf)) > 0) {
                         out.write(buf, 0, len);
                     }
-                    showToast(ctx, "Saved to: " + dest.getAbsolutePath());
+                    showToast(ctx, UiText.get(R.string.waex_ui_saved_to_b95e47d2, "Saved to: ") + dest.getAbsolutePath());
                     return;
                 }
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " saveMediaFile error: " + t.getClass().getSimpleName());
-            showToast(ctx, "Error saving status media: " + t.getMessage());
+            showToast(ctx, UiText.get(R.string.waex_ui_error_saving_status_media_de3da11e, "Error saving status media: ") + t.getMessage());
         }
     }
 
@@ -718,10 +721,10 @@ public class StatusDownloadHook extends BaseFeature {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
                 ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("Status Text", text);
+                ClipData clip = ClipData.newPlainText(UiText.get(R.string.waex_ui_status_text_b35d0184, "Status Text"), text);
                 if (clipboard != null) {
                     clipboard.setPrimaryClip(clip);
-                    Toast.makeText(ctx, "Copied status text to clipboard", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ctx, UiText.get(R.string.waex_ui_copied_status_text_to_clipboard_b81c6089, "Copied status text to clipboard"), Toast.LENGTH_SHORT).show();
                 }
             } catch (Throwable ignored) {}
         });

@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.media;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -77,7 +80,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                     if (menu.findItem(MENU_ID_DOWNLOAD) != null) return;
 
                     Activity activity = (Activity) param.thisObject;
-                    MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
+                    MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
                     item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
                     Drawable icon = MenuIconLoader.load(activity, "ic_waex_download");
@@ -90,13 +93,13 @@ public class DownloadViewOnceHook extends BaseFeature {
                             try {
                                 File mediaFile = extractMediaFileFromActivity(activity);
                                 if (mediaFile == null || !mediaFile.exists()) {
-                                    showToast(activity, "Media not cached or available yet");
+                                    showToast(activity, UiText.get(R.string.waex_ui_media_not_cached_or_available_yet_45e16ba0, "Media not cached or available yet"));
                                     return;
                                 }
                                 saveMediaFile(activity, mediaFile);
                             } catch (Throwable t) {
                                 XposedBridge.log(TAG + " Error saving view once from Activity: " + t.getMessage());
-                                showToast(activity, "Failed to save: " + t.getMessage());
+                                showToast(activity, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
                             }
                         });
                         return true;
@@ -162,7 +165,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                         if (menu == null || menu.findItem(MENU_ID_DOWNLOAD) != null) return;
 
                         final Object targetMessage = fmessageObj;
-                        MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
+                        MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
                         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
                         Drawable icon = MenuIconLoader.load(context, "ic_waex_download");
@@ -180,10 +183,10 @@ public class DownloadViewOnceHook extends BaseFeature {
                                             return;
                                         }
                                     }
-                                    showToast(context, "Media not available yet");
+                                    showToast(context, UiText.get(R.string.waex_ui_media_not_available_yet_c504582c, "Media not available yet"));
                                 } catch (Throwable t) {
                                     XposedBridge.log(TAG + " Error saving media: " + t.getMessage());
-                                    showToast(context, "Failed to save: " + t.getMessage());
+                                    showToast(context, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
                                 }
                             });
                             return true;
@@ -298,10 +301,10 @@ public class DownloadViewOnceHook extends BaseFeature {
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
             GalleryMediaExporter.export(ctx, srcFile);
-            showToast(ctx, "Media saved (WAEX)");
+            showToast(ctx, UiText.get(R.string.waex_ui_media_saved_v30, "Media saved (WAEX)"));
         } catch (Exception failure) {
             XposedBridge.log(TAG + " Export failed: " + failure.getClass().getSimpleName());
-            showToast(ctx, "Unable to save this media file");
+            showToast(ctx, UiText.get(R.string.waex_ui_media_save_failed_v30, "Unable to save this media file"));
         }
     }
 

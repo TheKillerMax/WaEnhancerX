@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.media;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
@@ -99,13 +102,13 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
 
     private void installMenuAction(Activity activity, Menu menu) {
         if (menu.findItem(MENU_ID) != null) return;
-        MenuItem item = menu.add(Menu.NONE, MENU_ID, Menu.NONE, "Download");
+        MenuItem item = menu.add(Menu.NONE, MENU_ID, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
         item.setIcon(android.R.drawable.stat_sys_download_done);
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
         item.setOnMenuItemClickListener(ignored -> {
             Bitmap bitmap = captureDisplayedPhoto(activity);
             if (bitmap == null) {
-                Toast.makeText(activity, "Profile photo is not ready yet", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, UiText.get(R.string.waex_ui_profile_photo_is_not_ready_yet_8ff494b5, "Profile photo is not ready yet"), Toast.LENGTH_SHORT).show();
                 return true;
             }
             io.execute(() -> saveBitmap(activity, bitmap));
@@ -204,8 +207,8 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
             bitmap.recycle();
             boolean saved = success;
             activity.runOnUiThread(() -> Toast.makeText(activity,
-                    saved ? "Profile photo saved to Pictures/WAEX/Profile Photos"
-                            : "Couldn't save profile photo",
+                    saved ? UiText.get(R.string.waex_ui_profile_photo_saved_to_pictures_waex_p_a8c4bd76, "Profile photo saved to Pictures/WAEX/Profile Photos")
+                            : UiText.get(R.string.waex_ui_couldn_t_save_profile_photo_296d0ed9, "Couldn't save profile photo"),
                     Toast.LENGTH_LONG).show());
         }
     }
