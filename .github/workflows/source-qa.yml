@@ -126,6 +126,20 @@ jobs:
             test -f qa/test_recorder_cleanup.py
           fi
 
+      - name: Require regression tests for scoped export and identity changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java ]]; then
+            test -f qa/test_gallery_export.py
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
+            test -f qa/test_contact_identity.py
+          fi
+          if grep -q 'prefs.contains("hide_forwarded_tag")' app/src/main/java/com/waenhancer/xposed/features/privacy/HideForwardedTagHook.kt; then
+            test -f qa/test_forwarded_metadata_scope.py
+          fi
+
       - name: Run additional source-only QA suites when merged
         shell: bash
         run: |
@@ -174,6 +188,9 @@ jobs:
             qa/test_runtime_observation_clock.py \
             qa/test_filter_work.py \
             qa/test_recorder_cleanup.py \
+            qa/test_gallery_export.py \
+            qa/test_contact_identity.py \
+            qa/test_forwarded_metadata_scope.py \
             qa/test_db_migrations.py; do
             if [[ -f "$test_script" ]]; then
               echo "::group::$test_script"
