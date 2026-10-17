@@ -1,5 +1,6 @@
 [Added]
 - Added support for switching between debug and release
+- Added HMA detection in diagnosis
 
 [Fixes]
 - Fixed missing texts or resources from category titles or descriptions
@@ -11,6 +12,7 @@
 
 [Improvements]
 - Improved Call recorder
+- Improved System Diagnosis
 
 [New Languages]
 - Chinese
