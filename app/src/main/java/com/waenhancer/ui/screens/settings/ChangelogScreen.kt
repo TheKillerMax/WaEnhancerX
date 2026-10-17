@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.util.LinkifyCompat
 import androidx.core.util.PatternsCompat
+import com.waenhancer.app.BuildConfig
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.components.BuildTypeSelectionSheet
 import com.waenhancer.ui.components.UpdateDownloadSheet
@@ -191,11 +192,24 @@ fun ChangelogScreen() {
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                                 )
                             }
-                            if ((release.assets.isNotEmpty() || release.downloadUrl != null) && (comparison > 0 || (comparison < 0 && allowDowngrade))) {
+                            val debugAsset = release.assets.firstOrNull { it.isDebug }
+                            val releaseAsset = release.assets.firstOrNull { !it.isDebug }
+                            val hasBothModes = debugAsset != null && releaseAsset != null
+                            val canSwitchMode = installed && hasBothModes
+                            val otherModeAsset = if (installed) {
+                                if (BuildConfig.DEBUG) releaseAsset else debugAsset
+                            } else null
+
+                            val showActionButton = (canSwitchMode && otherModeAsset != null) ||
+                                ((release.assets.isNotEmpty() || release.downloadUrl != null) && (comparison > 0 || (comparison < 0 && allowDowngrade)))
+
+                            if (showActionButton) {
                                 Spacer(Modifier.height(14.dp))
                                 Button(
                                     onClick = {
-                                        if (release.assets.size > 1) {
+                                        if (canSwitchMode && otherModeAsset != null) {
+                                            activeDownload = release to otherModeAsset
+                                        } else if (release.assets.size > 1) {
                                             buildSelectionRelease = release
                                         } else {
                                             val asset = release.assets.firstOrNull() ?: release.defaultAsset
@@ -212,7 +226,12 @@ fun ChangelogScreen() {
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(if (comparison > 0) "Upgrade" else "Downgrade")
+                                    val buttonText = when {
+                                        canSwitchMode -> if (BuildConfig.DEBUG) "Switch to Release" else "Switch to Debug"
+                                        comparison > 0 -> "Upgrade"
+                                        else -> "Downgrade"
+                                    }
+                                    Text(buttonText)
                                 }
                             }
                         }

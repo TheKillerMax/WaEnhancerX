@@ -33,9 +33,11 @@ import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
+import com.waenhancer.app.BuildConfig
 import com.waenhancer.update.ReleaseRepository
 import com.waenhancer.update.WaexAsset
 import com.waenhancer.update.WaexRelease
+import com.waenhancer.update.normalizeVersion
 
 @Composable
 fun ReleaseDetailsScreen(tagName: String) {
@@ -75,30 +77,48 @@ fun ReleaseDetailsScreen(tagName: String) {
                     ChangelogBodyView(item.body, initiallyExpanded = true)
                     Spacer(Modifier.height(20.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val isInstalled = item.version.equals(normalizeVersion(installedVersion), true)
+                        val debugAsset = item.assets.firstOrNull { it.isDebug }
+                        val releaseAsset = item.assets.firstOrNull { !it.isDebug }
+                        val hasBothModes = debugAsset != null && releaseAsset != null
+                        val canSwitchMode = isInstalled && hasBothModes
+                        val otherModeAsset = if (isInstalled) {
+                            if (BuildConfig.DEBUG) releaseAsset else debugAsset
+                        } else null
+
                         val isDowngrade = ReleaseRepository.versionCode(item.version) < ReleaseRepository.versionCode(installedVersion)
-                        if (!isDowngrade || preferences.getBoolean("downgrades_enabled", false)) {
-                            if (item.assets.isNotEmpty() || item.downloadUrl != null) {
-                                Button(
-                                    onClick = {
-                                        if (item.assets.size > 1) {
-                                            showBuildSelection = true
-                                        } else {
-                                            val asset = item.assets.firstOrNull() ?: item.defaultAsset
-                                            if (asset != null) {
-                                                activeDownload = item to asset
-                                            } else if (item.downloadUrl != null) {
-                                                activeDownload = item to WaexAsset(
-                                                    name = "WaEnhancerX-${item.tagName}.apk",
-                                                    downloadUrl = item.downloadUrl!!,
-                                                    size = item.downloadSize
-                                                )
-                                            }
+                        val allowDowngrade = preferences.getBoolean("downgrades_enabled", false)
+                        val canInstall = canSwitchMode || (!isDowngrade || allowDowngrade)
+
+                        if (canInstall && (item.assets.isNotEmpty() || item.downloadUrl != null)) {
+                            Button(
+                                onClick = {
+                                    if (canSwitchMode && otherModeAsset != null) {
+                                        activeDownload = item to otherModeAsset
+                                    } else if (item.assets.size > 1) {
+                                        showBuildSelection = true
+                                    } else {
+                                        val asset = item.assets.firstOrNull() ?: item.defaultAsset
+                                        if (asset != null) {
+                                            activeDownload = item to asset
+                                        } else if (item.downloadUrl != null) {
+                                            activeDownload = item to WaexAsset(
+                                                name = "WaEnhancerX-${item.tagName}.apk",
+                                                downloadUrl = item.downloadUrl!!,
+                                                size = item.downloadSize
+                                            )
                                         }
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Install APK")
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                val buttonText = when {
+                                    canSwitchMode -> if (BuildConfig.DEBUG) "Switch to Release" else "Switch to Debug"
+                                    isInstalled -> "Reinstall APK"
+                                    isDowngrade -> "Downgrade"
+                                    else -> "Install APK"
                                 }
+                                Text(buttonText)
                             }
                         }
                         if (item.htmlUrl.isNotBlank()) OutlinedButton(onClick = { openUrl(context, item.htmlUrl) }, modifier = Modifier.weight(1f)) { Text("Release page") }
