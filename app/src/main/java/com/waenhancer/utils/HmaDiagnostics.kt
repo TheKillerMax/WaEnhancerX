@@ -308,19 +308,24 @@ object HmaDiagnostics {
                 }
             }
 
-            // Write modified JSON to temporary file in app cache then copy via root
-            val tempFile = File(context.cacheDir, "hma_fix_${System.currentTimeMillis()}.json")
-            tempFile.writeText(root.toString())
+            // Encode JSON to base64 to avoid quoting/escaping issues in shell
+            val b64 = android.util.Base64.encodeToString(root.toString().toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+            val tmpConfig = "$configPath.tmp"
 
-            val copyCmd = "cp ${tempFile.absolutePath} $configPath && " +
+            val writeScript = "echo '$b64' | base64 -d > $tmpConfig && " +
+                    "mv $tmpConfig $configPath && " +
                     "chmod 600 $configPath && " +
                     "chown system:system $configPath; " +
-                    "rm -f ${tempFile.absolutePath}"
-            AppRestartHelper.runRootCommand(copyCmd)
+                    "killall org.frknkrc44.hma_oss 2>/dev/null; " +
+                    "am force-stop org.frknkrc44.hma_oss 2>/dev/null; " +
+                    "true"
+
+            val result = AppRestartHelper.runRootCommand(writeScript)
+            val writtenOk = result != null
 
             // Clear cached diagnostic result so next check reflects new state
             cachedResult.set(null)
-            true
+            writtenOk
         } catch (_: Exception) {
             false
         }
