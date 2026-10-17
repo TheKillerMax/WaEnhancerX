@@ -6,6 +6,7 @@ navigation-only entries. Do not infer that an alias is a working UI switch.
 """
 from pathlib import Path
 import re
+from catalog_source import catalog_features
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'app/src/main/java/com/waenhancer'
@@ -29,28 +30,8 @@ SCHEMA_PATTERN = re.compile(r'add\(entries,\s*"([^"]+)"\s*,\s*Type\.([A-Z_]+)')
 ALIAS_PATTERN = re.compile(r'"([^"]+)"\s+to\s+"([^"]+)"')
 
 
-import json
-
-ASSETS = ROOT / 'app/src/main/assets'
-
-
-def parse_catalog(text_or_path=None):
-    if text_or_path is not None and not str(text_or_path).strip().startswith('[') and not str(text_or_path).endswith('.json'):
-        # Check if legacy text contains FeatureItem
-        found = CATALOG_PATTERN.findall(text_or_path)
-        if found:
-            return found
-    catalog_file = ASSETS / 'preference_catalog.json'
-    data = json.loads(catalog_file.read_text(encoding='utf-8'))
-    # Replicate canonical deduplication from FeatureCatalog
-    keys = []
-    seen = set()
-    for group in data:
-        for k in group.get('keys', []):
-            if k not in seen:
-                seen.add(k)
-                keys.append(k)
-    return keys
+def parse_catalog(text):
+    return CATALOG_PATTERN.findall(text)
 
 
 def parse_schema(text):
@@ -81,7 +62,7 @@ def validate(catalog, schema, aliases):
 
 
 def main():
-    cat = parse_catalog((SRC / 'config/FeatureCatalog.kt').read_text(encoding='utf-8'))
+    cat = [row['key'] for row in catalog_features(ROOT)]
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)

@@ -24,7 +24,13 @@ with tempfile.TemporaryDirectory(prefix='waex_feature_inventory_') as directory:
     root = Path(directory)
     java_root = root/'app/src/main/java/com/waenhancer'
     for rel, data in {
-        'config/FeatureCatalog.kt': 'private val canonicalGroupOverrides = mapOf()',
+        'config/FeatureCatalog.kt': '''private const val ASSET_NAME = "preference_catalog.json"
+private val canonicalGroupOverrides = mapOf(
+)
+.flatMap { it.items() }
+.filter { item -> canonicalGroupOverrides[item.key]?.let { it == item.groupId } ?: true }
+.distinctBy { it.key }
+''',
         'config/PreferenceSchema.java': 'add(entries, "alpha", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);',
         'core/preferences/SettingsBackupCodec.kt': '"beta" to "alpha"',
         'xposed/features/AlphaHook.java': 'boolean yes = prefs.getBoolean("alpha", false);',
@@ -34,13 +40,24 @@ with tempfile.TemporaryDirectory(prefix='waex_feature_inventory_') as directory:
         file.write_text(data)
     asset = root/'app/src/main/assets/preference_catalog.json'
     asset.parent.mkdir(parents=True, exist_ok=True)
-    asset.write_text('[{"id":"test","keys":["alpha","beta"]}]')
+    asset.write_text('[{"id":"test","tabIndex":1,"tabId":"privacy","keys":["alpha","beta"]}]')
+    resources = root/'app/src/main/res/values/strings.xml'
+    resources.parent.mkdir(parents=True, exist_ok=True)
+    resources.write_text('''<resources>
+      <string name="sec_test">Test group</string>
+      <string name="catalog_tab_privacy">Privacy</string>
+      <string name="feat_alpha_title">Alpha</string>
+      <string name="feat_alpha_desc">Alpha description</string>
+      <string name="feat_beta_title">Beta</string>
+      <string name="feat_beta_desc">Beta description</string>
+    </resources>''')
     found = inventory(root)
     assert found['catalog_count'] == 2
     assert found['schema_key_count'] == 1
     assert found['not_in_schema'] == 1
     assert found['without_direct_xposed_literal'] == 1
     alpha, beta = found['features']
+    assert alpha['label'] == 'Alpha' and beta['label'] == 'Beta'
     assert alpha['runtime_direct_refs'] == ['app/src/main/java/com/waenhancer/xposed/features/AlphaHook.java']
     assert beta['legacy_alias'] == 'alpha'
     assert beta['alias_schema_type'] == 'BOOLEAN'
