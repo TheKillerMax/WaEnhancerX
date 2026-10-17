@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">Включите новый стиль настроек с фотографией профиля на панели инструментов главного экрана.</string>
     <string name="feat_custom_view_dpi_title">Изменение разрешения по умолчанию</string>
     <string name="feat_custom_view_dpi_desc">Измените настройку DPI для приложения. Используйте 0 для сброса настроек по умолчанию.</string>
-    <string name="feat_seen_tick_customization_title">Посмотреть просмотренный тик</string>
-    <string name="feat_seen_tick_customization_desc">Показывать значок, если представление сообщения было отправлено получателю или было просмотрено уникальное представление.</string>
+    <string name="feat_seen_tick_customization_title">Кнопка подтверждения прочтения</string>
+    <string name="feat_seen_tick_customization_desc">При скрытых подтверждениях прочтения показывать действие для отправки отложенных подтверждений</string>
     <string name="feat_floating_bottom_bar_title">Плавающая нижняя панель</string>
     <string name="feat_floating_bottom_bar_desc">Включить плавающую нижнюю панель навигации в стиле iOS.</string>
     <string name="feat_unlock_premium_customization_title">Разблокировать WA Plus</string>

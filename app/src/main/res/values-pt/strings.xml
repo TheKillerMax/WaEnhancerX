@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">Habilite o novo estilo de configurações, com foto do perfil na barra de ferramentas da tela inicial</string>
     <string name="feat_custom_view_dpi_title">Alterar DPI padrão</string>
     <string name="feat_custom_view_dpi_desc">Altere a configuração de DPI do aplicativo. Use 0 para redefinir o padrão.</string>
-    <string name="feat_seen_tick_customization_title">Ver visto visto</string>
-    <string name="feat_seen_tick_customization_desc">Mostrar um ícone se a visualização da mensagem foi enviada ao destinatário ou se a visualização única foi vista</string>
+    <string name="feat_seen_tick_customization_title">Botão manual de confirmação de leitura</string>
+    <string name="feat_seen_tick_customization_desc">Quando ocultar confirmações de leitura estiver ativado, mostrar uma ação para enviar as confirmações retidas</string>
     <string name="feat_floating_bottom_bar_title">Barra inferior flutuante</string>
     <string name="feat_floating_bottom_bar_desc">Ativar barra de navegação inferior flutuante estilo iOS</string>
     <string name="feat_unlock_premium_customization_title">Desbloquear WA Plus</string>

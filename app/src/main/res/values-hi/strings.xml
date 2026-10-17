@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">होम स्क्रीन टूलबार पर प्रोफ़ाइल फ़ोटो के साथ नई सेटिंग शैली सक्षम करें</string>
     <string name="feat_custom_view_dpi_title">डिफ़ॉल्ट डीपीआई बदलें</string>
     <string name="feat_custom_view_dpi_desc">एप्लिकेशन के लिए डीपीआई सेटिंग बदलें। डिफ़ॉल्ट पर रीसेट करने के लिए 0 का उपयोग करें।</string>
-    <string name="feat_seen_tick_customization_title">देखें देखा गया टिक</string>
-    <string name="feat_seen_tick_customization_desc">यदि संदेश दृश्य प्राप्तकर्ता को भेजा गया था या अद्वितीय दृश्य देखा गया था तो एक आइकन दिखाएं</string>
+    <string name="feat_seen_tick_customization_title">पढ़ने की पुष्टि भेजने का बटन</string>
+    <string name="feat_seen_tick_customization_desc">पढ़ने की पुष्टि छिपाना चालू होने पर रोकी गई पुष्टियाँ भेजने की कार्रवाई दिखाएँ</string>
     <string name="feat_floating_bottom_bar_title">फ्लोटिंग बॉटम बार</string>
     <string name="feat_floating_bottom_bar_desc">आईओएस-शैली फ्लोटिंग बॉटम नेविगेशन बार सक्षम करें</string>
     <string name="feat_unlock_premium_customization_title">डब्ल्यूए प्लस को अनलॉक करें</string>

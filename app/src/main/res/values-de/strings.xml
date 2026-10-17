@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">Aktivieren Sie den neuen Einstellungsstil mit Profilfoto in der Symbolleiste des Startbildschirms</string>
     <string name="feat_custom_view_dpi_title">Standard-DPI ändern</string>
     <string name="feat_custom_view_dpi_desc">Ändern Sie die DPI-Einstellung für die Anwendung. Verwenden Sie 0, um auf die Standardeinstellungen zurückzusetzen.</string>
-    <string name="feat_seen_tick_customization_title">Gesehenes Häkchen anzeigen</string>
-    <string name="feat_seen_tick_customization_desc">Zeigt ein Symbol an, wenn die Nachrichtenansicht an den Empfänger gesendet wurde oder eine eindeutige Ansicht angezeigt wurde</string>
+    <string name="feat_seen_tick_customization_title">Manuelle Lesebestätigung</string>
+    <string name="feat_seen_tick_customization_desc">Wenn Lesebestätigungen ausgeblendet sind, eine Aktion zum Senden zurückgehaltener Lesebestätigungen anzeigen</string>
     <string name="feat_floating_bottom_bar_title">Schwebende untere Leiste</string>
     <string name="feat_floating_bottom_bar_desc">Aktivieren Sie die schwebende untere Navigationsleiste im iOS-Stil</string>
     <string name="feat_unlock_premium_customization_title">WA Plus freischalten</string>

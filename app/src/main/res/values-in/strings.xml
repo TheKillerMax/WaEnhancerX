@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">Aktifkan gaya pengaturan baru, dengan foto profil di toolbar layar beranda</string>
     <string name="feat_custom_view_dpi_title">Ubah DPI Default</string>
     <string name="feat_custom_view_dpi_desc">Ubah pengaturan DPI untuk aplikasi. Gunakan 0 untuk mengatur ulang ke default.</string>
-    <string name="feat_seen_tick_customization_title">Lihat Terlihat Centang</string>
-    <string name="feat_seen_tick_customization_desc">Menampilkan ikon jika tampilan pesan dikirim ke penerima atau tampilan unik terlihat</string>
+    <string name="feat_seen_tick_customization_title">Tombol manual tanda dibaca</string>
+    <string name="feat_seen_tick_customization_desc">Saat Sembunyikan Tanda Dibaca aktif, tampilkan tindakan untuk mengirim tanda dibaca yang ditahan</string>
     <string name="feat_floating_bottom_bar_title">Batang Bawah Mengambang</string>
     <string name="feat_floating_bottom_bar_desc">Aktifkan bilah navigasi bawah mengambang bergaya iOS</string>
     <string name="feat_unlock_premium_customization_title">Buka kunci WA Plus</string>

@@ -27,15 +27,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Blue on Reply Hook:
@@ -45,15 +41,13 @@ public class BlueOnReplyHook extends BaseFeature {
 
     private static final String TAG = "[WAEX][BlueOnReply]";
     private static final String PREF_KEY = "blueonreply";
-    private static final Pattern JID_PATTERN = Pattern.compile(
-            "([0-9-]+)@(s\\.whatsapp\\.net|g\\.us|lid|broadcast)");
-    private static final Map<String, CopyOnWriteArrayList<ReadJobRecipe>> PENDING_JOBS =
-            new ConcurrentHashMap<>();
+    // Bound retained constructor arguments and never route one chat's read receipts to another.
+    private static final PendingReadReceiptStore<ReadJobRecipe> PENDING_JOBS =
+            new PendingReadReceiptStore<>(128, 64);
     private static volatile Constructor<?> sendReadConstructor;
     private static volatile Method enqueueJobMethod;
     private static volatile Class<?> managerClass;
     private static volatile Object jobManager;
-    private static volatile String lastHiddenConversationJid;
     private static final int MENU_SEND_BLUE_TICK = 0x7EAE0012;
 
     private static final class ReadJobRecipe {
@@ -161,17 +155,10 @@ public class BlueOnReplyHook extends BaseFeature {
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!isBlueOnReplyEnabled()) return;
 
-                        String remoteJid = extractRemoteJid(param.thisObject);
-                        if (remoteJid != null) {
-                            String receiptJid = remoteJid;
-                            Activity activity = ActivityTracker.getCurrentActivity();
-                            if (activity != null
-                                    && activity.getClass().getSimpleName().contains("Conversation")) {
-                                String currentConversation = resolveConversationJid(activity);
-                                if (currentConversation != null) receiptJid = currentConversation;
-                            }
-                            sendPendingReadJobs(receiptJid);
-                        }
+                        // Use the outgoing job's actual recipient, not the Activity currently
+                        // in the foreground: a queued send may belong to another conversation.
+                        String remoteJid = extractOutgoingJobJid(param.thisObject);
+                        if (remoteJid != null) sendPendingReadJobs(remoteJid);
                     }
                 });
             }
@@ -188,10 +175,6 @@ public class BlueOnReplyHook extends BaseFeature {
                                                 Object[] constructorArgs) {
         String key = canonicalJid(jid);
         if (key == null || constructor == null || constructorArgs == null) return;
-        CopyOnWriteArrayList<ReadJobRecipe> pending =
-                PENDING_JOBS.computeIfAbsent(key, ignored -> new CopyOnWriteArrayList<>());
-        if (pending.size() >= 64) pending.remove(0);
-
         Object[] copy = Arrays.copyOf(constructorArgs, constructorArgs.length);
         for (int i = 0; i < copy.length; i++) {
             if (copy[i] instanceof String[]) {
@@ -199,9 +182,9 @@ public class BlueOnReplyHook extends BaseFeature {
             }
         }
         constructor.setAccessible(true);
-        pending.add(new ReadJobRecipe(constructor, copy));
-        lastHiddenConversationJid = key;
-        XposedBridge.log(TAG + " Captured hidden read job (pending=" + pending.size() + ")");
+        PENDING_JOBS.add(key, new ReadJobRecipe(constructor, copy));
+        XposedBridge.log(TAG + " Captured hidden read job (pending="
+                + PENDING_JOBS.pendingCount(key) + ")");
     }
 
     private static Object getOrFindJobManager() {
@@ -225,62 +208,63 @@ public class BlueOnReplyHook extends BaseFeature {
 
     private static int sendPendingReadJobs(String jid) {
         String key = canonicalJid(jid);
-        // The SendE2EMessageJob recipient is the only safe authority for an automatic
-        // blue-on-reply dispatch.  A phone/LID user-part match, the foreground
-        // conversation, or the last captured job may refer to a different chat while
-        // WhatsApp is sending queued work.  Never touch another job when it is unknown.
         if (key == null) {
+            // Preserve upstream's exact outgoing-recipient guard and sanitized diagnostic.
             XposedBridge.log(TAG + " Cannot dispatch: outgoing recipient is unavailable");
             return 0;
         }
+
         Method enqueue = enqueueJobMethod;
         Object manager = getOrFindJobManager();
-
         if (enqueue == null || manager == null) {
             XposedBridge.log(TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready");
             return 0;
         }
 
-        List<ReadJobRecipe> pending = PENDING_JOBS.remove(key);
-
-        if (pending == null || pending.isEmpty()) {
+        // Exact canonical JID match only. @lid, @s.whatsapp.net and @g.us are
+        // distinct identity namespaces; same local user part is NOT proof that
+        // their queued read receipts belong to the same recipient.
+        List<ReadJobRecipe> pending = PENDING_JOBS.drain(key);
+        if (pending.isEmpty()) {
             XposedBridge.log(TAG + " No captured read jobs for reply");
             return 0;
         }
 
-        HideReceiptsHook.allowBlueReplyReceipt(key);
-
+        // Do not authorize an entire JID: only IDs from explicitly enqueued jobs.
         int sent = 0;
         for (ReadJobRecipe recipe : pending) {
             try {
-                HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments);
+                HideReceiptsHook.allowExplicitReceiptIds(key, recipe.arguments);
                 Object job = recipe.constructor.newInstance(recipe.arguments);
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
                 sent++;
                 XposedBridge.log(TAG + " Enqueued blue-on-reply receipt");
             } catch (Throwable t) {
-                XposedBridge.log(TAG + " Error enqueueing read receipt: " + t.getClass().getSimpleName());
+                // Constructor or dispatch failure must not leave a stale permission.
+                HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments);
+                XposedBridge.log(TAG + " Error enqueueing read receipt: "
+                        + t.getClass().getSimpleName());
             }
         }
         return sent;
     }
 
-    private String extractRemoteJid(Object source) {
-        if (source == null) return null;
-        // SendE2EMessageJob deliberately keeps this serialized field name stable. This is the
-        // This exact field path avoids selecting participant/device JIDs from other fields.
+    /**
+     * The verified SendE2EMessageJob host declares a String field named "jid".
+     * Never scan arbitrary job fields: they may contain participant or device IDs
+     * that are valid JIDs but do not identify the outbound conversation.
+     * Unknown hosts fail closed rather than releasing another chat's receipts.
+     */
+    private static String extractOutgoingJobJid(Object job) {
+        if (job == null) return null;
         try {
-            Object jid = XposedHelpers.getObjectField(source, "jid");
-            if (jid != null) {
-                String raw = jid.toString();
-                if (canonicalJid(raw) != null) return raw;
-            }
+            Object value = XposedHelpers.getObjectField(job, "jid");
+            return value instanceof String
+                    ? ReceiptJidPolicy.canonical((String) value) : null;
         } catch (Throwable ignored) {
+            return null;
         }
-        // Do not scan arbitrary fields. Send jobs also carry participant and device JIDs,
-        // neither of which proves the conversation that owns this outbound message.
-        return null;
     }
 
     private void hookConversationMenu() {
@@ -366,7 +350,8 @@ public class BlueOnReplyHook extends BaseFeature {
             Context toastContext = conversation instanceof Context
                     ? (Context) conversation : context;
             Toast.makeText(toastContext,
-                    sent > 0 ? "Blue tick sent" : "No hidden read receipt to send",
+                    jid == null ? "Cannot verify chat recipient"
+                            : (sent > 0 ? "Blue tick sent" : "No hidden read receipt to send"),
                     Toast.LENGTH_SHORT).show();
             return true;
         });
@@ -401,43 +386,36 @@ public class BlueOnReplyHook extends BaseFeature {
         return isManualButtonEnabled() ? 1 : 0;
     }
 
+    /**
+     * For a manual user action, require an explicit and unambiguous chat address.
+     * Scanning the Activity's fields or arbitrary Intent extras risks selecting a
+     * different contact's pending receipt job, so unknown hosts fail closed.
+     */
     private String resolveConversationJid(Object conversation) {
-        String reflected = extractRemoteJid(conversation);
-        if (reflected != null) return reflected;
-        if (conversation instanceof Activity) {
-            try {
-                Intent intent = ((Activity) conversation).getIntent();
-                if (intent != null) {
-                    // Check intent URI or data
-                    if (intent.getData() != null) {
-                        String rawData = intent.getData().toString();
-                        String parsedData = canonicalJid(rawData);
-                        if (parsedData != null) return parsedData;
-                    }
-                    Bundle extras = intent.getExtras();
-                    if (extras != null) {
-                        // Common WhatsApp conversation intent keys
-                        String[] commonKeys = new String[]{"jid", "chat_jid", "remote_jid", "extra_chat_jid", "conversation_jid"};
-                        for (String key : commonKeys) {
-                            Object value = extras.get(key);
-                            if (value != null) {
-                                String parsed = extractJidString(value);
-                                if (parsed != null) return parsed;
-                            }
-                        }
-                        for (String key : extras.keySet()) {
-                            Object value = extras.get(key);
-                            if (value != null) {
-                                String parsed = extractJidString(value);
-                                if (parsed != null) return parsed;
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {
+        if (!(conversation instanceof Activity)) return null;
+        try {
+            Intent intent = ((Activity) conversation).getIntent();
+            if (intent == null) return null;
+            List<String> candidates = new ArrayList<>();
+            if (intent.getData() != null) {
+                String exactData = canonicalJid(intent.getData().toString());
+                if (exactData != null) candidates.add(exactData);
             }
+            Bundle extras = intent.getExtras();
+            if (extras != null) {
+                String[] keys = {"jid", "chat_jid", "remote_jid",
+                        "extra_chat_jid", "conversation_jid"};
+                for (String key : keys) {
+                    if (!extras.containsKey(key)) continue;
+                    String value = extractJidString(extras.get(key));
+                    if (value == null) return null;
+                    candidates.add(value);
+                }
+            }
+            return ConversationRecipientPolicy.resolve(candidates);
+        } catch (Throwable ignored) {
+            return null;
         }
-        return lastHiddenConversationJid;
     }
 
     private static String extractJidString(Object obj) {
@@ -456,9 +434,7 @@ public class BlueOnReplyHook extends BaseFeature {
     }
 
     private static String canonicalJid(String value) {
-        if (value == null) return null;
-        Matcher matcher = JID_PATTERN.matcher(value);
-        return matcher.find() ? matcher.group(1) + "@" + matcher.group(2) : null;
+        return ReceiptJidPolicy.canonical(value);
     }
 
     @NonNull

@@ -116,6 +116,12 @@ fun StylesSettingsScreen() {
                 if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) {
                     // Do not decode a STRING or STRING_SET using getBoolean().
                     put(key, false)
+                } else if (key == "seen_tick_customization") {
+                    // The receipt hooks read the canonical STRING 'seentick' (0/1/2),
+                    // not the old UI-only Boolean 'seen_tick_customization' flag.
+                    put(key, ManualSeenTickPreferencePolicy.isEnabled(
+                        preferenceManager.getString("seentick", "0")
+                    ))
                 } else {
                     val defaultValue = if (key == "send_audio_as_voice_status") {
                         preferenceManager.getBoolean("voice_status_enhancement", false)
@@ -131,6 +137,17 @@ fun StylesSettingsScreen() {
 
     val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
         if (StyleNonBooleanPreferencePolicy.requiresDedicatedEditor(key)) return@update
+        if (key == "seen_tick_customization") {
+            val currentPlacement = preferenceManager.getString("seentick", "0")
+            val nextPlacement = ManualSeenTickPreferencePolicy.valueAfterExplicitToggle(value, currentPlacement)
+            if (preferenceManager.putPublicString("seentick", nextPlacement)) {
+                settingsState[key] = ManualSeenTickPreferencePolicy.isEnabled(nextPlacement)
+            } else {
+                // A failed commit can already have changed memory. Keep the last confirmed UI state.
+                Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            }
+            return@update
+        }
         val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
         val changes = if (key == "send_audio_as_voice_status") {
             // Persist the visible setting and its linked hook key atomically.

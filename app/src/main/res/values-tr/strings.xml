@@ -233,8 +233,8 @@
     <string name="feat_custom_toolbar_desc">Ana ekran araç çubuğundaki profil fotoğrafıyla yeni ayarlar stilini etkinleştirin</string>
     <string name="feat_custom_view_dpi_title">Varsayılan DPI\'yi Değiştir</string>
     <string name="feat_custom_view_dpi_desc">Uygulamanın DPI ayarını değiştirin. Varsayılana sıfırlamak için 0\'ı kullanın.</string>
-    <string name="feat_seen_tick_customization_title">Görülenleri Görüntüle İşareti</string>
-    <string name="feat_seen_tick_customization_desc">Mesaj görünümü alıcıya gönderildiyse veya benzersiz görünüm görüldüyse bir simge göster</string>
+    <string name="feat_seen_tick_customization_title">Manuel okundu bilgisi düğmesi</string>
+    <string name="feat_seen_tick_customization_desc">Okundu bilgilerini gizleme etkinken bekletilen okundu bilgilerini göndermek için bir işlem göster</string>
     <string name="feat_floating_bottom_bar_title">Kayan Alt Çubuk</string>
     <string name="feat_floating_bottom_bar_desc">iOS tarzı kayan alt gezinme çubuğunu etkinleştir</string>
     <string name="feat_unlock_premium_customization_title">WA Plus\'ın kilidini açın</string>
