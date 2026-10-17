@@ -1,0 +1,84 @@
+name: V29 read-only inventory
+on:
+  push:
+    branches: ['test/qa-v29-review-2026-10-17']
+    paths: ['.github/workflows/v29-readonly-inventory.yml']
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: WaEnhancerX/WaEnhancerX
+          ref: 50bc0eb6d93d2dc7eca9e78d2894e60393e55847
+          submodules: false
+          persist-credentials: false
+      - name: Collect read-only source and paginated issue metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import pathlib, json, subprocess, urllib.request, time, hashlib
+          out=pathlib.Path('v29-inventory'); out.mkdir()
+          api='https://api.github.com'
+          import os
+          def get(path):
+              request=urllib.request.Request(api+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'waex-v29-readonly'})
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(request,timeout=60) as r:return json.load(r)
+                  except Exception:
+                      if attempt==2:raise
+                      time.sleep(2**attempt)
+          def pages(path):
+              result=[]; page=1
+              while True:
+                  batch=get(path+('&' if '?' in path else '?')+f'per_page=100&page={page}')
+                  if not isinstance(batch,list):raise TypeError(path)
+                  result.extend(batch)
+                  if len(batch)<100:return result
+                  page+=1
+          def save(name,value): (out/name).write_text(json.dumps(value,indent=2),encoding='utf-8')
+          upstream='WaEnhancerX/WaEnhancerX'; fork='TheKillerMax/WaEnhancerX'
+          issues=pages(f'/repos/{upstream}/issues?state=all&sort=created&direction=asc')
+          issues=[x for x in issues if 'pull_request' not in x]
+          for issue in issues:
+              issue['all_comments']=pages(f'/repos/{upstream}/issues/{issue["number"]}/comments')
+          save('issues.json',issues)
+          pulls=pages(f'/repos/{upstream}/pulls?state=all&sort=created&direction=asc')
+          for pr in pulls:
+              if pr['state']=='open':
+                  pr['all_comments']=pages(f'/repos/{upstream}/issues/{pr["number"]}/comments')
+                  pr['reviews']=pages(f'/repos/{upstream}/pulls/{pr["number"]}/reviews')
+                  pr['review_comments']=pages(f'/repos/{upstream}/pulls/{pr["number"]}/comments')
+          save('pulls.json',pulls)
+          save('fork-branches.json',pages(f'/repos/{fork}/branches'))
+          save('release.json',get(f'/repos/{upstream}/releases/latest'))
+          save('main-ref.json',get(f'/repos/{upstream}/git/ref/heads/main'))
+          save('runs.json',get(f'/repos/{upstream}/actions/runs?per_page=20'))
+          entries=[]
+          for line in subprocess.check_output(['git','ls-tree','-r','-z','HEAD']).split(b'\0'):
+              if not line:continue
+              meta,path=line.split(b'\t',1);mode,kind,sha=meta.decode().split();path=path.decode()
+              entry={'path':path,'mode':mode,'type':kind,'sha':sha};entries.append(entry)
+              if kind!='blob':continue
+              data=subprocess.check_output(['git','show',f'HEAD:{path}'])
+              entry['sha256']=hashlib.sha256(data).hexdigest()
+              try:data.decode('utf-8')
+              except UnicodeDecodeError:continue
+              if pathlib.Path(path).suffix.lower() in {'.ttf','.otf','.woff','.woff2','.apk','.jks','.jar','.aar'}:continue
+              dest=out/'source'/path;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+          save('tree.json',{'commit':subprocess.check_output(['git','rev-parse','HEAD']).decode().strip(),'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}']).decode().strip(),'entries':entries})
+          print('ISSUES',len(issues),'OPEN',sum(x['state']=='open' for x in issues),'COMMENTS',sum(len(x['all_comments']) for x in issues))
+          print('OPEN PRS',[(x['number'],x['head']['ref']) for x in pulls if x['state']=='open'])
+          print('SOURCE',len(entries),'COMMIT',subprocess.check_output(['git','rev-parse','HEAD']).decode().strip())
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v29-readonly-inventory
+          path: v29-inventory/
+          retention-days: 7
