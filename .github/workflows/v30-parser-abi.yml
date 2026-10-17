@@ -1,0 +1,22 @@
+name: V30 parser ABI
+on:
+  push:
+    branches: ['test/es419-localization-review-v30-2026-10-17']
+    paths: ['.github/workflows/v30-parser-abi.yml']
+permissions:
+  contents: read
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: |
+          mkdir wheels
+          python -m pip download --only-binary=:all: --dest wheels tree-sitter==0.25.2 tree-sitter-kotlin==1.1.0 tree-sitter-java==0.23.5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v30-parser-cp313
+          path: wheels/
+          retention-days: 3
