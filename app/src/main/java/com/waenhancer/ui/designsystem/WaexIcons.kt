@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Security
@@ -41,6 +42,7 @@ object WaexIcons {
     val ChevronRight = Icons.Rounded.ChevronRight
     val Info = Icons.Rounded.Info
     val Warning = Icons.Rounded.Warning
+    val Help = Icons.AutoMirrored.Rounded.Help
     val Success = Icons.Rounded.CheckCircle
     val Settings = Icons.Rounded.Settings
     val MoreVert = Icons.Rounded.MoreVert

@@ -48,7 +48,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,7 +62,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -800,45 +807,49 @@ private fun HmaDetailsBottomSheet(
                     color = colors.error
                 )
                 activeTargets.forEach { item ->
-                    Surface(
-                        shape = radius.cardShape,
-                        color = colors.error.copy(alpha = 0.05f),
-                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.35f)),
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFFEF4444).copy(alpha = 0.15f),
+                                modifier = Modifier.size(20.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.error)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = item.appName,
-                                    style = typography.bodyMd,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.onSurface
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = WaexIcons.Clear,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEF4444),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = item.packageName,
-                                style = typography.bodySm,
-                                color = colors.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Reason: ${item.reason}",
-                                style = typography.bodySm,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.error
+                                text = item.appName,
+                                style = typography.bodyMd,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.onSurface
                             )
                         }
+                        Text(
+                            text = item.packageName,
+                            style = typography.labelSm,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
+                        )
+                        Text(
+                            text = item.reason,
+                            style = typography.bodySm,
+                            color = colors.error,
+                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
+                        )
                     }
                 }
             }
@@ -851,47 +862,54 @@ private fun HmaDetailsBottomSheet(
                     color = colors.onSurfaceVariant
                 )
                 cleanTargets.forEach { item ->
-                    Surface(
-                        shape = radius.cardShape,
-                        color = colors.surfaceDim.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                modifier = Modifier.size(20.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.primary)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = item.appName,
-                                    style = typography.bodyMd,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = colors.onSurface
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = WaexIcons.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFF10B981),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = item.packageName,
-                                style = typography.bodySm,
-                                color = colors.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Status: ${item.reason}",
-                                style = typography.bodySm,
-                                color = colors.onSurfaceVariant
+                                text = item.appName,
+                                style = typography.bodyMd,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.onSurface
                             )
                         }
+                        Text(
+                            text = item.packageName,
+                            style = typography.labelSm,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
+                        )
+                        Text(
+                            text = item.reason,
+                            style = typography.bodySm,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             Button(
                 onClick = onDismiss,
@@ -989,19 +1007,22 @@ private fun DashboardDiagnosticsCard(
                     false -> stringResource(R.string.diag_status_inactive)
                     null -> stringResource(R.string.diag_status_checking)
                 },
-                healthy = diagnostics?.moduleActive
+                healthy = diagnostics?.moduleActive,
+                isLoading = diagnostics == null
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_framework),
                 value = diagnostics?.framework?.name ?: stringResource(R.string.diag_framework_detecting),
-                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" }
+                healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" },
+                isLoading = diagnostics == null
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_compatibility),
                 value = targetSummary.text,
-                healthy = targetSummary.healthy
+                healthy = targetSummary.healthy,
+                isLoading = false
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
@@ -1017,6 +1038,7 @@ private fun DashboardDiagnosticsCard(
                     HmaDiagnostics.HmaState.CLEAN, HmaDiagnostics.HmaState.NOT_ACTIVE, HmaDiagnostics.HmaState.NOT_CONFIGURED -> true
                     HmaDiagnostics.HmaState.CHECKING, null -> null
                 },
+                isLoading = hmaReport == null || hmaReport.state == HmaDiagnostics.HmaState.CHECKING,
                 onClick = if (hmaReport?.targetDetails?.isNotEmpty() == true) onOpenHmaDetails else null
             )
 
@@ -1102,21 +1124,20 @@ private fun DashboardDiagnosticsCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardDiagnosticRow(
     label: String,
     value: String,
     healthy: Boolean?,
+    isLoading: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
-    val stateColor = when (healthy) {
-        true -> colors.primary
-        false -> colors.error
-        null -> colors.onSurfaceVariant
-    }
+    val scope = rememberCoroutineScope()
+    val tooltipState = rememberTooltipState()
 
     val rowModifier = Modifier
         .fillMaxWidth()
@@ -1135,30 +1156,89 @@ private fun DashboardDiagnosticRow(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(stateColor)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = label,
             style = typography.bodyMd,
             color = colors.onSurfaceVariant,
-            maxLines = 1
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = value,
-            style = typography.bodyMd,
-            fontWeight = FontWeight.SemiBold,
-            color = if (onClick != null && healthy == false) colors.error else colors.onSurface,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            maxLines = 1,
             modifier = Modifier.weight(1f)
         )
+        Spacer(modifier = Modifier.width(12.dp))
+
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = colors.primary
+            )
+        } else {
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = {
+                    PlainTooltip(
+                        containerColor = colors.surfaceContainerHighest,
+                        contentColor = colors.onSurface
+                    ) {
+                        Text(
+                            text = value,
+                            style = typography.bodySm,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                state = tooltipState
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = when (healthy) {
+                        true -> Color(0xFF10B981).copy(alpha = 0.15f)
+                        false -> Color(0xFFEF4444).copy(alpha = 0.15f)
+                        null -> Color(0xFFF59E0B).copy(alpha = 0.15f)
+                    },
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            if (onClick != null && healthy == false) {
+                                onClick()
+                            } else {
+                                scope.launch { tooltipState.show() }
+                            }
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        when (healthy) {
+                            true -> {
+                                Icon(
+                                    imageVector = WaexIcons.Check,
+                                    contentDescription = value,
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                            false -> {
+                                Icon(
+                                    imageVector = WaexIcons.Clear,
+                                    contentDescription = value,
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                            null -> {
+                                Icon(
+                                    imageVector = WaexIcons.Help,
+                                    contentDescription = value,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (onClick != null) {
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Icon(
                 imageVector = WaexIcons.ChevronRight,
                 contentDescription = null,
