@@ -112,6 +112,10 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     applicationVariants.all {
         val variant = this
         variant.outputs.forEach {
