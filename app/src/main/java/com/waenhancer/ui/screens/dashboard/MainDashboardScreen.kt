@@ -122,6 +122,7 @@ fun MainDashboardScreen(
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val preferenceManager = LocalWaexPreferenceManager.current
     val isModuleActive = remember { ModuleStatus.isModuleActive() }
 
@@ -243,6 +244,8 @@ fun MainDashboardScreen(
     var showCustomizationSoon by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
     var showHmaDetailSheet by remember { mutableStateOf(false) }
+    var hmaTargetToFix by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var isFixingHma by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -716,7 +719,46 @@ fun MainDashboardScreen(
         if (showHmaDetailSheet && hmaStatus != null) {
             HmaDetailsBottomSheet(
                 report = hmaStatus!!,
+                onFixTarget = { pkg, name ->
+                    hmaTargetToFix = pkg to name
+                },
                 onDismiss = { showHmaDetailSheet = false }
+            )
+        }
+
+        // HMA Fix Confirmation Bottom Sheet
+        if (hmaTargetToFix != null) {
+            val (targetPkg, targetName) = hmaTargetToFix!!
+            WaexConfirmationBottomSheet(
+                title = stringResource(R.string.diag_hma_fix_title),
+                message = stringResource(R.string.diag_hma_fix_message, targetName),
+                confirmLabel = stringResource(R.string.diag_hma_btn_fix),
+                confirmEnabled = !isFixingHma,
+                onConfirm = {
+                    isFixingHma = true
+                    coroutineScope.launch {
+                        val success = HmaDiagnostics.fixTargetIsolation(context, targetPkg)
+                        isFixingHma = false
+                        hmaTargetToFix = null
+                        if (success) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.diag_hma_fix_success),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            hmaRefreshTrigger++
+                        } else {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.diag_hma_fix_failed),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                },
+                onDismiss = {
+                    if (!isFixingHma) hmaTargetToFix = null
+                }
             )
         }
     }
@@ -726,6 +768,7 @@ fun MainDashboardScreen(
 @Composable
 private fun HmaDetailsBottomSheet(
     report: HmaDiagnostics.HmaReport,
+    onFixTarget: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val colors = WaexTheme.colors
@@ -759,44 +802,19 @@ private fun HmaDetailsBottomSheet(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(radius.defaultShape)
-                        .background(
-                            if (report.state == HmaDiagnostics.HmaState.BLOCKING_TARGETS) {
-                                colors.error.copy(alpha = 0.12f)
-                            } else {
-                                colors.primaryContainer
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = WaexIcons.Security,
-                        contentDescription = null,
-                        tint = if (report.state == HmaDiagnostics.HmaState.BLOCKING_TARGETS) colors.error else colors.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.diag_hma_sheet_title),
-                        style = typography.titleLg,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.onSurface
-                    )
-                    Text(
-                        text = stringResource(R.string.diag_hma_sheet_desc),
-                        style = typography.bodySm,
-                        color = colors.onSurfaceVariant
-                    )
-                }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.diag_hma_sheet_title),
+                    style = typography.titleLg,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.diag_hma_sheet_desc),
+                    style = typography.bodySm,
+                    color = colors.onSurfaceVariant
+                )
             }
 
             if (activeTargets.isNotEmpty()) {
@@ -852,6 +870,23 @@ private fun HmaDetailsBottomSheet(
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.Medium,
                                     color = colors.error
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { onFixTarget(item.packageName, item.appName) },
+                                shape = radius.smShape,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.error,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.diag_hma_btn_fix),
+                                    style = typography.labelSm,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -962,25 +997,48 @@ private fun DashboardDiagnosticsCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            val isDiagnosticsLoading = diagnostics == null || hmaReport == null || hmaReport.state == HmaDiagnostics.HmaState.CHECKING
+
+            // Determine overall health:
+            // Error (Red): module not active, framework not detected when checked, targetSummary is explicitly false, or HMA blocking
+            // Warning (Yellow): unconfirmed state, target review needed, etc.
+            // Healthy (Green): everything healthy and ok
+            val isCriticalError = (diagnostics != null && !diagnostics.moduleActive) ||
+                    (hmaReport != null && hmaReport.state == HmaDiagnostics.HmaState.BLOCKING_TARGETS) ||
+                    (targetSummary.healthy == false)
+
+            val isWarning = !isCriticalError && (targetSummary.healthy == null || (diagnostics != null && diagnostics.framework.name == "Not detected"))
+
+            val healthColor = when {
+                isCriticalError -> Color(0xFFEF4444)
+                isWarning -> Color(0xFFF59E0B)
+                else -> Color(0xFF10B981)
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(radius.defaultShape)
-                        .background(colors.primaryContainer),
+                    modifier = Modifier.size(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = WaexIcons.Security,
-                        contentDescription = null,
-                        tint = colors.primary,
-                        modifier = Modifier.size(21.dp)
-                    )
+                    if (isDiagnosticsLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = colors.primary
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(healthColor)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.system_diagnostics_title),

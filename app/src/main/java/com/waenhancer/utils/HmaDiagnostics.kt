@@ -218,16 +218,112 @@ object HmaDiagnostics {
         }
     }
 
+
     private fun readHmaConfigJson(): String? {
-        val out1 = AppRestartHelper.runRootCommand("cat $HMA_CONFIG_GLOB 2>/dev/null")
-        if (!out1.isNullOrBlank() && out1.startsWith("{")) {
-            return out1
-        }
-        val out2 = AppRestartHelper.runRootCommand("cat $HMA_ALT_CONFIG 2>/dev/null")
-        if (!out2.isNullOrBlank() && out2.startsWith("{")) {
-            return out2
+        val path = findHmaConfigPath() ?: return null
+        val out = AppRestartHelper.runRootCommand("cat $path 2>/dev/null")
+        if (!out.isNullOrBlank() && out.startsWith("{")) {
+            return out
         }
         return null
+    }
+
+    private fun findHmaConfigPath(): String? {
+        val cmd = "find /data/misc -maxdepth 2 -name 'config.json' -path '*/hide_my_applist*' 2>/dev/null; " +
+                "[ -f $HMA_ALT_CONFIG ] && echo $HMA_ALT_CONFIG; true"
+        val out = AppRestartHelper.runRootCommand(cmd) ?: return null
+        return out.lines().map { it.trim() }.firstOrNull { it.isNotBlank() && it.endsWith("config.json") }
+    }
+
+    /**
+     * Fixes HMA isolation settings for the specified [targetPackage] by removing
+     * any blocking rules (such as 'xposed' preset or module package in extra lists / blacklist templates).
+     */
+    suspend fun fixTargetIsolation(context: Context, targetPackage: String): Boolean = withContext(Dispatchers.IO) {
+        val configPath = findHmaConfigPath() ?: return@withContext false
+        val currentJsonStr = AppRestartHelper.runRootCommand("cat $configPath 2>/dev/null") ?: return@withContext false
+        if (!currentJsonStr.startsWith("{")) return@withContext false
+
+        val moduleSignatures = setOf(
+            context.packageName,
+            "com.waenhancer",
+            "com.waenhancer.debug"
+        )
+
+        try {
+            val root = JSONObject(currentJsonStr)
+            val scope = root.optJSONObject("scope") ?: return@withContext false
+            val targetScope = scope.optJSONObject(targetPackage)
+
+            if (targetScope != null) {
+                // 1. Remove module package from extraAppList
+                targetScope.optJSONArray("extraAppList")?.let { arr ->
+                    val filtered = JSONArray()
+                    for (i in 0 until arr.length()) {
+                        val v = arr.optString(i)
+                        if (v !in moduleSignatures) filtered.put(v)
+                    }
+                    targetScope.put("extraAppList", filtered)
+                }
+
+                // 2. Remove module package from extraOppositeAppList
+                targetScope.optJSONArray("extraOppositeAppList")?.let { arr ->
+                    val filtered = JSONArray()
+                    for (i in 0 until arr.length()) {
+                        val v = arr.optString(i)
+                        if (v !in moduleSignatures) filtered.put(v)
+                    }
+                    targetScope.put("extraOppositeAppList", filtered)
+                }
+
+                // 3. Remove "xposed" preset from applyPresets
+                targetScope.optJSONArray("applyPresets")?.let { arr ->
+                    val filtered = JSONArray()
+                    for (i in 0 until arr.length()) {
+                        val v = arr.optString(i)
+                        if (!v.equals("xposed", ignoreCase = true)) filtered.put(v)
+                    }
+                    targetScope.put("applyPresets", filtered)
+                }
+            }
+
+            // 4. Remove module package from any blacklist templates
+            val templates = root.optJSONObject("templates")
+            if (templates != null) {
+                val keys = templates.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val template = templates.optJSONObject(key) ?: continue
+                    val isWhitelist = template.optBoolean("isWhitelist", false)
+                    if (!isWhitelist) {
+                        template.optJSONArray("appList")?.let { arr ->
+                            val filtered = JSONArray()
+                            for (i in 0 until arr.length()) {
+                                val v = arr.optString(i)
+                                if (v !in moduleSignatures) filtered.put(v)
+                            }
+                            template.put("appList", filtered)
+                        }
+                    }
+                }
+            }
+
+            // Write modified JSON to temporary file in app cache then copy via root
+            val tempFile = File(context.cacheDir, "hma_fix_${System.currentTimeMillis()}.json")
+            tempFile.writeText(root.toString())
+
+            val copyCmd = "cp ${tempFile.absolutePath} $configPath && " +
+                    "chmod 600 $configPath && " +
+                    "chown system:system $configPath; " +
+                    "rm -f ${tempFile.absolutePath}"
+            AppRestartHelper.runRootCommand(copyCmd)
+
+            // Clear cached diagnostic result so next check reflects new state
+            cachedResult.set(null)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun checkScopeBlockReason(
