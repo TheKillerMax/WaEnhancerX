@@ -84,6 +84,16 @@ jobs:
             echo '::endgroup::'
           done
 
+      - name: Verify public Spanish Latin America resources and runtime lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f qa/localization_support.py
+          test -f qa/test_es419_localization.py
+          test -f qa/test_es419_runtime.py
+          python3 qa/test_es419_localization.py
+          python3 qa/test_es419_runtime.py
+
       - name: Require tests for merged runtime and resource contracts
         shell: bash
         run: |
