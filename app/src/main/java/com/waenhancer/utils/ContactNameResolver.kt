@@ -17,7 +17,7 @@ import java.io.File
  * 1. Live WhatsApp UI / Activity traversal (Headers, ActionBars, View Hierarchy).
  * 2. WhatsApp internal SQLite databases (wa.db, msgstore.db jid_map for LID -> Phone translation).
  * 3. Preserved message store (cross-process IPC cached names).
- * 4. Android System Contacts Provider (ContactsContract PhoneLookup & suffix queries).
+ * 4. Android System Contacts Provider (full-number verification of PhoneLookup results).
  */
 object ContactNameResolver {
 
@@ -30,143 +30,65 @@ object ContactNameResolver {
         fallbackName: String? = null,
         phoneHint: String? = null
     ): String {
-        if (rawJid.isBlank() && phoneHint.isNullOrBlank()) return fallbackName ?: "Unknown"
+        // An unqualified numeric identifier must not silently become a LID or a phone.
+        val jid = ContactIdentityPolicy.canonicalJid(rawJid) ?: if (rawJid.isBlank()) {
+            ContactIdentityPolicy.phoneDigits(phoneHint)?.let { "$it@s.whatsapp.net" }
+        } else null
+        if (jid == null) return fallbackName?.takeIf(::isValidDisplayName) ?: "Unknown"
 
-        val isGroup = isGroupJid(rawJid)
-        val userPart = cleanUserPart(rawJid)
-
-        // If fallbackName is already a valid human-readable contact name, return it directly
-        if (isValidDisplayName(fallbackName)) {
-            return fallbackName!!
-        }
-
-        // 1. Check PreservedMessageStore (where WhatsApp Delete-For-Me engine records exact resolved names)
-        try {
-            val recordedName = PreservedMessageStore.getInstance(context).getContactNameByJid(rawJid)
-            if (isValidDisplayName(recordedName)) {
-                return recordedName!!
-            }
-            if (!phoneHint.isNullOrBlank()) {
-                val phoneRecorded = PreservedMessageStore.getInstance(context).getContactNameByJid(phoneHint)
-                if (isValidDisplayName(phoneRecorded)) {
-                    return phoneRecorded!!
-                }
-            }
-        } catch (_: Throwable) {}
-
-        // 2. Group Subject Resolution (from msgstore.db if available)
-        if (isGroup) {
+        if (isGroupJid(jid)) {
             try {
-                val dbFile = findDatabase(context, "msgstore.db")
-                if (dbFile != null && dbFile.exists()) {
-                    SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                findDatabase(context, "msgstore.db")?.let { file ->
+                    SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                         db.rawQuery(
-                            "SELECT subject FROM chat WHERE jid_row_id = (SELECT _id FROM jid WHERE raw_string = ? OR user = ?) LIMIT 1",
-                            arrayOf(rawJid, userPart)
-                        ).use { c ->
-                            if (c != null && c.moveToFirst()) {
-                                val subject = c.getString(0)
-                                if (!subject.isNullOrBlank()) return subject
-                            }
-                        }
+                            "SELECT subject FROM chat WHERE jid_row_id IN (SELECT _id FROM jid WHERE raw_string = ?) LIMIT 33",
+                            arrayOf(jid)
+                        ).use { cursor -> uniqueDisplayName(cursor, 1)?.let { return it } }
                     }
                 }
-            } catch (_: Throwable) {}
-            return if (!fallbackName.isNullOrBlank() && fallbackName != "Group ($userPart)") fallbackName else "Group"
+            } catch (_: Exception) { }
+            return fallbackName?.takeIf(::isValidDisplayName) ?: "Group"
         }
 
-        // 3. Personal Contact / LID Resolution
-        var resolvedPhoneJid: String? = null
-        var resolvedPhoneUser: String? = phoneHint
-        val cleanJid = if (rawJid.contains("@")) rawJid else "$rawJid@lid"
+        // Each lookup has an exact namespace-qualified key. Try the original identity first.
+        resolveFromWaDb(context, jid)?.let { return it }
+        val mappedPhone = if (isLidJid(jid)) resolveLidToPhone(context, jid) else null
+        val mappedJid = mappedPhone?.let { "$it@s.whatsapp.net" }
+        if (mappedJid != null) resolveFromWaDb(context, mappedJid)?.let { return it }
+        val phone = ContactIdentityPolicy.phoneUser(jid) ?: mappedPhone
+        if (phone != null) getSystemContactName(context, phone)?.let { return it }
 
-        // Step A: Resolve LID to Phone JID in msgstore.db (if accessible)
+        for (candidate in listOfNotNull(jid, mappedJid).distinct()) {
+            try {
+                findDatabase(context, "wa.db")?.let { file ->
+                    SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                        db.rawQuery("SELECT verified_name FROM wa_vnames WHERE jid = ? LIMIT 33",
+                            arrayOf(candidate)).use { cursor -> uniqueDisplayName(cursor, 1)?.let { return it } }
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+        // Historical display names are a fallback, not more authoritative than exact live rows.
         try {
-            val dbFile = findDatabase(context, "msgstore.db")
-            if (dbFile != null && dbFile.exists()) {
-                SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                    val resolvePhoneSql = """
-                        SELECT j2.raw_string, j2.user 
-                        FROM jid_map jm
-                        JOIN jid j1 ON jm.lid_row_id = j1._id
-                        JOIN jid j2 ON jm.jid_row_id = j2._id
-                        WHERE j1.user = ? OR j1.raw_string LIKE ? OR j1.raw_string = ?
-                    """.trimIndent()
-                    db.rawQuery(resolvePhoneSql, arrayOf(userPart, "$userPart%", cleanJid)).use { c ->
-                        if (c != null && c.moveToFirst()) {
-                            resolvedPhoneJid = c.getString(0)
-                            resolvedPhoneUser = c.getString(1)
-                        }
-                    }
-                }
-            }
-        } catch (_: Throwable) {}
+            PreservedMessageStore.getInstance(context).getContactNameByJid(jid)
+                ?.takeIf(::isValidDisplayName)?.let { return it }
+        } catch (_: Exception) { }
+        return fallbackName?.takeIf(::isValidDisplayName) ?: phone?.let(::formatPhoneNumber) ?: "Unknown"
+    }
 
-        // Step B: Query Android System Contacts Provider (PhoneLookup + Trailing Digits Match)
-        val candidatePhones = listOfNotNull(resolvedPhoneUser, phoneHint, if (!isLidJid(rawJid)) userPart else null).filter { it.isNotBlank() }
-        for (targetPhone in candidatePhones) {
-            val systemName = getSystemContactName(context, targetPhone)
-            if (isValidDisplayName(systemName)) {
-                return systemName!!
-            }
+    /** Refuse conflicting names and bound cursor work, even for a corrupt database/provider. */
+    private fun uniqueDisplayName(cursor: Cursor?, columns: Int): String? {
+        if (cursor == null) return null
+        var name: String? = null
+        var rows = 0
+        while (cursor.moveToNext()) {
+            if (++rows > 32) return null
+            val candidate = (0 until columns).asSequence().map { cursor.getString(it) }
+                .firstOrNull(::isValidDisplayName)?.trim() ?: continue
+            if (name != null && name != candidate) return null
+            name = candidate
         }
-
-        // Step C: Query wa.db (wa_contacts table)
-        try {
-            val waDbFile = findDatabase(context, "wa.db")
-            if (waDbFile != null && waDbFile.exists()) {
-                SQLiteDatabase.openDatabase(waDbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { waDb ->
-                    val querySql = "SELECT display_name, wa_name, sort_name, number FROM wa_contacts WHERE jid = ? OR jid = ? OR jid LIKE ? OR number = ? OR number = ? OR number LIKE ?"
-                    val params = arrayOf(
-                        rawJid,
-                        resolvedPhoneJid ?: "",
-                        "%$userPart%",
-                        userPart,
-                        resolvedPhoneUser ?: "",
-                        "%${resolvedPhoneUser ?: userPart}%"
-                    )
-                    waDb.rawQuery(querySql, params).use { c ->
-                        if (c != null && c.moveToFirst()) {
-                            val displayName = c.getString(0)
-                            val waName = c.getString(1)
-                            val sortName = c.getString(2)
-                            val number = c.getString(3)
-
-                            if (isValidDisplayName(displayName)) return displayName
-                            if (isValidDisplayName(waName)) return waName
-                            if (isValidDisplayName(sortName)) return sortName
-                            if (!displayName.isNullOrBlank() && isValidDisplayName(displayName)) return displayName
-                            if (!number.isNullOrBlank() && !isLidJid(number)) return "+$number"
-                        }
-                    }
-                }
-            }
-        } catch (_: Throwable) {}
-
-        // Step D: Check wa_vnames (Verified Business Names) in wa.db
-        try {
-            val waDbFile = findDatabase(context, "wa.db")
-            if (waDbFile != null && waDbFile.exists()) {
-                SQLiteDatabase.openDatabase(waDbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { waDb ->
-                    waDb.rawQuery("SELECT verified_name FROM wa_vnames WHERE jid = ? OR jid = ? OR jid LIKE ?", arrayOf(rawJid, resolvedPhoneJid ?: "", "%$userPart%")).use { c ->
-                        if (c != null && c.moveToFirst()) {
-                            val vname = c.getString(0)
-                            if (isValidDisplayName(vname)) return vname
-                        }
-                    }
-                }
-            }
-        } catch (_: Throwable) {}
-
-        if (!resolvedPhoneUser.isNullOrBlank() && !isLidJid(resolvedPhoneUser)) {
-            return formatPhoneNumber(resolvedPhoneUser)
-        }
-
-        return if (!isLidJid(rawJid) && userPart.all { it.isDigit() } && userPart.length in 10..15) {
-            "+$userPart"
-        } else {
-            fallbackName ?: "Unknown"
-        }
+        return name
     }
 
     /**
@@ -191,7 +113,7 @@ object ContactNameResolver {
             // 2. Resolve LID to Phone in msgstore.db, then check wa.db
             val mappedPhone = resolveLidToPhone(activity, jid)
             if (!mappedPhone.isNullOrBlank()) {
-                val mappedDbName = resolveFromWaDb(activity, mappedPhone)
+                val mappedDbName = resolveFromWaDb(activity, "$mappedPhone@s.whatsapp.net")
                 if (isValidDisplayName(mappedDbName)) {
                     return mappedDbName!!
                 }
@@ -287,131 +209,71 @@ object ContactNameResolver {
      * Resolves contact name from WhatsApp's internal wa.db (when running inside com.whatsapp).
      */
     fun resolveFromWaDb(context: Context, rawJid: String): String? {
+        val jid = ContactIdentityPolicy.canonicalJid(rawJid) ?: return null
         try {
-            val waDbFile = findDatabase(context, "wa.db")
-            if (waDbFile != null && waDbFile.exists()) {
-                SQLiteDatabase.openDatabase(waDbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { waDb ->
-                    val user = cleanUserPart(rawJid)
-                    val query = "SELECT display_name, wa_name, sort_name, number FROM wa_contacts WHERE jid LIKE ? OR jid = ? OR number = ? OR number LIKE ?"
-                    waDb.rawQuery(query, arrayOf("%$user%", rawJid, user, "%$user%")).use { c ->
-                        if (c != null && c.moveToFirst()) {
-                            val displayName = c.getString(0)
-                            val waName = c.getString(1)
-                            val sortName = c.getString(2)
-                            if (isValidDisplayName(displayName)) return displayName
-                            if (isValidDisplayName(waName)) return waName
-                            if (isValidDisplayName(sortName)) return sortName
-                        }
-                    }
+            findDatabase(context, "wa.db")?.let { file ->
+                SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                    db.rawQuery("SELECT display_name, wa_name, sort_name FROM wa_contacts WHERE jid = ? LIMIT 33",
+                        arrayOf(jid)).use { cursor -> return uniqueDisplayName(cursor, 3) }
                 }
             }
-        } catch (_: Throwable) {}
+        } catch (_: Exception) { }
         return null
     }
 
-    /**
-     * Maps a WhatsApp LID back to its phone number from msgstore.db jid_map table.
-     */
+    /** Only a unique explicit jid_map edge may associate a LID with a phone JID. */
     fun resolveLidToPhone(context: Context, rawJid: String): String? {
+        if (!ContactIdentityPolicy.isLid(rawJid)) return null
         try {
-            val dbFile = findDatabase(context, "msgstore.db")
-            if (dbFile != null && dbFile.exists()) {
-                SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                    val user = cleanUserPart(rawJid)
+            findDatabase(context, "msgstore.db")?.let { file ->
+                SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                     val query = """
-                        SELECT j2.user, j2.raw_string 
+                        SELECT DISTINCT j2.raw_string
                         FROM jid_map jm
                         JOIN jid j1 ON jm.lid_row_id = j1._id
                         JOIN jid j2 ON jm.jid_row_id = j2._id
-                        WHERE j1.user = ? OR j1.raw_string LIKE ? OR j1.raw_string = ?
+                        WHERE j1.raw_string = ? LIMIT 2
                     """.trimIndent()
-                    db.rawQuery(query, arrayOf(user, "$user%", rawJid)).use { c ->
-                        if (c != null && c.moveToFirst()) {
-                            val phone = c.getString(0)
-                            if (!phone.isNullOrBlank() && !isLidJid(phone)) return phone
-                            val rawPhone = c.getString(1)
-                            if (!rawPhone.isNullOrBlank() && !isLidJid(rawPhone)) {
-                                val cleanPhone = cleanUserPart(rawPhone)
-                                if (!isLidJid(cleanPhone)) return cleanPhone
-                            }
-                        }
+                    db.rawQuery(query, arrayOf(rawJid)).use { cursor ->
+                        if (cursor == null || !cursor.moveToFirst()) return null
+                        val phone = ContactIdentityPolicy.phoneUser(cursor.getString(0)) ?: return null
+                        if (cursor.moveToNext()) return null
+                        return phone
                     }
                 }
             }
-        } catch (_: Throwable) {}
+        } catch (_: Exception) { }
         return null
     }
 
-    /**
-     * Resolves contact display name from Android System Contacts using:
-     * 1. Standard PhoneLookup
-     * 2. PhoneLookup with '+'
-     * 3. CommonDataKinds.Phone with trailing 7-9 digits
-     */
+    /** PhoneLookup may be fuzzy: independently compare its complete number before using a name. */
     fun getSystemContactName(context: Context, phoneNumber: String): String? {
-        val cleanNumber = phoneNumber.replace(Regex("[^0-9]"), "")
-        if (cleanNumber.length < 5) return null
-
-        // 1. Try standard PhoneLookup
+        val digits = ContactIdentityPolicy.phoneDigits(phoneNumber) ?: return null
         try {
-            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(cleanNumber))
-            context.contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                null,
-                null,
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val name = cursor.getString(0)
-                    if (isValidDisplayName(name)) return name.trim()
+            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode("+$digits"))
+            context.contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME,
+                ContactsContract.PhoneLookup.NORMALIZED_NUMBER, ContactsContract.PhoneLookup.NUMBER),
+                null, null, null)?.use { cursor ->
+                var name: String? = null
+                var rows = 0
+                while (cursor.moveToNext()) {
+                    if (++rows > 32) return null
+                    val number = ContactIdentityPolicy.phoneDigits(cursor.getString(1))
+                        ?: ContactIdentityPolicy.phoneDigits(cursor.getString(2))
+                    if (number != digits) continue
+                    val candidate = cursor.getString(0)?.trim()?.takeIf(::isValidDisplayName) ?: continue
+                    if (name != null && name != candidate) return null
+                    name = candidate
                 }
+                return name
             }
-        } catch (_: Throwable) {}
-
-        // 2. Try with leading '+'
-        if (!cleanNumber.startsWith("+")) {
-            try {
-                val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode("+$cleanNumber"))
-                context.contentResolver.query(
-                    uri,
-                    arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                    null,
-                    null,
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val name = cursor.getString(0)
-                        if (isValidDisplayName(name)) return name.trim()
-                    }
-                }
-            } catch (_: Throwable) {}
-        }
-
-        // 3. Fallback: Query CommonDataKinds.Phone with suffix match (last 7 to 9 digits)
-        if (cleanNumber.length >= 7) {
-            val suffix = cleanNumber.substring(cleanNumber.length - 7)
-            try {
-                val uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
-                val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                val selection = "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?"
-                val selectionArgs = arrayOf("%$suffix")
-
-                context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val name = cursor.getString(0)
-                        if (isValidDisplayName(name)) return name.trim()
-                    }
-                }
-            } catch (_: Throwable) {}
-        }
-
+        } catch (_: Exception) { }
         return null
     }
 
-    fun isGroupJid(jid: String): Boolean = jid.contains("@g.us") || jid.contains("-")
+    fun isGroupJid(jid: String): Boolean = ContactIdentityPolicy.isGroup(jid)
 
-    fun isLidJid(jid: String): Boolean = jid.contains("@lid") || (cleanUserPart(jid).length >= 14 && !isGroupJid(jid))
+    fun isLidJid(jid: String): Boolean = ContactIdentityPolicy.isLid(jid)
 
     fun cleanUserPart(jid: String): String = jid.substringBefore("@").substringBefore(":").substringBefore(".")
 
@@ -451,12 +313,8 @@ object ContactNameResolver {
     }
 
     private fun findDatabase(context: Context, dbName: String): File? {
-        val targetPkg = "com.whatsapp"
-        val candidates = listOf(
-            File(context.filesDir?.parentFile, "databases/$dbName"),
-            File("/data/data/$targetPkg/databases/$dbName"),
-            File("/data/user/0/$targetPkg/databases/$dbName")
-        )
-        return candidates.firstOrNull { it.exists() }
+        if (dbName != "wa.db" && dbName != "msgstore.db") return null
+        // Never fall back to another package's or user 0's databases.
+        return context.getDatabasePath(dbName)?.takeIf { it.isFile && it.canRead() }
     }
 }
