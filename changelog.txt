@@ -9,8 +9,9 @@
 [Improvements]
 - Improved Call recorder
 
-[New Language]
+[New Languages]
 - Chinese
+- Turkish
 
 [Community contribution]
 - Thanks to @TheKillerMax & @wilsonmilson for valuable contributions in this update.

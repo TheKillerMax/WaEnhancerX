@@ -159,6 +159,14 @@
     <string name="feat_open_wae_desc">إضافة زر في الشاشة الرئيسية أو إعدادات الواتساب لفتح Wa Enhancer</string>
     <string name="feat_message_bomber_title">رسالة منفذها</string>
     <string name="feat_message_bomber_desc">إرسال سلسلة قصيرة ومؤجلة من الرسائل من داخل دردشة الواتس اب</string>
+    <string name="feat_anti_edit_messages_title">إظهار سجل التعديلات</string>
+    <string name="feat_anti_edit_messages_desc">يعرض سجل التعديلات عند الضغط على «تم التعديل» في رسالة.</string>
+    <string name="feat_revokeallmessages_title">زيادة حد «الحذف لدى الجميع»</string>
+    <string name="feat_revokeallmessages_desc">يزيد الحد الزمني لخيار «الحذف لدى الجميع» إلى ثلاثة أيام.</string>
+    <string name="feat_hide_forwarded_tag_title">إخفاء علامة «تمت إعادة التوجيه»</string>
+    <string name="feat_hide_forwarded_tag_desc">يعيد توجيه الرسائل من دون علامة «تمت إعادة التوجيه».</string>
+    <string name="feat_removeseemore_title">إزالة زر «عرض المزيد»</string>
+    <string name="feat_removeseemore_desc">يعرض الرسائل الطويلة كاملة ويزيل «عرض المزيد».</string>
     <string name="feat_message_device_source_title">إظهار مصدر جهاز الرسالة</string>
     <string name="feat_message_device_source_desc">يوضح ما إذا كانت الرسالة قد تم إرسالها من الجهاز الأساسي أو من جهاز مرتبط</string>
     <string name="feat_preserve_delete_for_me_title">حذف (لي)</string>
@@ -290,12 +298,15 @@
     <string name="sec_home_layout_navigation">تخطيط المنزل والملاحة</string>
     <string name="sec_utilities_data">المرافق والبيانات</string>
     <string name="sec_system_compatibility">النظام والتوافق</string>
-    <string name="feat_anti_edit_messages_title">إظهار سجل التعديلات</string><string name="feat_anti_edit_messages_desc">يعرض سجل التعديلات عند الضغط على «تم التعديل» في رسالة.</string>
-    <string name="feat_revokeallmessages_title">زيادة حد «الحذف لدى الجميع»</string><string name="feat_revokeallmessages_desc">يزيد الحد الزمني لخيار «الحذف لدى الجميع» إلى ثلاثة أيام.</string>
-    <string name="feat_hide_forwarded_tag_title">إخفاء علامة «تمت إعادة التوجيه»</string><string name="feat_hide_forwarded_tag_desc">يعيد توجيه الرسائل من دون علامة «تمت إعادة التوجيه».</string>
-    <string name="feat_removeseemore_title">إزالة زر «عرض المزيد»</string><string name="feat_removeseemore_desc">يعرض الرسائل الطويلة كاملة ويزيل «عرض المزيد».</string>
-    <string name="sec_security_vault">الأمان والخزنة</string><string name="sec_chat_navigation_shortcuts">تنقل الدردشات والاختصارات</string>
-    <string name="catalog_tab_privacy">الخصوصية</string><string name="catalog_tab_conversation">الدردشات</string><string name="catalog_tab_media">الوسائط</string><string name="catalog_tab_automation">الأتمتة</string><string name="catalog_tab_styles">الأنماط</string><string name="catalog_tab_settings">الإعدادات</string><string name="catalog_tab_premium">المميز</string>
+    <string name="sec_security_vault">الأمان والخزنة</string>
+    <string name="sec_chat_navigation_shortcuts">تنقل الدردشات والاختصارات</string>
+    <string name="catalog_tab_privacy">الخصوصية</string>
+    <string name="catalog_tab_conversation">الدردشات</string>
+    <string name="catalog_tab_media">الوسائط</string>
+    <string name="catalog_tab_automation">الأتمتة</string>
+    <string name="catalog_tab_styles">الأنماط</string>
+    <string name="catalog_tab_settings">الإعدادات</string>
+    <string name="catalog_tab_premium">المميز</string>
     <string name="injected_hooks_active_count">الخطافات المحقونة (%1\$d/%2\$d نشط)</string>
     <string name="diag_label_module">الوحدة</string>
     <string name="diag_status_active">نشط</string>

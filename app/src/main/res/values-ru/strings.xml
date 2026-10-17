@@ -159,6 +159,14 @@
     <string name="feat_open_wae_desc">Добавьте кнопку на главный экран или в настройки WhatsApp, чтобы открыть Wa Enhancer.</string>
     <string name="feat_message_bomber_title">Бомбардировщик сообщений</string>
     <string name="feat_message_bomber_desc">Отправьте короткую последовательность сообщений с задержкой из чата WhatsApp.</string>
+    <string name="feat_anti_edit_messages_title">Показывать историю изменений</string>
+    <string name="feat_anti_edit_messages_desc">Показывает историю изменений при нажатии «Изменено» в сообщении.</string>
+    <string name="feat_revokeallmessages_title">Увеличить лимит «Удалить у всех»</string>
+    <string name="feat_revokeallmessages_desc">Увеличивает лимит времени для «Удалить у всех» до трёх дней.</string>
+    <string name="feat_hide_forwarded_tag_title">Скрыть метку «Переслано»</string>
+    <string name="feat_hide_forwarded_tag_desc">Пересылает сообщения без метки «Переслано».</string>
+    <string name="feat_removeseemore_title">Убрать кнопку «Подробнее»</string>
+    <string name="feat_removeseemore_desc">Полностью показывает длинные сообщения и убирает «Подробнее».</string>
     <string name="feat_message_device_source_title">Показать источник устройства сообщений</string>
     <string name="feat_message_device_source_desc">Показывает, было ли сообщение отправлено с основного устройства или со связанного устройства.</string>
     <string name="feat_preserve_delete_for_me_title">Удалить (для меня)</string>
@@ -290,12 +298,15 @@
     <string name="sec_home_layout_navigation">Макет главной страницы и навигация</string>
     <string name="sec_utilities_data">Утилиты и данные</string>
     <string name="sec_system_compatibility">Система и совместимость</string>
-    <string name="feat_anti_edit_messages_title">Показывать историю изменений</string><string name="feat_anti_edit_messages_desc">Показывает историю изменений при нажатии «Изменено» в сообщении.</string>
-    <string name="feat_revokeallmessages_title">Увеличить лимит «Удалить у всех»</string><string name="feat_revokeallmessages_desc">Увеличивает лимит времени для «Удалить у всех» до трёх дней.</string>
-    <string name="feat_hide_forwarded_tag_title">Скрыть метку «Переслано»</string><string name="feat_hide_forwarded_tag_desc">Пересылает сообщения без метки «Переслано».</string>
-    <string name="feat_removeseemore_title">Убрать кнопку «Подробнее»</string><string name="feat_removeseemore_desc">Полностью показывает длинные сообщения и убирает «Подробнее».</string>
-    <string name="sec_security_vault">Безопасность и хранилище</string><string name="sec_chat_navigation_shortcuts">Навигация и ярлыки чатов</string>
-    <string name="catalog_tab_privacy">Конфиденциальность</string><string name="catalog_tab_conversation">Чаты</string><string name="catalog_tab_media">Медиа</string><string name="catalog_tab_automation">Автоматизация</string><string name="catalog_tab_styles">Стили</string><string name="catalog_tab_settings">Настройки</string><string name="catalog_tab_premium">Премиум</string>
+    <string name="sec_security_vault">Безопасность и хранилище</string>
+    <string name="sec_chat_navigation_shortcuts">Навигация и ярлыки чатов</string>
+    <string name="catalog_tab_privacy">Конфиденциальность</string>
+    <string name="catalog_tab_conversation">Чаты</string>
+    <string name="catalog_tab_media">Медиа</string>
+    <string name="catalog_tab_automation">Автоматизация</string>
+    <string name="catalog_tab_styles">Стили</string>
+    <string name="catalog_tab_settings">Настройки</string>
+    <string name="catalog_tab_premium">Премиум</string>
     <string name="injected_hooks_active_count">Внедренные хуки (%1\$d/%2\$d активны)</string>
     <string name="diag_label_module">Модуль</string>
     <string name="diag_status_active">Активен</string>

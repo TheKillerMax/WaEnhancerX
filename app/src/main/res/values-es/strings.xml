@@ -159,6 +159,14 @@
     <string name="feat_open_wae_desc">Botón Agregar en la pantalla de inicio o en la configuración de WhatsApp para abrir Wa Enhancer</string>
     <string name="feat_message_bomber_title">Mensaje bombardero</string>
     <string name="feat_message_bomber_desc">Envía una secuencia corta y retrasada de mensajes desde dentro de un chat de WhatsApp</string>
+    <string name="feat_anti_edit_messages_title">Mostrar historial de ediciones</string>
+    <string name="feat_anti_edit_messages_desc">Muestra el historial de ediciones al tocar «Editado» en un mensaje.</string>
+    <string name="feat_revokeallmessages_title">Aumentar el límite de «Eliminar para todos»</string>
+    <string name="feat_revokeallmessages_desc">Aumenta a tres días el límite de «Eliminar para todos».</string>
+    <string name="feat_hide_forwarded_tag_title">Ocultar la etiqueta «Reenviado»</string>
+    <string name="feat_hide_forwarded_tag_desc">Reenvía mensajes sin la etiqueta «Reenviado».</string>
+    <string name="feat_removeseemore_title">Quitar el botón «Ver más»</string>
+    <string name="feat_removeseemore_desc">Muestra completos los mensajes largos y elimina «Ver más».</string>
     <string name="feat_message_device_source_title">Mostrar origen del dispositivo del mensaje</string>
     <string name="feat_message_device_source_desc">Muestra si un mensaje fue enviado desde el dispositivo principal o desde un dispositivo vinculado</string>
     <string name="feat_preserve_delete_for_me_title">Eliminar (para mí)</string>
@@ -290,12 +298,15 @@
     <string name="sec_home_layout_navigation">Diseño y navegación de inicio</string>
     <string name="sec_utilities_data">Utilidades y datos</string>
     <string name="sec_system_compatibility">Sistema y compatibilidad</string>
-    <string name="feat_anti_edit_messages_title">Mostrar historial de ediciones</string><string name="feat_anti_edit_messages_desc">Muestra el historial de ediciones al tocar «Editado» en un mensaje.</string>
-    <string name="feat_revokeallmessages_title">Aumentar el límite de «Eliminar para todos»</string><string name="feat_revokeallmessages_desc">Aumenta a tres días el límite de «Eliminar para todos».</string>
-    <string name="feat_hide_forwarded_tag_title">Ocultar la etiqueta «Reenviado»</string><string name="feat_hide_forwarded_tag_desc">Reenvía mensajes sin la etiqueta «Reenviado».</string>
-    <string name="feat_removeseemore_title">Quitar el botón «Ver más»</string><string name="feat_removeseemore_desc">Muestra completos los mensajes largos y elimina «Ver más».</string>
-    <string name="sec_security_vault">Seguridad y bóveda</string><string name="sec_chat_navigation_shortcuts">Navegación y accesos directos del chat</string>
-    <string name="catalog_tab_privacy">Privacidad</string><string name="catalog_tab_conversation">Conversación</string><string name="catalog_tab_media">Multimedia</string><string name="catalog_tab_automation">Automatización</string><string name="catalog_tab_styles">Estilos</string><string name="catalog_tab_settings">Ajustes</string><string name="catalog_tab_premium">Premium</string>
+    <string name="sec_security_vault">Seguridad y bóveda</string>
+    <string name="sec_chat_navigation_shortcuts">Navegación y accesos directos del chat</string>
+    <string name="catalog_tab_privacy">Privacidad</string>
+    <string name="catalog_tab_conversation">Conversación</string>
+    <string name="catalog_tab_media">Multimedia</string>
+    <string name="catalog_tab_automation">Automatización</string>
+    <string name="catalog_tab_styles">Estilos</string>
+    <string name="catalog_tab_settings">Ajustes</string>
+    <string name="catalog_tab_premium">Premium</string>
     <string name="injected_hooks_active_count">Hooks inyectados (%1\$d/%2\$d activos)</string>
     <string name="diag_label_module">Módulo</string>
     <string name="diag_status_active">Activo</string>

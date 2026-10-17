@@ -159,6 +159,14 @@
     <string name="feat_open_wae_desc">वा एन्हांसर खोलने के लिए होम स्क्रीन या व्हाट्सएप सेटिंग्स में बटन जोड़ें</string>
     <string name="feat_message_bomber_title">संदेश बॉम्बर</string>
     <string name="feat_message_bomber_desc">व्हाट्सएप चैट के अंदर से संदेशों का एक संक्षिप्त, विलंबित क्रम भेजें</string>
+    <string name="feat_anti_edit_messages_title">संपादन इतिहास दिखाएँ</string>
+    <string name="feat_anti_edit_messages_desc">संदेश में “संपादित” पर टैप करने पर संपादन इतिहास दिखाता है।</string>
+    <string name="feat_revokeallmessages_title">“सभी के लिए हटाएँ” की सीमा बढ़ाएँ</string>
+    <string name="feat_revokeallmessages_desc">“सभी के लिए हटाएँ” की समय-सीमा को तीन दिन तक बढ़ाता है।</string>
+    <string name="feat_hide_forwarded_tag_title">“फ़ॉरवर्ड किया गया” टैग छिपाएँ</string>
+    <string name="feat_hide_forwarded_tag_desc">संदेशों को “फ़ॉरवर्ड किया गया” टैग के बिना फ़ॉरवर्ड करता है।</string>
+    <string name="feat_removeseemore_title">“और देखें” बटन हटाएँ</string>
+    <string name="feat_removeseemore_desc">लंबे संदेश पूरे दिखाता है और “और देखें” हटाता है।</string>
     <string name="feat_message_device_source_title">संदेश डिवाइस स्रोत दिखाएँ</string>
     <string name="feat_message_device_source_desc">दिखाता है कि कोई संदेश प्राथमिक डिवाइस से भेजा गया था या किसी लिंक किए गए डिवाइस से</string>
     <string name="feat_preserve_delete_for_me_title">हटाएं (मेरे लिए)</string>
@@ -290,12 +298,15 @@
     <string name="sec_home_layout_navigation">होम लेआउट और नेविगेशन</string>
     <string name="sec_utilities_data">उपयोगिताएँ एवं डेटा</string>
     <string name="sec_system_compatibility">सिस्टम और अनुकूलता</string>
-    <string name="feat_anti_edit_messages_title">संपादन इतिहास दिखाएँ</string><string name="feat_anti_edit_messages_desc">संदेश में “संपादित” पर टैप करने पर संपादन इतिहास दिखाता है।</string>
-    <string name="feat_revokeallmessages_title">“सभी के लिए हटाएँ” की सीमा बढ़ाएँ</string><string name="feat_revokeallmessages_desc">“सभी के लिए हटाएँ” की समय-सीमा को तीन दिन तक बढ़ाता है।</string>
-    <string name="feat_hide_forwarded_tag_title">“फ़ॉरवर्ड किया गया” टैग छिपाएँ</string><string name="feat_hide_forwarded_tag_desc">संदेशों को “फ़ॉरवर्ड किया गया” टैग के बिना फ़ॉरवर्ड करता है।</string>
-    <string name="feat_removeseemore_title">“और देखें” बटन हटाएँ</string><string name="feat_removeseemore_desc">लंबे संदेश पूरे दिखाता है और “और देखें” हटाता है।</string>
-    <string name="sec_security_vault">सुरक्षा और वॉल्ट</string><string name="sec_chat_navigation_shortcuts">चैट नेविगेशन और शॉर्टकट</string>
-    <string name="catalog_tab_privacy">गोपनीयता</string><string name="catalog_tab_conversation">चैट</string><string name="catalog_tab_media">मीडिया</string><string name="catalog_tab_automation">स्वचालन</string><string name="catalog_tab_styles">शैलियाँ</string><string name="catalog_tab_settings">सेटिंग</string><string name="catalog_tab_premium">प्रीमियम</string>
+    <string name="sec_security_vault">सुरक्षा और वॉल्ट</string>
+    <string name="sec_chat_navigation_shortcuts">चैट नेविगेशन और शॉर्टकट</string>
+    <string name="catalog_tab_privacy">गोपनीयता</string>
+    <string name="catalog_tab_conversation">चैट</string>
+    <string name="catalog_tab_media">मीडिया</string>
+    <string name="catalog_tab_automation">स्वचालन</string>
+    <string name="catalog_tab_styles">शैलियाँ</string>
+    <string name="catalog_tab_settings">सेटिंग</string>
+    <string name="catalog_tab_premium">प्रीमियम</string>
     <string name="injected_hooks_active_count">इंजेक्टेड हुक्स (%1\$d/%2\$d सक्रिय)</string>
     <string name="diag_label_module">मॉड्यूल</string>
     <string name="diag_status_active">सक्रिय</string>
