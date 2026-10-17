@@ -1,0 +1,35 @@
+name: V33 pinned follow-up sources
+on:
+  push:
+    branches: ['test/review-v32-2026-10-17']
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          python3 - <<'PY'
+          import pathlib,subprocess,json,hashlib
+          out=pathlib.Path('followups');out.mkdir()
+          base='f6ec7d4e6f47a246ebb413848d66358217fa9c08'
+          refs={'locale':'8b7dceb404abf7f06ecf67828a35f98619fb8613','bridge':'e7774c15141f7c589d0942d998e0aceca54eb163'}
+          for tag,sha in refs.items():
+              subprocess.run(['git','fetch','origin',sha],check=True)
+              folder=out/tag;folder.mkdir()
+              patch=subprocess.check_output(['git','diff','--binary',base,sha]);(out/(tag+'.patch')).write_bytes(patch)
+              manifest=[]
+              for line in subprocess.check_output(['git','ls-tree','-r',sha]).decode().splitlines():
+                  left,path=line.split('\t');mode,kind,blob=left.split();manifest.append({'path':path,'mode':mode,'sha':blob,'type':kind})
+                  if kind=='blob' and path.endswith(('.java','.kt','.py','.md','.yml','.xml','.json','.txt','.kts','.toml','.properties')):
+                      data=subprocess.check_output(['git','show',sha+':'+path]);p=folder/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+              (out/(tag+'-manifest.json')).write_text(json.dumps({'commit':sha,'tree':subprocess.check_output(['git','rev-parse',sha+'^{tree}']).decode().strip(),'files':manifest},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v33-followup-sources
+          path: followups/
+          retention-days: 7
