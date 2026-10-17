@@ -1,0 +1,1000 @@
+-                                text = "Enable WhatsApp audio transcription with Groq AI or AssemblyAI",
++                                text = UiText.get(R.string.feat_voice_transcription_desc, "Enable WhatsApp audio transcription with Groq AI or AssemblyAI"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant,
+                                 fontSize = 12.sp
+@@ -494,7 +496,7 @@ fun AutomationTaskerScreen() {
+                             // Provider Dropdown selection
+                             Column {
+                                 Text(
+-                                    text = "AI Transcription Provider",
++                                    text = UiText.get(R.string.waex_ui_ai_transcription_provider_39d10f0b, "AI Transcription Provider"),
+                                     style = typography.labelSm,
+                                     color = colors.onSurfaceVariant,
+                                     modifier = Modifier.padding(bottom = 6.dp)
+@@ -535,7 +537,7 @@ fun AutomationTaskerScreen() {
+                             if (transcriptionProvider == "Groq") {
+                                 Column {
+                                     Text(
+-                                        text = "Groq API Key",
++                                        text = UiText.get(R.string.waex_ui_groq_api_key_af3ea8bb, "Groq API Key"),
+                                         style = typography.labelSm,
+                                         color = colors.onSurfaceVariant,
+                                         modifier = Modifier.padding(bottom = 6.dp)
+@@ -571,7 +573,7 @@ fun AutomationTaskerScreen() {
+                             } else {
+                                 Column {
+                                     Text(
+-                                        text = "AssemblyAI API Key",
++                                        text = UiText.get(R.string.waex_ui_assemblyai_api_key_1a41b574, "AssemblyAI API Key"),
+                                         style = typography.labelSm,
+                                         color = colors.onSurfaceVariant,
+                                         modifier = Modifier.padding(bottom = 6.dp)
+@@ -616,7 +618,7 @@ fun AutomationTaskerScreen() {
+                                         verticalAlignment = Alignment.CenterVertically,
+                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                     ) {
+-                                        Text(text = "Connection Status", style = typography.bodyMd, color = colors.onSurfaceVariant)
++                                        Text(text = UiText.get(R.string.waex_ui_connection_status_3693e288, "Connection Status"), style = typography.bodyMd, color = colors.onSurfaceVariant)
+                                         if (assemblyStatus == "ok") {
+                                             Icon(
+                                                 imageVector = WaexIcons.Success,
+@@ -624,7 +626,7 @@ fun AutomationTaskerScreen() {
+                                                 tint = Color(0xFF22C55E),
+                                                 modifier = Modifier.size(13.dp)
+                                             )
+-                                            Text(text = "Connected", style = typography.labelSm, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
++                                            Text(text = UiText.get(R.string.waex_ui_connected_22965568, "Connected"), style = typography.labelSm, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
+                                         } else if (assemblyStatus == "verifying") {
+                                             CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = colors.primary)
+                                         }
+@@ -646,7 +648,7 @@ fun AutomationTaskerScreen() {
+                                         ),
+                                         modifier = Modifier.height(36.dp)
+                                     ) {
+-                                        Text(text = "Test", style = typography.bodyMd)
++                                        Text(text = UiText.get(R.string.waex_ui_test_532eaabd, "Test"), style = typography.bodyMd)
+                                     }
+                                 }
+                             }
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerGuideScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerGuideScreen.kt
+index 8ea6e38..5ad473a 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerGuideScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerGuideScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.automation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.ClipData
+ import android.content.ClipboardManager
+ import android.content.Context
+@@ -56,13 +59,13 @@ fun TaskerGuideScreen() {
+         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+         val clip = ClipData.newPlainText(label, text)
+         clipboard.setPrimaryClip(clip)
+-        Toast.makeText(context, "Copied $label to clipboard", Toast.LENGTH_SHORT).show()
++        Toast.makeText(context, UiText.get(R.string.waex_ui_copied_1_s_to_clipboard_99b46814, "Copied %1\$s to clipboard", label), Toast.LENGTH_SHORT).show()
+     }
+ 
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Tasker Integration Guide",
++                title = UiText.get(R.string.title_tasker_guide, "Tasker Integration Guide"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -95,7 +98,7 @@ fun TaskerGuideScreen() {
+                     )
+                     Spacer(modifier = Modifier.width(12.dp))
+                     Text(
+-                        text = "Automate WhatsApp workflows using Intent broadcasts in Tasker, MacroDroid, and Automate.",
++                        text = UiText.get(R.string.waex_ui_automate_whatsapp_workflows_using_inte_9ba38948, "Automate WhatsApp workflows using Intent broadcasts in Tasker, MacroDroid, and Automate."),
+                         style = typography.bodyMd,
+                         color = colors.onSurface,
+                         fontSize = 13.sp,
+@@ -113,7 +116,7 @@ fun TaskerGuideScreen() {
+             ) {
+                 Column(modifier = Modifier.padding(20.dp)) {
+                     Text(
+-                        text = "EVENT: INCOMING MESSAGE",
++                        text = UiText.get(R.string.waex_ui_event_incoming_message_3d2cc9a6, "EVENT: INCOMING MESSAGE"),
+                         style = typography.labelSm,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.primary,
+@@ -121,7 +124,7 @@ fun TaskerGuideScreen() {
+                     )
+                     Spacer(modifier = Modifier.height(10.dp))
+                     Text(
+-                        text = "Trigger automation whenever a new message is received in WhatsApp.",
++                        text = UiText.get(R.string.waex_ui_trigger_automation_whenever_a_new_mess_f5c90c18, "Trigger automation whenever a new message is received in WhatsApp."),
+                         style = typography.bodyMd,
+                         color = colors.onSurfaceVariant
+                     )
+@@ -135,11 +138,11 @@ fun TaskerGuideScreen() {
+                             .clip(radius.defaultShape)
+                             .background(colors.surface)
+                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
+-                            .clickable { copyToClipboard("Action", "com.waenhancer.MESSAGE_RECEIVED") }
++                            .clickable { copyToClipboard(UiText.get(R.string.waex_ui_action_64cff131, "Action"), "com.waenhancer.MESSAGE_RECEIVED") }
+                             .padding(14.dp)
+                     ) {
+                         Column {
+-                            Text(text = "Action Intent:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
++                            Text(text = UiText.get(R.string.waex_ui_action_intent_5c8cbed1, "Action Intent:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                             Text(
+                                 text = "com.waenhancer.MESSAGE_RECEIVED",
+                                 style = typography.bodyMd,
+@@ -148,9 +151,9 @@ fun TaskerGuideScreen() {
+                                 color = colors.primary
+                             )
+                             Spacer(modifier = Modifier.height(8.dp))
+-                            Text(text = "Available Extras:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
++                            Text(text = UiText.get(R.string.waex_ui_available_extras_1d71d8a2, "Available Extras:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                             Text(
+-                                text = "%name (Sender Name)\n%number (Sender JID / Phone)\n%message (Text Content)",
++                                text = UiText.get(R.string.waex_ui_name_sender_name_number_sender_jid_pho_ee23ebc4, "%name (Sender Name)\n%number (Sender JID / Phone)\n%message (Text Content)"),
+                                 style = typography.bodyMd,
+                                 fontFamily = FontFamily.Monospace,
+                                 color = colors.onSurface,
+@@ -171,7 +174,7 @@ fun TaskerGuideScreen() {
+             ) {
+                 Column(modifier = Modifier.padding(20.dp)) {
+                     Text(
+-                        text = "ACTION: SEND MESSAGE AUTOMATICALLY",
++                        text = UiText.get(R.string.waex_ui_action_send_message_automatically_5e143aa0, "ACTION: SEND MESSAGE AUTOMATICALLY"),
+                         style = typography.labelSm,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.primary,
+@@ -179,7 +182,7 @@ fun TaskerGuideScreen() {
+                     )
+                     Spacer(modifier = Modifier.height(10.dp))
+                     Text(
+-                        text = "Broadcast intent to send a message without opening the WhatsApp interface.",
++                        text = UiText.get(R.string.waex_ui_broadcast_intent_to_send_a_message_wit_d171b9bd, "Broadcast intent to send a message without opening the WhatsApp interface."),
+                         style = typography.bodyMd,
+                         color = colors.onSurfaceVariant
+                     )
+@@ -192,11 +195,11 @@ fun TaskerGuideScreen() {
+                             .clip(radius.defaultShape)
+                             .background(colors.surface)
+                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
+-                            .clickable { copyToClipboard("Action", "com.waenhancer.MESSAGE_SENT") }
++                            .clickable { copyToClipboard(UiText.get(R.string.waex_ui_action_64cff131, "Action"), "com.waenhancer.MESSAGE_SENT") }
+                             .padding(14.dp)
+                     ) {
+                         Column {
+-                            Text(text = "Action Intent:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
++                            Text(text = UiText.get(R.string.waex_ui_action_intent_5c8cbed1, "Action Intent:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                             Text(
+                                 text = "com.waenhancer.MESSAGE_SENT",
+                                 style = typography.bodyMd,
+@@ -205,9 +208,9 @@ fun TaskerGuideScreen() {
+                                 color = colors.primary
+                             )
+                             Spacer(modifier = Modifier.height(8.dp))
+-                            Text(text = "Required Extras:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
++                            Text(text = UiText.get(R.string.waex_ui_required_extras_54e6a19f, "Required Extras:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                             Text(
+-                                text = "Extra: number:1234567890\nExtra: message:Your automated reply here",
++                                text = UiText.get(R.string.waex_ui_extra_number_1234567890_extra_message_ad458a9f, "Extra: number:1234567890\nExtra: message:Your automated reply here"),
+                                 style = typography.bodyMd,
+                                 fontFamily = FontFamily.Monospace,
+                                 color = colors.onSurface,
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerHistoryScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerHistoryScreen.kt
+index 8b21c24..001a592 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerHistoryScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/automation/TaskerHistoryScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.automation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.clickable
+@@ -62,22 +65,22 @@ fun TaskerHistoryScreen() {
+                 id = "1",
+                 eventType = "SENT",
+                 contactName = "+1 555-0192",
+-                details = "Auto-Reply: I am currently driving, will get back shortly.",
+-                timestamp = "Today, 2:15 PM"
++                details = UiText.get(R.string.waex_ui_auto_reply_i_am_currently_driving_will_8c4dec21, "Auto-Reply: I am currently driving, will get back shortly."),
++                timestamp = UiText.get(R.string.waex_ui_today_2_15_pm_3746292d, "Today, 2:15 PM")
+             ),
+             TaskerHistoryItem(
+                 id = "2",
+                 eventType = "RECEIVED",
+                 contactName = "Alex Thorne",
+-                details = "Triggered Macro: 'Forward to Telegram Bot'",
+-                timestamp = "Today, 1:40 PM"
++                details = UiText.get(R.string.waex_ui_triggered_macro_forward_to_telegram_bo_b1f50fd0, "Triggered Macro: 'Forward to Telegram Bot'"),
++                timestamp = UiText.get(R.string.waex_ui_today_1_40_pm_3985c17d, "Today, 1:40 PM")
+             ),
+             TaskerHistoryItem(
+                 id = "3",
+                 eventType = "SENT",
+                 contactName = "+971 50-0001",
+-                details = "Automated Morning Briefing Scheduled Dispatch",
+-                timestamp = "Today, 9:00 AM"
++                details = UiText.get(R.string.waex_ui_automated_morning_briefing_scheduled_d_42884bb5, "Automated Morning Briefing Scheduled Dispatch"),
++                timestamp = UiText.get(R.string.waex_ui_today_9_00_am_6144f2eb, "Today, 9:00 AM")
+             )
+         )
+     }
+@@ -85,7 +88,7 @@ fun TaskerHistoryScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Tasker Execution History",
++                title = UiText.get(R.string.title_tasker_history, "Tasker Execution History"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -133,7 +136,7 @@ fun TaskerHistoryScreen() {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                 Text(
+-                                    text = if (isSent) "Action: Send Intent" else "Event: Message Received",
++                                    text = if (isSent) UiText.get(R.string.waex_ui_action_send_intent_b3deaa4a, "Action: Send Intent") else UiText.get(R.string.waex_ui_event_message_received_29191586, "Event: Message Received"),
+                                     style = typography.bodyLg,
+                                     fontWeight = FontWeight.Bold,
+                                     color = colors.onSurface
+@@ -148,7 +151,7 @@ fun TaskerHistoryScreen() {
+                             }
+                             Spacer(modifier = Modifier.height(4.dp))
+                             Text(
+-                                text = "Target: ${item.contactName}",
++                                text = UiText.get(R.string.waex_ui_target_1_s_d0d8050b, "Target: %1\$s", item.contactName),
+                                 style = typography.labelSm,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.primary,
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/calls/CallsHubScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/calls/CallsHubScreen.kt
+index 676b6e1..70c9e5a 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/calls/CallsHubScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/calls/CallsHubScreen.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.ui.screens.calls
+ 
++import com.waenhancer.utils.UiText
++
+ import android.Manifest
+ import android.content.Context
+ import android.content.Intent
+@@ -178,12 +180,12 @@ fun CallsHubScreen() {
+             }.apply {
+                 type = "audio/*"
+                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+-                clipData = ClipData.newRawUri("Call recording", uris.first())
++                clipData = ClipData.newRawUri(UiText.get(R.string.waex_ui_call_recording_bb8d55c9, "Call recording"), uris.first())
+             }
+-            context.startActivity(Intent.createChooser(intent, "Share call recording"))
++            context.startActivity(Intent.createChooser(intent, UiText.get(R.string.waex_ui_share_call_recording_692216ae, "Share call recording")))
+             clearRecordingSelection()
+         }.onFailure {
+-            Toast.makeText(context, "Couldn't share the selected recording", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_couldn_t_share_the_selected_recording_d260dfd9, "Couldn't share the selected recording"), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -193,7 +195,7 @@ fun CallsHubScreen() {
+         val removed = selected.filter { runCatching { it.file.delete() }.getOrDefault(false) }
+         recordingsList.removeAll(removed.toSet())
+         clearRecordingSelection()
+-        Toast.makeText(context, "Deleted ${removed.size} recording${if (removed.size == 1) "" else "s"}", Toast.LENGTH_SHORT).show()
++        Toast.makeText(context, UiText.quantity(R.plurals.waex_recordings_deleted, removed.size, "Deleted %d recording(s)", removed.size), Toast.LENGTH_SHORT).show()
+     }
+ 
+     DisposableEffect(Unit) {
+@@ -226,7 +228,7 @@ fun CallsHubScreen() {
+         }
+ 
+         foundFiles.sortByDescending { it.lastModified() }
+-        val dateFormat = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
++        val dateFormat = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, UiText.displayLocale())
+ 
+         for (file in foundFiles) {
+             val sizeKb = file.length() / 1024
+@@ -239,7 +241,7 @@ fun CallsHubScreen() {
+                     name = file.nameWithoutExtension,
+                     dateStr = dateStr,
+                     sizeStr = sizeStr,
+-                    durationStr = "Audio Call"
++                    durationStr = UiText.get(R.string.waex_ui_audio_call_edd60bff, "Audio Call")
+                 )
+             )
+         }
+@@ -257,7 +259,7 @@ fun CallsHubScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = if (selectedRecordingPaths.isEmpty()) "Calls & Recording" else "${selectedRecordingPaths.size} selected",
++                title = if (selectedRecordingPaths.isEmpty()) UiText.get(R.string.waex_ui_calls_recording_6042880c, "Calls & Recording") else UiText.get(R.string.waex_ui_1_s_selected_5f9d5da8, "%1\$s selected", selectedRecordingPaths.size),
+                 onBackClick = if (selectedRecordingPaths.isEmpty()) {
+                     { navController.popBack() }
+                 } else {
+@@ -266,10 +268,10 @@ fun CallsHubScreen() {
+                 actions = if (selectedRecordingPaths.isEmpty()) null else {
+                     {
+                         IconButton(onClick = { shareSelectedRecordings() }) {
+-                            Icon(WaexIcons.Share, contentDescription = "Share selected", tint = colors.onSurface)
++                            Icon(WaexIcons.Share, contentDescription = UiText.get(R.string.waex_ui_share_selected_e3040dd9, "Share selected"), tint = colors.onSurface)
+                         }
+                         IconButton(onClick = { deleteSelectedRecordings() }) {
+-                            Icon(WaexIcons.Clear, contentDescription = "Delete selected", tint = colors.error)
++                            Icon(WaexIcons.Clear, contentDescription = UiText.get(R.string.waex_ui_delete_selected_d2ab5d46, "Delete selected"), tint = colors.error)
+                         }
+                     }
+                 }
+@@ -382,7 +384,7 @@ fun CallsHubScreen() {
+                         // ── SECTION 1: WHO CAN CALL ME ─────────────────────────────────
+                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                             Text(
+-                                text = "WHO CAN CALL ME",
++                                text = UiText.get(R.string.waex_ui_who_can_call_me_14ebef24, "WHO CAN CALL ME"),
+                                 style = typography.labelSm,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurfaceVariant,
+@@ -397,9 +399,9 @@ fun CallsHubScreen() {
+                             ) {
+                                 Column(modifier = Modifier.fillMaxWidth()) {
+                                     val blockerOptions = listOf(
+-                                        "0" to ("Everyone (No Block)" to "Allow all WhatsApp incoming voice & video calls"),
+-                                        "1" to ("Block All Calls" to "Automatically drop every incoming WhatsApp call"),
+-                                        "2" to ("Unknown Contacts Only" to "Only allow numbers saved in your phone address book")
++                                        "0" to (UiText.get(R.string.waex_ui_everyone_no_block_f8505494, "Everyone (No Block)") to UiText.get(R.string.waex_ui_allow_all_whatsapp_incoming_voice_vide_3f8889bd, "Allow all WhatsApp incoming voice & video calls")),
++                                        "1" to (UiText.get(R.string.waex_ui_block_all_calls_f74be201, "Block All Calls") to UiText.get(R.string.waex_ui_automatically_drop_every_incoming_what_52316223, "Automatically drop every incoming WhatsApp call")),
++                                        "2" to (UiText.get(R.string.waex_ui_unknown_contacts_only_0adb8d96, "Unknown Contacts Only") to UiText.get(R.string.waex_ui_only_allow_numbers_saved_in_your_phone_504e2e53, "Only allow numbers saved in your phone address book"))
+                                     )
+ 
+                                     blockerOptions.forEachIndexed { index, (value, details) ->
+@@ -471,7 +473,7 @@ fun CallsHubScreen() {
+                         if (callPrivacyMode != "0") {
+                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                 Text(
+-                                    text = "CALL REJECTION APPEARANCE",
++                                    text = UiText.get(R.string.waex_ui_call_rejection_appearance_4b21bb01, "CALL REJECTION APPEARANCE"),
+                                     style = typography.labelSm,
+                                     fontWeight = FontWeight.Bold,
+                                     color = colors.onSurfaceVariant,
+@@ -486,10 +488,10 @@ fun CallsHubScreen() {
+                                 ) {
+                                     Column(modifier = Modifier.fillMaxWidth()) {
+                                         val rejectOptions = listOf(
+-                                            "no_internet" to ("No Internet Connection" to "Caller sees 'Calling...' without connection tone"),
+-                                            "busy" to ("User Busy" to "Simulates immediate line busy tone"),
+-                                            "declined" to ("Call Declined" to "Instantly rejects and shows call declined"),
+-                                            "uncallable" to ("Not Available" to "Simulates caller not reachable")
++                                            "no_internet" to (UiText.get(R.string.waex_ui_no_internet_connection_13a21216, "No Internet Connection") to UiText.get(R.string.waex_ui_caller_sees_calling_without_connection_78bae289, "Caller sees 'Calling...' without connection tone")),
++                                            "busy" to (UiText.get(R.string.waex_ui_user_busy_0ee28857, "User Busy") to UiText.get(R.string.waex_ui_simulates_immediate_line_busy_tone_983e3462, "Simulates immediate line busy tone")),
++                                            "declined" to (UiText.get(R.string.waex_ui_call_declined_f695a2f2, "Call Declined") to UiText.get(R.string.waex_ui_instantly_rejects_and_shows_call_decli_f15c55b2, "Instantly rejects and shows call declined")),
++                                            "uncallable" to (UiText.get(R.string.waex_ui_not_available_2ab64517, "Not Available") to UiText.get(R.string.waex_ui_simulates_caller_not_reachable_fd5240bd, "Simulates caller not reachable"))
+                                         )
+ 
+                                         rejectOptions.forEachIndexed { index, (typeVal, details) ->
+@@ -560,7 +562,7 @@ fun CallsHubScreen() {
+                         // ── SECTION 3: CALL CONTROLS & DIAGNOSTICS ─────────────────────
+                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                             Text(
+-                                text = "CALL ENHANCEMENTS",
++                                text = UiText.get(R.string.waex_ui_call_enhancements_2ffe1444, "CALL ENHANCEMENTS"),
+                                 style = typography.labelSm,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurfaceVariant,
+@@ -583,13 +585,13 @@ fun CallsHubScreen() {
+                                     ) {
+                                         Column(modifier = Modifier.weight(1f)) {
+                                             Text(
+-                                                text = "Additional Call Information",
++                                                text = UiText.get(R.string.waex_ui_additional_call_information_c9b77d50, "Additional Call Information"),
+                                                 style = typography.bodyLg,
+                                                 fontWeight = FontWeight.SemiBold,
+                                                 color = colors.onSurface
+                                             )
+                                             Text(
+-                                                text = "Receive detailed notification with caller IP, location, device & version after calls end",
++                                                text = UiText.get(R.string.waex_ui_receive_detailed_notification_with_cal_e55e211d, "Receive detailed notification with caller IP, location, device & version after calls end"),
+                                                 style = typography.bodyMd,
+                                                 color = colors.onSurfaceVariant,
+                                                 fontSize = 12.sp
+@@ -620,13 +622,13 @@ fun CallsHubScreen() {
+                                     ) {
+                                         Column(modifier = Modifier.weight(1f)) {
+                                             Text(
+-                                                text = "Record WhatsApp Calls",
++                                                text = UiText.get(R.string.waex_ui_record_whatsapp_calls_edeb6ac1, "Record WhatsApp Calls"),
+                                                 style = typography.bodyLg,
+                                                 fontWeight = FontWeight.SemiBold,
+                                                 color = colors.onSurface
+                                             )
+                                             Text(
+-                                                text = "Automatically capture incoming & outgoing voice calls",
++                                                text = UiText.get(R.string.waex_ui_automatically_capture_incoming_outgoin_892737f9, "Automatically capture incoming & outgoing voice calls"),
+                                                 style = typography.bodyMd,
+                                                 color = colors.onSurfaceVariant,
+                                                 fontSize = 12.sp
+@@ -649,7 +651,7 @@ fun CallsHubScreen() {
+                         if (callRecordingEnabled) {
+                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                 Text(
+-                                    text = "RECORDING CONFIGURATION",
++                                    text = UiText.get(R.string.waex_ui_recording_configuration_40230390, "RECORDING CONFIGURATION"),
+                                     style = typography.labelSm,
+                                     fontWeight = FontWeight.Bold,
+                                     color = colors.onSurfaceVariant,
+@@ -665,7 +667,7 @@ fun CallsHubScreen() {
+                                     Column(modifier = Modifier.padding(16.dp)) {
+                                         // Capture engine row
+                                         Text(
+-                                            text = "Audio Capture Engine",
++                                            text = UiText.get(R.string.waex_ui_audio_capture_engine_2219d349, "Audio Capture Engine"),
+                                             style = typography.bodyMd,
+                                             fontWeight = FontWeight.SemiBold,
+                                             color = colors.onSurface,
+@@ -678,8 +680,8 @@ fun CallsHubScreen() {
+                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                         ) {
+                                             listOf(
+-                                                true to ("Direct Pipeline" to "Root / Direct"),
+-                                                false to ("Microphone" to "Standard Mic")
++                                                true to (UiText.get(R.string.waex_ui_direct_pipeline_e449cc90, "Direct Pipeline") to UiText.get(R.string.waex_ui_root_direct_ffade4c1, "Root / Direct")),
++                                                false to (UiText.get(R.string.waex_ui_microphone_186352a8, "Microphone") to UiText.get(R.string.waex_ui_standard_mic_84f47136, "Standard Mic"))
+                                             ).forEach { (isRoot, labels) ->
+                                                 val active = useRootStream == isRoot
+                                                 Box(
+@@ -727,7 +729,7 @@ fun CallsHubScreen() {
+ 
+                                         // Encoding Format Row
+                                         Text(
+-                                            text = "Encoding Format",
++                                            text = UiText.get(R.string.waex_ui_encoding_format_414693ab, "Encoding Format"),
+                                             style = typography.bodyMd,
+                                             fontWeight = FontWeight.SemiBold,
+                                             color = colors.onSurface,
+@@ -740,8 +742,8 @@ fun CallsHubScreen() {
+                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                         ) {
+                                             listOf(
+-                                                "m4a" to "AAC (.m4a)",
+-                                                "opus" to "Opus (.opus)"
++                                                "m4a" to UiText.get(R.string.waex_ui_aac_m4a_512c810e, "AAC (.m4a)"),
++                                                "opus" to UiText.get(R.string.waex_ui_opus_opus_f43733be, "Opus (.opus)")
+                                             ).forEach { (formatKey, label) ->
+                                                 val active = audioFormat == formatKey
+                                                 Box(
+@@ -804,14 +806,14 @@ fun CallsHubScreen() {
+                             }
+                             Spacer(modifier = Modifier.height(16.dp))
+                             Text(
+-                                text = "No Call Recordings Yet",
++                                text = UiText.get(R.string.waex_ui_no_call_recordings_yet_1a95417c, "No Call Recordings Yet"),
+                                 style = typography.headlineMd,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurface
+                             )
+                             Spacer(modifier = Modifier.height(6.dp))
+                             Text(
+-                                text = "When WhatsApp calls are placed or received with Call Recording enabled, the audio files will appear here automatically.",
++                                text = UiText.get(R.string.waex_ui_when_whatsapp_calls_are_placed_or_rece_a10b5a50, "When WhatsApp calls are placed or received with Call Recording enabled, the audio files will appear here automatically."),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant,
+                                 textAlign = TextAlign.Center,
+@@ -872,7 +874,7 @@ fun CallsHubScreen() {
+                                                         mediaPlayer = mp
+                                                         currentlyPlayingPath = item.file.absolutePath
+                                                     } catch (e: Exception) {
+-                                                        Toast.makeText(context, "Playback error: ${e.message}", Toast.LENGTH_SHORT).show()
++                                                        Toast.makeText(context, UiText.get(R.string.waex_ui_playback_error_1_s_158f296a, "Playback error: %1\$s", e.message), Toast.LENGTH_SHORT).show()
+                                                         stopAudio()
+                                                     }
+                                                 }
+@@ -884,7 +886,7 @@ fun CallsHubScreen() {
+                                         ) {
+                                             Icon(
+                                                 imageVector = if (isPlaying) WaexIcons.Clear else WaexIcons.Play,
+-                                                contentDescription = if (isPlaying) "Stop" else "Play",
++                                                contentDescription = if (isPlaying) UiText.get(R.string.waex_ui_stop_cae7d57b, "Stop") else UiText.get(R.string.waex_ui_play_436e6101, "Play"),
+                                                 tint = if (isPlaying) Color.White else colors.primary,
+                                                 modifier = Modifier.size(20.dp)
+                                             )
+@@ -930,7 +932,7 @@ fun CallsHubScreen() {
+                                         if (isSelected) {
+                                             Icon(
+                                                 imageVector = WaexIcons.Check,
+-                                                contentDescription = "Selected",
++                                                contentDescription = UiText.get(R.string.waex_ui_selected_57fd7a0c, "Selected"),
+                                                 tint = colors.primary,
+                                                 modifier = Modifier.size(24.dp)
+                                             )
+@@ -942,14 +944,14 @@ fun CallsHubScreen() {
+                                                 try {
+                                                     item.file.delete()
+                                                     recordingsList.remove(item)
+-                                                    Toast.makeText(context, "Recording deleted", Toast.LENGTH_SHORT).show()
++                                                    Toast.makeText(context, UiText.get(R.string.waex_ui_recording_deleted_ded881bb, "Recording deleted"), Toast.LENGTH_SHORT).show()
+                                                 } catch (_: Throwable) {}
+                                             },
+                                             modifier = Modifier.size(36.dp)
+                                         ) {
+                                             Icon(
+                                                 imageVector = WaexIcons.Clear,
+-                                                contentDescription = "Delete",
++                                                contentDescription = UiText.get(R.string.action_delete, "Delete"),
+                                                 tint = colors.error.copy(alpha = 0.8f),
+                                                 modifier = Modifier.size(16.dp)
+                                             )
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/conversation/ConversationEnhancementsScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/conversation/ConversationEnhancementsScreen.kt
+index 2996fa9..85d6a7f 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/conversation/ConversationEnhancementsScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/conversation/ConversationEnhancementsScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.conversation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.animation.animateColorAsState
+ import androidx.compose.animation.core.tween
+ import androidx.compose.foundation.background
+@@ -98,7 +101,7 @@ fun ConversationEnhancementsScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Conversation & Messages",
++                title = UiText.get(R.string.title_conversation_messages, "Conversation & Messages"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -117,8 +120,8 @@ fun ConversationEnhancementsScreen() {
+         ) {
+             // Section 1: Message Protection & Controls
+             WaexSectionHeader(
+-                title = "Message Protection & Controls",
+-                subtitle = "Preserve edits, prevent limits, and safeguard messages"
++                title = UiText.get(R.string.waex_ui_message_protection_controls_ecb4dab0, "Message Protection & Controls"),
++                subtitle = UiText.get(R.string.waex_ui_preserve_edits_prevent_limits_and_safe_6139d177, "Preserve edits, prevent limits, and safeguard messages")
+             )
+ 
+             WaexCard(modifier = Modifier.fillMaxWidth()) {
+@@ -130,8 +133,8 @@ fun ConversationEnhancementsScreen() {
+                         label = "bomber_highlight_bg"
+                     )
+                     WaexSwitchPreference(
+-                        title = "Message Bomber · Pro",
+-                        description = "Send a short, delayed sequence of messages from inside a WhatsApp chat",
++                        title = UiText.get(R.string.waex_ui_message_bomber_pro_33022491, "Message Bomber · Pro"),
++                        description = UiText.get(R.string.feat_message_bomber_desc, "Send a short, delayed sequence of messages from inside a WhatsApp chat"),
+                         checked = isPro && (stateMap["message_bomber"] ?: false),
+                         onCheckedChange = { enabled ->
+                             if (isPro) onToggle("message_bomber", enabled) else onActivatePro()
+@@ -152,8 +155,8 @@ fun ConversationEnhancementsScreen() {
+                         label = "ae_highlight_bg"
+                     )
+                     WaexSwitchPreference(
+-                        title = "Show Edited Message History",
+-                        description = "Show edited message history when clicking \"Edited\" on a message",
++                        title = UiText.get(R.string.feat_anti_edit_messages_title, "Show Edited Message History"),
++                        description = UiText.get(R.string.feat_anti_edit_messages_desc, "Show edited message history when clicking \"Edited\" on a message"),
+                         checked = stateMap["anti_edit_messages"] ?: false,
+                         onCheckedChange = { onToggle("anti_edit_messages", it) },
+                         icon = WaexIcons.Lock,
+@@ -172,8 +175,8 @@ fun ConversationEnhancementsScreen() {
+                         label = "mds_highlight_bg"
+                     )
+                     WaexSwitchPreference(
+-                        title = "Show Message Device Source",
+-                        description = "Shows whether a message was sent from the primary device or a linked device",
++                        title = UiText.get(R.string.feat_message_device_source_title, "Show Message Device Source"),
++                        description = UiText.get(R.string.feat_message_device_source_desc, "Shows whether a message was sent from the primary device or a linked device"),
+                         checked = stateMap["message_device_source"] ?: false,
+                         onCheckedChange = { onToggle("message_device_source", it) },
+                         icon = WaexIcons.Extension,
+@@ -186,64 +189,64 @@ fun ConversationEnhancementsScreen() {
+                             }
+                     )
+                     WaexSwitchPreference(
+-                        title = "Delete (for me)",
+-                        description = "Retain messages locally when Delete for Me is pressed",
++                        title = UiText.get(R.string.feat_preserve_delete_for_me_title, "Delete (for me)"),
++                        description = UiText.get(R.string.waex_ui_retain_messages_locally_when_delete_fo_83f67a27, "Retain messages locally when Delete for Me is pressed"),
+                         checked = stateMap["preserve_delete_for_me"] ?: false,
+                         onCheckedChange = { onToggle("preserve_delete_for_me", it) },
+                         icon = WaexIcons.Security,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Keep My Revoked Messages",
+-                        description = "Keep your local copy after Delete for Everyone while deleting it for recipients",
++                        title = UiText.get(R.string.feat_preserve_own_revoke_title, "Keep My Revoked Messages"),
++                        description = UiText.get(R.string.feat_preserve_own_revoke_desc, "Keep your local copy after Delete for Everyone while deleting it for recipients"),
+                         checked = stateMap["preserve_own_revoke"] ?: false,
+                         onCheckedChange = { onToggle("preserve_own_revoke", it) },
+                         icon = WaexIcons.Security,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Increase limit of \"Delete for everyone\" option",
+-                        description = "Increases the limit to 3 days in the option to delete messages for everyone",
++                        title = UiText.get(R.string.feat_revokeallmessages_title, "Increase limit of \"Delete for everyone\" option"),
++                        description = UiText.get(R.string.feat_revokeallmessages_desc, "Increases the limit to 3 days in the option to delete messages for everyone"),
+                         checked = stateMap["revokeallmessages"] ?: false,
+                         onCheckedChange = { onToggle("revokeallmessages", it) },
+                         icon = WaexIcons.Refresh,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Hide \"Forwarded\" Tag",
+-                        description = "Forward messages without the tag \"Forwarded\"",
++                        title = UiText.get(R.string.feat_hide_forwarded_tag_title, "Hide \"Forwarded\" Tag"),
++                        description = UiText.get(R.string.feat_hide_forwarded_tag_desc, "Forward messages without the tag \"Forwarded\""),
+                         checked = stateMap["hide_forwarded_tag"] ?: false,
+                         onCheckedChange = { onToggle("hide_forwarded_tag", it) },
+                         icon = WaexIcons.Share,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Remove Forward Limit",
+-                        description = "Remove forward limit for 5 chats (normal) and 1 chat (multiple times)",
++                        title = UiText.get(R.string.feat_removeforwardlimit_title, "Remove Forward Limit"),
++                        description = UiText.get(R.string.feat_removeforwardlimit_desc, "Remove forward limit for 5 chats (normal) and 1 chat (multiple times)"),
+                         checked = stateMap["removeforwardlimit"] ?: false,
+                         onCheckedChange = { onToggle("removeforwardlimit", it) },
+                         icon = WaexIcons.Share,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Confirmation Before Sending Sticker",
+-                        description = "Show a dialog before sending the sticker",
++                        title = UiText.get(R.string.feat_sticker_confirm_alert_title, "Confirmation Before Sending Sticker"),
++                        description = UiText.get(R.string.feat_sticker_confirm_alert_desc, "Show a dialog before sending the sticker"),
+                         checked = stateMap["sticker_confirm_alert"] ?: false,
+                         onCheckedChange = { onToggle("sticker_confirm_alert", it) },
+                         icon = WaexIcons.Settings,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Remove \"See More\" Button",
+-                        description = "Disable \"See More\" button and show all long message",
++                        title = UiText.get(R.string.feat_removeseemore_title, "Remove \"See More\" Button"),
++                        description = UiText.get(R.string.waex_ui_disable_see_more_button_and_show_all_l_74a0a668, "Disable \"See More\" button and show all long message"),
+                         checked = stateMap["removeseemore"] ?: false,
+                         onCheckedChange = { onToggle("removeseemore", it) },
+                         icon = WaexIcons.Info,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Remove Stamp from Copied Messages",
+-                        description = "Removes name and date when copying more than one message",
++                        title = UiText.get(R.string.feat_stamp_copied_message_title, "Remove Stamp from Copied Messages"),
++                        description = UiText.get(R.string.feat_stamp_copied_message_desc, "Removes name and date when copying more than one message"),
+                         checked = stateMap["stamp_copied_message"] ?: false,
+                         onCheckedChange = { onToggle("stamp_copied_message", it) },
+                         icon = WaexIcons.Folder,
+@@ -251,8 +254,8 @@ fun ConversationEnhancementsScreen() {
+                     )
+                     val doubleTapEnabled = stateMap["doubletap2like"] ?: false
+                     WaexSwitchPreference(
+-                        title = "Enable Double Click to React",
+-                        description = "Activates the possibility of double-clicking on the message to react it",
++                        title = UiText.get(R.string.feat_doubletap2like_title, "Enable Double Click to React"),
++                        description = UiText.get(R.string.feat_doubletap2like_desc, "Activates the possibility of double-clicking on the message to react it"),
+                         checked = doubleTapEnabled,
+                         onCheckedChange = { onToggle("doubletap2like", it) },
+                         icon = WaexIcons.AutoAwesome,
+@@ -266,8 +269,8 @@ fun ConversationEnhancementsScreen() {
+                         }
+ 
+                         WaexPreferenceItem(
+-                            title = "Custom Reaction",
+-                            description = "Change the default emoji sent when double-clicking ($currentEmoji)",
++                            title = UiText.get(R.string.waex_ui_custom_reaction_9a565091, "Custom Reaction"),
++                            description = UiText.get(R.string.waex_ui_change_the_default_emoji_sent_when_dou_9ed5b05d, "Change the default emoji sent when double-clicking (%1\$s)", currentEmoji),
+                             icon = WaexIcons.Palette,
+                             onClick = { showEmojiPicker = true },
+                             showDivider = false,
+@@ -302,55 +305,55 @@ fun ConversationEnhancementsScreen() {
+ 
+             // Section 2: Chat Navigation & Shortcuts
+             WaexSectionHeader(
+-                title = "Chat Navigation & Shortcuts",
+-                subtitle = "Fast navigation and conversation productivity tools"
++                title = UiText.get(R.string.sec_chat_navigation_shortcuts, "Chat Navigation & Shortcuts"),
++                subtitle = UiText.get(R.string.waex_ui_fast_navigation_and_conversation_produ_83302a70, "Fast navigation and conversation productivity tools")
+             )
+ 
+             WaexCard(modifier = Modifier.fillMaxWidth()) {
+                 Column {
+                     WaexSwitchPreference(
+-                        title = "Jump to First Message",
+-                        description = "Add a button to skip the first message in the conversations screen",
++                        title = UiText.get(R.string.feat_jump_to_first_message_title, "Jump to First Message"),
++                        description = UiText.get(R.string.feat_jump_to_first_message_desc, "Add a button to skip the first message in the conversations screen"),
+                         checked = stateMap["jump_to_first_message"] ?: false,
+                         onCheckedChange = { onToggle("jump_to_first_message", it) },
+                         icon = WaexIcons.Play,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Disable Pinned Chats Limit",
+-                        description = "Disable limit of 3 pinned chats",
++                        title = UiText.get(R.string.feat_unlimited_pinned_chats_title, "Disable Pinned Chats Limit"),
++                        description = UiText.get(R.string.feat_unlimited_pinned_chats_desc, "Disable limit of 3 pinned chats"),
+                         checked = stateMap["unlimited_pinned_chats"] ?: false,
+                         onCheckedChange = { onToggle("unlimited_pinned_chats", it) },
+                         icon = WaexIcons.Lock,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Show chat broadcast icon",
+-                        description = "Shows an icon if the contact sent a message via broadcast",
++                        title = UiText.get(R.string.feat_broadcast_tag_title, "Show chat broadcast icon"),
++                        description = UiText.get(R.string.feat_broadcast_tag_desc, "Shows an icon if the contact sent a message via broadcast"),
+                         checked = stateMap["broadcast_tag"] ?: false,
+                         onCheckedChange = { onToggle("broadcast_tag", it) },
+                         icon = WaexIcons.Notifications,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "New Chat",
+-                        description = "Message numbers directly without saving them to contacts",
++                        title = UiText.get(R.string.feat_direct_chat_dialer_title, "New Chat"),
++                        description = UiText.get(R.string.feat_direct_chat_dialer_desc, "Message numbers directly without saving them to contacts"),
+                         checked = stateMap["direct_chat_dialer"] ?: false,
+                         onCheckedChange = { onToggle("direct_chat_dialer", it) },
+                         icon = WaexIcons.Contacts,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Enable Google Translate",
+-                        description = "Replaces Whatsapp's native translator with Google Translate",
++                        title = UiText.get(R.string.feat_inline_translation_title, "Enable Google Translate"),
++                        description = UiText.get(R.string.feat_inline_translation_desc, "Replaces Whatsapp's native translator with Google Translate"),
+                         checked = stateMap["inline_translation"] ?: false,
+                         onCheckedChange = { onToggle("inline_translation", it) },
+                         icon = WaexIcons.Extension,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Enable Copy Status",
+-                        description = "Activates the possibility of copying the description and caption of statuses by holding on them",
++                        title = UiText.get(R.string.feat_copy_status_text_title, "Enable Copy Status"),
++                        description = UiText.get(R.string.feat_copy_status_text_desc, "Activates the possibility of copying the description and caption of statuses by holding on them"),
+                         checked = stateMap["copy_status_text"] ?: false,
+                         onCheckedChange = { onToggle("copy_status_text", it) },
+                         icon = WaexIcons.Folder,
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/dashboard/DashboardBentoScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/dashboard/DashboardBentoScreen.kt
+index 19a459e..3ab5561 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/dashboard/DashboardBentoScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/dashboard/DashboardBentoScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.dashboard
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.animation.core.LinearEasing
+ import androidx.compose.animation.core.RepeatMode
+ import androidx.compose.animation.core.animateFloat
+@@ -91,7 +94,7 @@ fun DashboardBentoScreen() {
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.ShieldHeart,
+-                            contentDescription = "Shield Heart",
++                            contentDescription = UiText.get(R.string.waex_ui_shield_heart_4bd16fe2, "Shield Heart"),
+                             tint = colors.primary,
+                             modifier = Modifier.size(24.dp)
+                         )
+@@ -111,7 +114,7 @@ fun DashboardBentoScreen() {
+                                 .padding(horizontal = 12.dp, vertical = 4.dp)
+                         ) {
+                             Text(
+-                                text = "Free Plan",
++                                text = UiText.get(R.string.waex_ui_free_plan_6d7e546c, "Free Plan"),
+                                 style = typography.labelSm,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -120,7 +123,7 @@ fun DashboardBentoScreen() {
+                         IconButton(onClick = { navController.navigateTo(Screen.GlobalPrivacySettings) }) {
+                             Icon(
+                                 imageVector = WaexIcons.Settings,
+-                                contentDescription = "Settings",
++                                contentDescription = UiText.get(R.string.catalog_tab_settings, "Settings"),
+                                 tint = colors.secondary
+                             )
+                         }
+@@ -151,12 +154,12 @@ fun DashboardBentoScreen() {
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.GridView,
+-                            contentDescription = "Dashboard",
++                            contentDescription = UiText.get(R.string.waex_ui_dashboard_67b69646, "Dashboard"),
+                             tint = colors.secondary,
+                             modifier = Modifier.size(24.dp)
+                         )
+                         Text(
+-                            text = "Dashboard",
++                            text = UiText.get(R.string.waex_ui_dashboard_67b69646, "Dashboard"),
+                             style = typography.labelSm,
+                             color = colors.secondary,
+                             modifier = Modifier.padding(top = 4.dp)
+@@ -168,12 +171,12 @@ fun DashboardBentoScreen() {
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.Extension,
+-                            contentDescription = "Modules",
++                            contentDescription = UiText.get(R.string.waex_ui_modules_76c86c4c, "Modules"),
+                             tint = colors.primary,
+                             modifier = Modifier.size(24.dp)
+                         )
+                         Text(
+-                            text = "Modules",
++                            text = UiText.get(R.string.waex_ui_modules_76c86c4c, "Modules"),
+                             style = typography.labelSm,
+                             color = colors.primary,
+                             modifier = Modifier.padding(top = 4.dp)
+@@ -185,12 +188,12 @@ fun DashboardBentoScreen() {
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.ContactSupport,
+-                            contentDescription = "Support",
++                            contentDescription = UiText.get(R.string.support, "Support"),
+                             tint = colors.secondary,
+                             modifier = Modifier.size(24.dp)
+                         )
+                         Text(
+-                            text = "Support",
++                            text = UiText.get(R.string.support, "Support"),
+                             style = typography.labelSm,
+                             color = colors.secondary,
+                             modifier = Modifier.padding(top = 4.dp)
+@@ -235,7 +238,7 @@ fun DashboardBentoScreen() {
+                         }
+                         Spacer(modifier = Modifier.width(10.dp))
+                         Text(
+-                            text = "Module Active",
++                            text = UiText.get(R.string.module_active, "Module Active"),
+                             style = typography.headlineMd,
+                             fontWeight = FontWeight.Bold,
+                             color = colors.onSurface
+@@ -254,7 +257,7 @@ fun DashboardBentoScreen() {
+                             )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text(
+-                                text = "Xposed Framework Connected",
++                                text = UiText.get(R.string.waex_ui_xposed_framework_connected_d363853a, "Xposed Framework Connected"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -268,7 +271,7 @@ fun DashboardBentoScreen() {
+                                 )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text(
+-                                text = "WhatsApp Hooked",
++                                text = UiText.get(R.string.waex_ui_whatsapp_hooked_c9066f8d, "WhatsApp Hooked"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -282,7 +285,7 @@ fun DashboardBentoScreen() {
+                             )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text(
+-                                text = "Engine Running",
++                                text = UiText.get(R.string.waex_ui_engine_running_11ac7787, "Engine Running"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -296,7 +299,7 @@ fun DashboardBentoScreen() {
+                             )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text(
+-                                text = "Compatibility Verified",
++                                text = UiText.get(R.string.waex_ui_compatibility_verified_cca213b2, "Compatibility Verified"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -329,7 +332,7 @@ fun DashboardBentoScreen() {
+                             )
+                             Spacer(modifier = Modifier.height(4.dp))
+                             Text(
+-                                text = "HOOK SUCCESS",
++                                text = UiText.get(R.string.waex_ui_hook_success_bf7c8178, "HOOK SUCCESS"),
+                                 style = typography.labelSm,
+                                 color = colors.secondary,
+                                 fontWeight = FontWeight.Bold
+@@ -352,7 +355,7 @@ fun DashboardBentoScreen() {
+                                 verticalAlignment = Alignment.CenterVertically
+                             ) {
+                                 Text(
+-                                    text = "Hooks",
++                                    text = UiText.get(R.string.waex_ui_hooks_d412a062, "Hooks"),
+                                     style = typography.bodyMd,
+                                     color = colors.onSurfaceVariant
+                                 )
+@@ -374,7 +377,7 @@ fun DashboardBentoScreen() {
+                                 verticalAlignment = Alignment.CenterVertically
+                             ) {
+                                 Text(
+-                                    text = "Features",
++                                    text = UiText.get(R.string.waex_ui_features_5697d03d, "Features"),
+                                     style = typography.bodyMd,
+                                     color = colors.onSurfaceVariant
+                                 )
+@@ -423,7 +426,7 @@ fun DashboardBentoScreen() {
+                             }
+                             Spacer(modifier = Modifier.width(12.dp))
+                             Text(
+-                                text = "Controls",
++                                text = UiText.get(R.string.nav_controls, "Controls"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurface
+@@ -431,7 +434,7 @@ fun DashboardBentoScreen() {
+                         }
+                         Spacer(modifier = Modifier.height(10.dp))
+                         Text(
+-                            text = "Advanced protection for your messaging experience. Control visibility and message persistence.",
++                            text = UiText.get(R.string.waex_ui_advanced_protection_for_your_messaging_b0cdb7dc, "Advanced protection for your messaging experience. Control visibility and message persistence."),
+                             style = typography.bodyMd,
+                             color = colors.onSurfaceVariant
+                         )
+@@ -441,7 +444,7 @@ fun DashboardBentoScreen() {
+                             verticalArrangement = Arrangement.spacedBy(6.dp),
+                             modifier = Modifier.fillMaxWidth()
+                         ) {
+-                            val list = listOf("Ghost Mode", "Anti Revoke", "Hide Seen", "Hide View Status")
++                            val list = listOf(UiText.get(R.string.waex_ui_ghost_mode_48b2b30e, "Ghost Mode"), UiText.get(R.string.waex_ui_anti_revoke_c56cb768, "Anti Revoke"), UiText.get(R.string.waex_ui_hide_seen_28cfe6b3, "Hide Seen"), UiText.get(R.string.waex_ui_hide_view_status_64ca562e, "Hide View Status"))
+                             list.forEach { tagText ->
+                                 Box(
+                                     modifier = Modifier
+@@ -469,7 +472,7 @@ fun DashboardBentoScreen() {
+                             modifier = Modifier.fillMaxWidth()
+                         ) {
+                             Text(
+-                                text = "Manage Privacy Settings",
++                                text = UiText.get(R.string.waex_ui_manage_privacy_settings_cf4ad284, "Manage Privacy Settings"),
+                                 style = typography.labelSm,
+                                 fontWeight = FontWeight.SemiBold
+                             )
+@@ -479,17 +482,17 @@ fun DashboardBentoScreen() {
+ 
+                 // Media
+                 WaexBentoItemMobile(
+-                    title = "Media",
++                    title = UiText.get(R.string.catalog_tab_media, "Media"),
+                     icon = WaexIcons.Image,
+-                    chips = listOf("HD Upload", "Status Download", "Unlimited View Once", "Audio to Voice Status"),
++                    chips = listOf(UiText.get(R.string.waex_ui_hd_upload_ee403315, "HD Upload"), UiText.get(R.string.waex_ui_status_download_bbc8b7f1, "Status Download"), UiText.get(R.string.feat_anti_view_once_title, "Unlimited View Once"), UiText.get(R.string.feat_send_audio_as_voice_status_title, "Audio to Voice Status")),
+                     onManageClick = { navController.navigateTo(Screen.MediaStatusHub) }
+                 )
+ 
+                 // Customization
+                 WaexBentoItemMobile(
+-                    title = "Customization",
++                    title = UiText.get(R.string.customization_coming_soon_title, "Customization"),
+                     icon = WaexIcons.Palette,
+-                    chips = listOf("Pill Design", "Custom Status Layout", "Menu Icons", "Animated Emojis"),
++                    chips = listOf(UiText.get(R.string.waex_ui_pill_design_5eba892d, "Pill Design"), UiText.get(R.string.waex_ui_custom_status_layout_c8b6c1ff, "Custom Status Layout"), UiText.get(R.string.waex_ui_menu_icons_6ee1d5da, "Menu Icons"), UiText.get(R.string.waex_ui_animated_emojis_cf3b4565, "Animated Emojis")),
+                     onManageClick = { navController.navigateTo(Screen.ConversationEnhancements) }
+                 )
+ 
+@@ -519,7 +522,7 @@ fun DashboardBentoScreen() {
+                             }
+                             Spacer(modifier = Modifier.width(12.dp))
+                             Text(
+-                                text = "Automation",
++                                text = UiText.get(R.string.subtab_automation, "Automation"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurface
+@@ -531,7 +534,7 @@ fun DashboardBentoScreen() {
+                             verticalArrangement = Arrangement.spacedBy(6.dp),
+                             modifier = Modifier.fillMaxWidth()
+                         ) {
+-                            val list = listOf("Always Typing", "Auto Reply", "Status Forward", "Tasker")
++                            val list = listOf(UiText.get(R.string.waex_ui_always_typing_b7568ffa, "Always Typing"), UiText.get(R.string.waex_ui_auto_reply_8772ec0f, "Auto Reply"), UiText.get(R.string.waex_ui_status_forward_efd1de1c, "Status Forward"), "Tasker")
+                             list.forEach { tagText ->
+                                 Box(
+                                     modifier = Modifier

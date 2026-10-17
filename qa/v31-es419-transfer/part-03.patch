@@ -1,0 +1,1000 @@
++import com.waenhancer.utils.UiText
++
+ import android.graphics.Color as AndroidColor
+ import android.widget.Toast
+ import com.waenhancer.ui.components.WaexProChip
+@@ -578,7 +580,7 @@ fun GlobalPrivacySettingsScreen(
+                                         verticalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         Text(
+-                                            text = "BUTTON PLACEMENT",
++                                            text = UiText.get(R.string.waex_ui_button_placement_15d950e9, "BUTTON PLACEMENT"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+@@ -591,7 +593,7 @@ fun GlobalPrivacySettingsScreen(
+                                                 .padding(4.dp),
+                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                         ) {
+-                                            listOf("1" to "Top icon", "2" to "Menu option").forEach { (value, label) ->
++                                            listOf("1" to UiText.get(R.string.waex_ui_top_icon_d8a8beb7, "Top icon"), "2" to UiText.get(R.string.waex_ui_menu_option_e2b665ae, "Menu option")).forEach { (value, label) ->
+                                                 val selected = seenTickPlacement == value
+                                                 Box(
+                                                     modifier = Modifier
+@@ -631,7 +633,7 @@ fun GlobalPrivacySettingsScreen(
+                                         verticalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         Text(
+-                                            text = "OPEN ARCHIVED CHATS",
++                                            text = UiText.get(R.string.waex_ui_open_archived_chats_4757b69a, "OPEN ARCHIVED CHATS"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+@@ -642,7 +644,7 @@ fun GlobalPrivacySettingsScreen(
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+                                             Text(
+-                                                text = "Show in 3-dots / WAEX menu",
++                                                text = UiText.get(R.string.waex_ui_show_in_3_dots_waex_menu_022a93a6, "Show in 3-dots / WAEX menu"),
+                                                 style = typography.bodySm,
+                                                 color = colors.onSurface,
+                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
+@@ -665,7 +667,7 @@ fun GlobalPrivacySettingsScreen(
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+                                             Text(
+-                                                text = "Long-press WhatsApp title",
++                                                text = UiText.get(R.string.waex_ui_long_press_whatsapp_title_eee432ef, "Long-press WhatsApp title"),
+                                                 style = typography.bodySm,
+                                                 color = colors.onSurface,
+                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
+@@ -688,7 +690,7 @@ fun GlobalPrivacySettingsScreen(
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+                                             Text(
+-                                                text = "Tap WhatsApp title 3 times",
++                                                text = UiText.get(R.string.waex_ui_tap_whatsapp_title_3_times_84515b9e, "Tap WhatsApp title 3 times"),
+                                                 style = typography.bodySm,
+                                                 color = colors.onSurface,
+                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
+@@ -722,13 +724,13 @@ fun GlobalPrivacySettingsScreen(
+                                         verticalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         Text(
+-                                            text = "OPEN LOCKED CHATS",
++                                            text = UiText.get(R.string.waex_ui_open_locked_chats_b10ca180, "OPEN LOCKED CHATS"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+                                         )
+                                         listOf(
+-                                            Triple("Show in 3-dots / WAEX menu", lockedOpenViaMenu) { checked: Boolean ->
++                                            Triple(UiText.get(R.string.waex_ui_show_in_3_dots_waex_menu_022a93a6, "Show in 3-dots / WAEX menu"), lockedOpenViaMenu) { checked: Boolean ->
+                                                 lockedOpenViaMenu = checked
+                                                 preferenceManager.putBoolean("locked_open_via_menu", checked)
+                                                 if (checked) {
+@@ -736,7 +738,7 @@ fun GlobalPrivacySettingsScreen(
+                                                     preferenceManager.putBoolean("archive_open_via_menu", false)
+                                                 }
+                                             },
+-                                            Triple("Long-press WhatsApp title", lockedOpenViaTitleLongPress) { checked: Boolean ->
++                                            Triple(UiText.get(R.string.waex_ui_long_press_whatsapp_title_eee432ef, "Long-press WhatsApp title"), lockedOpenViaTitleLongPress) { checked: Boolean ->
+                                                 lockedOpenViaTitleLongPress = checked
+                                                 preferenceManager.putBoolean("locked_open_via_title_long_press", checked)
+                                                 if (checked) {
+@@ -744,7 +746,7 @@ fun GlobalPrivacySettingsScreen(
+                                                     preferenceManager.putBoolean("archive_open_via_title_long_press", false)
+                                                 }
+                                             },
+-                                            Triple("Tap WhatsApp title 3 times", lockedOpenViaTitleTripleTap) { checked: Boolean ->
++                                            Triple(UiText.get(R.string.waex_ui_tap_whatsapp_title_3_times_84515b9e, "Tap WhatsApp title 3 times"), lockedOpenViaTitleTripleTap) { checked: Boolean ->
+                                                 lockedOpenViaTitleTripleTap = checked
+                                                 preferenceManager.putBoolean("locked_open_via_title_triple_tap", checked)
+                                                 if (checked) {
+@@ -796,7 +798,7 @@ fun GlobalPrivacySettingsScreen(
+                                         // Section 1: Indicator Style with Segmented Control
+                                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                             Text(
+-                                                text = "INDICATOR STYLE",
++                                                text = UiText.get(R.string.waex_ui_indicator_style_7b2d18a3, "INDICATOR STYLE"),
+                                                 style = typography.labelSm,
+                                                 fontWeight = FontWeight.Bold,
+                                                 color = colors.primary
+@@ -809,7 +811,7 @@ fun GlobalPrivacySettingsScreen(
+                                                     .padding(4.dp),
+                                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                             ) {
+-                                                listOf("2" to "Deleted Icon 🚫", "1" to "Text \"Deleted\"").forEach { (valKey, title) ->
++                                                listOf("2" to UiText.get(R.string.waex_ui_deleted_icon_a9a44dc0, "Deleted Icon 🚫"), "1" to UiText.get(R.string.waex_ui_text_deleted_0eb7a071, "Text \"Deleted\"")).forEach { (valKey, title) ->
+                                                     val isSelected = currentIndicator == valKey
+                                                     Box(
+                                                         modifier = Modifier
+@@ -847,13 +849,13 @@ fun GlobalPrivacySettingsScreen(
+                                         ) {
+                                             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                                 Text(
+-                                                    text = "Color Deleted Text & Indicator",
++                                                    text = UiText.get(R.string.waex_ui_color_deleted_text_indicator_ae75ad33, "Color Deleted Text & Indicator"),
+                                                     style = typography.bodyMd,
+                                                     color = colors.onSurface,
+                                                     fontWeight = FontWeight.Medium
+                                                 )
+                                                 Text(
+-                                                    text = "Apply custom color to deleted message/status and time",
++                                                    text = UiText.get(R.string.waex_ui_apply_custom_color_to_deleted_message_11bb3603, "Apply custom color to deleted message/status and time"),
+                                                     style = typography.labelSm,
+                                                     color = colors.onSurfaceVariant
+                                                 )
+@@ -897,7 +899,7 @@ fun GlobalPrivacySettingsScreen(
+                                                             .border(1.5.dp, colors.outline, CircleShape)
+                                                     )
+                                                     Text(
+-                                                        text = "Indicator & Text Color",
++                                                        text = UiText.get(R.string.waex_ui_indicator_text_color_55dfa1d7, "Indicator & Text Color"),
+                                                         style = typography.bodyMd,
+                                                         color = colors.onSurface,
+                                                         fontWeight = FontWeight.Medium
+@@ -931,13 +933,13 @@ fun GlobalPrivacySettingsScreen(
+                                         verticalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         Text(
+-                                            text = "WAENHANCERX SETTINGS PLACEMENT",
++                                            text = UiText.get(R.string.waex_ui_waenhancerx_settings_placement_8c28acc2, "WAENHANCERX SETTINGS PLACEMENT"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+                                         )
+                                         Text(
+-                                            text = "Choose where to show the WAEX settings entry point",
++                                            text = UiText.get(R.string.waex_ui_choose_where_to_show_the_waex_settings_44afa3ae, "Choose where to show the WAEX settings entry point"),
+                                             style = typography.bodyMd,
+                                             color = colors.onSurfaceVariant,
+                                             fontSize = 11.sp
+@@ -951,8 +953,8 @@ fun GlobalPrivacySettingsScreen(
+                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                         ) {
+                                             listOf(
+-                                                "home_menu" to "Home Menu",
+-                                                "wa_settings" to "WhatsApp Settings"
++                                                "home_menu" to UiText.get(R.string.waex_ui_home_menu_792a1d5a, "Home Menu"),
++                                                "wa_settings" to UiText.get(R.string.waex_ui_whatsapp_settings_37faf372, "WhatsApp Settings")
+                                             ).forEach { (value, label) ->
+                                                 val isSelected = waexSettingsPlacement == value
+                                                 Box(
+@@ -996,13 +998,13 @@ fun GlobalPrivacySettingsScreen(
+                                         verticalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         Text(
+-                                            text = "MENU DISPLAY OPTIONS",
++                                            text = UiText.get(R.string.waex_ui_menu_display_options_c808869d, "MENU DISPLAY OPTIONS"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+                                         )
+                                         Text(
+-                                            text = "How WAEX items appear in WhatsApp's home menu",
++                                            text = UiText.get(R.string.waex_ui_how_waex_items_appear_in_whatsapp_s_ho_3f618d0d, "How WAEX items appear in WhatsApp's home menu"),
+                                             style = typography.bodyMd,
+                                             color = colors.onSurfaceVariant,
+                                             fontSize = 11.sp
+@@ -1016,9 +1018,9 @@ fun GlobalPrivacySettingsScreen(
+                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                         ) {
+                                             listOf(
+-                                                "grouped"  to "Grouped",
+-                                                "separate" to "Separate",
+-                                                "icons"    to "Icons"
++                                                "grouped"  to UiText.get(R.string.waex_ui_grouped_89731456, "Grouped"),
++                                                "separate" to UiText.get(R.string.waex_ui_separate_726c1269, "Separate"),
++                                                "icons"    to UiText.get(R.string.waex_ui_icons_eae96e02, "Icons")
+                                             ).forEach { (value, label) ->
+                                                 val isSelected = waexMenuStyle == value
+                                                 Box(
+@@ -1070,13 +1072,13 @@ fun GlobalPrivacySettingsScreen(
+                                     ) {
+                                         Column(modifier = Modifier.weight(1f)) {
+                                             Text(
+-                                                text = "CUSTOM REACTION EMOJI",
++                                                text = UiText.get(R.string.waex_ui_custom_reaction_emoji_e6b8a58e, "CUSTOM REACTION EMOJI"),
+                                                 style = typography.labelSm,
+                                                 fontWeight = FontWeight.Bold,
+                                                 color = colors.primary
+                                             )
+                                             Text(
+-                                                text = "Tap to change default reaction emoji ($currentEmoji)",
++                                                text = UiText.get(R.string.waex_ui_tap_to_change_default_reaction_emoji_1_341eb819, "Tap to change default reaction emoji (%1\$s)", currentEmoji),
+                                                 style = typography.bodyMd,
+                                                 color = colors.onSurfaceVariant,
+                                                 fontSize = 11.sp
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyListScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyListScreen.kt
+index a33e6f2..30cf6fb 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyListScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyListScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.privacy
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.Manifest
+ import androidx.activity.compose.BackHandler
+ import androidx.compose.animation.AnimatedVisibility
+@@ -112,7 +115,7 @@ fun PerContactPrivacyListScreen(
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Per Contact Rules",
++                title = UiText.get(R.string.hub_per_contact_rules_title, "Per Contact Rules"),
+                 onBackClick = { navController.popBack() },
+                 actions = {
+                     if (selectedTab == "rules" && contacts.isNotEmpty()) {
+@@ -121,7 +124,7 @@ fun PerContactPrivacyListScreen(
+                             colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE53935))
+                         ) {
+                             Text(
+-                                text = "Clear All",
++                                text = UiText.get(R.string.waex_ui_clear_all_ddceb7ad, "Clear All"),
+                                 fontWeight = FontWeight.SemiBold
+                             )
+                         }
+@@ -178,8 +181,8 @@ fun PerContactPrivacyListScreen(
+                         horizontalArrangement = Arrangement.SpaceAround
+                     ) {
+                         listOf(
+-                            "config" to "Configuration",
+-                            "rules" to if (contacts.isNotEmpty()) "Contact Rules (${contacts.size})" else "Contact Rules"
++                            "config" to UiText.get(R.string.waex_ui_configuration_b332c349, "Configuration"),
++                            "rules" to if (contacts.isNotEmpty()) UiText.get(R.string.waex_ui_contact_rules_1_s_c13a5f53, "Contact Rules (%1\$s)", contacts.size) else UiText.get(R.string.waex_ui_contact_rules_9a0c44b0, "Contact Rules")
+                         ).forEach { (tabId, label) ->
+                             val isSelected = selectedTab == tabId
+                             val textColor by animateColorAsState(
+@@ -240,13 +243,13 @@ fun PerContactPrivacyListScreen(
+                                 ) {
+                                     Column(modifier = Modifier.weight(1f)) {
+                                         Text(
+-                                            text = "Enable Per-Contact Privacy",
++                                            text = UiText.get(R.string.waex_ui_enable_per_contact_privacy_be0089bd, "Enable Per-Contact Privacy"),
+                                             style = typography.bodyLg,
+                                             fontWeight = FontWeight.SemiBold,
+                                             color = colors.onSurface
+                                         )
+                                         Text(
+-                                            text = "Allow granular privacy overrides for specific contacts or groups",
++                                            text = UiText.get(R.string.waex_ui_allow_granular_privacy_overrides_for_s_2a8a0ee6, "Allow granular privacy overrides for specific contacts or groups"),
+                                             style = typography.bodyMd,
+                                             color = colors.onSurfaceVariant,
+                                             fontSize = 12.sp
+@@ -274,7 +277,7 @@ fun PerContactPrivacyListScreen(
+                                     verticalArrangement = Arrangement.spacedBy(8.dp)
+                                 ) {
+                                     Text(
+-                                        text = "IN-APP SHORTCUT PLACEMENT",
++                                        text = UiText.get(R.string.waex_ui_in_app_shortcut_placement_08e2621d, "IN-APP SHORTCUT PLACEMENT"),
+                                         style = typography.labelSm,
+                                         fontWeight = FontWeight.Bold,
+                                         color = colors.onSurfaceVariant,
+@@ -289,9 +292,9 @@ fun PerContactPrivacyListScreen(
+                                     ) {
+                                         Column(modifier = Modifier.fillMaxWidth()) {
+                                             val options = listOf(
+-                                                Triple("1", "Contact & Group Info Screen", "Adds a dedicated Custom Privacy tile on contact and group details page"),
+-                                                Triple("2", "Chat 3-Dot Options Menu", "Adds 'Custom Privacy' directly into the top-right options menu in chats"),
+-                                                Triple("3", "Both (Info Screen & 3-Dot Menu)", "Displays the custom privacy shortcut in both places")
++                                                Triple("1", UiText.get(R.string.waex_ui_contact_group_info_screen_5dbeac75, "Contact & Group Info Screen"), UiText.get(R.string.waex_ui_adds_a_dedicated_custom_privacy_tile_o_9290614b, "Adds a dedicated Custom Privacy tile on contact and group details page")),
++                                                Triple("2", UiText.get(R.string.waex_ui_chat_3_dot_options_menu_07e9e5b5, "Chat 3-Dot Options Menu"), UiText.get(R.string.waex_ui_adds_custom_privacy_directly_into_the_81b1ca4c, "Adds 'Custom Privacy' directly into the top-right options menu in chats")),
++                                                Triple("3", UiText.get(R.string.waex_ui_both_info_screen_3_dot_menu_9ea0f0e7, "Both (Info Screen & 3-Dot Menu)"), UiText.get(R.string.waex_ui_displays_the_custom_privacy_shortcut_i_478c235f, "Displays the custom privacy shortcut in both places"))
+                                             )
+ 
+                                             options.forEachIndexed { index, (typeValue, title, desc) ->
+@@ -372,14 +375,14 @@ fun PerContactPrivacyListScreen(
+                                     verticalArrangement = Arrangement.spacedBy(4.dp)
+                                 ) {
+                                     Text(
+-                                        text = "How to Configure Rules",
++                                        text = UiText.get(R.string.waex_ui_how_to_configure_rules_2ee03efe, "How to Configure Rules"),
+                                         style = typography.bodyMd,
+                                         fontWeight = FontWeight.SemiBold,
+                                         color = colors.onSurface,
+                                         fontSize = 13.sp
+                                     )
+                                     Text(
+-                                        text = "1. Open any chat or contact info page in WhatsApp.\n2. Tap 'Custom Privacy' to set specific overrides.\n3. Saved rules take priority over global privacy settings.",
++                                        text = UiText.get(R.string.waex_ui_1_open_any_chat_or_contact_info_page_i_f5ec973b, "1. Open any chat or contact info page in WhatsApp.\n2. Tap 'Custom Privacy' to set specific overrides.\n3. Saved rules take priority over global privacy settings."),
+                                         style = typography.bodyMd,
+                                         color = colors.onSurfaceVariant,
+                                         lineHeight = 17.sp,
+@@ -399,7 +402,7 @@ fun PerContactPrivacyListScreen(
+                                     modifier = Modifier.fillMaxWidth()
+                                 ) {
+                                     Text(
+-                                        text = "View ${contacts.size} Configured Contact(s) →",
++                                        text = UiText.get(R.string.waex_ui_view_1_s_configured_contact_s_5418a89a, "View %1\$s Configured Contact(s) →", contacts.size),
+                                         fontWeight = FontWeight.Bold
+                                     )
+                                 }
+@@ -437,7 +440,7 @@ fun PerContactPrivacyListScreen(
+                                         )
+                                         Spacer(modifier = Modifier.width(10.dp))
+                                         Text(
+-                                            text = "Per-Contact Privacy is currently disabled in Configuration.",
++                                            text = UiText.get(R.string.waex_ui_per_contact_privacy_is_currently_disab_b04d6482, "Per-Contact Privacy is currently disabled in Configuration."),
+                                             style = typography.bodyMd,
+                                             color = Color(0xFFE65100),
+                                             fontWeight = FontWeight.Medium,
+@@ -450,7 +453,7 @@ fun PerContactPrivacyListScreen(
+                                             }
+                                         ) {
+                                             Text(
+-                                                text = "Enable",
++                                                text = UiText.get(R.string.waex_ui_enable_5342e09f, "Enable"),
+                                                 fontWeight = FontWeight.Bold,
+                                                 color = Color(0xFFE65100)
+                                             )
+@@ -487,13 +490,13 @@ fun PerContactPrivacyListScreen(
+                                             )
+                                         }
+                                         Text(
+-                                            text = "No custom rules yet",
++                                            text = UiText.get(R.string.waex_ui_no_custom_rules_yet_35ba92cb, "No custom rules yet"),
+                                             style = typography.headlineMd,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.onBackground
+                                         )
+                                         Text(
+-                                            text = "Contacts with custom privacy rules will appear here. Rules can be set from inside a WhatsApp conversation.",
++                                            text = UiText.get(R.string.waex_ui_contacts_with_custom_privacy_rules_wil_37b703c4, "Contacts with custom privacy rules will appear here. Rules can be set from inside a WhatsApp conversation."),
+                                             style = typography.bodyMd,
+                                             color = colors.onSurfaceVariant,
+                                             textAlign = TextAlign.Center
+@@ -631,11 +634,11 @@ private fun ContactPrivacyRow(
+     // Define color codes for each active rule to show beautiful chips
+     val activeRulesList = remember(contact) {
+         val list = mutableListOf<Pair<String, Color>>()
+-        if (contact.hideSeen) list.add("Seen" to Color(0xFF1E88E5)) // Blue
+-        if (contact.hideTyping) list.add("Typing" to Color(0xFF43A047)) // Green
+-        if (contact.hideRecording) list.add("Rec" to Color(0xFFFB8C00)) // Orange
+-        if (contact.antiRevoke) list.add("Anti-Revoke" to Color(0xFFE53935)) // Red
+-        if (contact.freezeLastSeen) list.add("Freeze" to Color(0xFF00ACC1)) // Teal
++        if (contact.hideSeen) list.add(UiText.get(R.string.waex_ui_seen_8894cf30, "Seen") to Color(0xFF1E88E5)) // Blue
++        if (contact.hideTyping) list.add(UiText.get(R.string.waex_ui_typing_25dfb9b4, "Typing") to Color(0xFF43A047)) // Green
++        if (contact.hideRecording) list.add(UiText.get(R.string.waex_ui_rec_a29ea413, "Rec") to Color(0xFFFB8C00)) // Orange
++        if (contact.antiRevoke) list.add(UiText.get(R.string.waex_ui_anti_revoke_e16be3ed, "Anti-Revoke") to Color(0xFFE53935)) // Red
++        if (contact.freezeLastSeen) list.add(UiText.get(R.string.waex_ui_freeze_509b1035, "Freeze") to Color(0xFF00ACC1)) // Teal
+         list
+     }
+ 
+@@ -712,7 +715,7 @@ private fun ContactPrivacyRow(
+                         contact.endHour > 12 -> contact.endHour - 12
+                         else -> contact.endHour
+                     }
+-                    String.format("Scheduled (%02d:00 %s - %02d:00 %s)", startDisplay, startAmPm, endDisplay, endAmPm)
++                    UiText.get(R.string.waex_ui_scheduled_1_02d_00_2_s_3_02d_00_4_s_d83744a2, "Scheduled (%1\$02d:00 %2\$s - %3\$02d:00 %4\$s)", startDisplay, startAmPm, endDisplay, endAmPm)
+                 } else {
+                     contact.scope.replaceFirstChar { it.uppercase() }
+                 }
+@@ -741,7 +744,7 @@ private fun ContactPrivacyRow(
+                 }
+             } else {
+                 Text(
+-                    text = "No active rules",
++                    text = UiText.get(R.string.waex_ui_no_active_rules_fc15b50c, "No active rules"),
+                     style = typography.bodyMd,
+                     color = colors.onSurfaceVariant.copy(alpha = 0.6f),
+                     fontSize = 11.sp
+@@ -769,7 +772,7 @@ private fun ContactPrivacyRow(
+         ) {
+             Icon(
+                 imageVector = WaexIcons.Clear,
+-                contentDescription = "Remove custom rules",
++                contentDescription = UiText.get(R.string.waex_ui_remove_custom_rules_a2782b75, "Remove custom rules"),
+                 tint = colors.error,
+                 modifier = Modifier.size(14.dp)
+             )
+@@ -852,7 +855,7 @@ fun ClearAllConfirmationModal(
+             }
+             Spacer(modifier = Modifier.height(8.dp))
+             Text(
+-                text = "Clear All Custom Rules?",
++                text = UiText.get(R.string.waex_ui_clear_all_custom_rules_faed51b9, "Clear All Custom Rules?"),
+                 style = typography.bodyLg,
+                 fontWeight = FontWeight.Bold,
+                 color = colors.onSurface,
+@@ -860,7 +863,7 @@ fun ClearAllConfirmationModal(
+                 textAlign = TextAlign.Center
+             )
+             Text(
+-                text = "Are you sure you want to remove all custom privacy rules? This action will restore default privacy rules for all contacts and cannot be undone.",
++                text = UiText.get(R.string.waex_ui_are_you_sure_you_want_to_remove_all_cu_214cbfda, "Are you sure you want to remove all custom privacy rules? This action will restore default privacy rules for all contacts and cannot be undone."),
+                 style = typography.bodyMd,
+                 color = colors.onSurfaceVariant,
+                 fontSize = 13.sp,
+@@ -890,7 +893,7 @@ fun ClearAllConfirmationModal(
+                     .weight(1f)
+                     .height(48.dp)
+             ) {
+-                Text(text = "Cancel", style = typography.bodyLg, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.action_cancel, "Cancel"), style = typography.bodyLg, fontWeight = FontWeight.Bold)
+             }
+             Button(
+                 onClick = onConfirm,
+@@ -903,7 +906,7 @@ fun ClearAllConfirmationModal(
+                     .weight(1f)
+                     .height(48.dp)
+             ) {
+-                Text(text = "Clear All", style = typography.bodyLg, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.waex_ui_clear_all_ddceb7ad, "Clear All"), style = typography.bodyLg, fontWeight = FontWeight.Bold)
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyModal.kt b/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyModal.kt
+index 62d2af4..8a3c7f7 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyModal.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/privacy/PerContactPrivacyModal.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.privacy
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.clickable
+@@ -114,14 +117,14 @@ fun PerContactPrivacyModal(
+         ) {
+             Column {
+                 Text(
+-                    text = "Custom Privacy Rules",
++                    text = UiText.get(R.string.waex_ui_custom_privacy_rules_17ba2822, "Custom Privacy Rules"),
+                     style = typography.bodyLg,
+                     fontWeight = FontWeight.Bold,
+                     color = colors.onSurface,
+                     fontSize = 18.sp
+                 )
+                 Text(
+-                    text = "Configure rules for this specific contact",
++                    text = UiText.get(R.string.waex_ui_configure_rules_for_this_specific_cont_13ad1641, "Configure rules for this specific contact"),
+                     style = typography.bodyMd,
+                     color = colors.onSurfaceVariant,
+                     fontSize = 13.sp
+@@ -136,7 +139,7 @@ fun PerContactPrivacyModal(
+             ) {
+                 Icon(
+                     imageVector = WaexIcons.Clear,
+-                    contentDescription = "Close",
++                    contentDescription = UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"),
+                     tint = colors.onSurfaceVariant,
+                     modifier = Modifier.size(14.dp)
+                 )
+@@ -172,7 +175,7 @@ fun PerContactPrivacyModal(
+             Spacer(modifier = Modifier.width(12.dp))
+             Column {
+                 Text(
+-                    text = contact?.name ?: "Unknown Contact",
++                    text = contact?.name ?: UiText.get(R.string.waex_ui_unknown_contact_52b001c8, "Unknown Contact"),
+                     style = typography.bodyLg.copy(fontWeight = FontWeight.SemiBold),
+                     color = colors.onSurface
+                 )
+@@ -200,7 +203,7 @@ fun PerContactPrivacyModal(
+         ) {
+             // Section: Privacy Rules
+             Text(
+-                text = "PRIVACY RULES",
++                text = UiText.get(R.string.waex_ui_privacy_rules_42135437, "PRIVACY RULES"),
+                 style = typography.labelSm,
+                 fontWeight = FontWeight.Bold,
+                 color = colors.onSurfaceVariant
+@@ -213,11 +216,11 @@ fun PerContactPrivacyModal(
+             ) {
+                 Column {
+                     val ruleItems = listOf(
+-                        Triple("hide_seen", "Hide Seen Tick", "Hide read confirmation"),
+-                        Triple("hide_typing", "Hide Typing Status", "Hide typing indicator"),
+-                        Triple("hide_recording", "Hide Recording Status", "Hide audio recording state"),
+-                        Triple("anti_revoke", "Anti-Revoke Messages", "Keep deleted messages visible"),
+-                        Triple("freeze_lastseen", "Freeze Last Seen", "Lock your online timestamp")
++                        Triple("hide_seen", UiText.get(R.string.waex_ui_hide_seen_tick_8eba5af5, "Hide Seen Tick"), UiText.get(R.string.waex_ui_hide_read_confirmation_2ae39653, "Hide read confirmation")),
++                        Triple("hide_typing", UiText.get(R.string.waex_ui_hide_typing_status_afddc69c, "Hide Typing Status"), UiText.get(R.string.waex_ui_hide_typing_indicator_153c8ac4, "Hide typing indicator")),
++                        Triple("hide_recording", UiText.get(R.string.waex_ui_hide_recording_status_ccd978cf, "Hide Recording Status"), UiText.get(R.string.waex_ui_hide_audio_recording_state_dca180a4, "Hide audio recording state")),
++                        Triple("anti_revoke", UiText.get(R.string.feat_anti_revoke_title, "Anti-Revoke Messages"), UiText.get(R.string.waex_ui_keep_deleted_messages_visible_7d6b1de5, "Keep deleted messages visible")),
++                        Triple("freeze_lastseen", UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen"), UiText.get(R.string.waex_ui_lock_your_online_timestamp_03f3f564, "Lock your online timestamp"))
+                     )
+ 
+                     ruleItems.forEachIndexed { index, (key, label, desc) ->
+@@ -235,7 +238,7 @@ fun PerContactPrivacyModal(
+ 
+             // Section: Rule Scope
+             Text(
+-                text = "RULE SCOPE",
++                text = UiText.get(R.string.waex_ui_rule_scope_010c9afb, "RULE SCOPE"),
+                 style = typography.labelSm,
+                 fontWeight = FontWeight.Bold,
+                 color = colors.onSurfaceVariant
+@@ -248,9 +251,9 @@ fun PerContactPrivacyModal(
+             ) {
+                 Column {
+                     val scopes = listOf(
+-                        "always" to "Always Active",
+-                        "scheduled" to "Scheduled Rules",
+-                        "temporary" to "Temporary Lockout"
++                        "always" to UiText.get(R.string.waex_ui_always_active_cbdb4cc2, "Always Active"),
++                        "scheduled" to UiText.get(R.string.waex_ui_scheduled_rules_59260020, "Scheduled Rules"),
++                        "temporary" to UiText.get(R.string.waex_ui_temporary_lockout_fa623835, "Temporary Lockout")
+                     )
+                     scopes.forEachIndexed { idx, (scopeId, label) ->
+                         val isSelected = selectedScope == scopeId
+@@ -270,9 +273,9 @@ fun PerContactPrivacyModal(
+                                         color = colors.onSurface
+                                     )
+                                     val desc = when (scopeId) {
+-                                        "always" -> "Rules apply at all times"
+-                                        "scheduled" -> "Apply during set hours"
+-                                        else -> "Reset automatically after 24 hours"
++                                        "always" -> UiText.get(R.string.waex_ui_rules_apply_at_all_times_5fbfcc41, "Rules apply at all times")
++                                        "scheduled" -> UiText.get(R.string.waex_ui_apply_during_set_hours_3b459f48, "Apply during set hours")
++                                        else -> UiText.get(R.string.waex_ui_reset_automatically_after_24_hours_4ea91231, "Reset automatically after 24 hours")
+                                     }
+                                     Text(
+                                         text = desc,
+@@ -316,7 +319,7 @@ fun PerContactPrivacyModal(
+                                     ) {
+                                         HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.4f))
+                                         Text(
+-                                            text = "Active Hours Range",
++                                            text = UiText.get(R.string.waex_ui_active_hours_range_b86fa4fd, "Active Hours Range"),
+                                             style = typography.labelSm,
+                                             fontWeight = FontWeight.Bold,
+                                             color = colors.primary
+@@ -328,7 +331,7 @@ fun PerContactPrivacyModal(
+                                             horizontalArrangement = Arrangement.SpaceBetween,
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+-                                            Text(text = "Start Hour", style = typography.bodyMd, color = colors.onSurface)
++                                            Text(text = UiText.get(R.string.waex_ui_start_hour_ab66a6d4, "Start Hour"), style = typography.bodyMd, color = colors.onSurface)
+                                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                                 TextButton(
+                                                     onClick = {
+@@ -364,7 +367,7 @@ fun PerContactPrivacyModal(
+                                             horizontalArrangement = Arrangement.SpaceBetween,
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+-                                            Text(text = "End Hour", style = typography.bodyMd, color = colors.onSurface)
++                                            Text(text = UiText.get(R.string.waex_ui_end_hour_37f91306, "End Hour"), style = typography.bodyMd, color = colors.onSurface)
+                                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                                 TextButton(
+                                                     onClick = {
+@@ -439,7 +442,7 @@ fun PerContactPrivacyModal(
+                     .fillMaxWidth()
+                     .height(48.dp)
+             ) {
+-                Text(text = "Save Rules", style = typography.bodyLg, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.waex_ui_save_rules_fb164cd9, "Save Rules"), style = typography.bodyLg, fontWeight = FontWeight.Bold)
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/privacy/PreservedChatDetailsScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/privacy/PreservedChatDetailsScreen.kt
+index db476c2..5b5c731 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/privacy/PreservedChatDetailsScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/privacy/PreservedChatDetailsScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.privacy
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.activity.compose.BackHandler
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.isSystemInDarkTheme
+@@ -71,7 +74,7 @@ fun PreservedChatDetailsScreen(
+                         IconButton(onClick = onBack) {
+                             Icon(
+                                 imageVector = WaexIcons.Back,
+-                                contentDescription = "Back",
++                                contentDescription = UiText.get(R.string.action_back, "Back"),
+                                 tint = colors.onSurface
+                             )
+                         }
+@@ -113,7 +116,7 @@ fun PreservedChatDetailsScreen(
+                                 overflow = TextOverflow.Ellipsis
+                             )
+                             Text(
+-                                text = if (chat.isGroup) "Group • ${chat.messages.size} preserved" else "${chat.messages.size} preserved messages",
++                                text = if (chat.isGroup) UiText.get(R.string.waex_ui_group_1_s_preserved_29347f6b, "Group • %1\$s preserved", chat.messages.size) else UiText.get(R.string.waex_ui_1_s_preserved_messages_74d3a032, "%1\$s preserved messages", chat.messages.size),
+                                 style = typography.labelSm,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -197,7 +200,7 @@ private fun PreservedMessageBubble(
+             ) {
+                 // In group received messages, show sender name if available
+                 if (isGroup && !isSent) {
+-                    val authorName = message.senderName?.takeIf { it.isNotBlank() } ?: "Participant"
++                    val authorName = message.senderName?.takeIf { it.isNotBlank() } ?: UiText.get(R.string.waex_ui_participant_554f4235, "Participant")
+                     Text(
+                         text = authorName,
+                         style = typography.labelSm,
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/search/SearchScreen.kt
+index bb27fd3..bb1068b 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/search/SearchScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/search/SearchScreen.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.ui.screens.search
+ 
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.clickable
+@@ -94,7 +96,7 @@ fun SearchScreen() {
+                         ) {
+                             Icon(
+                                 imageVector = WaexIcons.Back,
+-                                contentDescription = "Back",
++                                contentDescription = UiText.get(R.string.action_back, "Back"),
+                                 tint = colors.onBackground,
+                                 modifier = Modifier.size(20.dp)
+                             )
+@@ -217,7 +219,7 @@ fun SearchScreen() {
+                                                 lineHeight = 17.sp
+                                             )
+                                             Text(
+-                                                text = "Section: ${LocalizationHelper.getSection(context, pref)}",
++                                                text = UiText.get(R.string.waex_ui_section_1_s_ab7f31a7, "Section: %1\$s", LocalizationHelper.getSection(context, pref)),
+                                                 style = typography.labelSm,
+                                                 color = colors.primary,
+                                                 fontSize = 11.sp,
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/settings/AboutScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/settings/AboutScreen.kt
+index 29da243..db5c8f8 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/settings/AboutScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/settings/AboutScreen.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.ui.screens.settings
+ 
++import com.waenhancer.utils.UiText
++
+ import android.content.Context
+ import android.content.Intent
+ import android.graphics.Bitmap
+@@ -258,7 +260,7 @@ fun AboutScreen() {
+             val request = Request.Builder()
+                 .url("https://api.github.com/repos/WaEnhancerX/WaEnhancerX/contributors")
+                 .header("User-Agent", "WaEnhancerX-App")
+-                .header("Accept", "application/vnd.github.v3+json")
++                .header(UiText.get(R.string.waex_ui_accept_89713b9c, "Accept"), "application/vnd.github.v3+json")
+                 .build()
+ 
+             try {
+@@ -309,7 +311,7 @@ fun AboutScreen() {
+             val request = Request.Builder()
+                 .url("https://api.github.com/users/${contributor.login}")
+                 .header("User-Agent", "WaEnhancerX-App")
+-                .header("Accept", "application/vnd.github.v3+json")
++                .header(UiText.get(R.string.waex_ui_accept_89713b9c, "Accept"), "application/vnd.github.v3+json")
+                 .build()
+ 
+             try {
+@@ -368,7 +370,7 @@ fun AboutScreen() {
+             val request = Request.Builder()
+                 .url("https://api.github.com/repos/Xposed-Modules-Repo/com.waenhancer/releases/stats/contributors")
+                 .header("User-Agent", "WaEnhancerX-App")
+-                .header("Accept", "application/vnd.github.v3+json")
++                .header(UiText.get(R.string.waex_ui_accept_89713b9c, "Accept"), "application/vnd.github.v3+json")
+                 .build()
+ 
+             try {
+@@ -409,7 +411,7 @@ fun AboutScreen() {
+             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+             context.startActivity(intent)
+         } catch (e: Exception) {
+-            Toast.makeText(context, "Could not open link", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_could_not_open_link_dfa30a8f, "Could not open link"), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -445,7 +447,7 @@ fun AboutScreen() {
+                     // App Launcher Icon
+                     Image(
+                         painter = painterResource(id = R.drawable.ic_app_logo),
+-                        contentDescription = "App Logo",
++                        contentDescription = UiText.get(R.string.waex_ui_app_logo_c1fa6ccf, "App Logo"),
+                         modifier = Modifier
+                             .size(88.dp)
+                             .clip(RoundedCornerShape(12.dp))
+@@ -478,7 +480,7 @@ fun AboutScreen() {
+                                 fontSize = 10.sp
+                             )
+                             Text(
+-                                text = "MAINTAINER",
++                                text = UiText.get(R.string.waex_ui_maintainer_ba79e198, "MAINTAINER"),
+                                 color = Color(0xFF10B981),
+                                 fontSize = 10.sp,
+                                 fontWeight = FontWeight.Bold,
+@@ -650,7 +652,7 @@ fun AboutScreen() {
+                         }
+                     } else if (contributors.isEmpty()) {
+                         Text(
+-                            text = "No contributors found",
++                            text = UiText.get(R.string.waex_ui_no_contributors_found_faee6c16, "No contributors found"),
+                             style = typography.bodyMd,
+                             color = colors.onSurfaceVariant
+                         )
+@@ -835,14 +837,14 @@ fun AboutScreen() {
+                                 }
+                                 if (profile.followers > 0) {
+                                     Text(
+-                                        text = if (profile.location.isNotEmpty()) " • ${profile.followers} followers" else "${profile.followers} followers",
++                                        text = if (profile.location.isNotEmpty()) UiText.get(R.string.waex_ui_1_s_followers_3e4e03fd, " • %1\$s followers", profile.followers) else UiText.get(R.string.waex_ui_1_s_followers_3024eca2, "%1\$s followers", profile.followers),
+                                         style = typography.labelSm,
+                                         color = colors.onSurfaceVariant
+                                     )
+                                 }
+                                 if (user.contributions > 0) {
+                                     Text(
+-                                        text = " • ${user.contributions} commits",
++                                        text = UiText.get(R.string.waex_ui_1_s_commits_6a8c37d2, " • %1\$s commits", user.contributions),
+                                         style = typography.labelSm,
+                                         color = colors.onSurfaceVariant
+                                     )
+@@ -882,7 +884,7 @@ fun AboutScreen() {
+                                                 )
+                                                 Spacer(modifier = Modifier.width(4.dp))
+                                                 Text(
+-                                                    text = "Open to hire",
++                                                    text = UiText.get(R.string.waex_ui_open_to_hire_c4863654, "Open to hire"),
+                                                     fontSize = 12.sp,
+                                                     fontWeight = FontWeight.Medium,
+                                                     color = colors.primary
+@@ -930,7 +932,7 @@ fun AboutScreen() {
+                                 )
+                                 Spacer(modifier = Modifier.width(8.dp))
+                                 Text(
+-                                    text = "View GitHub Profile",
++                                    text = UiText.get(R.string.waex_ui_view_github_profile_1a49fe64, "View GitHub Profile"),
+                                     fontWeight = FontWeight.SemiBold,
+                                     color = colors.onSurface
+                                 )
+@@ -954,7 +956,7 @@ fun AboutScreen() {
+                                     )
+                                     Spacer(modifier = Modifier.width(8.dp))
+                                     Text(
+-                                        text = "Visit Website",
++                                        text = UiText.get(R.string.waex_ui_visit_website_584aa47f, "Visit Website"),
+                                         fontWeight = FontWeight.SemiBold,
+                                         color = colors.onSurface
+                                     )
+@@ -974,7 +976,7 @@ fun AboutScreen() {
+                                     )
+                                 ) {
+                                     Text(
+-                                        text = "View Detailed Contributions",
++                                        text = UiText.get(R.string.waex_ui_view_detailed_contributions_606cb13b, "View Detailed Contributions"),
+                                         fontWeight = FontWeight.Bold
+                                     )
+                                 }
+@@ -990,13 +992,13 @@ fun AboutScreen() {
+                         IconButton(onClick = { showContributionsView = false }) {
+                             Icon(
+                                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+-                                contentDescription = "Back",
++                                contentDescription = UiText.get(R.string.action_back, "Back"),
+                                 tint = colors.onSurface
+                             )
+                         }
+                         Spacer(modifier = Modifier.width(8.dp))
+                         Text(
+-                            text = "${userProfileData?.name ?: user.login}'s Contributions",
++                            text = UiText.get(R.string.waex_ui_1_s_s_contributions_7a33f895, "%1\$s's Contributions", userProfileData?.name ?: user.login),
+                             style = typography.headlineMd,
+                             fontWeight = FontWeight.Bold,
+                             color = colors.onSurface
+@@ -1037,7 +1039,7 @@ fun AboutScreen() {
+                                     horizontalArrangement = Arrangement.SpaceBetween
+                                 ) {
+                                     Text(
+-                                        text = "Total Commits",
++                                        text = UiText.get(R.string.waex_ui_total_commits_fe2d82f4, "Total Commits"),
+                                         style = typography.bodyLg,
+                                         color = colors.onSurfaceVariant
+                                     )
+@@ -1057,7 +1059,7 @@ fun AboutScreen() {
+                                         horizontalArrangement = Arrangement.SpaceBetween
+                                     ) {
+                                         Text(
+-                                            text = "Lines Added",
++                                            text = UiText.get(R.string.waex_ui_lines_added_caa510fe, "Lines Added"),
+                                             style = typography.bodyLg,
+                                             color = colors.onSurfaceVariant
+                                         )
+@@ -1076,7 +1078,7 @@ fun AboutScreen() {
+                                         horizontalArrangement = Arrangement.SpaceBetween
+                                     ) {
+                                         Text(
+-                                            text = "Lines Deleted",
++                                            text = UiText.get(R.string.waex_ui_lines_deleted_0bfbeabe, "Lines Deleted"),
+                                             style = typography.bodyLg,
+                                             color = colors.onSurfaceVariant
+                                         )
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/settings/BootloaderSpooferScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/settings/BootloaderSpooferScreen.kt
+index 0000f6b..857a4c1 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/settings/BootloaderSpooferScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/settings/BootloaderSpooferScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.settings
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.widget.Toast
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.result.contract.ActivityResultContracts
+@@ -57,8 +60,8 @@ fun BootloaderSpooferScreen() {
+             runCatching {
+                 withContext(Dispatchers.IO) {
+                     val xml = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+-                        ?: error("Could not read the selected file")
+-                    require(xml.length <= 2_000_000) { "Keybox file is too large" }
++                        ?: error(UiText.get(R.string.waex_ui_could_not_read_the_selected_file_a179611f, "Could not read the selected file"))
++                    require(xml.length <= 2_000_000) { UiText.get(R.string.waex_ui_keybox_file_is_too_large_cf788fae, "Keybox file is too large") }
+                     BootloaderSpooferFeature.parse(xml)
+                     prefs.putString(BootloaderSpooferFeature.CUSTOM_XML, xml)
+                 }
+@@ -66,12 +69,12 @@ fun BootloaderSpooferScreen() {
+                 customReady = true
+                 custom = true
+                 prefs.putBoolean(BootloaderSpooferFeature.CUSTOM_ENABLED, true)
+-                Toast.makeText(context, "Custom keybox imported", Toast.LENGTH_SHORT).show()
+-            }.onFailure { Toast.makeText(context, "Invalid keybox: ${it.message}", Toast.LENGTH_LONG).show() }
++                Toast.makeText(context, UiText.get(R.string.waex_ui_custom_keybox_imported_76fd6f29, "Custom keybox imported"), Toast.LENGTH_SHORT).show()
++            }.onFailure { Toast.makeText(context, UiText.get(R.string.waex_ui_invalid_keybox_1_s_0d9cdabc, "Invalid keybox: %1\$s", it.message), Toast.LENGTH_LONG).show() }
+         }
+     }
+ 
+-    Scaffold(topBar = { WaexTopBar("Bootloader Spoofer", onBackClick = { nav.popBack() }) },
++    Scaffold(topBar = { WaexTopBar(UiText.get(R.string.feat_bootloader_spoofer_title, "Bootloader Spoofer"), onBackClick = { nav.popBack() }) },
+         containerColor = colors.background) { insets ->
+         Column(Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState())
+             .padding(horizontal = WaexTheme.spacing.pageMargin, vertical = 20.dp),
+@@ -92,17 +95,17 @@ fun BootloaderSpooferScreen() {
+                     else Surface(Modifier.size(12.dp), shape = CircleShape, color = statusColor) {}
+                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                         Text(when {
+-                            syncing -> "Refreshing managed keybox"
+-                            custom && customReady -> "Custom keybox ready"
+-                            !custom && managedReady -> "Managed keybox ready"
+-                            syncError.isNotBlank() -> "Managed keybox unavailable"
+-                            else -> "Keybox setup required"
++                            syncing -> UiText.get(R.string.waex_ui_refreshing_managed_keybox_7bf6aed4, "Refreshing managed keybox")
++                            custom && customReady -> UiText.get(R.string.waex_ui_custom_keybox_ready_961be371, "Custom keybox ready")
++                            !custom && managedReady -> UiText.get(R.string.waex_ui_managed_keybox_ready_9149f2ec, "Managed keybox ready")
++                            syncError.isNotBlank() -> UiText.get(R.string.waex_ui_managed_keybox_unavailable_e63767b6, "Managed keybox unavailable")
++                            else -> UiText.get(R.string.waex_ui_keybox_setup_required_f83e4b34, "Keybox setup required")
+                         }, style = typography.bodyLg, fontWeight = FontWeight.Bold, color = colors.onSurface)
+                         Text(when {
+-                            syncing -> "Downloading and validating the certificate chain…"
++                            syncing -> UiText.get(R.string.waex_ui_downloading_and_validating_the_certifi_d80cdcf2, "Downloading and validating the certificate chain…")
+                             syncError.isNotBlank() && !managedReady -> syncError
+-                            enabled -> "Active after WhatsApp is restarted"
+-                            else -> "Enable the feature when your source is ready"
++                            enabled -> UiText.get(R.string.waex_ui_active_after_whatsapp_is_restarted_64b5969c, "Active after WhatsApp is restarted")
++                            else -> UiText.get(R.string.waex_ui_enable_the_feature_when_your_source_is_797a721f, "Enable the feature when your source is ready")
+                         }, style = typography.bodyMd, color = colors.onSurfaceVariant)
+                     }
+                 }
+@@ -110,26 +113,26 @@ fun BootloaderSpooferScreen() {
+             Surface(shape = radius.bentoCardShape, color = colors.surfaceDim,
+                 border = BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
+                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+-                    Text("DEVICE ATTESTATION", style = typography.labelSm, fontWeight = FontWeight.Bold, color = colors.primary)
+-                    SettingRow("Enable Bootloader Spoofer",
+-                        "Spoof the locked and verified boot state used by WhatsApp integrity checks", enabled) {
++                    Text(UiText.get(R.string.waex_ui_device_attestation_e6c517e1, "DEVICE ATTESTATION"), style = typography.labelSm, fontWeight = FontWeight.Bold, color = colors.primary)
++                    SettingRow(UiText.get(R.string.waex_ui_enable_bootloader_spoofer_27426554, "Enable Bootloader Spoofer"),
++                        UiText.get(R.string.waex_ui_spoof_the_locked_and_verified_boot_sta_b8bb2e3a, "Spoof the locked and verified boot state used by WhatsApp integrity checks"), enabled) {
+                         enabled = it; prefs.putBoolean(BootloaderSpooferFeature.ENABLED, it)
+                     }
+                     HorizontalDivider(color = colors.outlineVariant)
+-                    SettingRow("Use Custom Keybox",
+-                        if (customReady) "Imported keybox selected" else "Import a keybox.xml before enabling", custom,
++                    SettingRow(UiText.get(R.string.waex_ui_use_custom_keybox_5b599ff8, "Use Custom Keybox"),
++                        if (customReady) UiText.get(R.string.waex_ui_imported_keybox_selected_1ba384df, "Imported keybox selected") else UiText.get(R.string.waex_ui_import_a_keybox_xml_before_enabling_7a4e19d7, "Import a keybox.xml before enabling"), custom,
+                         customReady) { custom = it; prefs.putBoolean(BootloaderSpooferFeature.CUSTOM_ENABLED, it) }
+                 }
+             }
+             Surface(shape = radius.bentoCardShape, color = colors.surfaceDim,
+                 border = BorderStroke(1.dp, colors.outlineVariant), modifier = Modifier.fillMaxWidth()) {
+                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+-                    Text("KEYBOX SOURCE", style = typography.labelSm, fontWeight = FontWeight.Bold, color = colors.primary)
+-                    Text(if (custom) "Custom keybox" else "WAEX managed keybox", style = typography.bodyLg,
++                    Text(UiText.get(R.string.waex_ui_keybox_source_910cb5ff, "KEYBOX SOURCE"), style = typography.labelSm, fontWeight = FontWeight.Bold, color = colors.primary)
++                    Text(if (custom) UiText.get(R.string.waex_ui_custom_keybox_ba042043, "Custom keybox") else UiText.get(R.string.waex_ui_waex_managed_keybox_3dc5818e, "WAEX managed keybox"), style = typography.bodyLg,
+                         fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+-                    Text(if (custom) "Stored privately on this device"
+-                    else if (managedReady) "Validated and stored privately\nUpdated: ${formatUpdated(updated)}"
+-                    else "No validated managed keybox is cached yet",
++                    Text(if (custom) UiText.get(R.string.waex_ui_stored_privately_on_this_device_8914dd99, "Stored privately on this device")
++                    else if (managedReady) UiText.get(R.string.waex_ui_validated_and_stored_privately_updated_2fc9fc11, "Validated and stored privately\nUpdated: %1\$s", formatUpdated(updated))
++                    else UiText.get(R.string.waex_ui_no_validated_managed_keybox_is_cached_d0090b84, "No validated managed keybox is cached yet"),
+                         style = typography.bodyMd, color = colors.onSurfaceVariant)
+                     Button(onClick = {
+                         syncing = true; syncError = ""
+@@ -137,17 +140,17 @@ fun BootloaderSpooferScreen() {
+                             syncing = false
+                             if (success) {
+                                 updated = detail; syncError = ""
+-                                Toast.makeText(context, "Managed keybox updated", Toast.LENGTH_SHORT).show()
++                                Toast.makeText(context, UiText.get(R.string.waex_ui_managed_keybox_updated_23fcdd3d, "Managed keybox updated"), Toast.LENGTH_SHORT).show()
+                             } else {
+                                 syncError = detail
+-                                Toast.makeText(context, "Refresh failed: $detail", Toast.LENGTH_LONG).show()
++                                Toast.makeText(context, UiText.get(R.string.waex_ui_refresh_failed_1_s_5b508fd6, "Refresh failed: %1\$s", detail), Toast.LENGTH_LONG).show()
+                             }
+                         }
+                     }, enabled = !syncing, modifier = Modifier.fillMaxWidth()) {
+-                        Text(if (syncing) "Refreshing…" else "Refresh managed keybox")
++                        Text(if (syncing) UiText.get(R.string.waex_ui_refreshing_1c0def7b, "Refreshing…") else UiText.get(R.string.waex_ui_refresh_managed_keybox_7f2d970b, "Refresh managed keybox"))
+                     }
+                     OutlinedButton(onClick = { importer.launch("*/*") }, modifier = Modifier.fillMaxWidth()) {
+-                        Text(if (customReady) "Replace custom keybox.xml" else "Import custom keybox.xml")
++                        Text(if (customReady) UiText.get(R.string.waex_ui_replace_custom_keybox_xml_9dbdb703, "Replace custom keybox.xml") else UiText.get(R.string.waex_ui_import_custom_keybox_xml_7c82038f, "Import custom keybox.xml"))
+                     }
+                     OutlinedButton(onClick = {
+                         verifying = true
+@@ -164,11 +167,11 @@ fun BootloaderSpooferScreen() {
+                     }, enabled = !verifying && (if (custom) customReady else managedReady),
+                         modifier = Modifier.fillMaxWidth()) {
+                         if (verifying) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+-                        else Text("Verify selected keybox")
++                        else Text(UiText.get(R.string.waex_ui_verify_selected_keybox_d4032599, "Verify selected keybox"))
+                     }
+                 }
+             }
+-            Text("Restart WhatsApp after changing the keybox source or enabling this feature.",
++            Text(UiText.get(R.string.waex_ui_restart_whatsapp_after_changing_the_ke_8275d80a, "Restart WhatsApp after changing the keybox source or enabling this feature."),
+                 style = typography.bodyMd, color = colors.onSurfaceVariant)
+         }
+     }
+@@ -221,7 +224,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
+             ) {
+                 Column(modifier = Modifier.weight(1f)) {
+                     Text(
+-                        "Keybox Verification",
++                        UiText.get(R.string.waex_ui_keybox_verification_e29bc513, "Keybox Verification"),
+                         style = typography.headlineMd,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.onSurface
+@@ -244,7 +247,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
+                 ) {
+                     Icon(
+                         imageVector = WaexIcons.Clear,
+-                        contentDescription = "Close",
++                        contentDescription = UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"),
+                         tint = colors.onSurfaceVariant,
+                         modifier = Modifier.size(16.dp)
+                     )
+@@ -289,7 +292,7 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
+                             .padding(horizontal = 10.dp, vertical = 4.dp)
+                     ) {
+                         Text(
+-                            if (report.recommended) "RECOMMENDED" else "NEEDS ATTENTION",
++                            if (report.recommended) UiText.get(R.string.waex_ui_recommended_baa505ce, "RECOMMENDED") else UiText.get(R.string.waex_ui_needs_attention_e0004b39, "NEEDS ATTENTION"),
+                             style = typography.labelSm,
+                             fontWeight = FontWeight.Bold,
+                             color = scoreColor,
+@@ -300,56 +303,56 @@ private fun VerificationSheet(report: BootloaderSpooferFeature.VerificationRepor
+             }
+ 
+             if (report.error.isNotBlank()) {
+-                AuditCard("Parse error", 0, 0, listOf(report.error to false))
++                AuditCard(UiText.get(R.string.waex_ui_parse_error_65837ce7, "Parse error"), 0, 0, listOf(report.error to false))
+             } else {
+                 AuditCard(
+-                    "Spoofer Runtime",
++                    UiText.get(R.string.waex_ui_spoofer_runtime_a7fae7b9, "Spoofer Runtime"),
+                     report.runtimeScore,
+                     10,
+                     listOf(
+-                        "Feature enabled" to report.featureEnabled,
+-                        "WhatsApp hook active" to report.hookActive
++                        UiText.get(R.string.waex_ui_feature_enabled_8e093ea1, "Feature enabled") to report.featureEnabled,
++                        UiText.get(R.string.waex_ui_whatsapp_hook_active_95610821, "WhatsApp hook active") to report.hookActive
+                     )
+                 )
+ 

@@ -1,0 +1,702 @@
++    <string name="waex_ui_timezone_60d86213" formatted="false">"Timezone: "</string>
++    <string name="waex_ui_country_bb1b735c" formatted="false">"Country: "</string>
++    <string name="waex_ui_city_9890558c" formatted="false">"City: "</string>
++    <string name="waex_ui_platform_b458abe9" formatted="false">"Platform: "</string>
++    <string name="waex_ui_whatsapp_version_a69b25df" formatted="false">"WhatsApp Version: "</string>
++    <string name="waex_ui_call_information_1e683bf5" formatted="false">"Call Information"</string>
++    <string name="waex_ui_call_blocked_f8914b51" formatted="false">"Call Blocked"</string>
++    <string name="waex_ui_call_from_e08ca331" formatted="false">"Call from "</string>
++    <string name="waex_ui_call_from_861d44f2" formatted="false">"Call from +"</string>
++    <string name="waex_ui_call_from_unknown_caller_5fc833e1" formatted="false">"Call from Unknown Caller ("</string>
++    <string name="waex_ui_whatsapp_call_information_d0f6cd71" formatted="false">"WhatsApp Call Information"</string>
++    <string name="waex_ui_unsupported_restart_target_db4c044c" formatted="false">"Unsupported restart target"</string>
++    <string name="waex_ui_unable_to_launch_selected_whatsapp_app_db15818c" formatted="false">"Unable to launch selected WhatsApp app"</string>
++    <string name="waex_ui_unable_to_find_selected_whatsapp_app_719a2e57" formatted="false">"Unable to find selected WhatsApp app"</string>
++    <string name="waex_ui_restarting_8e116479" formatted="false">"Restarting "</string>
++    <string name="waex_ui_whatsapp_opened_restart_not_verified_82c7c6d0" formatted="false">"WhatsApp opened; restart not verified"</string>
++    <string name="waex_ui_could_not_reopen_whatsapp_6cd0efa0" formatted="false">"Could not reopen WhatsApp"</string>
++    <string name="waex_ui_unable_to_restart_whatsapp_858d4979" formatted="false">"Unable to restart WhatsApp"</string>
++    <string name="waex_ui_restart_operation_unavailable_1da7ab39" formatted="false">"Restart operation unavailable"</string>
++    <string name="waex_ui_restarting_whatsapp_and_waex_3f47c0c8" formatted="false">"Restarting WhatsApp and WAEX..."</string>
++    <string name="waex_ui_unable_to_restart_apps_94cd4609" formatted="false">"Unable to restart apps"</string>
++    <string name="waex_ui_unable_to_relaunch_waex_f2b8e3cb" formatted="false">"Unable to relaunch WAEX"</string>
++    <string name="waex_ui_a_contact_f7f0de9a" formatted="false">"A contact"</string>
++    <string name="waex_ui_no_internet_ff1eadfe" formatted="false">"No Internet"</string>
++    <string name="waex_ui_ended_7cdc804e" formatted="false">"Ended"</string>
++    <string name="waex_ui_your_wa_enhancer_preferences_changed_r_eaa93890" formatted="false">"Your WA Enhancer preferences changed. Restart WhatsApp to apply them."</string>
++    <string name="waex_ui_restart_whatsapp_to_apply_f249101e" formatted="false">"Restart WhatsApp to apply:\n\n"</string>
++    <string name="waex_ui_more_d2740bc9" formatted="false">" more\n"</string>
++    <string name="waex_ui_setting_1_s_58e12775">"Setting: %1$s"</string>
++    <string name="waex_ui_chat_bubble_colors_6fb86fab" formatted="false">"Chat Bubble Colors"</string>
++    <string name="waex_ui_channel_recommendations_filter_94085776" formatted="false">"Channel Recommendations Filter"</string>
++    <string name="waex_ui_anti_edit_c3d97416" formatted="false">"Anti Edit"</string>
++    <string name="waex_ui_media_status_498f9960" formatted="false">"Media Status"</string>
++    <string name="waex_ui_media_saved_v30" formatted="false">"Media saved (WAEX)"</string>
++    <string name="waex_ui_media_save_failed_v30" formatted="false">"Unable to save this media file"</string>
++    <string name="waex_l10n_switch_release">"Switch to Release"</string>
++    <string name="waex_l10n_switch_debug">"Switch to Debug"</string>
++    <string name="waex_l10n_reinstall_apk">"Reinstall APK"</string>
++    <string name="waex_l10n_no_rejected_versions">"No rejected version is available to add. Check each target's rules status; this is not a feature compatibility test."</string>
++    <string name="waex_l10n_builtin_match">"Matches built-in rules"</string>
++    <string name="waex_l10n_custom_unverified">"Custom allowance (unverified)"</string>
++    <string name="waex_l10n_bypass_unverified">"Bypass active (unverified)"</string>
++    <string name="waex_l10n_rejected_rules">"Version rejected by rules"</string>
++    <string name="waex_l10n_version_check_unavailable">"Version check unavailable"</string>
++    <string name="waex_l10n_recipient_unconfirmed">"Cannot verify chat recipient"</string>
++    <string name="waex_l10n_guard_unsupported">"Your WhatsApp version (%1$s) does not match the configured version rules."</string>
++    <string name="waex_l10n_guard_rules_unavailable">"WAEX could not read its version rules from this WhatsApp process. Check that WhatsApp can access the WAEX package and its resources."</string>
++    <string name="waex_l10n_guard_prefs_unavailable">"WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp."</string>
++    <string name="waex_l10n_guard_version_unknown">"WAEX could not determine the installed WhatsApp version."</string>
++    <string name="waex_l10n_guard_paused">"WAEX features are paused for safety. This is not confirmation of functional compatibility."</string>
++    <string name="waex_l10n_guard_review">"Open WAEX settings to review the problem. Do not enable a version bypass just to hide an access error."</string>
++    <string name="waex_l10n_last_report">"Last report (not current): %1$s"</string>
++    <string name="waex_l10n_detail_active">"Injected &amp; active (%1$d/%2$d hooks active)"</string>
++    <string name="waex_l10n_detail_init">"Injected • Initialization: %1$s"</string>
++    <string name="waex_l10n_detail_bridge">"Injected • Bridge: %1$s"</string>
++    <string name="waex_l10n_runtime_001">"Not installed"</string>
++    <string name="waex_l10n_runtime_002">"Module inactive"</string>
++    <string name="waex_l10n_runtime_003">"Injection confirmed"</string>
++    <string name="waex_l10n_runtime_004">"Injection unconfirmed: boot identity unavailable"</string>
++    <string name="waex_l10n_runtime_005">"Injection unconfirmed: report from another boot"</string>
++    <string name="waex_l10n_runtime_006">"Injection unconfirmed: no runtime report"</string>
++    <string name="waex_l10n_runtime_007">"Injection unconfirmed: report expired or clock changed"</string>
++    <string name="waex_l10n_runtime_008">"Injection unconfirmed: process check unavailable"</string>
++    <string name="waex_l10n_runtime_009">"Reported process is not running"</string>
++    <string name="waex_l10n_runtime_010">"Injection unconfirmed: process changed"</string>
++    <string name="waex_l10n_runtime_011">"Injected • Compatibility check unavailable"</string>
++    <string name="waex_l10n_runtime_012">"Injected • Paused by target version guard"</string>
++    <string name="waex_l10n_runtime_013">"Injected • Initialization failed"</string>
++    <string name="waex_l10n_runtime_014">"Injected • Local version check requires review"</string>
++    <string name="waex_l10n_runtime_015">"Injected • Initialization in progress"</string>
++    <string name="waex_l10n_runtime_016">"Injected • Settings connection unavailable"</string>
++    <string name="waex_l10n_runtime_017">"Injected • Using settings fallback"</string>
++    <string name="waex_l10n_runtime_018">"Injected • Some features failed"</string>
++    <string name="waex_l10n_runtime_019">"Injected • Feature readiness unconfirmed"</string>
++    <string name="waex_l10n_runtime_020">"Injected • Settings connection unconfirmed"</string>
++    <string name="waex_l10n_runtime_021">"Injected • Version bypass active"</string>
++    <string name="waex_l10n_runtime_022">"Injected • Custom version allowance; unverified"</string>
++    <string name="waex_l10n_runtime_023">"Injected • Initialization reported complete"</string>
++    <string name="waex_l10n_runtime_024">"Connected directly"</string>
++    <string name="waex_l10n_runtime_025">"Using disk fallback"</string>
++    <string name="waex_l10n_runtime_026">"Unavailable"</string>
++    <string name="waex_l10n_runtime_027">"Not reported"</string>
++    <string name="waex_l10n_runtime_028">"Completed"</string>
++    <string name="waex_l10n_runtime_029">"Completed with hook failures"</string>
++    <string name="waex_l10n_runtime_030">"In progress"</string>
++    <string name="waex_l10n_runtime_031">"Paused: compatibility check unavailable"</string>
++    <string name="waex_l10n_runtime_032">"Paused: unsupported version"</string>
++    <string name="waex_l10n_runtime_033">"Failed"</string>
++    <string name="waex_l10n_runtime_034">"Injection detected"</string>
++    <string name="waex_l10n_runtime_035">"No installed target detected"</string>
++    <string name="waex_l10n_runtime_036">"Version rules require review"</string>
++    <string name="waex_l10n_runtime_037">"Target runtime requires review"</string>
++    <string name="waex_l10n_runtime_038">"Version bypass active; compatibility unverified"</string>
++    <string name="waex_l10n_runtime_039">"Custom version allowance; compatibility unverified"</string>
++    <string name="waex_l10n_runtime_040">"Version rules accepted; runtime unconfirmed"</string>
++    <string name="waex_l10n_runtime_041">"Rules accepted; initialization reported"</string>
++</resources>
+diff --git a/qa/ES419_LOCALIZATION_ACCEPTANCE.md b/qa/ES419_LOCALIZATION_ACCEPTANCE.md
+new file mode 100644
+index 0000000..b8e18e8
+--- /dev/null
++++ b/qa/ES419_LOCALIZATION_ACCEPTANCE.md
+@@ -0,0 +1,76 @@
++# Spanish (Latin America) public UI localization — acceptance
++
++## Source contract
++
++Reviewed upstream: `d8b7d98a32ec2b85ecb40ccfff8d2c7bb79dff4d`.
++The original English resources, other existing language files, preference schema,
++asset catalog, licensing dependency and signing/build configuration are unchanged.
++Spanish is explicitly `es-419` (`values-b+es+419`), with matching `values-es`
++fallback. Legacy stored `es` is interpreted as `es-419` without rewriting settings.
++Known status/build/category strings are localized only at display boundaries;
++protocol strings, preference keys, IDs, user text and arbitrary server responses
++are not run through a blanket text replacement.
++
++## Repeatable checks
++
++```sh
++python3 qa/test_es419_localization.py
++python3 qa/test_es419_runtime.py
++python3 qa/mutate_es419.py --out /tmp/waex-es419-mutations
++python3 qa/verify_es419_resources.py --aapt2 /path/to/aapt2 --out /tmp/waex-es419-resources
++```
++
++The first test verifies source/resource contracts. The second compiles the whole
++production locale policies, resource helper, display label mappings and Kotlin
++LocaleHelper with explicitly limited Android/Resources/Context substitutes. It
++executes Java formatting, not Android resource selection or complete Compose
++screens. Four unsafe source variants must compile and fail the targeted behavior.
++The AAPT2 runner actually compiles all public resources, then links an isolated
++strings/plurals fixture. Its APK is NOT a WAEX application, optimized Release,
++installation test or device acceptance. It requires an actual AAPT2 executable.
++
++## Authorized final artifact and device acceptance
++
++Build Debug and optimized Release with the authorized private module and original
++signing configuration. Inspect the final resource tables, not just source XML or
++the isolated fixture. Verify all public strings and the recording plural remain
++in default, es and es-419 configurations. Keep optimization enabled. The explicit
++localized-UI resource keep file supplements the existing catalog/icon rules.
++
++Exercise initial install, a saved `es` selection, explicit `es-419`, and System
++with es-CL/es-MX/es-AR/es-CO/es-PE/es-US. Verify returning to English and other
++supported languages; do not change their stored codes or existing translations.
++Confirm the current in-app picker behavior. No new Android platform localeConfig
++or AppCompat migration is included.
++
++Review narrow and wide devices, portrait/landscape, large text, TalkBack labels,
++right-to-left language switching, dialogs, input validation, zero/one/many counts,
++long error messages, offline states, notification channels and all menu variants.
++Verify that a language change/recreation does not require resetting preferences.
++The controls are not widened or rearranged by this contribution: longer Spanish
++labels can still reveal pre-existing clipping and need visual acceptance.
++
++Verify app-owned text inside official WhatsApp and Business on exact supported
++builds. Read module IDs only through a context owned by `com.waenhancer`; never
++use those IDs against the host resource table. Test module visibility loss and
++recovery. Unavailable module resources use explicit English source fallbacks to
++avoid crashing the host; this failure path is not advertised as English-free.
++The display helper must not change the host's process-wide default locale.
++
++Compare stable keys and behavior of theme options, restart targets, typed editors,
++privacy settings, scope, provider authorization and cryptographic labels. This
++patch localizes presentation, not those settings' values or permission decisions.
++
++## Boundaries
++
++Private-module screens, server/user content, downloaded release-note bodies,
++unknown plug-in labels, Android/PackageInstaller messages and technical error
++payloads are outside this public source translation. Keep diagnostic details
++verbatim when copied for debugging. Translating a toast does not fix its receipt
++classification; translating a feature name does not prove that hook works.
++
++Reconcile overlapping presentation edits from open receipt, presence, runtime,
++updater and media-export PRs rather than replacing their entire files. This branch
++is based on upstream main and does not silently absorb those other contributions.
++No full app build, optimized final artifact, screenshot/device review, Binder,
++LSPosed execution or all-feature certification was performed here.
+diff --git a/qa/localization_support.py b/qa/localization_support.py
+new file mode 100644
+index 0000000..6aa114d
+--- /dev/null
++++ b/qa/localization_support.py
+@@ -0,0 +1,51 @@
++"""Explicit display adapters for tests of non-localization behavior; no Android runtime claimed."""
++from pathlib import Path
++import re
++from xml.etree import ElementTree as ET
++
++
++def android_text(text):
++    if len(text) >= 2 and text[0] == text[-1] == '"':
++        text = text[1:-1]
++    return text.replace(r'\n', '\n').replace(r'\t', '\t').replace(r'\"', '"').replace(r"\'", "'").replace(r'\$', '$').replace('\\\\', '\\')
++
++
++def entries(root, folder):
++    out = {}
++    for path in sorted((Path(root)/'app/src/main/res'/folder).glob('*.xml')):
++        for element in ET.parse(path).getroot():
++            if element.tag == 'string':
++                key = element.attrib['name']
++                assert key not in out, f'Duplicate resource {folder}/{key}'
++                out[key] = (android_text(''.join(element.itertext())), element.attrib.get('formatted') != 'false')
++    return out
++
++
++def write_r(root, destination):
++    values = entries(root, 'values')
++    ids = {key: 0x7f020000 + i for i, key in enumerate(sorted(values))}
++    lines = ['package com.waenhancer.app;', 'public final class R {', 'public static final class string {']
++    lines += [f'public static final int {key} = {value};' for key, value in ids.items()]
++    lines += ['}', 'public static final class plurals { public static final int waex_recordings_deleted = 0x7f010000; }', '}']
++    path = Path(destination)/'com/waenhancer/app/R.java'
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text('\n'.join(lines))
++    return path, ids
++
++
++def write_display_adapter(root, destination):
++    """English rendering adapter only for existing restart/other non-locale tests.
++
++    The actual UiText source is exercised separately by test_es419_runtime.py.
++    No root, permission, persistence or callback logic is substituted here.
++    """
++    r, _ = write_r(root, destination)
++    path = Path(destination)/'com/waenhancer/utils/UiText.java'
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text('''package com.waenhancer.utils;
++public final class UiText {
++ public static String get(int id, String fallback, Object... args) {
++  return args.length == 0 ? fallback : String.format(java.util.Locale.ENGLISH, fallback, args);
++ }
++}''')
++    return [r, path]
+diff --git a/qa/mutate_es419.py b/qa/mutate_es419.py
+new file mode 100644
+index 0000000..aad6a28
+--- /dev/null
++++ b/qa/mutate_es419.py
+@@ -0,0 +1,29 @@
++#!/usr/bin/env python3
++"""Negative controls for localization; preserve original sources and require assertion failures."""
++from pathlib import Path
++import argparse,tempfile,shutil,subprocess,json
++ROOT=Path(__file__).resolve().parents[1]
++parser=argparse.ArgumentParser();parser.add_argument('--out',type=Path,required=True);args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True)
++CASES=[
++('ignore_selected_language','UiText.java','return DisplayLocalePolicy.resolve(code, system);','return java.util.Locale.ENGLISH;','test_es419_runtime.py','Spanish resource'),
++('host_resource_owner','UiText.java','source = new Source(app, module, preferences);','source = new Source(app, app, preferences);','test_es419_runtime.py','Spanish resource'),
++('recreate_resource_context_per_label','UiText.java','old != null && old.source == current','false && old != null && old.source == current','test_es419_runtime.py','unbounded per-label'),
++('lose_legacy_locale','DisplayLocalePolicy.java','if (code.equals("es")) return "es-419";','if (code.equals("es")) return "en";','test_es419_runtime.py','Spanish locale es'),
++]
++results=[]
++with tempfile.TemporaryDirectory(prefix='waex_l10n_mutants_') as temp:
++ base=Path(temp)
++ for name,file,before,after,test,expected in CASES:
++  r=base/name;(r/'app/src/main').mkdir(parents=True);(r/'qa').mkdir()
++  shutil.copytree(ROOT/'app/src/main/java',r/'app/src/main/java')
++  for folder in ['values','values-es','values-b+es+419']:
++   out=r/'app/src/main/res'/folder;out.mkdir(parents=True)
++   for n in ['strings.xml','ui_strings.xml']:shutil.copy2(ROOT/'app/src/main/res'/folder/n,out/n)
++  for n in ['localization_support.py','test_es419_runtime.py']:shutil.copy2(ROOT/'qa'/n,r/'qa'/n)
++  target=r/'app/src/main/java/com/waenhancer/utils'/file;code=target.read_text();assert before in code,(name,'inert');target.write_text(code.replace(before,after))
++  p=subprocess.run(['python3',str(r/'qa'/test)],cwd=r,capture_output=True,text=True,timeout=150)
++  output=p.stdout+p.stderr;(args.out/(name+'.log')).write_text(output)
++  compiled=('AssertionError: '+expected) in output
++  results.append({'case':name,'exit':p.returncode,'compiled_then_assertion_failure':compiled})
++  if p.returncode==0 or not compiled:raise AssertionError(f'{name}: expected a runtime assertion, not compiler/tool failure: {output[-1800:]}')
++(args.out/'results.json').write_text(json.dumps(results,indent=2));print('PASS: 4 localization mutants compiled and failed the expected production behavior assertion')
+diff --git a/qa/test_database_dialog_status_log_privacy.py b/qa/test_database_dialog_status_log_privacy.py
+index c15c451..b7938d8 100644
+--- a/qa/test_database_dialog_status_log_privacy.py
++++ b/qa/test_database_dialog_status_log_privacy.py
+@@ -34,5 +34,7 @@ for operation in ('getIdFromKey','getMediaFromId','findAccountDataDir'):
+ for operation in ('setTitle(', 'setMessage(', 'setPositiveButton('):
+  assert operation in dialog
+ assert 'saveMediaFile' in status
+-assert status.count('showToast(ctx, "Error saving status media: " + t.getMessage())')==1
++# Translation may wrap the static prefix; retain exactly one UI error path and
++# do not relax the separate log-privacy assertions above.
++assert len(re.findall(r'showToast\(ctx,\s*(?:UiText\.get\(R\.string\.[a-z0-9_]+,\s*)?"Error saving status media: "\)?\s*\+\s*t\.getMessage\(\)\)', status)) == 1
+ print('PASS: 18 DB, native dialog, and status-save diagnostics redact private exception texts')
+diff --git a/qa/test_es419_localization.py b/qa/test_es419_localization.py
+new file mode 100644
+index 0000000..16d728d
+--- /dev/null
++++ b/qa/test_es419_localization.py
+@@ -0,0 +1,72 @@
++#!/usr/bin/env python3
++"""Public display/resource contract. Static checks do not certify every runtime screen."""
++from pathlib import Path
++import re
++from collections import Counter
++from xml.etree import ElementTree as ET
++from localization_support import entries, android_text
++
++ROOT = Path(__file__).resolve().parents[1]
++SRC = ROOT/'app/src/main/java'
++base=entries(ROOT,'values');es=entries(ROOT,'values-es');latam=entries(ROOT,'values-b+es+419')
++assert base.keys()==es.keys()==latam.keys(), 'Missing/extra Spanish resources'
++assert es==latam, 'Spanish fallback and explicit es-419 diverged'
++PATTERN=re.compile(r'%(?:(\d+)\$)?[-#+ 0,(]*\d*(?:\.\d+)?([sdif])')
++checks=0
++for key,(source,formatted) in base.items():
++    target=latam[key][0]
++    assert target.strip(),key
++    assert not re.search('[\u202a-\u202e\u2066-\u2069\ufffd]',target),f'Unexpected bidi/replacement character: {key}'
++    if formatted:
++        def slots(text):
++            seq=0;result=[]
++            for index,typ in PATTERN.findall(text.replace('%%','')):
++                if not index:seq+=1;index=str(seq)
++                result.append((int(index),typ))
++            return Counter(result)
++        assert slots(source)==slots(target),(key,slots(source),slots(target))
++    assert source.count('\n') == target.count('\n'), f'Changed paragraph breaks: {key}'
++    checks+=1
++for folder in ['values','values-es','values-b+es+419']:
++    plural=ET.parse(ROOT/'app/src/main/res'/folder/'ui_strings.xml').getroot().find("plurals[@name='waex_recordings_deleted']")
++    assert plural is not None and {e.attrib['quantity'] for e in plural}=={'one','other'}
++    assert all('%1$d' in ''.join(e.itertext()) for e in plural)
++# Every new static R reference is defined. Keep original English only as explicit fallback.
++for path in SRC.rglob('*'):
++    if path.suffix not in ['.kt','.java']:continue
++    text=path.read_text()
++    for key in re.findall(r'R\.string\.(waex_ui_[a-z0-9_]+)',text):assert key in base,(path,key)
++locale=(SRC/'com/waenhancer/utils/LocaleHelper.kt').read_text()
++assert 'LanguageOption("es-419"' in locale
++assert 'DisplayLocalePolicy.canonicalCode' in locale
++picker=(SRC/'com/waenhancer/ui/screens/settings/ModuleSettingsScreen.kt').read_text()
++assert 'text = lang.englishName' not in picker
++assert 'getLanguageExplanation(lang.code)' in picker
++assert 'listOf("System", "Light", "Dark")' in picker, 'Do not translate stored theme values'
++assert 'putString(PREF_APP_LANGUAGE, langCode)' in locale
++bridge=(SRC/'com/waenhancer/xposed/bridge/HookProvider.java').read_text()
++assert 'new HashMap<String, Object>(prefs.getAll())' in bridge, 'Retain existing language snapshot path'
++assert 'UiText.initialize(appContext, bridgeClient)' in (SRC/'com/waenhancer/xposed/MainHook.java').read_text()
++assert 'UiText.initialize(this, PreferenceStores.publicStore(this))' in (SRC/'com/waenhancer/app/WaexApp.kt').read_text()
++helper=(SRC/'com/waenhancer/utils/UiText.java').read_text()
++assert 'Locale.setDefault' not in helper
++assert 'getResourcePackageName' in helper and 'createPackageContext(MODULE_PACKAGE, 0)' in helper
++assert 'getIdentifier(' not in helper, 'No repeated dynamic resource-name lookups'
++assert 'arguments.length == 0' in helper
++assert not re.search(r'preferences\.(?:edit|put|remove)',helper), 'Display helper must be read-only'
++keep = ET.parse(ROOT/'app/src/main/res/raw/waex_localized_ui_keep.xml').getroot()
++kept=keep.attrib['{http://schemas.android.com/tools}keep'].split(',')
++assert '@string/waex_ui_*' in kept and '@plurals/waex_recordings_deleted' in kept
++# Key enums, JIDs, SQL, cryptographic labels and selectors are intentionally not language strings.
++media=(SRC/'com/waenhancer/xposed/features/media/MediaPreviewHook.kt').read_text()
++for k in ['WhatsApp Image Keys','WhatsApp Video Keys','WhatsApp Audio Keys','WhatsApp Document Keys']:
++    assert f'"{k}".toByteArray(Charsets.UTF_8)' in media
++schema=(SRC/'com/waenhancer/config/PreferenceSchema.java').read_text()
++assert 'UiText' not in schema
++catalog=(ROOT/'app/src/main/assets/preference_catalog.json').read_text()
++assert 'disable_sensor_proximity' in catalog
++# Negative controls: a missing slot, malformed token and bidi marker must be recognized.
++for wrong in ['Sin variable', '%2$s', '%1$d']:
++    assert slots('Count: %1$s') != slots(wrong)
++assert re.search('[\u202a-\u202e\u2066-\u2069\ufffd]','a\u202eb')
++print(f'PASS: {checks} string keys in default/es/es-419, positional formats, paragraphs, plurals, routing and stable keys; 4 negative controls')
+diff --git a/qa/test_es419_runtime.py b/qa/test_es419_runtime.py
+new file mode 100644
+index 0000000..e10b612
+--- /dev/null
++++ b/qa/test_es419_runtime.py
+@@ -0,0 +1,117 @@
++#!/usr/bin/env python3
++"""Compile production locale/routing classes; run with explicit Android resource/context doubles.
++
++All real template formatting uses java.util.Formatter. This is not Android instrumentation.
++"""
++from pathlib import Path
++import tempfile,subprocess,base64,re
++from localization_support import entries,write_r
++ROOT=Path(__file__).resolve().parents[1];SRC=ROOT/'app/src/main/java/com/waenhancer/utils'
++DOUBLES={
++'android/os/LocaleList.java':'''package android.os; public class LocaleList { private final java.util.Locale[] v; public LocaleList(java.util.Locale... v){this.v=v;} public java.util.Locale get(int i){return v[i];} }''',
++'android/os/Build.java':'''package android.os; public class Build {public static class VERSION {public static int SDK_INT=34;} public static class VERSION_CODES {public static final int N=24;} }''',
++'android/content/SharedPreferences.java':'''package android.content; public interface SharedPreferences {String getString(String k,String v); Editor edit(); interface Editor {Editor putString(String k,String v); void apply();} }''',
++'android/content/res/Configuration.java':'''package android.content.res;
++public class Configuration { public static int copies; public java.util.Locale locale=java.util.Locale.ENGLISH; private android.os.LocaleList locales=new android.os.LocaleList(locale);
++public Configuration(){} public Configuration(Configuration c){copies++;locale=c.locale;locales=c.locales;} public void setLocales(android.os.LocaleList v){locales=v;locale=v.get(0);} public android.os.LocaleList getLocales(){return locales;} public int hashCode(){return locale.toLanguageTag().hashCode();}}
++''',
++'android/content/res/Resources.java':'''package android.content.res;
++import java.util.*; public class Resources {
++ public static class NotFoundException extends RuntimeException {}
++ public static final Map<Integer,String> EN=new HashMap<>(),ES=new HashMap<>();
++ public static Resources SYSTEM=new Resources("android"); public static int foreignReads;
++ public final String owner; private Configuration config=new Configuration();
++ public Resources(String owner){this.owner=owner;} public static Resources getSystem(){return SYSTEM;}
++ public Configuration getConfiguration(){return config;} public Object getDisplayMetrics(){return null;}
++ public void updateConfiguration(Configuration c,Object metrics){config=c;}
++ public String getResourcePackageName(int id){return owner;}
++ public String getString(int id){if(!owner.equals("com.waenhancer"))foreignReads++;String s=(config.locale.getLanguage().equals("es")?ES:EN).get(id);if(s==null)throw new NotFoundException();return s;}
++ public String getQuantityString(int id,int quantity){if(!owner.equals("com.waenhancer"))foreignReads++;if(config.locale.getLanguage().equals("es"))return quantity==1?"Se eliminó %1$d grabación":"Se eliminaron %1$d grabaciones";return quantity==1?"Deleted %1$d recording":"Deleted %1$d recordings";}
++}
++''',
++'android/content/Context.java':'''package android.content;
++import android.content.res.*; public class Context {
++ public static int packageQueries,configurationContexts; public String pkg; public boolean hidden,wrongOwner; public Context application; public SharedPreferences preferences; public Resources res;
++ public Context(String p){pkg=p;res=new Resources(p);} public Context getApplicationContext(){return application!=null?application:this;} public String getPackageName(){return pkg;}
++ public Resources getResources(){return res;} public Context createPackageContext(String name,int flags) throws Exception {packageQueries++;if(hidden)throw new Exception("hidden");return new Context(wrongOwner?"com.whatsapp":name);}
++ public Context createConfigurationContext(Configuration c){configurationContexts++;Context n=new Context(pkg);n.preferences=preferences;n.res.updateConfiguration(c,null);return n;}
++}
++''',
++'com/waenhancer/config/PreferenceStores.java':'''package com.waenhancer.config; public class PreferenceStores {public static android.content.SharedPreferences publicStore(android.content.Context c){return c.preferences;}}''',
++}
++RUNNER=r'''
++package qa; import android.content.*; import android.content.res.*; import java.util.*; import java.nio.file.*; import java.util.regex.*; import com.waenhancer.utils.*;
++public class TestEs419Runtime {
++ static int n; static void ok(boolean b,String label){n++;if(!b)throw new AssertionError(label);}
++ static class Prefs implements SharedPreferences,SharedPreferences.Editor {Map<String,String> values=new HashMap<>();boolean bad; public String getString(String k,String d){if(bad)throw new ClassCastException();return values.getOrDefault(k,d);} public Editor edit(){return this;} public Editor putString(String k,String v){values.put(k,v);return this;} public void apply(){} }
++ static String unbase(String s){return new String(Base64.getDecoder().decode(s),java.nio.charset.StandardCharsets.UTF_8);}
++ public static void main(String[] args) throws Exception {
++ List<String[]> input=new ArrayList<>(); for(String line:Files.readAllLines(Path.of(args[0]))){String[] v=line.split("\\t",-1);int id=Integer.parseInt(v[0]);v[1]=unbase(v[1]);v[2]=unbase(v[2]);Resources.EN.put(id,v[1]);Resources.ES.put(id,v[2]);input.add(v);}
++ Prefs p=new Prefs();Context host=new Context("com.whatsapp");host.preferences=p;Locale previous=Locale.getDefault();Locale.setDefault(Locale.GERMAN);
++ p.values.put("app_language","es-419");UiText.initialize(host,p);int queries=Context.packageQueries;
++ for(String[] v:input)ok(UiText.get(Integer.parseInt(v[0]),v[1]).equals(v[2]),"Spanish resource "+v[0]);
++ ok(Locale.getDefault().equals(Locale.GERMAN),"host default locale changed");
++ int contexts=Context.configurationContexts,copies=Configuration.copies;int first=Integer.parseInt(input.get(0)[0]);for(int i=0;i<10000;i++)UiText.get(first,"fallback");
++ ok(Context.configurationContexts==contexts && Configuration.copies==copies,"unbounded per-label configuration creation");ok(Context.packageQueries==queries,"per-label package lookup");
++ for(String code:new String[]{"es","es-419","es-CL","es-MX","es-AR","es-CO","es-PE","es-US"}){p.values.put("app_language",code);ok(UiText.get(first,"fallback").equals(input.get(0)[2]),"Spanish locale "+code);}
++ p.values.put("app_language","en");for(String[] v:input)ok(UiText.get(Integer.parseInt(v[0]),v[1]).equals(v[1]),"English resource "+v[0]);
++ // Full live Formatter behavior, without evaluating dynamic templates a second time.
++ Pattern format=Pattern.compile("%(?:(\\d+)\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?([sdif])");
++ for(String[] v:input){if(!v[3].equals("true"))continue;String source=v[1];Matcher matcher=format.matcher(source.replace("%%",""));Map<Integer,Character> types=new HashMap<>();int seq=0;
++ while(matcher.find()){int index=matcher.group(1)==null?++seq:Integer.parseInt(matcher.group(1));char t=matcher.group(2).charAt(0);if(t!='s'||!types.containsKey(index))types.put(index,t);}
++ if(types.isEmpty())continue;Object[] values=new Object[Collections.max(types.keySet())];Arrays.fill(values,"dato %1$s sin traducir");for(Map.Entry<Integer,Character> e:types.entrySet()){char t=e.getValue();if(t=='d'||t=='i')values[e.getKey()-1]=7;if(t=='f')values[e.getKey()-1]=3.5;}
++ p.values.put("app_language","es-419");String expected=String.format(Locale.forLanguageTag("es-419"),v[2],values);ok(UiText.get(Integer.parseInt(v[0]),source,values).equals(expected),"format "+v[0]);}
++ p.values.put("app_language","es-419");for(int count:new int[]{0,1,2,99}){String result=UiText.quantity(0x7f010000,count,"Deleted %d recording(s)",count);ok(result.equals(count==1?"Se eliminó 1 grabación":"Se eliminaron "+count+" grabaciones"),"plural "+count);}
++ p.values.put("app_language","system");Resources.SYSTEM.getConfiguration().setLocales(new android.os.LocaleList(Locale.forLanguageTag("es-CL")));ok(UiText.displayLocale().toLanguageTag().equals("es-CL"),"system selection");
++ p.bad=true;ok(UiText.displayLocale().getLanguage().equals("es"),"unreadable preference fallback");p.bad=false;
++ ok(DisplayLocalePolicy.canonicalCode("es").equals("es-419"),"legacy selection");ok(DisplayLocalePolicy.resolve("in",Locale.ENGLISH).getLanguage().equals("id"),"Indonesian alias");ok(DisplayLocalePolicy.resolve("",Locale.FRENCH).equals(Locale.FRENCH),"empty selection");
++ p.values.put("app_language","es-419");host.hidden=true;UiText.initialize(host,p);ok(UiText.get(first,"original").equals("original"),"hidden module fallback");ok(Resources.foreignReads==0,"foreign resource ID used");
++ host.hidden=false;host.wrongOwner=true;UiText.initialize(host,p);ok(UiText.get(first,"original").equals("original"),"wrong module owner");ok(Resources.foreignReads==0,"wrong owner read");
++ host.wrongOwner=false;UiText.initialize(host,p);ok(UiText.get(-1,"missing resource").equals("missing resource"),"missing ID fallback");
++ Resources.ES.put(-2,"%2$s");ok(UiText.get(-2,"Source %1$s","value").equals("Source value"),"malformed target must not crash");
++ Context activity=new Context("not-an-application");activity.application=host;UiText.initialize(activity,p);ok(UiText.get(first,"original").equals(input.get(0)[2]),"uses application context");
++ ok(InternalLabels.text("ACTIVE").equals("Activo"),"presentation status");ok(InternalLabels.text("not-a-label").equals("not-a-label"),"unknown metadata unchanged");
++ ok(PreferenceLabels.text("disable_sensor_proximity").contains("proximidad"),"catalog restart title");
++ Locale.setDefault(previous);System.out.println("PASS: "+n+" production resource/format/locale checks; 10,000 cache-hit reads; explicit Android doubles, not Android runtime");
++ }
++}
++'''
++KOTLIN=r'''
++import android.content.*
++import com.waenhancer.utils.*
++fun main() {
++ val prefs=object:SharedPreferences,SharedPreferences.Editor {
++  var code="es"
++  override fun getString(k:String,d:String):String=code
++  override fun edit():SharedPreferences.Editor=this
++  override fun putString(k:String,v:String):SharedPreferences.Editor {code=v;return this}
++  override fun apply(){}
++ }
++ val c=Context("com.waenhancer");c.preferences=prefs;UiText.initialize(c,prefs)
++ check(LocaleHelper.getSelectedLanguageCode(c)=="es-419")
++ check(prefs.code=="es") // Read-time alias does not rewrite data.
++ check(LocaleHelper.SUPPORTED_LANGUAGES.count{it.code=="es-419"}==1)
++ check(LocaleHelper.getLanguageDisplayName("es")=="Español (Latinoamérica)")
++ check(LocaleHelper.getLanguageExplanation("en").lowercase().contains("inglés"))
++ val wrapped=LocaleHelper.wrapContext(c)
++ check(wrapped.resources.configuration.locales[0].toLanguageTag()=="es-419")
++ LocaleHelper.applyLanguage(c,"es-419");check(prefs.code=="es-419")
++ println("PASS: 7 production Kotlin picker/migration/wrapped-context checks with Android doubles")
++}
++'''
++with tempfile.TemporaryDirectory(prefix='waex_es419_') as temp:
++    tmp=Path(temp);sources=[]
++    for path,code in DOUBLES.items():
++        p=tmp/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(code);sources.append(p)
++    r,ids=write_r(ROOT,tmp);sources.append(r)
++    runner=tmp/'qa/TestEs419Runtime.java';runner.parent.mkdir();runner.write_text(RUNNER);sources.append(runner)
++    sources += [SRC/p for p in ['UiText.java','DisplayLocalePolicy.java','InternalLabels.java','PreferenceLabels.java']]
++    en=entries(ROOT,'values');es=entries(ROOT,'values-b+es+419');fixture=tmp/'resource-values.tsv'
++    def b64(s):return base64.b64encode(s.encode()).decode()
++    fixture.write_text('\n'.join(f'{ids[k]}\t{b64(en[k][0])}\t{b64(es[k][0])}\t{str(en[k][1]).lower()}' for k in sorted(ids)))
++    classes=tmp/'classes';classes.mkdir()
++    subprocess.run(['javac','--release','17','-encoding','UTF-8','-d',str(classes),*map(str,sources)],check=True,timeout=90)
++    subprocess.run(['java','-Dfile.encoding=UTF-8','-cp',str(classes),'qa.TestEs419Runtime',str(fixture)],check=True,timeout=45)
++    kt=tmp/'TestLocale.kt';kt.write_text(KOTLIN)
++    subprocess.run(['kotlinc','-cp',str(classes),str(SRC/'LocaleHelper.kt'),str(kt),'-d',str(tmp/'test.jar')],check=True,timeout=90)
++    subprocess.run(['kotlin','-cp',str(classes)+':'+str(tmp/'test.jar'),'TestLocaleKt'],check=True,timeout=45)
+diff --git a/qa/test_manual_seen_tick_persistence.py b/qa/test_manual_seen_tick_persistence.py
+index e863361..0315c7c 100644
+--- a/qa/test_manual_seen_tick_persistence.py
++++ b/qa/test_manual_seen_tick_persistence.py
+@@ -145,7 +145,13 @@ public void show(){shown++;}}'''
+                     'ui/screens/settings/StyleNonBooleanPreferencePolicy.java'):
+             sources.append(str(SRC/rel))
+         subprocess.run(['javac','--release','17','-d',td,*sources],check=True,timeout=60)
+-        kt=out/'TestManual.kt';kt.write_text(TEST.replace('__PRODUCTION__',update))
++        # Production callback uses the module's localized, presentation-only warning.
++        # Keep its exact body but provide explicit resource adapters for this JVM probe.
++        import re
++        ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',update)))
++        r_stub='object R {object string {'+ ''.join(f'const val {name} = {0x7f060100+i};' for i,name in enumerate(ids))+'}}\n'
++        ui_stub='object UiText {fun get(id:Int, fallback:String, vararg args:Any?):String = if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)}\n'
++        kt=out/'TestManual.kt';kt.write_text(TEST.replace('__PRODUCTION__',update).replace('class Ui(',r_stub+ui_stub+'class Ui('))
+         jar=out/'test.jar'
+         subprocess.run(['kotlinc',str(kt),'-classpath',td,'-jvm-target','17','-include-runtime','-d',str(jar)],check=True,timeout=90)
+         subprocess.run(['java','-cp',str(jar)+os.pathsep+td,'TestManualKt'],check=True,timeout=60)
+diff --git a/qa/test_presence_event_contract.py b/qa/test_presence_event_contract.py
+index e5c7e3f..85277ca 100644
+--- a/qa/test_presence_event_contract.py
++++ b/qa/test_presence_event_contract.py
+@@ -58,6 +58,8 @@ import java.lang.reflect.*;import java.util.*;import java.util.concurrent.Execut
+ import com.waenhancer.xposed.features.automation.PresenceEventPolicy;
+ import com.waenhancer.xposed.features.automation.PresenceStateStore;
+ public class TestPresenceEventContract {
++ static class R {static class string {static final int waex_ui_is_online_e0992fa5=1;}}
++ static class UiText {static String get(int id, String fallback){return fallback;}}
+  static int checks;
+  static void check(boolean value,String label){checks++;if(!value)throw new AssertionError(label);System.out.println("PASS: "+label);}
+  static String TAG="test";Object context=new Object();ClassLoader classLoader=getClass().getClassLoader();
+diff --git a/qa/test_restart_safety.py b/qa/test_restart_safety.py
+index 0118113..a755084 100644
+--- a/qa/test_restart_safety.py
++++ b/qa/test_restart_safety.py
+@@ -172,6 +172,9 @@ with tempfile.TemporaryDirectory(prefix='waex_restart_integration_') as output:
+         file.parent.mkdir(parents=True, exist_ok=True)
+         file.write_text(code)
+         stub_sources.append(file)
++    # Explicit English display adapter; actual resource routing has its own runtime test.
++    from localization_support import write_display_adapter
++    stub_sources.extend(write_display_adapter(ROOT, base))
+     compiled = [*stub_sources, SRC/'RestartTargetPolicy.java',
+                 SRC/'AppRestartHelper.java', QA/'TestAppRestartHelper.java']
+     subprocess.run(['javac','--release','17','-d',output,*map(str,compiled)],check=True)
+diff --git a/qa/test_runtime_diagnostics.py b/qa/test_runtime_diagnostics.py
+index d9b7153..c265f85 100644
+--- a/qa/test_runtime_diagnostics.py
++++ b/qa/test_runtime_diagnostics.py
+@@ -33,7 +33,18 @@ def main():
+         model = det[det.index('data class InjectedHookItem('):det.index('object WhatsAppPackageDetector')]
+         put('Model.kt', 'package com.waenhancer.utils\n' + model)
+         # Full production guard is compiled too; the visual builder is an explicit double.
+-        put('VersionGuard.kt', (JAVA/'xposed/core/VersionGuard.kt').read_text())
++        guard_source = (JAVA/'xposed/core/VersionGuard.kt').read_text()
++        put('VersionGuard.kt', guard_source)
++        # Compile the real guard against explicit presentation-only adapters.
++        # Runtime policy decisions and English fallbacks remain executable.
++        import re
++        guard_ids = sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)', guard_source)))
++        put('UiText.kt', '''package com.waenhancer.utils
++object UiText {
++ @JvmStatic fun get(id:Int, fallback:String, vararg args:Any?):String =
++   if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)
++}
++''')
+         put('Resources.kt', '''package android.content.res
+ class Resources(val owner:String,val names:Map<String,Int>,val arrays:Map<Int,Array<String>>,val overrideName:String?=null) {
+  class NotFoundException:RuntimeException()
+@@ -87,9 +98,7 @@ object XposedBridge{val logs=mutableListOf<String>();fun log(s:String){logs.add(
+         put('Clock.kt', '''package android.os
+ object SystemClock{var time=1000L;fun elapsedRealtime()=time}
+ ''')
+-        put('R.kt', '''package com.waenhancer.app
+-object R{object array{const val universal_supported_versions=0x7f030000}}
+-''')
++        put('R.kt', 'package com.waenhancer.app\nobject R { object array { const val universal_supported_versions = 0x7f030000 }; object string {\n' + '\n'.join('const val '+name+' = '+str(0x7f050100+i) for i,name in enumerate(guard_ids)) + '\n} }\n')
+         put('Root.kt', '''package com.waenhancer.xposed.utils
+ object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=false;var calls=0;var advance=0L
+  fun runRootCommand(command:String):String?{calls++;lastCommand=command;android.os.SystemClock.time+=advance;if(fail)throw SecurityException("secret diagnostic");return output}}
+diff --git a/qa/test_update_download_contract.py b/qa/test_update_download_contract.py
+index 1a02384..f919357 100644
+--- a/qa/test_update_download_contract.py
++++ b/qa/test_update_download_contract.py
+@@ -16,6 +16,13 @@ def main():
+   identities[str(root_source.relative_to(a.root))]=hashlib.sha256(root_source.read_bytes()).hexdigest()
+   for name in ['UpdateDownloader.kt','UpdateTransferPolicy.kt']:
+    path=a.root/'app/src/main/java/com/waenhancer/update'/name;files[name]=path.read_text();identities[str(path.relative_to(a.root))]=hashlib.sha256(path.read_bytes()).hexdigest()
++  import re
++  ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',files['UpdateDownloader.kt'])))
++  files['AppR.kt']='package com.waenhancer.app\nobject R {object string {\n'+ '\n'.join(f'const val {name} = {0x7f060100+i}' for i,name in enumerate(ids))+'\n}}'
++  files['UiText.kt']='''package com.waenhancer.utils
++object UiText { @JvmStatic fun get(id:Int, fallback:String, vararg args:Any?):String =
++ if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args) }
++'''
+   for n,v in files.items():(src/n).write_text(v)
+   command=['kotlinc','-classpath',str(root_classes),'-nowarn','-language-version','2.0',*map(str,src.glob('*.kt')),'-include-runtime','-d',str(out/'test.jar')]
+   c=subprocess.run(command,text=True,capture_output=True,timeout=90);(out/'compile.log').write_text(c.stdout+c.stderr)
+diff --git a/qa/test_update_session.py b/qa/test_update_session.py
+index 074a414..f4c216c 100644
+--- a/qa/test_update_session.py
++++ b/qa/test_update_session.py
+@@ -70,7 +70,12 @@ def block(s,m):
+ def main():
+  p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=ROOT);a=p.parse_args();j=a.root/'app/src/main/java/com/waenhancer';s=(j/'ui/components/UpdateDownloadSheet.kt').read_text()
+  effect=block(s,'DisposableEffect(session)');cancel=block(s,'OutlinedButton(onClick = ')[len('OutlinedButton(onClick = '):]
+- files=dict(FILES);files['Session.kt']=(j/'update/UpdateDownloadSession.kt').read_text();files['Checks.kt']=PROGRAM.replace('EFFECT',effect).replace('CANCEL',cancel)
++ import re
++ ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',effect+cancel)))
++ r_stub='object R {object string {'+ ''.join(f'const val {name} = {0x7f060100+i};' for i,name in enumerate(ids))+'}}\n'
++ ui_stub='object UiText {fun get(id:Int, fallback:String, vararg args:Any?):String = if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)}\n'
++ files=dict(FILES);files['Session.kt']=(j/'update/UpdateDownloadSession.kt').read_text()
++ files['Checks.kt']=PROGRAM.replace('EFFECT',effect).replace('CANCEL',cancel).replace('class Context\n',r_stub+ui_stub+'class Context\n')
+  with tempfile.TemporaryDirectory(prefix='waex-session-') as d:
+   out=Path(d)
+   for n,v in files.items():(out/n).write_text(v)
+diff --git a/qa/verify_es419_resources.py b/qa/verify_es419_resources.py
+new file mode 100755
+index 0000000..dc4002b
+--- /dev/null
++++ b/qa/verify_es419_resources.py
+@@ -0,0 +1,94 @@
++#!/usr/bin/env python3
++"""Compile public resources and link an isolated locale table; NOT a WAEX APK build.
++
++Requires a real caller-supplied AAPT2. No SDK/signing/private dependencies are replaced.
++The fixture contains only module strings/plurals so linking needs no platform symbols.
++"""
++from pathlib import Path
++import argparse
++import hashlib
++import json
++import re
++import shutil
++import subprocess
++import sys
++import tempfile
++from localization_support import entries
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def verify_dump(text, expected, spanish):
++    assert 'Package name=com.waenhancer id=7f' in text, 'Wrong resource owner'
++    strings = {}
++    for match in re.finditer(r'^    resource 0x[0-9a-f]+ string/([^\n]+)\n(.*?)(?=^    resource |\Z)', text, re.M | re.S):
++        name, body = match.groups()
++        assert name not in strings, f'Duplicate compiled string {name}'
++        qualifiers = re.findall(r'^      \(([^)]*)\) ', body, re.M)
++        for qualifier in ('', 'es', 'es-r419'):
++            assert qualifiers.count(qualifier) == 1, (name, qualifier, qualifiers)
++        # AAPT2 prints literal newlines with its six-space pretty-print indentation.
++        for value in re.finditer(r'^      \(([^)]*)\) "(.*?)(?=^      \(|\Z)', body, re.M | re.S):
++            qualifier, content = value.groups()
++            if qualifier not in ('es', 'es-r419'): continue
++            content = content.rstrip('\n')
++            assert content.endswith('"'), (name, 'Malformed AAPT2 string output')
++            content = content[:-1].replace('\n      ', '\n')
++            assert content == spanish[name][0], (name, qualifier, 'Compiled Spanish value changed')
++        strings[name] = body
++    assert strings.keys() == expected.keys(), (len(strings), len(expected))
++    plural = re.search(r'plurals/waex_recordings_deleted\n(.*?)(?=^    resource |^  type |\Z)', text, re.M | re.S)
++    assert plural, 'Missing compiled recording plural'
++    assert plural.group(1).count('one=') == 3 and plural.group(1).count('other=') == 3
++    return len(strings)
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--aapt2', required=True, help='Path to actual Android AAPT2 executable')
++    parser.add_argument('--out', required=True, help='New directory for text evidence and temporary fixture')
++    args = parser.parse_args()
++    aapt2 = Path(args.aapt2).resolve()
++    if not aapt2.is_file(): raise SystemExit('AAPT2 is missing')
++    out = Path(args.out).resolve()
++    out.mkdir(parents=True, exist_ok=False)
++    commands=[]
++    def run(argv, name):
++        result = subprocess.run([str(a) for a in argv], text=True, encoding='utf-8', errors='replace',
++                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
++        (out/name).write_text(result.stdout, encoding='utf-8')
++        commands.append({'command':[str(a) for a in argv], 'exit':result.returncode})
++        if result.returncode: raise RuntimeError(f'{name} failed: {result.returncode}')
++        return result.stdout
++    run([aapt2, 'version'], 'aapt2-version.txt')
++    run([aapt2, 'compile', '--dir', ROOT/'app/src/main/res', '-o', out/'all-resources.zip'], 'compile-all.log')
++    res=out/'res';res.mkdir()
++    identities={}
++    for folder in ('values','values-es','values-b+es+419'):
++        (res/folder).mkdir()
++        for file in ('strings.xml','ui_strings.xml'):
++            source=ROOT/'app/src/main/res'/folder/file
++            shutil.copyfile(source,res/folder/file)
++            identities[f'{folder}/{file}']=hashlib.sha256(source.read_bytes()).hexdigest()
++    manifest=out/'AndroidManifest.xml'
++    manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.waenhancer"><application /></manifest>\n')
++    run([aapt2,'compile','--dir',res,'-o',out/'compiled.zip'],'compile-fixture.log')
++    run([aapt2,'link','-o',out/'resources-only.apk','--manifest',manifest,
++         '--java',out/'generated','--custom-package','com.waenhancer.app',out/'compiled.zip'],'link-fixture.log')
++    dump=run([aapt2,'dump','resources',out/'resources-only.apk'],'resources-table.txt')
++    expected=entries(ROOT,'values')
++    spanish=entries(ROOT,'values-b+es+419')
++    count=verify_dump(dump,expected,spanish)
++    controls = [dump.replace('(es-r419)', '(fr)'), dump.replace('Package name=com.waenhancer id=7f','Package name=other id=7f'),
++                dump.replace('other="Se eliminaron', 'zero="Se eliminaron',1), dump.replace('(es) "Agregar"', '(es) "Add"', 1)]
++    for bad in controls:
++        try: verify_dump(bad,expected,spanish)
++        except AssertionError: pass
++        else: raise AssertionError('Bad compiled-table fixture accepted')
++    (out/'result.json').write_text(json.dumps({'string_names':count,'configurations':['default','es','es-419'],
++        'exact_compiled_spanish_values':2*count,'plural_resources':1,'plural_forms_per_configuration':2,'negative_parser_controls':len(controls),
++        'identities':identities,'commands':commands,'scope':'AAPT2 actual compile/link of resource table only; not app build or runtime selection'},indent=2))
++    print(f'PASS: {count} compiled string names, all three locale configurations, {2*count} exact Spanish values, plural forms, {len(controls)} table-parser controls; NOT a full app build')
++
++if __name__=='__main__':
++    main()

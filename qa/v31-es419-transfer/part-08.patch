@@ -1,0 +1,1000 @@
++<resources>
++    <string name="app_name">"Wa Enhancer X"</string>
++    <string name="xposed_description">"Módulo de mejoras para WhatsApp y WhatsApp Business."</string>
++    <string name="about_title">"Acerca de y créditos"</string>
++    <string name="maintainer">"mubashardev"</string>
++    <string name="developer">"Desarrollado por Mubashar Dev"</string>
++    <string name="about_section_title">"Acerca de"</string>
++    <string name="about_info">"WaEnhancer X es un módulo avanzado de Xposed diseñado y desarrollado por Mubashar Dev. Mejora tu experiencia en WhatsApp con funciones de privacidad, opciones de personalización visual y herramientas avanzadas."</string>
++    <string name="installation">"Instalación"</string>
++    <string name="installation_desc">"1. Asegúrate de que tu dispositivo tenga acceso de superusuario.\n2. Instala el entorno Xposed en tu dispositivo.\n3. Descarga WaEnhancer X desde la sección Actions de GitHub.\n4. Instala el APK de WaEnhancer X.\n5. Activa el módulo WaEnhancer X en la aplicación Xposed Installer."</string>
++    <string name="community">"Comunidad"</string>
++    <string name="go_to_telegram">"Canal de Telegram"</string>
++    <string name="go_to_github">"Reportes en GitHub"</string>
++    <string name="contributors">"Colaboradores"</string>
++    <string name="stargazers_title">"Quienes apoyan el proyecto"</string>
++    <string name="stargazers_thank_you">"Gracias por apoyar a WaEnhancerX"</string>
++    <string name="stargazers_message">"Cada estrella ayuda a que más personas descubran el proyecto. Este espacio reconoce a quienes han mostrado su apoyo."</string>
++    <string name="support">"Ayuda"</string>
++    <string name="support_desc">"Si tienes algún problema o alguna pregunta sobre WaEnhancer X, visita nuestro canal de Telegram."</string>
++    <string name="license">"Licencia"</string>
++    <string name="license_desc">"Este proyecto se distribuye bajo la licencia Apache 2.0. Consulta el archivo LICENSE para obtener más información.\n\nMubashar Dev desarrolla WaEnhancer X de forma independiente. No está afiliado ni asociado con WhatsApp Inc. o Meta Platforms, Inc., ni cuenta con su respaldo. Este proyecto se ofrece \"tal cual\" con fines educativos y de investigación. Úsalo bajo tu propia responsabilidad. El uso indebido de esta herramienta puede tener consecuencias legales."</string>
++    <string name="show_message_device_source">"Mostrar el dispositivo de origen del mensaje"</string>
++    <string name="show_message_device_source_sum">"Indica si el mensaje se envió desde el dispositivo principal o desde uno vinculado"</string>
++    <string name="message_sent_via_phone">"Este mensaje se envió desde un teléfono"</string>
++    <string name="message_sent_via_linked_device">"Este mensaje se envió desde un dispositivo vinculado"</string>
++    <string name="nav_home">"Inicio"</string>
++    <string name="nav_controls">"Controles"</string>
++    <string name="nav_media">"Multimedia"</string>
++    <string name="nav_automation">"Automatización"</string>
++    <string name="nav_styles">"Estilos"</string>
++    <string name="nav_search">"Buscar"</string>
++    <string name="module_settings_title">"Ajustes del módulo"</string>
++    <string name="app_theme_title">"Tema de la aplicación"</string>
++    <string name="app_theme_desc">"Elige la apariencia de WAEX"</string>
++    <string name="choose_app_theme">"Elegir el tema de la aplicación"</string>
++    <string name="theme_follow_system">"Usar el del sistema"</string>
++    <string name="theme_light">"Claro"</string>
++    <string name="theme_dark">"Oscuro"</string>
++    <string name="theme_monet">"Colores dinámicos (Monet)"</string>
++    <string name="update_settings_title">"Ajustes de actualización"</string>
++    <string name="update_settings_desc">"Configura la búsqueda de actualizaciones, la instalación y el regreso a versiones anteriores"</string>
++    <string name="app_language_title">"Idioma de la aplicación"</string>
++    <string name="app_language_desc">"Cambia el idioma de la interfaz"</string>
++    <string name="choose_app_language">"Elegir idioma"</string>
++    <string name="language_default">"Predeterminado del sistema"</string>
++    <string name="action_back">"Volver"</string>
++    <string name="action_save">"Guardar"</string>
++    <string name="action_cancel">"Cancelar"</string>
++    <string name="action_ok">"Aceptar"</string>
++    <string name="action_reset">"Restablecer"</string>
++    <string name="action_delete">"Eliminar"</string>
++    <string name="action_add">"Agregar"</string>
++    <string name="action_edit">"Editar"</string>
++    <string name="action_apply">"Aplicar"</string>
++    <string name="action_search">"Buscar"</string>
++    <string name="search_placeholder">"Buscar funciones y ajustes…"</string>
++    <string name="no_results_found">"No se encontraron funciones"</string>
++    <string name="no_results_description">"Prueba con otras palabras o explora las funciones de cada pestaña."</string>
++    <string name="filter_all">"Todos"</string>
++    <string name="requires_pro">"Requiere Pro"</string>
++    <string name="pro_feature_tag">"Pro"</string>
++    <string name="dashboard_title">"WaEnhancerX"</string>
++    <string name="module_active">"Módulo activo"</string>
++    <string name="module_inactive">"Módulo inactivo"</string>
++    <string name="module_active_version">"Módulo activo • v%s"</string>
++    <string name="module_inactive_version">"Módulo inactivo • v%s"</string>
++    <string name="unsupported_target">"Aplicación no compatible"</string>
++    <string name="backup_btn">"Crear copia de seguridad"</string>
++    <string name="restore_btn">"Restaurar"</string>
++    <string name="reset_settings_btn">"Restablecer ajustes"</string>
++    <string name="reset_settings_confirm_title">"Restablecer todos los ajustes"</string>
++    <string name="reset_settings_confirm_msg">"¿Quieres restablecer todos los ajustes del módulo a sus valores predeterminados? Se borrarán todas las personalizaciones y preferencias."</string>
++    <string name="system_diagnostics_title">"Diagnóstico del sistema"</string>
++    <string name="live_health_overview">"Resumen del estado actual"</string>
++    <string name="view_diagnostic_details">"Ver detalles del diagnóstico"</string>
++    <string name="supported_versions_catalog">"Catálogo de versiones compatibles"</string>
++    <string name="customization_coming_soon_title">"Personalización"</string>
++    <string name="customization_coming_soon_desc">"Próximamente habrá más ajustes de personalización"</string>
++    <string name="hooks_injected">"Interceptores cargados"</string>
++    <string name="hooks_not_injected">"Interceptores no cargados"</string>
++    <string name="view_all">"Ver todos"</string>
++    <string name="title_conversation_messages">"Conversaciones y mensajes"</string>
++    <string name="title_supported_versions">"Versiones compatibles"</string>
++    <string name="title_filter_items">"Filtrar elementos por ID"</string>
++    <string name="title_floating_bottom_bar">"Barra inferior flotante"</string>
++    <string name="title_license_plan">"Licencia y plan"</string>
++    <string name="title_tasker_guide">"Guía de integración con Tasker"</string>
++    <string name="title_tasker_history">"Historial de ejecuciones de Tasker"</string>
++    <string name="title_audio_ai_summary">"Resumen de audio e IA"</string>
++    <string name="title_bootloader_spoofer">"Simulación del estado de arranque"</string>
++    <string name="title_system_health">"Estado del sistema"</string>
++    <string name="title_changelog">"Historial de cambios"</string>
++    <string name="title_per_contact_privacy">"Privacidad por contacto"</string>
++    <string name="title_deleted_messages">"Archivo de mensajes eliminados"</string>
++    <string name="feat_always_online_title">"Siempre en línea"</string>
++    <string name="feat_always_online_desc">"Te muestra en línea aunque minimices WhatsApp. No funciona si lo quitas de las aplicaciones recientes."</string>
++    <string name="feat_freezelastseen_title">"Congelar la última conexión"</string>
++    <string name="feat_freezelastseen_desc">"Mantiene fija la hora de tu última conexión"</string>
++    <string name="feat_ghostmode_t_title">"Ocultar que estás escribiendo"</string>
++    <string name="feat_ghostmode_t_desc">"Los demás no verán que estás escribiendo"</string>
++    <string name="feat_ghostmode_r_title">"Ocultar que estás grabando audio"</string>
++    <string name="feat_ghostmode_r_desc">"Los demás no verán que estás grabando audio"</string>
++    <string name="feat_stealth_status_view_title">"Ocultar las vistas de estados"</string>
++    <string name="feat_stealth_status_view_desc">"Mira estados sin que sus autores lo sepan"</string>
++    <string name="feat_hide_read_receipts_title">"Ocultar las confirmaciones de lectura"</string>
++    <string name="feat_hide_read_receipts_desc">"Lee mensajes dentro de una conversación sin que los demás lo sepan"</string>
++    <string name="feat_hideread_group_title">"Ocultar las confirmaciones de lectura en grupos"</string>
++    <string name="feat_hideread_group_desc">"Lee mensajes de grupos sin que los demás lo sepan"</string>
++    <string name="feat_blueonreply_title">"Confirmar la lectura al responder"</string>
++    <string name="feat_blueonreply_desc">"Envía la confirmación de lectura después de responder un mensaje"</string>
++    <string name="feat_seentick_title">"Mostrar un botón para confirmar la lectura"</string>
++    <string name="feat_seentick_desc">"Agrega un botón para marcar el contenido como leído o visto"</string>
++    <string name="feat_hide_delivery_receipts_title">"Ocultar las confirmaciones de entrega"</string>
++    <string name="feat_hide_delivery_receipts_desc">"Los demás no sabrán que sus mensajes llegaron a tu dispositivo"</string>
++    <string name="feat_hide_seen_receipts_title">"Ocultar la reproducción de audios"</string>
++    <string name="feat_hide_seen_receipts_desc">"No envía la confirmación de reproducción cuando escuchas un audio"</string>
++    <string name="feat_hideonceseen_title">"Ocultar la apertura de contenido de una sola vista"</string>
++    <string name="feat_hideonceseen_desc">"Oculta que abriste una foto o un video de una sola vista"</string>
++    <string name="feat_anti_revoke_title">"Conservar mensajes eliminados"</string>
++    <string name="feat_anti_revoke_desc">"Conserva tu copia de los mensajes que otras personas eliminan"</string>
++    <string name="feat_hide_anti_revoke_title">"Agregar la opción de ocultar mensajes eliminados"</string>
++    <string name="feat_hide_anti_revoke_desc">"Agrega al menú de la conversación una opción para ocultar sus mensajes eliminados"</string>
++    <string name="feat_preserve_own_revoke_title">"Conservar mis mensajes eliminados para todos"</string>
++    <string name="feat_preserve_own_revoke_desc">"Conserva tu copia local al usar Eliminar para todos, sin impedir que se elimine la de los destinatarios"</string>
++    <string name="feat_antirevokestatus_title">"Conservar estados eliminados"</string>
++    <string name="feat_antirevokestatus_desc">"Permite ver estados que sus autores eliminaron"</string>
++    <string name="feat_anti_view_once_title">"Volver a abrir contenido de una sola vista"</string>
++    <string name="feat_anti_view_once_desc">"Permite abrir varias veces fotos y videos de una sola vista"</string>
++    <string name="feat_locked_chats_enhancer_title">"Mejoras para chats bloqueados"</string>
++    <string name="feat_locked_chats_enhancer_desc">"Oculta las notificaciones de los chats bloqueados y sus contactos de la lista de contactos"</string>
++    <string name="feat_typearchive_title">"Ocultar chats archivados"</string>
++    <string name="feat_typearchive_desc">"Oculta el acceso a los chats archivados y permite elegir cómo abrirlos"</string>
++    <string name="feat_dnd_mode_title">"Modo No molestar"</string>
++    <string name="feat_dnd_mode_desc">"Mientras esté activo, no podrás enviar ni recibir mensajes"</string>
++    <string name="feat_hide_chats_title">"Ocultar chats bloqueados"</string>
++    <string name="feat_hide_chats_desc">"Oculta los chats bloqueados y permite elegir cómo abrirlos"</string>
++    <string name="feat_custom_privacy_title">"Privacidad personalizada por contacto"</string>
++    <string name="feat_custom_privacy_desc">"Agrega un botón de privacidad personalizada a la información del contacto"</string>
++    <string name="feat_call_privacy_title">"Bloquear llamadas"</string>
++    <string name="feat_call_privacy_desc">"Bloquea llamadas de WhatsApp según la regla de privacidad seleccionada"</string>
++    <string name="feat_autonext_status_title">"Desactivar el avance automático de estados"</string>
++    <string name="feat_autonext_status_desc">"Evita que el estado actual avance automáticamente al siguiente"</string>
++    <string name="feat_toast_viewed_status_title">"Avisar cuando alguien vea tu estado"</string>
++    <string name="feat_toast_viewed_status_desc">"Muestra un aviso emergente cuando alguien ve tu estado"</string>
++    <string name="feat_antidisappearing_title">"Conservar mensajes temporales"</string>
++    <string name="feat_antidisappearing_desc">"Evita que los mensajes temporales se eliminen de tu dispositivo"</string>
++    <string name="feat_toastdeleted_title">"Avisar cuando alguien elimine un mensaje"</string>
++    <string name="feat_toastdeleted_desc">"Muestra un aviso emergente cuando un contacto elimina un mensaje"</string>
++    <string name="feat_toast_viewed_message_title">"Avisar cuando alguien lea tu mensaje"</string>
++    <string name="feat_toast_viewed_message_desc">"Muestra un aviso emergente cuando alguien lee tu mensaje"</string>
++    <string name="feat_ghostmode_title">"Mostrar el botón del modo fantasma"</string>
++    <string name="feat_ghostmode_desc">"Agrega el botón del modo fantasma a la barra de herramientas de inicio"</string>
++    <string name="feat_show_dndmode_title">"Mostrar el botón de No molestar"</string>
++    <string name="feat_show_dndmode_desc">"Agrega el botón del modo No molestar a la barra de herramientas de inicio"</string>
++    <string name="feat_restartbutton_title">"Mostrar el botón de reinicio"</string>
++    <string name="feat_restartbutton_desc">"Agrega un botón en la pantalla de inicio para reiniciar la aplicación"</string>
++    <string name="feat_open_wae_title">"Mostrar el botón de WAEX"</string>
++    <string name="feat_open_wae_desc">"Agrega un botón en el inicio o los ajustes de WhatsApp para abrir Wa Enhancer"</string>
++    <string name="feat_message_bomber_title">"Envío de mensajes en secuencia"</string>
++    <string name="feat_message_bomber_desc">"Envía una secuencia corta de mensajes con pausas desde una conversación de WhatsApp"</string>
++    <string name="feat_anti_edit_messages_title">"Mostrar el historial de ediciones"</string>
++    <string name="feat_anti_edit_messages_desc">"Muestra las versiones anteriores al tocar Editado en un mensaje"</string>
++    <string name="feat_revokeallmessages_title">"Ampliar el plazo para eliminar mensajes para todos"</string>
++    <string name="feat_revokeallmessages_desc">"Amplía a 3 días el plazo para usar Eliminar para todos"</string>
++    <string name="feat_hide_forwarded_tag_title">"Ocultar la etiqueta Reenviado"</string>
++    <string name="feat_hide_forwarded_tag_desc">"Reenvía mensajes sin la etiqueta Reenviado"</string>
++    <string name="feat_removeseemore_title">"Quitar el botón Leer más"</string>
++    <string name="feat_removeseemore_desc">"Muestra completos los mensajes largos sin el botón Leer más"</string>
++    <string name="feat_message_device_source_title">"Mostrar el dispositivo de origen del mensaje"</string>
++    <string name="feat_message_device_source_desc">"Indica si el mensaje se envió desde el dispositivo principal o desde uno vinculado"</string>
++    <string name="feat_preserve_delete_for_me_title">"Conservar mensajes eliminados para mí"</string>
++    <string name="feat_preserve_delete_for_me_desc">"Conserva una copia local al elegir Eliminar para mí"</string>
++    <string name="feat_removeforwardlimit_title">"Quitar el límite de reenvíos"</string>
++    <string name="feat_removeforwardlimit_desc">"Quita el límite de 5 chats para reenvíos normales y de 1 chat para mensajes reenviados muchas veces"</string>
++    <string name="feat_sticker_confirm_alert_title">"Confirmar antes de enviar un sticker"</string>
++    <string name="feat_sticker_confirm_alert_desc">"Muestra una confirmación antes de enviar un sticker"</string>
++    <string name="feat_stamp_copied_message_title">"Quitar nombres y fechas al copiar mensajes"</string>
++    <string name="feat_stamp_copied_message_desc">"Quita el nombre y la fecha al copiar más de un mensaje"</string>
++    <string name="feat_doubletap2like_title">"Reaccionar con un doble toque"</string>
++    <string name="feat_doubletap2like_desc">"Permite reaccionar a un mensaje al tocarlo dos veces"</string>
++    <string name="feat_doubletap2like_emoji_title">"Emoji de reacción personalizado"</string>
++    <string name="feat_doubletap2like_emoji_desc">"Cambia el emoji que se envía al tocar dos veces un mensaje"</string>
++    <string name="feat_jump_to_first_message_title">"Ir al primer mensaje"</string>
++    <string name="feat_jump_to_first_message_desc">"Agrega un botón para ir al primer mensaje de la conversación"</string>
++    <string name="feat_copy_status_text_title">"Copiar el texto de los estados"</string>
++    <string name="feat_copy_status_text_desc">"Permite copiar la descripción o el texto de un estado al mantenerlo presionado"</string>
++    <string name="feat_inline_translation_title">"Usar el Traductor de Google"</string>
++    <string name="feat_inline_translation_desc">"Reemplaza el traductor integrado de WhatsApp por el Traductor de Google"</string>
++    <string name="feat_direct_chat_dialer_title">"Nuevo chat"</string>
++    <string name="feat_direct_chat_dialer_desc">"Escribe a un número sin guardarlo en tus contactos"</string>
++    <string name="feat_unlimited_pinned_chats_title">"Quitar el límite de chats fijados"</string>
++    <string name="feat_unlimited_pinned_chats_desc">"Quita el límite de 3 chats fijados"</string>
++    <string name="feat_broadcast_tag_title">"Mostrar el indicador de difusión"</string>
++    <string name="feat_broadcast_tag_desc">"Muestra un icono si el contacto envió el mensaje mediante una lista de difusión"</string>
++    <string name="feat_group_admin_tools_title">"Mostrar el indicador de administrador"</string>
++    <string name="feat_group_admin_tools_desc">"Agrega un icono junto al nombre de quien administra el grupo"</string>
++    <string name="feat_call_type_controller_title">"Elegir el tipo de llamada"</string>
++    <string name="feat_call_type_controller_desc">"Permite elegir entre una llamada telefónica y una llamada de WhatsApp"</string>
++    <string name="feat_status_text_composer_title">"Colores personalizados para estados de texto"</string>
++    <string name="feat_status_text_composer_desc">"Mantén presionado el selector de color del estado para personalizarlo"</string>
++    <string name="feat_status_downloader_title">"Descargar y compartir estados"</string>
++    <string name="feat_status_downloader_desc">"Agrega dos botones para compartir y descargar estados"</string>
++    <string name="feat_media_upload_quality_title">"Fotos y videos en alta definición"</string>
++    <string name="feat_media_upload_quality_desc">"Envía fotos y videos en alta definición de forma predeterminada"</string>
++    <string name="feat_send_audio_as_voice_status_title">"Audio local como estado de voz"</string>
++    <string name="feat_send_audio_as_voice_status_desc">"Elige un archivo de audio de tu dispositivo y publícalo como estado de voz"</string>
++    <string name="feat_status_video_splitter_title">"Dividir videos para estados"</string>
++    <string name="feat_status_video_splitter_desc">"Divide videos largos en segmentos de 30, 60 o 90 segundos para publicarlos como estados"</string>
++    <string name="feat_file_size_spoofer_title">"Simular el tamaño de un archivo"</string>
++    <string name="feat_file_size_spoofer_desc">"Elige el tamaño que verá el destinatario desde la vista previa de envío de WhatsApp"</string>
++    <string name="feat_call_recording_title">"Grabación de llamadas"</string>
++    <string name="feat_call_recording_desc">"Graba como audio las llamadas de voz y video, tanto entrantes como salientes"</string>
++    <string name="feat_download_profile_title">"Descargar fotos de perfil"</string>
++    <string name="feat_download_profile_desc">"Descarga fotos de perfil directamente y con su resolución completa"</string>
++    <string name="feat_download_view_once_title">"Descargar contenido de una sola vista"</string>
++    <string name="feat_download_view_once_desc">"Agrega un botón para descargar fotos y videos de una sola vista"</string>
++    <string name="feat_media_preview_title">"Vista previa de archivos multimedia"</string>
++    <string name="feat_media_preview_desc">"Agrega un botón para previsualizar contenido multimedia en un archivo temporal"</string>
++    <string name="feat_always_typing_title">"Ocultar que estás escribiendo"</string>
++    <string name="feat_always_typing_desc">"Los demás no verán que estás escribiendo"</string>
++    <string name="feat_tasker_integration_title">"Activar la automatización con Tasker"</string>
++    <string name="feat_tasker_integration_desc">"Permite usar intents para recibir y enviar mensajes mediante Tasker"</string>
++    <string name="feat_voice_transcription_title">"Transcripción de audio"</string>
++    <string name="feat_voice_transcription_desc">"Activa la transcripción de audio de WhatsApp con Groq AI o AssemblyAI"</string>
++    <string name="feat_bubble_colors_title">"Cambiar los colores de las burbujas"</string>
++    <string name="feat_bubble_colors_desc">"Cambia el color de las burbujas de mensajes en las conversaciones"</string>
++    <string name="feat_custom_theme_title">"Tema CSS personalizado"</string>
++    <string name="feat_custom_theme_desc">"Personaliza WhatsApp con estilos CSS"</string>
++    <string name="feat_custom_time_format_title">"Mostrar segundos en la hora"</string>
++    <string name="feat_custom_time_format_desc">"Agrega los segundos a las horas que muestra WhatsApp"</string>
++    <string name="feat_custom_toolbar_title">"Nuevo estilo de ajustes"</string>
++    <string name="feat_custom_toolbar_desc">"Activa el nuevo estilo de ajustes, con la foto de perfil en la barra de herramientas de inicio"</string>
++    <string name="feat_custom_view_dpi_title">"Cambiar la densidad de pantalla"</string>
++    <string name="feat_custom_view_dpi_desc">"Cambia el valor de DPI de la aplicación. Usa 0 para volver al valor predeterminado."</string>
++    <string name="feat_seen_tick_customization_title">"Mostrar el indicador de lectura enviada"</string>
++    <string name="feat_seen_tick_customization_desc">"Muestra un icono cuando se envía una confirmación de lectura o se abre contenido de una sola vista"</string>
++    <string name="feat_floating_bottom_bar_title">"Barra inferior flotante"</string>
++    <string name="feat_floating_bottom_bar_desc">"Activa una barra de navegación inferior flotante al estilo de iOS"</string>
++    <string name="feat_unlock_premium_customization_title">"Desbloquear WA Plus"</string>
++    <string name="feat_unlock_premium_customization_desc">"Desbloquea funciones de la suscripción oficial WhatsApp Plus, como iconos de aplicación, temas y stickers exclusivos"</string>
++    <string name="feat_filter_items_title">"Filtrar elementos por ID"</string>
++    <string name="feat_filter_items_desc">"Quita o personaliza elementos de WhatsApp por su ID: ocultar, cambiar el color, la opacidad o el tamaño"</string>
++    <string name="feat_custom_filters_title">"Filtros de apariencia personalizados"</string>
++    <string name="feat_custom_filters_desc">"Activa o desactiva las reglas de filtrado por ID de elemento"</string>
++    <string name="feat_dotonline_title">"Mostrar el punto de conexión en la lista de chats"</string>
++    <string name="feat_dotonline_desc">"Muestra un punto verde en el inicio cuando un contacto está en línea"</string>
++    <string name="feat_showonlinetext_title">"Mostrar la conexión en la lista de chats"</string>
++    <string name="feat_showonlinetext_desc">"Muestra En línea o la hora de la última conexión en la pantalla de inicio"</string>
++    <string name="feat_typing_online_toasts_title">"Avisar cuando un contacto se conecte"</string>
++    <string name="feat_typing_online_toasts_desc">"Muestra un aviso emergente cuando un contacto está en línea"</string>
++    <string name="feat_channels_enhancements_title">"Quitar las recomendaciones de canales"</string>
++    <string name="feat_channels_enhancements_desc">"Quita las recomendaciones de canales de la pestaña de estados"</string>
++    <string name="feat_chat_filters_title">"Filtrar chats por tipo"</string>
++    <string name="feat_chat_filters_desc">"Muestra filtros para grupos, contactos y mensajes no leídos"</string>
++    <string name="feat_hide_ui_tabs_title">"Ocultar pestañas de inicio"</string>
++    <string name="feat_hide_ui_tabs_desc">"Oculta pestañas del inicio, como Novedades, Comunidades y Llamadas"</string>
++    <string name="feat_instagram_status_layout_title">"Estados al estilo de Instagram en el inicio"</string>
++    <string name="feat_instagram_status_layout_desc">"Muestra los estados en el inicio con un diseño similar al de Instagram"</string>
++    <string name="feat_separate_groups_tabs_title">"Separar los grupos"</string>
++    <string name="feat_separate_groups_tabs_desc">"Organiza el contenido en pestañas de grupos, chats privados, estados, llamadas y comunidades"</string>
++    <string name="feat_quick_home_menu_title">"Menú de acciones rápidas en el inicio"</string>
++    <string name="feat_quick_home_menu_desc">"Agrega acciones rápidas al mantener presionado el inicio"</string>
++    <string name="feat_contact_blocked_verify_title">"Mostrar si un contacto te agregó"</string>
++    <string name="feat_contact_blocked_verify_desc">"Comprueba si el contacto te agregó o tiene una foto de perfil pública"</string>
++    <string name="feat_disable_sensor_proximity_title">"Evitar que el sensor de proximidad apague la pantalla"</string>
++    <string name="feat_disable_sensor_proximity_desc">"Evita que el sensor de proximidad apague la pantalla mientras usas WhatsApp"</string>
++    <string name="feat_show_hook_toast_title">"Avisar cuando se carguen los interceptores"</string>
++    <string name="feat_show_hook_toast_desc">"Muestra u oculta el aviso de carga de interceptores al abrir WhatsApp"</string>
++    <string name="feat_show_restart_sheet_title">"Mostrar el aviso de reinicio"</string>
++    <string name="feat_show_restart_sheet_desc">"Sugiere reiniciar WhatsApp después de cambiar ajustes para volver a cargar los interceptores"</string>
++    <string name="feat_supported_versions_title">"Versiones compatibles de WhatsApp"</string>
++    <string name="feat_supported_versions_desc">"Administra las versiones verificadas de WhatsApp y WhatsApp Business, incluidos los comodines"</string>
++    <string name="feat_bypass_version_check_title">"Desactivar la comprobación de versión"</string>
++    <string name="feat_bypass_version_check_desc">"Desactiva la comprobación de versiones compatibles de WhatsApp"</string>
++    <string name="feat_bootloader_spoofer_title">"Simular el estado de arranque"</string>
++    <string name="feat_bootloader_spoofer_desc">"Simula la atestación de arranque verificado en las comprobaciones de integridad de WhatsApp"</string>
++    <string name="feat_license_verification_title">"Verificación y activación de licencia"</string>
++    <string name="feat_license_verification_desc">"Permite ingresar y validar la clave de licencia"</string>
++    <string name="feat_pro_features_unlock_title">"Administrar funciones Pro"</string>
++    <string name="feat_pro_features_unlock_desc">"Controla el bloqueo y desbloqueo de las funciones Pro"</string>
++    <string name="sec_chat_group_utilities">"Herramientas para chats y grupos"</string>
++    <string name="sec_conversation_list_activity_presence">"Actividad y conexión en la lista de chats"</string>
++    <string name="sec_visual_styles">"Estilos visuales"</string>
++    <string name="sec_anti_revoke_deletion_defense">"Protección frente a la eliminación de mensajes"</string>
++    <string name="sec_advanced_rules_filtering">"Reglas y filtros avanzados"</string>
++    <string name="sec_status_privacy">"Privacidad de los estados"</string>
++    <string name="sec_automation">"Automatización"</string>
++    <string name="sec_message_controls">"Controles de mensajes"</string>
++    <string name="sec_media_quality_status">"Calidad multimedia y estados"</string>
++    <string name="sec_presence_online_visibility">"Visibilidad y conexión"</string>
++    <string name="sec_message_protection_security">"Protección y seguridad de mensajes"</string>
++    <string name="sec_home_menu_shortcuts">"Accesos rápidos del menú de inicio"</string>
++    <string name="sec_premium">"Pro"</string>
++    <string name="sec_message_delivery_receipts">"Confirmaciones de entrega y lectura"</string>
++    <string name="sec_audio_ai">"Audio e IA"</string>
++    <string name="sec_media_utility_downloader">"Herramientas y descargas multimedia"</string>
++    <string name="sec_home_layout_navigation">"Diseño y navegación del inicio"</string>
++    <string name="sec_utilities_data">"Herramientas y datos"</string>
++    <string name="sec_system_compatibility">"Sistema y compatibilidad"</string>
++    <string name="sec_security_vault">"Seguridad y archivo"</string>
++    <string name="sec_chat_navigation_shortcuts">"Navegación y accesos rápidos de chats"</string>
++    <string name="catalog_tab_privacy">"Privacidad"</string>
++    <string name="catalog_tab_conversation">"Conversaciones"</string>
++    <string name="catalog_tab_media">"Multimedia"</string>
++    <string name="catalog_tab_automation">"Automatización"</string>
++    <string name="catalog_tab_styles">"Estilos"</string>
++    <string name="catalog_tab_settings">"Ajustes"</string>
++    <string name="catalog_tab_premium">"Pro"</string>
++    <string name="injected_hooks_active_count">"Interceptores cargados (%1$d/%2$d activos)"</string>
++    <string name="diag_label_module">"Módulo"</string>
++    <string name="diag_status_active">"Activo"</string>
++    <string name="diag_status_inactive">"Inactivo"</string>
++    <string name="diag_status_checking">"Comprobando…"</string>
++    <string name="diag_label_framework">"Entorno de ejecución"</string>
++    <string name="diag_framework_detecting">"Detectando…"</string>
++    <string name="diag_label_compatibility">"Compatibilidad de la aplicación"</string>
++    <string name="diag_status_supported">"Compatible"</string>
++    <string name="diag_status_review_required">"Requiere revisión"</string>
++    <string name="diag_label_android">"Android"</string>
++    <string name="diag_label_selinux">"SELinux"</string>
++    <string name="diag_label_root">"Superusuario"</string>
++    <string name="diag_root_allowed">"Permitido"</string>
++    <string name="diag_root_not_allowed">"No permitido"</string>
++    <string name="diag_disclaimer">"La comprobación se realiza en este dispositivo. No se envían datos de diagnóstico."</string>
++    <string name="tasker_integration_box_title">"Integración con Tasker y otras herramientas"</string>
++    <string name="tasker_integration_box_desc">"Automatiza funciones de WhatsApp, respuestas automáticas y el registro de mensajes con intents de difusión en Tasker, MacroDroid o Automate."</string>
++    <string name="tasker_view_setup_guide">"Ver la guía de configuración →"</string>
++    <string name="tasker_execution_history">"Historial de ejecuciones"</string>
++    <string name="call_recording_config_title">"Ajustes de grabación de llamadas"</string>
++    <string name="call_recording_config_desc">"Configura la captura directa de audio con acceso de superusuario, los formatos y la tasa de bits"</string>
++    <string name="requires_pro_label">"Requiere Pro"</string>
++    <string name="subtab_automation">"Automatización"</string>
++    <string name="subtab_audio_ai">"Audio e IA"</string>
++    <string name="tab_privacy">"Privacidad"</string>
++    <string name="tab_conversation">"Conversaciones"</string>
++    <string name="advanced_hubs_vaults">"HERRAMIENTAS Y ARCHIVOS AVANZADOS"</string>
++    <string name="hub_per_contact_rules_title">"Reglas por contacto"</string>
++    <string name="hub_per_contact_rules_desc">"Configura reglas de privacidad específicas para cada contacto"</string>
++    <string name="hub_delete_for_me_title">"Mensajes eliminados para mí"</string>
++    <string name="hub_delete_for_me_desc">"Consulta los chats y registros de grupos conservados al usar Eliminar para mí"</string>
++    <string name="hub_calls_recording_title">"Llamadas y grabaciones"</string>
++    <string name="hub_calls_recording_desc">"Bloqueo de llamadas, privacidad, formatos de grabación e historial"</string>
++    <string name="dep_disabled_hide_blue_ticks">"(Desactivado: primero activa Ocultar las confirmaciones de lectura)"</string>
++    <string name="title_call_configurations">"Ajustes de llamadas"</string>
++    <string name="title_call_recordings">"Grabaciones"</string>
++    <string name="diag_label_hma">Aislamiento de apps (HMA)</string>
++    <string name="diag_hma_not_active">No activo</string>
++    <string name="diag_hma_clean">Ningún objetivo oculto</string>
++    <string name="diag_hma_blocked">Ocultando módulo</string>
++    <string name="diag_hma_checking">Comprobando…</string>
++    <string name="diag_hma_sheet_title">Diagnóstico de aislamiento de apps</string>
++    <string name="diag_hma_sheet_desc">Resumen de las reglas de aislamiento de Hide My Applist que afectan a los paquetes de destino y la visibilidad del módulo.</string>
++    <string name="diag_hma_active_targets">Objetivos configurados</string>
++    <string name="diag_hma_inactive_targets">Otros objetivos</string>
++    <string name="diag_hma_btn_fix">Corregir</string>
++    <string name="diag_hma_fix_title">Corregir aislamiento de apps</string>
++    <string name="diag_hma_fix_message">Esto actualizará la configuración de Hide My Applist para eliminar las reglas de bloqueo y ajustes preestablecidos de %1$s.</string>
++    <string name="diag_hma_fix_success">Reglas de aislamiento actualizadas correctamente</string>
++    <string name="diag_hma_fix_failed">Error al actualizar la configuración de HMA</string>
++    <string name="diag_target_sheet_title">Compatibilidad de objetivos</string>
++    <string name="diag_target_sheet_desc">Estado de inyección y ganchos en vivo en todas las instalaciones de WhatsApp detectadas.</string>
++    <string name="diag_target_sheet_partial_warning">Algunas aplicaciones de WhatsApp instaladas no han reportado una inyección activa. Ábralas una vez para inicializar los ganchos y confirmar la compatibilidad.</string>
++    <string name="diag_target_sheet_all_ok">Todas las aplicaciones de WhatsApp instaladas están activas e inyectadas.</string>
++    <string name="diag_target_sheet_unconfirmed_badge">Tiempo de ejecución no confirmado</string>
++    <string name="diag_target_sheet_injected_badge">Inyectado</string>
++    <string name="diag_target_sheet_section_targets">Objetivos instalados</string>
++</resources>
+diff --git a/app/src/main/res/values-b+es+419/ui_strings.xml b/app/src/main/res/values-b+es+419/ui_strings.xml
+new file mode 100644
+index 0000000..01493ce
+--- /dev/null
++++ b/app/src/main/res/values-b+es+419/ui_strings.xml
+@@ -0,0 +1,1002 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Static resource references from UiText call sites. Do not translate keys. -->
++<resources>
++    <string name="waex_ui_1_open_any_chat_or_contact_info_page_i_f5ec973b" formatted="false">"1. Abre un chat o la información de un contacto en WhatsApp.\n2. Toca «Privacidad personalizada» para definir ajustes específicos.\n3. Las reglas guardadas tienen prioridad sobre los ajustes generales de privacidad."</string>
++    <string name="waex_ui_1_s_2_s_followers_3_s_repositories_3525e760">"%1$sSeguidores: %2$s | Repositorios: %3$s"</string>
++    <string name="waex_ui_1_s_active_0c79364e">"Activos: %1$s"</string>
++    <string name="waex_ui_1_s_available_24c71695">"%1$s disponible"</string>
++    <string name="waex_ui_1_s_commits_6a8c37d2">" • %1$s confirmaciones de código"</string>
++    <string name="waex_ui_1_s_failed_af74ff71">"%1$s con errores"</string>
++    <string name="waex_ui_1_s_followers_3024eca2">"%1$s seguidores"</string>
++    <string name="waex_ui_1_s_followers_3e4e03fd">" • %1$s seguidores"</string>
++    <string name="waex_ui_1_s_hidden_416c73f0">"Ocultas: %1$s"</string>
++    <string name="waex_ui_1_s_hooks_f0333300">"Interceptores de %1$s"</string>
++    <string name="waex_ui_1_s_initialization_a35e3f64">"Inicialización de %1$s"</string>
++    <string name="waex_ui_1_s_last_error_2f54987d">"Último error de %1$s"</string>
++    <string name="waex_ui_1_s_of_2_s_devices_in_use_1ac51503">"%1$s de %2$s dispositivos en uso"</string>
++    <string name="waex_ui_1_s_of_2_s_granted_f824e2d7">"%1$s de %2$s permisos concedidos"</string>
++    <string name="waex_ui_1_s_of_2_s_granted_missing_permissions_d52260f9">"%1$s de %2$s permisos concedidos. Los permisos que falten se solicitarán cuando una función los necesite."</string>
++    <string name="waex_ui_1_s_preference_bridge_c27008b2">"Puente de preferencias de %1$s"</string>
++    <string name="waex_ui_1_s_preserved_messages_74d3a032">"Mensajes conservados: %1$s"</string>
++    <string name="waex_ui_1_s_s_avatar_21ab3ff2">"Foto de perfil de %1$s"</string>
++    <string name="waex_ui_1_s_s_contributions_7a33f895">"Contribuciones de %1$s"</string>
++    <string name="waex_ui_1_s_selected_5f9d5da8">"Selección: %1$s"</string>
++    <string name="waex_ui_1_s_settings_backed_up_1a3f7819">"Ajustes incluidos en la copia: %1$s"</string>
++    <string name="waex_ui_1_s_settings_restored_restart_whatsapp_09d38d41">"Ajustes restaurados: %1$s. Reinicia WhatsApp para aplicar los cambios."</string>
++    <string name="waex_ui_1_s_supporters_and_counting_0c9807fc">"Ya nos apoyan %1$s personas"</string>
++    <string name="waex_ui_aac_m4a_512c810e" formatted="false">"AAC (.m4a)"</string>
++    <string name="waex_ui_accept_89713b9c" formatted="false">"Aceptar"</string>
++    <string name="waex_ui_account_protection_2b24d9b9" formatted="false">"Protección de la cuenta"</string>
++    <string name="waex_ui_action_64cff131" formatted="false">"Acción"</string>
++    <string name="waex_ui_action_intent_5c8cbed1" formatted="false">"Acción del intent:"</string>
++    <string name="waex_ui_action_send_intent_b3deaa4a" formatted="false">"Acción: enviar intent"</string>
++    <string name="waex_ui_action_send_message_automatically_5e143aa0" formatted="false">"ACCIÓN: ENVIAR UN MENSAJE AUTOMÁTICAMENTE"</string>
++    <string name="waex_ui_activate_ghost_mode_2481d3ff" formatted="false">"¿Activar el modo fantasma?"</string>
++    <string name="waex_ui_activate_license_key_3e7cbad8" formatted="false">"Activar clave de licencia"</string>
++    <string name="waex_ui_activate_pro_license_9b27501f" formatted="false">"Activar licencia Pro"</string>
++    <string name="waex_ui_activate_restart_017ecc0d" formatted="false">"Activar y reiniciar"</string>
++    <string name="waex_ui_active_630c2f1c" formatted="false">"Activo"</string>
++    <string name="waex_ui_active_after_whatsapp_is_restarted_64b5969c" formatted="false">"Se activará después de reiniciar WhatsApp"</string>
++    <string name="waex_ui_active_device_slots_045c453d" formatted="false">"Cupos de dispositivos activos"</string>
++    <string name="waex_ui_active_hours_range_b86fa4fd" formatted="false">"Horario de activación"</string>
++    <string name="waex_ui_active_pro_191376ef" formatted="false">"Pro activo"</string>
++    <string name="waex_ui_active_subscription_8a09aaa3" formatted="false">"Suscripción activa"</string>
++    <string name="waex_ui_add_filter_76de3dfc" formatted="false">"Agregar filtro"</string>
++    <string name="waex_ui_add_me_to_the_list_6c6e9342" formatted="false">"Agregarme a la lista"</string>
++    <string name="waex_ui_add_rule_968c3cb8" formatted="false">"Agregar regla"</string>
++    <string name="waex_ui_add_universal_rule_1_s_2944d582">"Agregar regla universal (%1$s)"</string>
++    <string name="waex_ui_added_universal_rule_1_s_6af7d00f">"Se agregó la regla universal %1$s"</string>
++    <string name="waex_ui_additional_call_information_c9b77d50" formatted="false">"Información adicional de llamadas"</string>
++    <string name="waex_ui_adds_a_dedicated_custom_privacy_tile_o_9290614b" formatted="false">"Agrega una opción de privacidad personalizada a la información de contactos y grupos"</string>
++    <string name="waex_ui_adds_custom_privacy_directly_into_the_81b1ca4c" formatted="false">"Agrega Privacidad personalizada al menú de opciones de la esquina superior derecha del chat"</string>
++    <string name="waex_ui_adjust_corner_curves_margins_and_sizin_72c8f1f8" formatted="false">"Ajusta las esquinas, los márgenes y el tamaño"</string>
++    <string name="waex_ui_advanced_protection_for_your_messaging_b0cdb7dc" formatted="false">"Protección avanzada para tus conversaciones. Controla la visibilidad y la conservación de mensajes."</string>
++    <string name="waex_ui_after_ignoring_an_update_0072f0fc" formatted="false">"Después de omitir una actualización"</string>
++    <string name="waex_ui_ai_transcription_provider_39d10f0b" formatted="false">"Proveedor de transcripción con IA"</string>
++    <string name="waex_ui_all_files_access_c5936362" formatted="false">"Acceso a todos los archivos"</string>
++    <string name="waex_ui_all_installed_whatsapp_apps_are_alread_75c1f385" formatted="false">"¡Todas las aplicaciones de WhatsApp instaladas ya son compatibles!"</string>
++    <string name="waex_ui_all_settings_reset_to_default_75452587" formatted="false">"Se restablecieron todos los ajustes"</string>
++    <string name="waex_ui_allow_all_whatsapp_incoming_voice_vide_3f8889bd" formatted="false">"Permitir todas las llamadas de voz y video entrantes de WhatsApp"</string>
++    <string name="waex_ui_allow_granular_privacy_overrides_for_s_2a8a0ee6" formatted="false">"Permite establecer reglas de privacidad específicas para contactos o grupos"</string>
++    <string name="waex_ui_allow_user_defined_versions_and_wildca_ac9bee29" formatted="false">"Permite cargar los interceptores con versiones y comodines definidos por el usuario"</string>
++    <string name="waex_ui_allow_version_downgrades_cb84c618" formatted="false">"Permitir volver a versiones anteriores"</string>
++    <string name="waex_ui_always_active_cbdb4cc2" formatted="false">"Siempre activas"</string>
++    <string name="waex_ui_always_typing_b7568ffa" formatted="false">"Siempre escribiendo"</string>
++    <string name="waex_ui_android_device_9ea4780b" formatted="false">"Dispositivo Android"</string>
++    <string name="waex_ui_animated_emojis_cf3b4565" formatted="false">"Emojis animados"</string>
++    <string name="waex_ui_anti_disappearing_messages_f4d02052" formatted="false">"Conservar mensajes temporales"</string>
++    <string name="waex_ui_anti_edit_messages_5a3cecdb" formatted="false">"Historial de ediciones"</string>
++    <string name="waex_ui_anti_revoke_c56cb768" formatted="false">"Conservar mensajes eliminados"</string>
++    <string name="waex_ui_anti_revoke_e16be3ed" formatted="false">"Conservar mensajes eliminados"</string>
++    <string name="waex_ui_anti_revoke_status_8c7b6e5c" formatted="false">"Conservar estados eliminados"</string>
++    <string name="waex_ui_anti_view_once_73413cd8" formatted="false">"Vista única sin límites"</string>
++    <string name="waex_ui_api_1_s_7ed74ebc">"API %1$s"</string>
++    <string name="waex_ui_apk_does_not_match_selected_version_1_2285cdd0">"El APK no corresponde a la versión seleccionada: %1$s"</string>
++    <string name="waex_ui_app_logo_c1fa6ccf" formatted="false">"Logotipo de la aplicación"</string>
++    <string name="waex_ui_appearance_3907fa7f" formatted="false">"Apariencia"</string>
++    <string name="waex_ui_apply_custom_color_to_deleted_message_11bb3603" formatted="false">"Aplica un color personalizado al mensaje o estado eliminado y a su hora"</string>
++    <string name="waex_ui_apply_during_set_hours_3b459f48" formatted="false">"Se aplican durante el horario elegido"</string>
++    <string name="waex_ui_approve_the_superuser_request_if_your_eb6a2e6a" formatted="false">"Autoriza la solicitud si tu administrador de superusuario te pide permiso."</string>
++    <string name="waex_ui_archived_chats_unavailable_in_this_wha_a75f8af5" formatted="false">"Los chats archivados no están disponibles en esta versión de WhatsApp"</string>
++    <string name="waex_ui_are_you_sure_you_want_to_delete_filter_5aa1a0e8">"¿Quieres eliminar el filtro «%1$s»?"</string>
++    <string name="waex_ui_are_you_sure_you_want_to_remove_all_cu_214cbfda" formatted="false">"¿Quieres quitar todas las reglas de privacidad personalizadas? Se restablecerán las reglas predeterminadas para todos los contactos. Esta acción no se puede deshacer."</string>
++    <string name="waex_ui_ask_the_module_to_check_when_whatsapp_eef51246" formatted="false">"Le pide al módulo que busque actualizaciones cuando se inicia WhatsApp"</string>
++    <string name="waex_ui_assemblyai_api_key_1a41b574" formatted="false">"Clave de API de AssemblyAI"</string>
++    <string name="waex_ui_at_most_every_6_hours_6e9a44b5" formatted="false">"Como máximo, cada 6 horas"</string>
++    <string name="waex_ui_at_most_once_a_day_9198c451" formatted="false">"Como máximo, una vez al día"</string>
++    <string name="waex_ui_at_most_once_a_week_8226a663" formatted="false">"Como máximo, una vez por semana"</string>
++    <string name="waex_ui_audio_call_edd60bff" formatted="false">"Llamada de voz"</string>
++    <string name="waex_ui_audio_capture_engine_2219d349" formatted="false">"Motor de captura de audio"</string>
++    <string name="waex_ui_auto_check_for_updates_7598a244" formatted="false">"Buscar actualizaciones automáticamente"</string>
++    <string name="waex_ui_auto_download_models_6789ddb3" formatted="false">"Descargar modelos automáticamente"</string>
++    <string name="waex_ui_auto_reply_8772ec0f" formatted="false">"Respuesta automática"</string>
++    <string name="waex_ui_auto_reply_i_am_currently_driving_will_8c4dec21" formatted="false">"Respuesta automática: Estoy conduciendo. Te responderé en un momento."</string>
++    <string name="waex_ui_automate_whatsapp_workflows_using_inte_9ba38948" formatted="false">"Automatiza tareas de WhatsApp con intents de difusión en Tasker, MacroDroid y Automate."</string>
++    <string name="waex_ui_automated_checks_adf7684a" formatted="false">"BÚSQUEDAS AUTOMÁTICAS"</string>
++    <string name="waex_ui_automated_morning_briefing_scheduled_d_42884bb5" formatted="false">"Envío programado del resumen de la mañana"</string>
++    <string name="waex_ui_automatically_capture_incoming_outgoin_892737f9" formatted="false">"Graba automáticamente las llamadas de voz entrantes y salientes"</string>
++    <string name="waex_ui_automatically_drop_every_incoming_what_52316223" formatted="false">"Rechazar automáticamente todas las llamadas entrantes de WhatsApp"</string>
++    <string name="waex_ui_automatically_hides_pill_when_scrollin_cc4932d4" formatted="false">"Oculta la barra automáticamente al desplazarte por la lista de chats"</string>
++    <string name="waex_ui_automatically_install_downloaded_apk_v_c1ae30db" formatted="false">"Instala automáticamente el APK descargado mediante comandos de superusuario"</string>
++    <string name="waex_ui_automation_tasker_e61057ac" formatted="false">"Automatización y Tasker"</string>
++    <string name="waex_ui_available_apk_assets_for_1_s_8419f6c4">"Archivos APK disponibles para %1$s"</string>
++    <string name="waex_ui_available_e6744473" formatted="false">"Disponible"</string>
++    <string name="waex_ui_available_extras_1d71d8a2" formatted="false">"Parámetros disponibles:"</string>
++    <string name="waex_ui_awaiting_runtime_report_c20be700" formatted="false">"Esperando el informe de ejecución"</string>
++    <string name="waex_ui_backup_failed_1_s_5a9e913e">"No se pudo crear la copia de seguridad: %1$s"</string>
++    <string name="waex_ui_base_translation_dictionary_42_mb_41e8799d" formatted="false">"Diccionario base de traducción: 42 MB"</string>
++    <string name="waex_ui_basic_0e35f6e9" formatted="false">"Básico"</string>
++    <string name="waex_ui_basic_integrity_supported_9e9e6a42" formatted="false">"Compatible con integridad básica"</string>
++    <string name="waex_ui_be_the_first_supporter_featured_here_b_c40e50c7" formatted="false">"Sé la primera persona en aparecer aquí: marca WaEnhancerX con una estrella en GitHub."</string>
++    <string name="waex_ui_become_a_supporter_868a6b05" formatted="false">"Apoyar el proyecto"</string>
++    <string name="waex_ui_behavior_change_color_7489c095" formatted="false">"Acción: cambiar el color"</string>
++    <string name="waex_ui_behavior_edf8d3f1" formatted="false">"Acción"</string>
++    <string name="waex_ui_behavior_gone_remove_c0b72aa7" formatted="false">"Acción: ocultar y quitar"</string>
++    <string name="waex_ui_behavior_opacity_1_s_7e479a2b">"Acción: opacidad (%1$s%%)"</string>
++    <string name="waex_ui_behavior_resize_1_s_98639c64">"Acción: cambiar el tamaño (%1$s)"</string>
++    <string name="waex_ui_behavior_translucency_d145210f" formatted="false">"Comportamiento y transparencia"</string>
++    <string name="waex_ui_best_value_06447fa6" formatted="false">"Mejor precio"</string>
++    <string name="waex_ui_beta_70339031" formatted="false">"Beta"</string>
++    <string name="waex_ui_block_all_calls_f74be201" formatted="false">"Bloquear todas las llamadas"</string>
++    <string name="waex_ui_blue_on_reply_afb645a1" formatted="false">"Confirmar lectura al responder"</string>
++    <string name="waex_ui_blue_on_reply_d4d34105" formatted="false">"Confirmar lectura al responder"</string>
++    <string name="waex_ui_blue_tick_sent_22828691" formatted="false">"Se envió la confirmación de lectura"</string>
++    <string name="waex_ui_bootloader_spoofing_integrity_54acd305" formatted="false">"Simulación del cargador de arranque e integridad"</string>
++    <string name="waex_ui_both_info_screen_3_dot_menu_9ea0f0e7" formatted="false">"Ambas ubicaciones"</string>
++    <string name="waex_ui_bottom_margin_f43447af" formatted="false">"Margen inferior"</string>
++    <string name="waex_ui_brightness_ec811d30" formatted="false">"Brillo"</string>
++    <string name="waex_ui_broadcast_intent_to_send_a_message_wit_d171b9bd" formatted="false">"Envía un intent de difusión para enviar un mensaje sin abrir la interfaz de WhatsApp."</string>
++    <string name="waex_ui_bubble_colors_8926b38c" formatted="false">"Colores de burbujas"</string>
++    <string name="waex_ui_button_placement_15d950e9" formatted="false">"UBICACIÓN DEL BOTÓN"</string>
++    <string name="waex_ui_bypass_version_verification_cc98aed9" formatted="false">"Omitir la comprobación de versión"</string>
++    <string name="waex_ui_call_declined_f695a2f2" formatted="false">"Llamada rechazada"</string>
++    <string name="waex_ui_call_enhancements_2ffe1444" formatted="false">"MEJORAS DE LLAMADAS"</string>
++    <string name="waex_ui_call_privacy_230ae481" formatted="false">"Privacidad de llamadas"</string>
++    <string name="waex_ui_call_recording_bb8d55c9" formatted="false">"Grabación de llamada"</string>
++    <string name="waex_ui_call_rejection_appearance_4b21bb01" formatted="false">"CÓMO SE MUESTRA EL RECHAZO"</string>
++    <string name="waex_ui_caller_sees_calling_without_connection_78bae289" formatted="false">"Quien llama ve «Llamando…» sin tono de conexión"</string>
++    <string name="waex_ui_calls_b73a5e2c" formatted="false">"Llamadas"</string>
++    <string name="waex_ui_calls_recording_6042880c" formatted="false">"Llamadas y grabaciones"</string>
++    <string name="waex_ui_certificate_is_current_581ed686" formatted="false">"El certificado está vigente"</string>
++    <string name="waex_ui_certificates_parsed_9c645673" formatted="false">"Certificados analizados"</string>
++    <string name="waex_ui_change_c0bf75bd" formatted="false">"Cambiar"</string>
++    <string name="waex_ui_change_color_pro_0fbd0557" formatted="false">"Cambiar el color (Pro)"</string>
++    <string name="waex_ui_change_the_default_emoji_sent_when_dou_9ed5b05d">"Cambia el emoji del doble toque (%1$s)"</string>
++    <string name="waex_ui_changelog_releases_f404e373" formatted="false">"Historial de cambios y versiones"</string>
++    <string name="waex_ui_chat_3_dot_options_menu_07e9e5b5" formatted="false">"Menú de tres puntos del chat"</string>
++    <string name="waex_ui_chat_filter_display_7d02ece7" formatted="false">"Visualización del filtro de chats"</string>
++    <string name="waex_ui_chat_filters_444a8afd" formatted="false">"Filtros de chats"</string>
++    <string name="waex_ui_chat_limits_bypass_3746bd63" formatted="false">"Ampliar límites de chats"</string>
++    <string name="waex_ui_chat_list_customizations_e7528188" formatted="false">"Personalización de la lista de chats"</string>
++    <string name="waex_ui_chats_ef5b4049" formatted="false">"Chats"</string>
++    <string name="waex_ui_check_again_fb7099ad" formatted="false">"Volver a comprobar"</string>
++    <string name="waex_ui_check_frequency_12e9b9ef" formatted="false">"Frecuencia de búsqueda"</string>
++    <string name="waex_ui_check_that_every_selector_has_a_matchi_c94dfb11" formatted="false">"Comprueba que cada selector tenga un bloque { } correspondiente"</string>
++    <string name="waex_ui_check_when_module_opens_147ecac4" formatted="false">"Buscar al abrir el módulo"</string>
++    <string name="waex_ui_check_when_whatsapp_opens_112f6dcc" formatted="false">"Buscar al abrir WhatsApp"</string>
++    <string name="waex_ui_checking_root_access_76c86676" formatted="false">"Comprobando el acceso de superusuario"</string>
++    <string name="waex_ui_choose_color_f2cd02c5" formatted="false">"Elegir color"</string>
++    <string name="waex_ui_choose_where_to_show_the_waex_settings_44afa3ae" formatted="false">"Elige dónde mostrar el acceso a los ajustes de WAEX"</string>
++    <string name="waex_ui_classic_regular_2f519419" formatted="false">"Clásico (normal)"</string>
++    <string name="waex_ui_clear_all_custom_rules_faed51b9" formatted="false">"¿Borrar todas las reglas personalizadas?"</string>
++    <string name="waex_ui_clear_all_ddceb7ad" formatted="false">"Borrar todo"</string>
++    <string name="waex_ui_clear_search_3b7ea517" formatted="false">"Borrar la búsqueda"</string>
++    <string name="waex_ui_close_7d9eb7ac" formatted="false">"Cerrar"</string>
++    <string name="waex_ui_close_search_55656b5e" formatted="false">"Cerrar búsqueda"</string>
++    <string name="waex_ui_collapse_1_s_a0b382ed">"Contraer %1$s"</string>
++    <string name="waex_ui_collapse_be6eb1fc" formatted="false">"Contraer"</string>
++    <string name="waex_ui_color_deleted_text_indicator_ae75ad33" formatted="false">"Colorear el texto y el indicador de eliminación"</string>
++    <string name="waex_ui_communities_c864f329" formatted="false">"Comunidades"</string>
++    <string name="waex_ui_compatibility_verified_cca213b2" formatted="false">"Compatibilidad verificada"</string>
++    <string name="waex_ui_completed_22a970d2" formatted="false">"Finalizada"</string>
++    <string name="waex_ui_completed_with_hook_failures_24befe70" formatted="false">"Finalizada con errores de interceptores"</string>
++    <string name="waex_ui_configuration_b332c349" formatted="false">"Configuración"</string>
++    <string name="waex_ui_configure_1_s_a548a230">"Configurar %1$s"</string>
++    <string name="waex_ui_configure_6defafa2" formatted="false">"Configurar"</string>
++    <string name="waex_ui_configure_filter_items_1e380999" formatted="false">"Configurar filtros de elementos"</string>
++    <string name="waex_ui_configure_rules_for_this_specific_cont_13ad1641" formatted="false">"Configura las reglas de este contacto"</string>
++    <string name="waex_ui_configure_scroll_hide_dynamics_and_bac_42fabf06" formatted="false">"Configura cómo se oculta la barra al desplazarte y la opacidad del fondo"</string>
++    <string name="waex_ui_configured_84aebc69" formatted="false">"Configurado"</string>
++    <string name="waex_ui_confirm_unlink_current_device_078a2a44" formatted="false">"Confirmar desvinculación de este dispositivo"</string>
++    <string name="waex_ui_confirm_unlink_device_f6a5f66a" formatted="false">"Confirmar desvinculación"</string>
++    <string name="waex_ui_connected_22965568" formatted="false">"Conectado"</string>
++    <string name="waex_ui_connected_devices_16c0c720" formatted="false">"Dispositivos conectados"</string>
++    <string name="waex_ui_connected_directly_547bd078" formatted="false">"Conexión directa"</string>
++    <string name="waex_ui_connection_status_3693e288" formatted="false">"Estado de la conexión"</string>
++    <string name="waex_ui_contact_group_info_screen_5dbeac75" formatted="false">"Información del contacto o grupo"</string>
++    <string name="waex_ui_contact_rules_1_s_c13a5f53">"Reglas por contacto (%1$s)"</string>
++    <string name="waex_ui_contact_rules_9a0c44b0" formatted="false">"Reglas por contacto"</string>
++    <string name="waex_ui_contacts_access_af7abbb0" formatted="false">"Acceso a los contactos"</string>
++    <string name="waex_ui_contacts_with_custom_privacy_rules_wil_37b703c4" formatted="false">"Aquí aparecerán los contactos con reglas de privacidad personalizadas. Puedes configurarlas desde una conversación de WhatsApp."</string>
++    <string name="waex_ui_continue_to_waenhancerx_44fe727b" formatted="false">"Continuar a WaEnhancerX"</string>
++    <string name="waex_ui_convert_received_voice_notes_to_readab_47e047f7" formatted="false">"Convierte las notas de voz recibidas en texto dentro de las conversaciones."</string>
++    <string name="waex_ui_copied_1_s_to_clipboard_99b46814">"Se copió %1$s al portapapeles"</string>
++    <string name="waex_ui_copied_status_text_to_clipboard_b81c6089" formatted="false">"Se copió el texto del estado al portapapeles"</string>
++    <string name="waex_ui_copy_error_19dc540f" formatted="false">"Copiar error"</string>
++    <string name="waex_ui_copy_text_b0ac9cea" formatted="false">"Copiar texto"</string>
++    <string name="waex_ui_copy_the_error_details_when_reporting_8ec1cba5" formatted="false">"\n\nCopia los detalles del error cuando reportes este problema."</string>
++    <string name="waex_ui_corner_radius_e1cf3271" formatted="false">"Radio de las esquinas"</string>
++    <string name="waex_ui_could_not_load_this_github_profile_eb4f568a" formatted="false">"No se pudo cargar este perfil de GitHub."</string>
++    <string name="waex_ui_could_not_open_archived_chats_d18485fc" formatted="false">"No se pudieron abrir los chats archivados"</string>
++    <string name="waex_ui_could_not_open_file_picker_1_s_5bc514b4">"No se pudo abrir el selector de archivos: %1$s"</string>
++    <string name="waex_ui_could_not_open_link_dfa30a8f" formatted="false">"No se pudo abrir el enlace"</string>
++    <string name="waex_ui_could_not_open_locked_chats_cfe581e0" formatted="false">"No se pudieron abrir los chats bloqueados"</string>
++    <string name="waex_ui_could_not_read_the_selected_file_a179611f" formatted="false">"No se pudo leer el archivo seleccionado"</string>
++    <string name="waex_ui_could_not_refresh_devices_8e10f690" formatted="false">"No se pudieron actualizar los dispositivos."</string>
++    <string name="waex_ui_couldn_t_find_you_or_your_friend_here_68192ff2" formatted="false">"¿No encuentras tu perfil o el de un amigo?"</string>
++    <string name="waex_ui_couldn_t_save_profile_photo_296d0ed9" formatted="false">"No se pudo guardar la foto de perfil"</string>
++    <string name="waex_ui_couldn_t_share_the_selected_recording_d260dfd9" formatted="false">"No se pudo compartir la grabación seleccionada"</string>
++    <string name="waex_ui_css_theme_5cd3abac" formatted="false">"Tema CSS"</string>
++    <string name="waex_ui_current_device_unlinked_reverted_to_fr_646d3450" formatted="false">"Se desvinculó este dispositivo. Se activó el plan gratuito."</string>
++    <string name="waex_ui_custom_dpi_749aab90" formatted="false">"DPI personalizado"</string>
++    <string name="waex_ui_custom_keybox_ba042043" formatted="false">"Archivo de claves personalizado"</string>
++    <string name="waex_ui_custom_keybox_imported_76fd6f29" formatted="false">"Se importó el archivo de claves personalizado"</string>
++    <string name="waex_ui_custom_keybox_ready_961be371" formatted="false">"Archivo de claves personalizado listo"</string>
++    <string name="waex_ui_custom_privacy_76f9c20d" formatted="false">"Privacidad personalizada"</string>
++    <string name="waex_ui_custom_privacy_rules_17ba2822" formatted="false">"Reglas de privacidad personalizadas"</string>
++    <string name="waex_ui_custom_privacy_saved_f499fef5" formatted="false">"Se guardaron los ajustes de privacidad personalizada"</string>
++    <string name="waex_ui_custom_reaction_9a565091" formatted="false">"Reacción personalizada"</string>
++    <string name="waex_ui_custom_reaction_emoji_e6b8a58e" formatted="false">"EMOJI DE REACCIÓN PERSONALIZADO"</string>
++    <string name="waex_ui_custom_status_layout_c8b6c1ff" formatted="false">"Diseño personalizado de estados"</string>
++    <string name="waex_ui_custom_status_view_2159812e" formatted="false">"Vista de estados personalizada"</string>
++    <string name="waex_ui_custom_time_format_dfda77a8" formatted="false">"Formato de hora personalizado"</string>
++    <string name="waex_ui_custom_toolbar_1fde08d6" formatted="false">"Barra de herramientas personalizada"</string>
++    <string name="waex_ui_customize_floating_bottom_bar_58ae0180" formatted="false">"Personalizar la barra inferior flotante"</string>
++    <string name="waex_ui_dashboard_67b69646" formatted="false">"Panel de inicio"</string>
++    <string name="waex_ui_date_unavailable_616fdd79" formatted="false">"fecha no disponible"</string>
++    <string name="waex_ui_deactivate_ghost_mode_ae52c22b" formatted="false">"¿Desactivar el modo fantasma?"</string>
++    <string name="waex_ui_deactivate_restart_5f1c0ebe" formatted="false">"Desactivar y reiniciar"</string>
++    <string name="waex_ui_deactivating_restores_your_normal_onli_e7fff0e3" formatted="false">"Al desactivarlo, se restablecen tu visibilidad en línea, los indicadores de escritura y las confirmaciones de lectura.\n\n¿Reiniciar WhatsApp para aplicar los cambios?"</string>
++    <string name="waex_ui_debug_1a03bd2f" formatted="false">"Depuración"</string>
++    <string name="waex_ui_default_dpi_9037cbe6" formatted="false">"DPI predeterminado"</string>
++    <string name="waex_ui_default_language_28bee244" formatted="false">"Idioma predeterminado"</string>
++    <string name="waex_ui_delete_filter_9cb0dfa6" formatted="false">"Eliminar filtro"</string>
++    <string name="waex_ui_delete_selected_d2ab5d46" formatted="false">"Eliminar selección"</string>
++    <string name="waex_ui_deleted_504973e7" formatted="false">"🚫 Eliminado • "</string>
++    <string name="waex_ui_deleted_at_36fa22d4" formatted="false">"Eliminado el: "</string>
++    <string name="waex_ui_deleted_icon_a9a44dc0" formatted="false">"Icono de eliminado 🚫"</string>
++    <string name="waex_ui_developer_3fb7b394" formatted="false">"Desarrollador"</string>
++    <string name="waex_ui_device_6ba0bdec" formatted="false">"Dispositivo"</string>
++    <string name="waex_ui_device_attestation_e6c517e1" formatted="false">"ATESTACIÓN DEL DISPOSITIVO"</string>
++    <string name="waex_ui_device_environment_663d37f3" formatted="false">"Entorno del dispositivo"</string>
++    <string name="waex_ui_device_integrity_supported_d1cb6d72" formatted="false">"Compatible con integridad del dispositivo"</string>
++    <string name="waex_ui_device_management_0be43a11" formatted="false">"Administrar dispositivos"</string>
++    <string name="waex_ui_device_model_e266c843" formatted="false">"Modelo del dispositivo"</string>
++    <string name="waex_ui_device_unlinked_successfully_cb9d61d0" formatted="false">"Se desvinculó el dispositivo."</string>
++    <string name="waex_ui_direct_pipeline_e449cc90" formatted="false">"Captura directa"</string>
++    <string name="waex_ui_disable_proximity_sensor_9f5bf89d" formatted="false">"Desactivar sensor de proximidad"</string>
++    <string name="waex_ui_disable_see_more_button_and_show_all_l_74a0a668" formatted="false">"Muestra completos los mensajes largos sin el botón Leer más"</string>
++    <string name="waex_ui_disabled_0c7ef33e" formatted="false">"Desactivado"</string>
++    <string name="waex_ui_disabled_75081b59" formatted="false">"Desactivado"</string>
++    <string name="waex_ui_dismiss_48845bff" formatted="false">"Cerrar"</string>
++    <string name="waex_ui_display_over_other_apps_9a1d9177" formatted="false">"Mostrar sobre otras aplicaciones"</string>
++    <string name="waex_ui_displays_the_custom_privacy_shortcut_i_478c235f" formatted="false">"Muestra el acceso a la privacidad personalizada en ambas ubicaciones"</string>
++    <string name="waex_ui_dissociating_your_current_phone_will_r_cdfc4aef" formatted="false">"Si desvinculas este teléfono, WAEX volverá al plan gratuito y se reiniciará."</string>
++    <string name="waex_ui_dnd_off_1695672b" formatted="false">"No molestar: desactivado"</string>
++    <string name="waex_ui_dnd_on_58025d4c" formatted="false">"No molestar: activado"</string>
++    <string name="waex_ui_do_you_want_to_send_this_sticker_to_th_962b373b" formatted="false">"¿Quieres enviar este sticker al chat?"</string>
++    <string name="waex_ui_done_11a6767d" formatted="false">"Listo"</string>
++    <string name="waex_ui_double_tap_reaction_b4b8e267" formatted="false">"Reacción con doble toque"</string>
++    <string name="waex_ui_downgrade_d955b7e8" formatted="false">"Volver a una versión anterior"</string>
++    <string name="waex_ui_download_d6eafe82" formatted="false">"Descargar"</string>
++    <string name="waex_ui_download_failed_1_s_1f37f501">"No se pudo descargar: %1$s"</string>
++    <string name="waex_ui_downloading_and_validating_the_certifi_d80cdcf2" formatted="false">"Descargando y validando la cadena de certificados…"</string>
++    <string name="waex_ui_downloading_update_01436823" formatted="false">"Descargando actualización"</string>
++    <string name="waex_ui_e_g_007cd8a1" formatted="false">"Por ejemplo: 👍"</string>
++    <string name="waex_ui_e_g_conversation_row_date_c1b9b63b" formatted="false">"Por ejemplo: conversation_row_date"</string>
++    <string name="waex_ui_ec_attestation_chain_8a11fd52" formatted="false">"Cadena de atestación EC"</string>
++    <string name="waex_ui_edit_filter_47d55283" formatted="false">"Editar filtro"</string>
++    <string name="waex_ui_edited_message_history_492e60cb" formatted="false">"Historial de ediciones del mensaje"</string>
++    <string name="waex_ui_enable_5342e09f" formatted="false">"Activar"</string>
++    <string name="waex_ui_enable_bootloader_spoofer_27426554" formatted="false">"Activar la simulación del estado de arranque"</string>
++    <string name="waex_ui_enable_custom_versions_9be60a96" formatted="false">"Activar versiones personalizadas"</string>
++    <string name="waex_ui_enable_floating_bottom_bar_6888db9b" formatted="false">"Activar la barra inferior flotante"</string>
++    <string name="waex_ui_enable_per_contact_privacy_be0089bd" formatted="false">"Activar la privacidad por contacto"</string>
++    <string name="waex_ui_enable_the_feature_when_your_source_is_797a721f" formatted="false">"Activa la función cuando la fuente esté lista"</string>
++    <string name="waex_ui_encoding_format_414693ab" formatted="false">"Formato de codificación"</string>
++    <string name="waex_ui_end_hour_37f91306" formatted="false">"Hora de fin"</string>
++    <string name="waex_ui_enforcing_1ca5672a" formatted="false">"Restrictivo"</string>
++    <string name="waex_ui_engine_running_11ac7787" formatted="false">"Motor en ejecución"</string>
++    <string name="waex_ui_enhanced_adaptive_shadows_and_refined_107eefd1" formatted="false">"Sombras adaptables y espaciado mejorado"</string>
++    <string name="waex_ui_enter_0_or_a_number_from_120_to_1000_b5a85be0" formatted="false">"Ingresa 0 o un número entre 120 y 1000"</string>
++    <string name="waex_ui_enter_0_to_use_the_device_default_or_a_2e3826cd" formatted="false">"Ingresa 0 para usar la densidad del dispositivo o un valor entre 120 y 1000 DPI."</string>
++    <string name="waex_ui_enter_your_license_key_to_unlock_all_p_51f39af2" formatted="false">"Ingresa tu clave de licencia para desbloquear todas las funciones Pro."</string>
++    <string name="waex_ui_error_1_s_81a2d6c7">"Error: %1$s"</string>
++    <string name="waex_ui_error_8eecdde0" formatted="false">"Error: "</string>
++    <string name="waex_ui_error_displaying_image_1_s_9844d874">"No se pudo mostrar la imagen: %1$s"</string>
++    <string name="waex_ui_error_displaying_video_1_s_6a5f9a50">"No se pudo mostrar el video: %1$s"</string>
++    <string name="waex_ui_error_finding_message_info_d5e24fb5" formatted="false">"No se encontró la información del mensaje"</string>
++    <string name="waex_ui_error_launching_preview_1_s_e1200bff">"No se pudo abrir la vista previa: %1$s"</string>
++    <string name="waex_ui_error_opening_status_768e80f2" formatted="false">"No se pudo abrir el estado: "</string>
++    <string name="waex_ui_error_playing_video_14f39a6f" formatted="false">"No se pudo reproducir el video"</string>
++    <string name="waex_ui_error_saving_status_media_de3da11e" formatted="false">"No se pudo guardar el archivo del estado: "</string>
++    <string name="waex_ui_event_incoming_message_3d2cc9a6" formatted="false">"EVENTO: MENSAJE ENTRANTE"</string>
++    <string name="waex_ui_event_message_received_29191586" formatted="false">"Evento: mensaje recibido"</string>
++    <string name="waex_ui_every_eligible_app_open_dadc9b2a" formatted="false">"Cada vez que se abre una aplicación habilitada"</string>
++    <string name="waex_ui_everyone_no_block_f8505494" formatted="false">"Todos (sin bloqueo)"</string>
++    <string name="waex_ui_exit_waenhancerx_7cb55953" formatted="false">"Salir de WaEnhancerX"</string>
++    <string name="waex_ui_expand_07548c2c" formatted="false">"Expandir"</string>
++    <string name="waex_ui_expand_1_s_e144bd52">"Expandir %1$s"</string>
++    <string name="waex_ui_expires_f6725f3a" formatted="false">"Vencimiento"</string>
++    <string name="waex_ui_extra_number_1234567890_extra_message_ad458a9f" formatted="false">"Extra: number:1234567890\nExtra: message:Escribe aquí tu respuesta automática"</string>
++    <string name="waex_ui_fade_out_7d680202" formatted="false">"Desvanecer"</string>
++    <string name="waex_ui_failed_02bd3492" formatted="false">"Con errores"</string>
++    <string name="waex_ui_failed_031a8f0f" formatted="false">"Con errores"</string>
++    <string name="waex_ui_failed_to_download_status_19426d76" formatted="false">"No se pudo descargar el estado: "</string>
++    <string name="waex_ui_failed_to_fetch_connected_devices_127a4496" formatted="false">"No se pudieron obtener los dispositivos conectados."</string>
++    <string name="waex_ui_failed_to_load_devices_15cdbbab" formatted="false">"No se pudieron cargar los dispositivos"</string>
++    <string name="waex_ui_failed_to_save_706247c6" formatted="false">"No se pudo guardar: "</string>
++    <string name="waex_ui_fast_navigation_and_conversation_produ_83302a70" formatted="false">"Herramientas de navegación rápida y productividad en chats"</string>
++    <string name="waex_ui_feature_3d377ae9" formatted="false">"Función"</string>
++    <string name="waex_ui_feature_enabled_8e093ea1" formatted="false">"Función activada"</string>
++    <string name="waex_ui_features_5697d03d" formatted="false">"Funciones"</string>
++    <string name="waex_ui_filter_items_954cac3d" formatted="false">"Filtros de elementos"</string>
++    <string name="waex_ui_filter_view_id_1867e726" formatted="false">"ID del elemento"</string>
++    <string name="waex_ui_force_waex_hooks_to_run_on_any_version_ffdfb190" formatted="false">"Fuerza la carga de interceptores en cualquier versión sin comprobarla (avanzado)"</string>
++    <string name="waex_ui_framework_package_2cd0a851" formatted="false">"Paquete del gestor"</string>
++    <string name="waex_ui_framework_version_b4522d19" formatted="false">"Versión del gestor"</string>
++    <string name="waex_ui_free_f411a1fb" formatted="false">"Gratis"</string>
++    <string name="waex_ui_free_plan_6d7e546c" formatted="false">"Plan gratuito"</string>
++    <string name="waex_ui_free_vs_pro_features_3092c6e5" formatted="false">"Funciones gratuitas y Pro"</string>
++    <string name="waex_ui_freeze_509b1035" formatted="false">"Última conexión fija"</string>
++    <string name="waex_ui_freeze_last_seen_200aea50" formatted="false">"¿Congelar la última conexión?"</string>
++    <string name="waex_ui_freeze_last_seen_off_2cb42c68" formatted="false">"Última conexión congelada: no"</string>
++    <string name="waex_ui_freeze_last_seen_on_ad444fb9" formatted="false">"Última conexión congelada: sí"</string>
++    <string name="waex_ui_freeze_restart_bfdfd4fc" formatted="false">"Congelar y reiniciar"</string>
++    <string name="waex_ui_frosted_glass_effect_294ac5db" formatted="false">"Efecto de cristal esmerilado"</string>
++    <string name="waex_ui_full_008dacb6" formatted="false">"Completo"</string>
++    <string name="waex_ui_full_access_to_all_pro_features_for_30_3746092e" formatted="false">"Acceso completo a las funciones Pro durante 30 días"</string>
++    <string name="waex_ui_full_quality_media_info_is_unavailable_a93af643" formatted="false">"No está disponible la información del archivo en calidad original"</string>
++    <string name="waex_ui_general_c910d474" formatted="false">"General"</string>
++    <string name="waex_ui_general_stability_improvements_and_bug_d6cabb44" formatted="false">"Mejoras generales de estabilidad y correcciones de errores."</string>
++    <string name="waex_ui_geometry_spacing_a08202fb" formatted="false">"Forma y espaciado"</string>
++    <string name="waex_ui_get_or_manage_license_via_waenhancerx_266f2cff" formatted="false">"Obtén o administra tu licencia mediante @waenhancerx_bot"</string>
++    <string name="waex_ui_get_whisper_models_over_wi_fi_automati_445a151d" formatted="false">"Descarga modelos de Whisper automáticamente mediante Wi-Fi."</string>
++    <string name="waex_ui_ghost_mode_48b2b30e" formatted="false">"Modo fantasma"</string>
++    <string name="waex_ui_ghost_mode_activated_970ac067" formatted="false">"Modo fantasma activado"</string>
++    <string name="waex_ui_ghost_mode_deactivated_7b9d7043" formatted="false">"Modo fantasma desactivado"</string>
++    <string name="waex_ui_ghost_mode_hides_your_online_status_fr_aef9e9dc" formatted="false">"El modo fantasma oculta tu estado en línea, congela tu última conexión y no envía indicadores de escritura ni confirmaciones de lectura a ningún contacto.\n\n¿Reiniciar WhatsApp para aplicar los cambios?"</string>
++    <string name="waex_ui_ghost_mode_off_33af0cd9" formatted="false">"Modo fantasma: desactivado"</string>
++    <string name="waex_ui_ghost_mode_on_c6fad9c9" formatted="false">"Modo fantasma: activado"</string>
++    <string name="waex_ui_github_account_b8d6a3e1" formatted="false">"Cuenta de GitHub"</string>
++    <string name="waex_ui_glass_opacity_fd4ffb38" formatted="false">"Opacidad del cristal"</string>
++    <string name="waex_ui_gone_remove_aced6fb5" formatted="false">"Ocultar y quitar"</string>
++    <string name="waex_ui_grant_everything_now_for_convenience_o_022cad3f" formatted="false">"Puedes conceder todos los permisos ahora o continuar y concederlos cuando una función los necesite."</string>
++    <string name="waex_ui_groq_api_key_af3ea8bb" formatted="false">"Clave de API de Groq"</string>
++    <string name="waex_ui_group_1_s_preserved_29347f6b">"Grupo • Conservados: %1$s"</string>
++    <string name="waex_ui_grouped_89731456" formatted="false">"Agrupados"</string>
++    <string name="waex_ui_grouped_under_waex_2485cb08" formatted="false">"Agrupar en WAEX"</string>
++    <string name="waex_ui_groups_39bbb719" formatted="false">"Grupos"</string>
++    <string name="waex_ui_hardware_locked_feature_activation_946923fc" formatted="false">"Activación de funciones vinculada al dispositivo"</string>
++    <string name="waex_ui_hd_upload_ee403315" formatted="false">"Envío en HD"</string>
++    <string name="waex_ui_hex_code_fc70e187" formatted="false">"Código hexadecimal"</string>
++    <string name="waex_ui_hide_audio_recording_state_dca180a4" formatted="false">"Oculta el indicador de grabación de audio"</string>
++    <string name="waex_ui_hide_forwarded_tag_a4f281a7" formatted="false">"Ocultar etiqueta de reenvío"</string>
++    <string name="waex_ui_hide_home_tabs_1bb26596" formatted="false">"Ocultar pestañas de inicio"</string>
++    <string name="waex_ui_hide_home_tabs_98f3a2cc" formatted="false">"Ocultar pestañas de inicio"</string>
++    <string name="waex_ui_hide_on_scroll_395216cb" formatted="false">"Ocultar al desplazarse"</string>
++    <string name="waex_ui_hide_online_d0b23371" formatted="false">"Ocultar estado en línea"</string>
++    <string name="waex_ui_hide_read_confirmation_2ae39653" formatted="false">"Oculta que leíste el mensaje"</string>
++    <string name="waex_ui_hide_receipts_c2702133" formatted="false">"Ocultar confirmaciones"</string>
++    <string name="waex_ui_hide_recording_52e7a008" formatted="false">"Ocultar indicador de grabación"</string>
++    <string name="waex_ui_hide_recording_status_ccd978cf" formatted="false">"Ocultar que estás grabando"</string>
++    <string name="waex_ui_hide_search_14bd5cb7" formatted="false">"Ocultar búsqueda"</string>
++    <string name="waex_ui_hide_seen_28cfe6b3" formatted="false">"Ocultar confirmaciones de lectura"</string>
++    <string name="waex_ui_hide_seen_tick_8eba5af5" formatted="false">"Ocultar la confirmación de lectura"</string>
++    <string name="waex_ui_hide_typing_indicator_153c8ac4" formatted="false">"Oculta el indicador de escritura"</string>
++    <string name="waex_ui_hide_typing_status_afddc69c" formatted="false">"Ocultar que estás escribiendo"</string>
++    <string name="waex_ui_hide_view_status_64ca562e" formatted="false">"Ocultar visualizaciones de estados"</string>
++    <string name="waex_ui_home_feed_ea0a795f" formatted="false">"Inicio y contenido"</string>
++    <string name="waex_ui_home_header_actions_98c6aa19" formatted="false">"Acciones de la cabecera de inicio"</string>
++    <string name="waex_ui_home_menu_792a1d5a" formatted="false">"Menú de inicio"</string>
++    <string name="waex_ui_hook_runtime_3e54a2b2" formatted="false">"Ejecución de interceptores"</string>
++    <string name="waex_ui_hook_success_bf7c8178" formatted="false">"CARGA COMPLETADA"</string>
++    <string name="waex_ui_hooks_d412a062" formatted="false">"Interceptores"</string>
++    <string name="waex_ui_horizontal_margin_fa46b8a7" formatted="false">"Margen horizontal"</string>
++    <string name="waex_ui_how_to_configure_rules_2ee03efe" formatted="false">"Cómo configurar las reglas"</string>
++    <string name="waex_ui_how_waex_items_appear_in_whatsapp_s_ho_3f618d0d" formatted="false">"Cómo aparecen los elementos de WAEX en el menú de inicio de WhatsApp"</string>
++    <string name="waex_ui_hue_4d7056f0" formatted="false">"Tono"</string>
++    <string name="waex_ui_icon_label_spacing_55a49e40" formatted="false">"Espacio entre icono y texto"</string>
++    <string name="waex_ui_icon_size_73cbeb77" formatted="false">"Tamaño de los iconos"</string>
++    <string name="waex_ui_icons_eae96e02" formatted="false">"Iconos"</string>
++    <string name="waex_ui_ignore_battery_optimizations_58d12723" formatted="false">"Sin restricciones de batería"</string>
++    <string name="waex_ui_ignore_fce77c34" formatted="false">"Omitir"</string>
++    <string name="waex_ui_import_a_keybox_xml_before_enabling_7a4e19d7" formatted="false">"Importa un archivo keybox.xml antes de activar esta opción"</string>
++    <string name="waex_ui_import_custom_keybox_xml_7c82038f" formatted="false">"Importar keybox.xml personalizado"</string>
++    <string name="waex_ui_imported_keybox_selected_1ba384df" formatted="false">"Archivo de claves importado seleccionado"</string>
++    <string name="waex_ui_in_app_shortcut_placement_08e2621d" formatted="false">"UBICACIÓN DEL ACCESO RÁPIDO"</string>
++    <string name="waex_ui_in_progress_c1f88e9d" formatted="false">"En curso"</string>
++    <string name="waex_ui_indicator_style_7b2d18a3" formatted="false">"ESTILO DEL INDICADOR"</string>
++    <string name="waex_ui_indicator_text_color_55dfa1d7" formatted="false">"Color del indicador y del texto"</string>
++    <string name="waex_ui_individuals_d64d3d99" formatted="false">"Individuales"</string>
++    <string name="waex_ui_injected_3a4e038a" formatted="false">"Cargados"</string>
++    <string name="waex_ui_injected_hooks_ec0c619c" formatted="false">"Interceptores cargados"</string>
++    <string name="waex_ui_injected_initialization_failed_2316f8ba" formatted="false">"Interceptores cargados • Error al iniciar"</string>
++    <string name="waex_ui_injected_settings_connection_unavailab_e020f0c5" formatted="false">"Interceptores cargados • Sin conexión con los ajustes"</string>
++    <string name="waex_ui_injected_some_features_failed_a9530842" formatted="false">"Interceptores cargados • Algunas funciones fallaron"</string>
++    <string name="waex_ui_injected_unsupported_version_c24bde79" formatted="false">"Interceptores cargados • Versión no compatible"</string>
++    <string name="waex_ui_injected_using_settings_fallback_d493392d" formatted="false">"Interceptores cargados • Usando ajustes de respaldo"</string>
++    <string name="waex_ui_injection_detected_97ffea75" formatted="false">"Carga de interceptores detectada"</string>
++    <string name="waex_ui_input_your_purchased_key_to_verify_you_2dc5edbb" formatted="false">"Ingresa la clave que compraste para verificar tu licencia."</string>
++    <string name="waex_ui_instagram_status_layout_59eb72e4" formatted="false">"Diseño de estados de Instagram"</string>
++    <string name="waex_ui_install_apk_6f672034" formatted="false">"Instalar APK"</string>
++    <string name="waex_ui_install_older_builds_over_newer_versio_0fccde02" formatted="false">"Instala versiones anteriores sobre versiones más recientes. Requiere acceso de superusuario."</string>
++    <string name="waex_ui_install_unknown_apps_d293d7b0" formatted="false">"Instalar aplicaciones de esta fuente"</string>
++    <string name="waex_ui_installation_successful_restarting_dbd45bac" formatted="false">"Instalación completada. Reiniciando…"</string>
++    <string name="waex_ui_installed_f8b32f4e" formatted="false">"Instalada"</string>
++    <string name="waex_ui_installed_v_1_s_5bf3b702">"Instalada: v%1$s"</string>
++    <string name="waex_ui_instant_automated_delivery_via_telegra_f09ba74c" formatted="false">"Entrega automática inmediata mediante el bot de Telegram"</string>
++    <string name="waex_ui_instantly_rejects_and_shows_call_decli_f15c55b2" formatted="false">"Rechaza de inmediato la llamada y muestra que fue rechazada"</string>
++    <string name="waex_ui_integrity_estimate_87441ad8" formatted="false">"Estimación de integridad"</string>
++    <string name="waex_ui_invalid_key_format_expected_waex_xxxx_8bf26cd1" formatted="false">"El formato de la clave no es válido. Debe ser WAEX-XXXX-XXXX-XXXX."</string>
++    <string name="waex_ui_invalid_keybox_1_s_0d9cdabc">"Archivo de claves no válido: %1$s"</string>
++    <string name="waex_ui_invalid_value_d3c7d623" formatted="false">"Valor no válido"</string>
++    <string name="waex_ui_ios_frosted_glass_21526033" formatted="false">"Cristal esmerilado de iOS"</string>
++    <string name="waex_ui_is_online_e0992fa5" formatted="false">" está en línea"</string>
++    <string name="waex_ui_join_our_supporters_and_get_your_githu_3a43f85e" formatted="false">"Apoya el proyecto para que tu perfil de GitHub aparezca en esta lista."</string>
++    <string name="waex_ui_join_the_supporters_list_b169de4a" formatted="false">"Unirte a la lista de apoyo"</string>
++    <string name="waex_ui_keep_deleted_messages_visible_7d6b1de5" formatted="false">"Mantiene visibles los mensajes eliminados"</string>
++    <string name="waex_ui_kernel_8a716159" formatted="false">"Núcleo del sistema"</string>
++    <string name="waex_ui_keybox_file_is_too_large_cf788fae" formatted="false">"El archivo de claves es demasiado grande"</string>
++    <string name="waex_ui_keybox_setup_required_f83e4b34" formatted="false">"Debes configurar el archivo de claves"</string>
++    <string name="waex_ui_keybox_source_910cb5ff" formatted="false">"FUENTE DEL ARCHIVO DE CLAVES"</string>
++    <string name="waex_ui_keybox_verification_e29bc513" formatted="false">"Verificación del archivo de claves"</string>
++    <string name="waex_ui_language_downloads_2c65f45e" formatted="false">"Idioma y descargas"</string>
++    <string name="waex_ui_last_seen_frozen_263b4306" formatted="false">"Última conexión congelada"</string>
++    <string name="waex_ui_last_seen_unfrozen_9b59cac2" formatted="false">"Se restableció la última conexión"</string>
++    <string name="waex_ui_last_updated_1_s_a8874f34">" | Última actualización: %1$s"</string>
++    <string name="waex_ui_later_73b6e48a" formatted="false">"Más tarde"</string>
++    <string name="waex_ui_license_expired_7314f40b" formatted="false">"Licencia vencida"</string>
++    <string name="waex_ui_license_key_71fd251d" formatted="false">"Clave de licencia"</string>
++    <string name="waex_ui_license_removed_from_this_device_0a2fb62a" formatted="false">"Se quitó la licencia de este dispositivo."</string>
++    <string name="waex_ui_licensing_75b38c87" formatted="false">"Licencias"</string>
++    <string name="waex_ui_lifetime_access_6307bd6b" formatted="false">"Acceso de por vida"</string>
++    <string name="waex_ui_lifetime_pro_edfdc169" formatted="false">"Pro de por vida"</string>
++    <string name="waex_ui_limit_full_67c23ba0" formatted="false">"Límite alcanzado"</string>
++    <string name="waex_ui_lines_added_caa510fe" formatted="false">"Líneas agregadas"</string>
++    <string name="waex_ui_lines_deleted_0bfbeabe" formatted="false">"Líneas eliminadas"</string>
++    <string name="waex_ui_linked_devices_34c09c50" formatted="false">"DISPOSITIVOS VINCULADOS"</string>
++    <string name="waex_ui_live_preview_d61b13d1" formatted="false">"Vista previa en tiempo real"</string>
++    <string name="waex_ui_location_ip_2730d766" formatted="false">"Ubicación / IP"</string>
++    <string name="waex_ui_lock_your_online_timestamp_03f3f564" formatted="false">"Mantiene fija la hora de tu conexión"</string>
++    <string name="waex_ui_locked_chats_unavailable_in_this_whats_05439a78" formatted="false">"Los chats bloqueados no están disponibles en esta versión de WhatsApp"</string>
++    <string name="waex_ui_locked_pro_feature_8239ac16" formatted="false">"Función Pro bloqueada"</string>
++    <string name="waex_ui_locks_your_last_seen_timestamp_so_cont_3c49d617" formatted="false">"Mantiene fija la hora de tu última conexión para que tus contactos no vean cuándo estás activo.\n\n¿Reiniciar WhatsApp para aplicar los cambios?"</string>
++    <string name="waex_ui_long_press_whatsapp_title_eee432ef" formatted="false">"Mantener presionado el título de WhatsApp"</string>
++    <string name="waex_ui_maintainer_ba79e198" formatted="false">"RESPONSABLE DEL PROYECTO"</string>
++    <string name="waex_ui_manage_1_s_8d56809c">"Administrar %1$s"</string>
++    <string name="waex_ui_manage_automation_b6075a0b" formatted="false">"Administrar automatización"</string>
++    <string name="waex_ui_manage_connected_devices_638abe23" formatted="false">"Administrar dispositivos conectados"</string>
++    <string name="waex_ui_manage_license_via_telegram_waenhancer_03cb64d0" formatted="false">"Administra tu licencia en Telegram con @waenhancerx_bot"</string>
++    <string name="waex_ui_manage_privacy_settings_cf4ad284" formatted="false">"Administrar ajustes de privacidad"</string>
++    <string name="waex_ui_managed_keybox_ready_9149f2ec" formatted="false">"Archivo de claves administrado listo"</string>
++    <string name="waex_ui_managed_keybox_unavailable_e63767b6" formatted="false">"Archivo de claves administrado no disponible"</string>
++    <string name="waex_ui_managed_keybox_updated_23fcdd3d" formatted="false">"Se actualizó el archivo de claves administrado"</string>
++    <string name="waex_ui_manager_process_hooked_a78a75a7" formatted="false">"Interceptores en el proceso del gestor"</string>
++    <string name="waex_ui_media_not_available_yet_c504582c" formatted="false">"El archivo aún no está disponible"</string>
++    <string name="waex_ui_media_not_cached_or_available_yet_45e16ba0" formatted="false">"El archivo aún no está disponible ni se ha guardado en caché"</string>
++    <string name="waex_ui_media_preview_2e70b815" formatted="false">"Vista previa multimedia"</string>
++    <string name="waex_ui_media_quality_bypass_699781cb" formatted="false">"Mejorar calidad multimedia"</string>
++    <string name="waex_ui_menu_display_options_c808869d" formatted="false">"OPCIONES DE VISUALIZACIÓN DEL MENÚ"</string>
++    <string name="waex_ui_menu_icons_6ee1d5da" formatted="false">"Iconos del menú"</string>
++    <string name="waex_ui_menu_option_e2b665ae" formatted="false">"Opción del menú"</string>
++    <string name="waex_ui_message_bomber_pro_33022491" formatted="false">"Envío de mensajes en secuencia · Pro"</string>
++    <string name="waex_ui_message_protection_controls_ecb4dab0" formatted="false">"Protección y controles de mensajes"</string>
++    <string name="waex_ui_messagedevicesource_6086ae2c" formatted="false">"Dispositivo de origen del mensaje"</string>
++    <string name="waex_ui_microphone_186352a8" formatted="false">"Micrófono"</string>
++    <string name="waex_ui_microphone_call_recording_db09aa48" formatted="false">"Micrófono y grabación de llamadas"</string>
++    <string name="waex_ui_minorfixes_c42ace17" formatted="false">"Correcciones menores"</string>
++    <string name="waex_ui_model_download_status_ff625765" formatted="false">"Estado de descarga del modelo"</string>
++    <string name="waex_ui_module_framework_b4c7101d" formatted="false">"Módulo y entorno de ejecución"</string>
++    <string name="waex_ui_module_inactive_57d5f17f" formatted="false">"Módulo inactivo"</string>
++    <string name="waex_ui_module_status_78cf7255" formatted="false">"Estado del módulo"</string>
++    <string name="waex_ui_module_version_d923cdd4" formatted="false">"Versión del módulo"</string>
++    <string name="waex_ui_modules_76c86c4c" formatted="false">"Módulos"</string>
++    <string name="waex_ui_month_40edde43" formatted="false">"/ mes"</string>
++    <string name="waex_ui_more_options_6285ce5d" formatted="false">"Más opciones"</string>
++    <string name="waex_ui_my_status_43503c17" formatted="false">"Mi estado"</string>
++    <string name="waex_ui_name_sender_name_number_sender_jid_pho_ee23ebc4" formatted="false">"%name (nombre del remitente)\n%number (JID o teléfono del remitente)\n%message (contenido del mensaje)"</string>
++    <string name="waex_ui_needs_attention_e0004b39" formatted="false">"REQUIERE ATENCIÓN"</string>
++    <string name="waex_ui_no_1ea442a1" formatted="false">"No"</string>
++    <string name="waex_ui_no_active_hooks_reported_by_whatsapp_p_50b24a7f" formatted="false">"El proceso de WhatsApp no reportó interceptores activos.\nComprueba que WhatsApp esté en ejecución."</string>
++    <string name="waex_ui_no_active_rules_fc15b50c" formatted="false">"Sin reglas activas"</string>
++    <string name="waex_ui_no_call_recordings_yet_1a95417c" formatted="false">"Todavía no hay grabaciones"</string>
++    <string name="waex_ui_no_changelog_available_d334743e" formatted="false">"No hay historial de cambios disponible."</string>
++    <string name="waex_ui_no_contributors_found_faee6c16" formatted="false">"No se encontraron colaboradores"</string>
++    <string name="waex_ui_no_custom_rules_yet_35ba92cb" formatted="false">"Todavía no hay reglas personalizadas"</string>
++    <string name="waex_ui_no_custom_version_rules_added_yet_tap_f86be378" formatted="false">"Todavía no hay reglas de versión personalizadas.\nToca Agregar regla para elegir una aplicación no compatible y registrar automáticamente su serie de versiones."</string>
++    <string name="waex_ui_no_filters_added_bc59f30c" formatted="false">"No hay filtros"</string>
++    <string name="waex_ui_no_hidden_read_receipt_to_send_15d6cfc0" formatted="false">"No hay confirmaciones de lectura retenidas para enviar"</string>
++    <string name="waex_ui_no_injected_hooks_matching_filter_fe90503b" formatted="false">"Ningún interceptor coincide con el filtro"</string>
++    <string name="waex_ui_no_internet_connection_13a21216" formatted="false">"Sin conexión a Internet"</string>
++    <string name="waex_ui_no_linked_devices_found_for_this_licen_c225645d" formatted="false">"No se encontraron dispositivos vinculados a esta licencia."</string>
++    <string name="waex_ui_no_message_history_found_d6380f22" formatted="false">"No se encontró el historial de mensajes"</string>
++    <string name="waex_ui_no_messages_a06faf26" formatted="false">"Sin mensajes"</string>
++    <string name="waex_ui_no_preserved_group_chats_29845d70" formatted="false">"No hay chats de grupos conservados"</string>
++    <string name="waex_ui_no_preserved_individual_chats_0491329d" formatted="false">"No hay chats individuales conservados"</string>
++    <string name="waex_ui_no_releases_found_d8feb500" formatted="false">"No se encontraron versiones."</string>
++    <string name="waex_ui_no_tabs_hidden_eb0aba28" formatted="false">"No hay pestañas ocultas"</string>
++    <string name="waex_ui_no_validated_managed_keybox_is_cached_d0090b84" formatted="false">"Todavía no hay un archivo de claves administrado y validado en la caché"</string>
++    <string name="waex_ui_none_reported_ffcae7fc" formatted="false">"Ninguna reportada"</string>
++    <string name="waex_ui_not_available_2ab64517" formatted="false">"No disponible"</string>
++    <string name="waex_ui_not_available_67a926f7" formatted="false">"No disponible"</string>
++    <string name="waex_ui_not_configured_dd1841d2" formatted="false">"Sin configurar"</string>
++    <string name="waex_ui_not_detected_9f4a1062" formatted="false">"No detectado"</string>
++    <string name="waex_ui_not_injected_3b307d1f" formatted="false">"No cargados"</string>
++    <string name="waex_ui_not_installed_d08041a7" formatted="false">"No instalado"</string>
++    <string name="waex_ui_not_installed_on_this_device_6aac8f5e" formatted="false">"No está instalada en este dispositivo"</string>
++    <string name="waex_ui_not_reported_adadface" formatted="false">"Sin información"</string>
++    <string name="waex_ui_not_reported_yet_355b4779" formatted="false">"Aún sin información"</string>
++    <string name="waex_ui_note_resizing_view_elements_dynamicall_95d239ba" formatted="false">"Nota: cambiar el tamaño de los elementos requiere recalcular su diseño. Esto puede hacer que las pantallas que los contienen tarden un poco más en cargar."</string>
++    <string name="waex_ui_online_presence_indicators_05934fbe" formatted="false">"Indicadores de presencia"</string>
++    <string name="waex_ui_only_allow_numbers_saved_in_your_phone_504e2e53" formatted="false">"Permitir únicamente los números guardados en tus contactos"</string>
++    <string name="waex_ui_opacity_0_100_e19bed46" formatted="false">"Opacidad (0 a 100)"</string>
++    <string name="waex_ui_opacity_pro_aa6ab765" formatted="false">"Opacidad (Pro)"</string>
++    <string name="waex_ui_open_archived_chats_4757b69a" formatted="false">"ABRIR CHATS ARCHIVADOS"</string>
++    <string name="waex_ui_open_archived_chats_791f3567" formatted="false">"Abrir chats archivados"</string>
++    <string name="waex_ui_open_github_0d2cda15" formatted="false">"Abrir GitHub"</string>
++    <string name="waex_ui_open_locked_chats_b10ca180" formatted="false">"ABRIR CHATS BLOQUEADOS"</string>
++    <string name="waex_ui_open_locked_chats_d1a58216" formatted="false">"Abrir chats bloqueados"</string>
++    <string name="waex_ui_open_to_hire_c4863654" formatted="false">"Disponible para contratar"</string>
++    <string name="waex_ui_open_waex_settings_51efb194" formatted="false">"Abrir ajustes de WAEX"</string>
++    <string name="waex_ui_open_your_github_profile_9303415f" formatted="false">"Abrir tu perfil de GitHub"</string>
++    <string name="waex_ui_optional_permissions_766be476" formatted="false">"Permisos opcionales"</string>
++    <string name="waex_ui_opus_opus_f43733be" formatted="false">"Opus (.opus)"</string>
++    <string name="waex_ui_or_enter_custom_emoji_8442012c" formatted="false">"También puedes escribir un emoji"</string>
++    <string name="waex_ui_overview_d4b1ea57" formatted="false">"Resumen"</string>
++    <string name="waex_ui_parse_error_65837ce7" formatted="false">"Error al interpretar el archivo"</string>
++    <string name="waex_ui_participant_554f4235" formatted="false">"Participante"</string>
++    <string name="waex_ui_paused_unsupported_version_66797ffe" formatted="false">"En pausa: versión no compatible"</string>
++    <string name="waex_ui_pending_332011b9" formatted="false">"Pendiente"</string>
++    <string name="waex_ui_per_contact_privacy_c4476ed0" formatted="false">"Privacidad por contacto"</string>
++    <string name="waex_ui_per_contact_privacy_is_currently_disab_b04d6482" formatted="false">"La privacidad por contacto está desactivada en Configuración."</string>
++    <string name="waex_ui_periodically_check_the_waenhancerx_rel_0026b98e" formatted="false">"Consulta periódicamente el servicio de actualizaciones de WaEnhancerX"</string>
++    <string name="waex_ui_permissive_3bd46607" formatted="false">"Permisivo"</string>
++    <string name="waex_ui_photos_media_storage_38774dc5" formatted="false">"Fotos y archivos multimedia"</string>
++    <string name="waex_ui_pill_design_5eba892d" formatted="false">"Diseño en forma de cápsula"</string>
++    <string name="waex_ui_pill_design_preset_3b444249" formatted="false">"Diseño de la barra"</string>
++    <string name="waex_ui_plan_fa8ed0bd" formatted="false">"Plan"</string>
++    <string name="waex_ui_play_436e6101" formatted="false">"Reproducir"</string>
++    <string name="waex_ui_playback_error_1_s_158f296a">"Error de reproducción: %1$s"</string>
++    <string name="waex_ui_please_allow_waenhancer_x_to_install_a_cde29fd6" formatted="false">"Permite que Wa Enhancer X instale aplicaciones"</string>
++    <string name="waex_ui_please_enter_your_license_key_49b0976f" formatted="false">"Ingresa tu clave de licencia."</string>
++    <string name="waex_ui_please_wait_until_the_status_finishes_0ef2b7ff" formatted="false">"Espera a que se termine de descargar el estado y vuelve a intentarlo"</string>
++    <string name="waex_ui_popular_reactions_c2b82def" formatted="false">"Reacciones frecuentes"</string>
++    <string name="waex_ui_post_notifications_515765d2" formatted="false">"Mostrar notificaciones"</string>
++    <string name="waex_ui_preferences_refresh_immediately_restar_e3de7bee" formatted="false">"Las preferencias se actualizan de inmediato. Al reiniciar WhatsApp, se vuelven a cargar los interceptores que solo se inicializan al abrir la aplicación."</string>
++    <string name="waex_ui_presence_toasts_ee8f508c" formatted="false">"Avisos de presencia"</string>
++    <string name="waex_ui_preserve_deleted_messages_e39773df" formatted="false">"Conservar mensajes eliminados"</string>
++    <string name="waex_ui_preserve_edits_prevent_limits_and_safe_6139d177" formatted="false">"Conserva ediciones, elimina límites y protege tus mensajes"</string>
++    <string name="waex_ui_preserved_9d31b48b" formatted="false">"Conservado"</string>
++    <string name="waex_ui_preserved_message_547f6da1" formatted="false">"Mensaje conservado"</string>
++    <string name="waex_ui_presets_954f93fe" formatted="false">"Colores predefinidos"</string>
++    <string name="waex_ui_press_back_again_to_exit_c151b888" formatted="false">"Vuelve a presionar Atrás para salir"</string>
++    <string name="waex_ui_prevent_revoke_35c7d01c" formatted="false">"Evitar eliminación"</string>
++    <string name="waex_ui_prevents_system_throttling_for_backgro_663fb76c" formatted="false">"Evita que el sistema limite las automatizaciones de Tasker en segundo plano y los interceptores de privacidad persistentes."</string>
++    <string name="waex_ui_privacy_rules_42135437" formatted="false">"REGLAS DE PRIVACIDAD"</string>
++    <string name="waex_ui_private_key_matches_4e90c050" formatted="false">"La clave privada coincide"</string>
++    <string name="waex_ui_pro_license_activated_b27626fb" formatted="false">"¡Licencia Pro activada!"</string>
++    <string name="waex_ui_pro_monthly_fc7aed6d" formatted="false">"Pro mensual"</string>
++    <string name="waex_ui_pro_yearly_a80329b0" formatted="false">"Pro anual"</string>
++    <string name="waex_ui_profile_photo_download_95f7b1b8" formatted="false">"Descargar foto de perfil"</string>
++    <string name="waex_ui_profile_photo_is_not_ready_yet_8ff494b5" formatted="false">"La foto de perfil aún no está disponible"</string>
++    <string name="waex_ui_profile_photo_saved_to_pictures_waex_p_a8c4bd76" formatted="false">"La foto de perfil se guardó en Pictures/WAEX/Profile Photos"</string>
++    <string name="waex_ui_purchase_license_key_7dc5ed9a" formatted="false">"Comprar clave de licencia"</string>
++    <string name="waex_ui_ready_5fa7aac5" formatted="false">"Listo"</string>
++    <string name="waex_ui_real_time_preview_of_how_whatsapp_bott_e803ed32" formatted="false">"Previsualiza cómo se verá la barra inferior de WhatsApp"</string>
++    <string name="waex_ui_rec_a29ea413" formatted="false">"Grabación"</string>
++    <string name="waex_ui_receive_detailed_notification_with_cal_e55e211d" formatted="false">"Recibe una notificación al terminar la llamada con la IP, ubicación, dispositivo y versión de quien llamó"</string>
++    <string name="waex_ui_recommended_baa505ce" formatted="false">"RECOMENDADO"</string>
++    <string name="waex_ui_record_whatsapp_calls_edeb6ac1" formatted="false">"Grabar llamadas de WhatsApp"</string>
++    <string name="waex_ui_recording_configuration_40230390" formatted="false">"AJUSTES DE GRABACIÓN"</string>
++    <string name="waex_ui_recording_deleted_ded881bb" formatted="false">"Grabación eliminada"</string>
++    <string name="waex_ui_refined_pro_277942ba" formatted="false">"Refinado (Pro)"</string>
++    <string name="waex_ui_refresh_diagnostics_7bce98ec" formatted="false">"Actualizar diagnóstico"</string>
++    <string name="waex_ui_refresh_failed_1_s_5b508fd6">"No se pudo actualizar: %1$s"</string>
++    <string name="waex_ui_refresh_hooks_5fbeb9a0" formatted="false">"Actualizar interceptores"</string>
++    <string name="waex_ui_refresh_managed_keybox_7f2d970b" formatted="false">"Actualizar archivo de claves administrado"</string>
++    <string name="waex_ui_refreshing_1c0def7b" formatted="false">"Actualizando…"</string>
++    <string name="waex_ui_refreshing_managed_keybox_7bf6aed4" formatted="false">"Actualizando el archivo de claves administrado"</string>
++    <string name="waex_ui_release_details_7a63d360" formatted="false">"Detalles de la versión"</string>
++    <string name="waex_ui_release_e020e3c6" formatted="false">"Publicación"</string>
++    <string name="waex_ui_release_not_found_2df35e7c" formatted="false">"No se encontró la versión."</string>
++    <string name="waex_ui_release_page_6ba4c7eb" formatted="false">"Página de la versión"</string>
++    <string name="waex_ui_remind_me_again_after_one_day_6522d8db" formatted="false">"Recordármela en un día"</string>
++    <string name="waex_ui_remind_me_again_after_one_week_31ebcd1e" formatted="false">"Recordármela en una semana"</string>
++    <string name="waex_ui_remove_custom_rules_a2782b75" formatted="false">"Quitar reglas personalizadas"</string>
++    <string name="waex_ui_remove_license_1af46866" formatted="false">"Quitar licencia"</string>
++    <string name="waex_ui_remove_license_70f459dc" formatted="false">"¿Quitar la licencia?"</string>
++    <string name="waex_ui_removing_d4b09919" formatted="false">"Quitando…"</string>
++    <string name="waex_ui_replace_custom_keybox_xml_9dbdb703" formatted="false">"Reemplazar keybox.xml personalizado"</string>
++    <string name="waex_ui_reported_hooked_targets_0f7b326d" formatted="false">"Aplicaciones que reportaron interceptores"</string>
++    <string name="waex_ui_required_extras_54e6a19f" formatted="false">"Parámetros obligatorios:"</string>
++    <string name="waex_ui_required_for_automatic_call_recording_109166ae" formatted="false">"Necesario para grabar llamadas automáticamente y transcribir mensajes de voz con IA."</string>
++    <string name="waex_ui_required_for_download_progress_indicat_70ce5a66" formatted="false">"Necesario para mostrar el progreso de las descargas, los avisos de conexión y la sincronización con Tasker."</string>
++    <string name="waex_ui_required_for_seamless_in_app_version_u_d1c6c3a3" formatted="false">"Necesario para descargar actualizaciones e instalar el módulo desde la aplicación."</string>
++    <string name="waex_ui_required_for_whatsapp_database_backups_961af6f4" formatted="false">"Necesario para crear copias de las bases de datos de WhatsApp, simular archivos y restaurar archivos de chats."</string>
++    <string name="waex_ui_required_to_display_floating_action_bu_a9a30dce" formatted="false">"Necesario para mostrar botones flotantes, avisos de conexión y menús rápidos de chats."</string>
++    <string name="waex_ui_required_to_resolve_contact_names_and_d8a90ce5" formatted="false">"Necesario para identificar nombres de contactos y configurar reglas de privacidad por contacto."</string>
++    <string name="waex_ui_required_to_save_status_photos_split_v_63d9ba8a" formatted="false">"Necesario para guardar fotos de estados, dividir videos y cargar temas con fondos personalizados."</string>
++    <string name="waex_ui_required_to_save_status_updates_backup_14a75a0b" formatted="false">"Necesario para guardar estados, crear copias de los ajustes y exportar grabaciones."</string>
++    <string name="waex_ui_reset_automatically_after_24_hours_4ea91231" formatted="false">"Se restablecen automáticamente después de 24 horas"</string>
++    <string name="waex_ui_resize_pro_7dff96e9" formatted="false">"Cambiar el tamaño (Pro)"</string>
++    <string name="waex_ui_restart_app_07fe185c" formatted="false">"Reiniciar aplicación"</string>
++    <string name="waex_ui_restart_required_b4687115" formatted="false">"Es necesario reiniciar"</string>
++    <string name="waex_ui_restart_whatsapp_after_changing_the_ke_8275d80a" formatted="false">"Reinicia WhatsApp después de cambiar la fuente del archivo de claves o activar esta función."</string>
++    <string name="waex_ui_restart_whatsapp_e68a0fd3" formatted="false">"Reiniciar WhatsApp"</string>
++    <string name="waex_ui_restore_failed_1_s_995c8df5">"No se pudo restaurar: %1$s"</string>
++    <string name="waex_ui_retain_messages_locally_when_delete_fo_83f67a27" formatted="false">"Conserva una copia local al usar Eliminar para mí"</string>
++    <string name="waex_ui_retry_942087cc" formatted="false">"Reintentar"</string>
++    <string name="waex_ui_root_access_is_required_a22936b2" formatted="false">"Se requiere acceso de superusuario"</string>
++    <string name="waex_ui_root_access_is_required_to_enable_sile_8a319a7a" formatted="false">"Necesitas acceso de superusuario para activar la instalación automática"</string>
++    <string name="waex_ui_root_access_is_required_to_enable_vers_650bb903" formatted="false">"Necesitas acceso de superusuario para permitir la instalación de versiones anteriores"</string>
++    <string name="waex_ui_root_allowed_fb11f039" formatted="false">"Acceso de superusuario permitido"</string>
++    <string name="waex_ui_root_direct_ffade4c1" formatted="false">"Directa con superusuario"</string>
++    <string name="waex_ui_root_installation_failed_1_s_eb2c4718">"No se pudo instalar con acceso de superusuario: %1$s"</string>
++    <string name="waex_ui_root_lets_waenhancerx_verify_the_modul_415333af" formatted="false">"El acceso de superusuario permite comprobar el alcance del módulo y el entorno de ejecución. No se admiten métodos de carga sin ese acceso, como LSPatch o las alternativas basadas en Shizuku."</string>
++    <string name="waex_ui_rsa_attestation_chain_04437628" formatted="false">"Cadena de atestación RSA"</string>
++    <string name="waex_ui_rule_scope_010c9afb" formatted="false">"VIGENCIA DE LAS REGLAS"</string>
++    <string name="waex_ui_rules_apply_at_all_times_5fbfcc41" formatted="false">"Las reglas se aplican en todo momento"</string>
++    <string name="waex_ui_run_an_eligible_update_check_when_waen_57552a51" formatted="false">"Busca actualizaciones al abrir WaEnhancerX, según la frecuencia configurada"</string>
++    <string name="waex_ui_runtime_api_captured_2625bdc2" formatted="false">"API de ejecución detectada"</string>
++    <string name="waex_ui_saturation_993f024b" formatted="false">"Saturación"</string>
++    <string name="waex_ui_save_33_with_full_pro_access_for_365_d_9ab320db" formatted="false">"Ahorra un 33 %: acceso Pro completo durante 365 días"</string>
++    <string name="waex_ui_save_rules_fb164cd9" formatted="false">"Guardar reglas"</string>
++    <string name="waex_ui_saved_to_b95e47d2" formatted="false">"Se guardó en: "</string>
++    <string name="waex_ui_scale_1_s_c7fc4a67">"Escala: %1$s"</string>
++    <string name="waex_ui_scheduled_rules_59260020" formatted="false">"Reglas programadas"</string>

@@ -1,0 +1,1000 @@
+ 
++import com.waenhancer.utils.UiText
++
+ import android.widget.Toast
+ import com.waenhancer.ui.components.WaexProChip
+ 
+@@ -159,7 +161,7 @@ fun StylesSettingsScreen() {
+             settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
+         } else {
+             // Failed commits must not appear as successful changes in the UI.
+-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -235,7 +237,7 @@ fun StylesSettingsScreen() {
+                     modifier = Modifier.fillMaxSize(),
+                     horizontalArrangement = Arrangement.SpaceAround
+                 ) {
+-                    listOf("appearance" to "Appearance", "layout" to "Home & Feed").forEach { (tabId, label) ->
++                    listOf("appearance" to UiText.get(R.string.waex_ui_appearance_3907fa7f, "Appearance"), "layout" to UiText.get(R.string.waex_ui_home_feed_ea0a795f, "Home & Feed")).forEach { (tabId, label) ->
+                         val isSelected = selectedTab == tabId
+                         val textColor by animateColorAsState(
+                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
+@@ -368,7 +370,7 @@ fun StylesSettingsScreen() {
+                                             ) {
+                                                 Icon(
+                                                     imageVector = WaexIcons.Settings,
+-                                                    contentDescription = "Customize Floating Bottom Bar",
++                                                    contentDescription = UiText.get(R.string.waex_ui_customize_floating_bottom_bar_58ae0180, "Customize Floating Bottom Bar"),
+                                                     tint = colors.primary,
+                                                     modifier = Modifier.size(20.dp)
+                                                 )
+@@ -383,7 +385,7 @@ fun StylesSettingsScreen() {
+                                             ) {
+                                                 Icon(
+                                                     imageVector = WaexIcons.Settings,
+-                                                    contentDescription = "Configure Filter Items",
++                                                    contentDescription = UiText.get(R.string.waex_ui_configure_filter_items_1e380999, "Configure Filter Items"),
+                                                     tint = colors.primary,
+                                                     modifier = Modifier.size(20.dp)
+                                                 )
+@@ -392,7 +394,7 @@ fun StylesSettingsScreen() {
+                                         if (needsTypedEditor) {
+                                             Icon(
+                                                 imageVector = WaexIcons.ChevronRight,
+-                                                contentDescription = "Configure $locTitle",
++                                                contentDescription = UiText.get(R.string.waex_ui_configure_1_s_a548a230, "Configure %1\$s", locTitle),
+                                                 tint = colors.primary,
+                                                 modifier = Modifier.size(20.dp)
+                                             )
+@@ -450,60 +452,60 @@ private fun TypedStyleEditorDialog(
+             onSaved()
+         } else {
+             // Keep the editor and its input open so the user can retry.
+-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
+         }
+     }
+     when (key) {
+         "custom_theme" -> TextValueEditorDialog(
+-            title = "Custom Theme CSS",
+-            description = "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving.",
++            title = UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS"),
++            description = UiText.get(R.string.waex_ui_style_whatsapp_views_using_ids_widget_eedbeb45, "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving."),
+             initialValue = preferenceManager.getString("css_theme", "") ?: "",
+             singleLine = false,
+             placeholder = "#conversation_row_date {\n  color: #FFFFFF;\n  font-size: 12sp;\n}",
+             validator = ::isValidCustomCss,
+-            errorMessage = "Check that every selector has a matching { } block",
++            errorMessage = UiText.get(R.string.waex_ui_check_that_every_selector_has_a_matchi_c94dfb11, "Check that every selector has a matching { } block"),
+             onDismiss = onDismiss,
+             onSave = { completeSave(preferenceManager.putPublicString("css_theme", it.trim())) }
+         )
+         "custom_view_dpi" -> TextValueEditorDialog(
+-            title = "Default DPI",
+-            description = "Enter 0 to use the device default, or a DPI value from 120 to 1000.",
++            title = UiText.get(R.string.waex_ui_default_dpi_9037cbe6, "Default DPI"),
++            description = UiText.get(R.string.waex_ui_enter_0_to_use_the_device_default_or_a_2e3826cd, "Enter 0 to use the device default, or a DPI value from 120 to 1000."),
+             initialValue = preferenceManager.getString("change_dpi", "0") ?: "0",
+             singleLine = true,
+             placeholder = "0",
+             validator = { value ->
+                 value.toIntOrNull()?.let { it == 0 || it in 120..1000 } == true
+             },
+-            errorMessage = "Enter 0 or a number from 120 to 1000",
++            errorMessage = UiText.get(R.string.waex_ui_enter_0_or_a_number_from_120_to_1000_b5a85be0, "Enter 0 or a number from 120 to 1000"),
+             onDismiss = onDismiss,
+             onSave = { completeSave(preferenceManager.putPublicString("change_dpi", it.trim())) }
+         )
+         "chat_filters" -> ChoiceValueEditorDialog(
+-            title = "Chat filter display",
++            title = UiText.get(R.string.waex_ui_chat_filter_display_7d02ece7, "Chat filter display"),
+             selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
+-            choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
++            choices = listOf("0" to UiText.get(R.string.waex_ui_hide_search_14bd5cb7, "Hide search"), "1" to UiText.get(R.string.waex_ui_search_icon_edfdb08d, "Search icon"), "2" to UiText.get(R.string.waex_ui_search_bar_de54d68f, "Search bar")),
+             onDismiss = onDismiss,
+             onSave = { completeSave(preferenceManager.putPublicString("chatfilter", it)) }
+         )
+         "quick_home_menu" -> ChoiceValueEditorDialog(
+-            title = "Quick Action Home Menu",
++            title = UiText.get(R.string.feat_quick_home_menu_title, "Quick Action Home Menu"),
+             selectedValue = preferenceManager.getString("waex_menu_style", "grouped") ?: "grouped",
+             choices = listOf(
+-                "grouped" to "Grouped under WAEX",
+-                "separate" to "Separate menu items",
+-                "icons" to "Toolbar icons"
++                "grouped" to UiText.get(R.string.waex_ui_grouped_under_waex_2485cb08, "Grouped under WAEX"),
++                "separate" to UiText.get(R.string.waex_ui_separate_menu_items_36c8f114, "Separate menu items"),
++                "icons" to UiText.get(R.string.waex_ui_toolbar_icons_12004bba, "Toolbar icons")
+             ),
+             onDismiss = onDismiss,
+             onSave = { completeSave(preferenceManager.putPublicString("waex_menu_style", it)) }
+         )
+         "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
+-            title = "Hide home tabs",
++            title = UiText.get(R.string.waex_ui_hide_home_tabs_98f3a2cc, "Hide home tabs"),
+             selectedValues = preferenceManager.getStringSet("hidetabs", emptySet()) ?: emptySet(),
+             choices = listOf(
+-                "300" to "Updates",
+-                "600" to "Communities",
+-                "400" to "Calls",
+-                "700" to "Tools"
++                "300" to UiText.get(R.string.waex_ui_updates_22e2bada, "Updates"),
++                "600" to UiText.get(R.string.waex_ui_communities_c864f329, "Communities"),
++                "400" to UiText.get(R.string.waex_ui_calls_b73a5e2c, "Calls"),
++                "700" to UiText.get(R.string.waex_ui_tools_ea93d6a2, "Tools")
+             ),
+             onDismiss = onDismiss,
+             onSave = { completeSave(preferenceManager.putPublicStringSet("hidetabs", it)) }
+@@ -521,7 +523,7 @@ private fun TextValueEditorDialog(
+     singleLine: Boolean,
+     placeholder: String,
+     validator: (String) -> Boolean = { true },
+-    errorMessage: String = "Invalid value",
++    errorMessage: String = UiText.get(R.string.waex_ui_invalid_value_d3c7d623, "Invalid value"),
+     onDismiss: () -> Unit,
+     onSave: (String) -> Unit
+ ) {
+@@ -563,14 +565,14 @@ private fun TextValueEditorDialog(
+                 modifier = Modifier.fillMaxWidth().height(50.dp),
+                 shape = radius.buttonShape
+             ) {
+-                Text("Save", fontWeight = FontWeight.Bold)
++                Text(UiText.get(R.string.action_save, "Save"), fontWeight = FontWeight.Bold)
+             }
+             OutlinedButton(
+                 onClick = onDismiss,
+                 modifier = Modifier.fillMaxWidth().height(50.dp),
+                 shape = radius.buttonShape
+             ) {
+-                Text("Cancel")
++                Text(UiText.get(R.string.action_cancel, "Cancel"))
+             }
+         }
+     }
+@@ -682,7 +684,7 @@ private fun ChoiceValueEditorDialog(
+                     contentColor = colors.onPrimary
+                 )
+             ) {
+-                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
++                Text(text = UiText.get(R.string.action_apply, "Apply"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+             }
+ 
+             Spacer(modifier = Modifier.height(8.dp))
+@@ -694,7 +696,7 @@ private fun ChoiceValueEditorDialog(
+                 shape = radius.fullShape
+             ) {
+                 Text(
+-                    text = "Cancel",
++                    text = UiText.get(R.string.action_cancel, "Cancel"),
+                     fontWeight = FontWeight.Medium,
+                     color = colors.onSurfaceVariant,
+                     fontSize = 14.sp
+@@ -816,7 +818,7 @@ private fun MultiChoiceValueEditorDialog(
+                     contentColor = colors.onPrimary
+                 )
+             ) {
+-                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
++                Text(text = UiText.get(R.string.action_apply, "Apply"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+             }
+ 
+             Spacer(modifier = Modifier.height(8.dp))
+@@ -828,7 +830,7 @@ private fun MultiChoiceValueEditorDialog(
+                 shape = radius.fullShape
+             ) {
+                 Text(
+-                    text = "Cancel",
++                    text = UiText.get(R.string.action_cancel, "Cancel"),
+                     fontWeight = FontWeight.Medium,
+                     color = colors.onSurfaceVariant,
+                     fontSize = 14.sp
+@@ -870,12 +872,12 @@ private fun typedStyleSummary(
+     preferenceManager: WaexPreferenceManager,
+     @Suppress("UNUSED_PARAMETER") revision: Int
+ ): String = when (key) {
+-    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"
+-    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") "Device default" else "$it DPI" } ?: "Device default"
+-    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> "Search hidden"; "1" -> "Search icon"; else -> "Search bar" }
+-    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) "No tabs hidden" else "${it.size} hidden" } ?: "No tabs hidden"
+-    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> "Separate items"; "icons" -> "Toolbar icons"; else -> "Grouped" }
+-    else -> "Configure"
++    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) UiText.get(R.string.waex_ui_not_configured_dd1841d2, "Not configured") else UiText.get(R.string.waex_ui_configured_84aebc69, "Configured")
++    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") UiText.get(R.string.waex_ui_device_default_aa46c373, "Device default") else "$it DPI" } ?: UiText.get(R.string.waex_ui_device_default_aa46c373, "Device default")
++    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> UiText.get(R.string.waex_ui_search_hidden_7723b9b3, "Search hidden"); "1" -> UiText.get(R.string.waex_ui_search_icon_edfdb08d, "Search icon"); else -> UiText.get(R.string.waex_ui_search_bar_de54d68f, "Search bar") }
++    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden") else UiText.get(R.string.waex_ui_1_s_hidden_416c73f0, "%1\$s hidden", it.size) } ?: UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden")
++    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> UiText.get(R.string.waex_ui_separate_items_7f91460e, "Separate items"); "icons" -> UiText.get(R.string.waex_ui_toolbar_icons_12004bba, "Toolbar icons"); else -> UiText.get(R.string.waex_ui_grouped_89731456, "Grouped") }
++    else -> UiText.get(R.string.waex_ui_configure_6defafa2, "Configure")
+ }
+ 
+ private data class StyleGroup(
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/settings/SupportedVersionsScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/settings/SupportedVersionsScreen.kt
+index f4313c1..7692c91 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/settings/SupportedVersionsScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/settings/SupportedVersionsScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.settings
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.Context
+ import android.widget.Toast
+ import androidx.compose.foundation.background
+@@ -120,7 +123,7 @@ fun SupportedVersionsScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Supported Versions",
++                title = UiText.get(R.string.title_supported_versions, "Supported Versions"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -139,7 +142,7 @@ fun SupportedVersionsScreen() {
+             // 1. Installed App Status Banner
+             item {
+                 Text(
+-                    text = "TARGET APPLICATIONS COMPATIBILITY",
++                    text = UiText.get(R.string.waex_ui_target_applications_compatibility_4941b8c2, "TARGET APPLICATIONS COMPATIBILITY"),
+                     style = typography.labelSm,
+                     color = colors.primary,
+                     fontWeight = FontWeight.Bold,
+@@ -165,7 +168,7 @@ fun SupportedVersionsScreen() {
+                                     refreshCustomList()
+                                     Toast.makeText(
+                                         context,
+-                                        "Added universal rule $wildcardRule",
++                                        UiText.get(R.string.waex_ui_added_universal_rule_1_s_6af7d00f, "Added universal rule %1\$s", wildcardRule),
+                                         Toast.LENGTH_SHORT
+                                     ).show()
+                                 }
+@@ -178,7 +181,7 @@ fun SupportedVersionsScreen() {
+             // 2. Global Version Controls
+             item {
+                 Text(
+-                    text = "SETTINGS & ENFORCEMENT",
++                    text = UiText.get(R.string.waex_ui_settings_enforcement_4ea541a3, "SETTINGS & ENFORCEMENT"),
+                     style = typography.labelSm,
+                     color = colors.primary,
+                     fontWeight = FontWeight.Bold,
+@@ -207,13 +210,13 @@ fun SupportedVersionsScreen() {
+                         ) {
+                             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                 Text(
+-                                    text = "Enable Custom Versions",
++                                    text = UiText.get(R.string.waex_ui_enable_custom_versions_9be60a96, "Enable Custom Versions"),
+                                     style = typography.bodyMd,
+                                     color = colors.onSurface,
+                                     fontWeight = FontWeight.SemiBold
+                                 )
+                                 Text(
+-                                    text = "Allow user-defined versions and wildcard rules to load hooks",
++                                    text = UiText.get(R.string.waex_ui_allow_user_defined_versions_and_wildca_ac9bee29, "Allow user-defined versions and wildcard rules to load hooks"),
+                                     style = typography.labelSm,
+                                     color = colors.onSurfaceVariant
+                                 )
+@@ -243,13 +246,13 @@ fun SupportedVersionsScreen() {
+                         ) {
+                             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                 Text(
+-                                    text = "Bypass Version Verification",
++                                    text = UiText.get(R.string.waex_ui_bypass_version_verification_cc98aed9, "Bypass Version Verification"),
+                                     style = typography.bodyMd,
+                                     color = if (isBypassEnabled) colors.error else colors.onSurface,
+                                     fontWeight = FontWeight.SemiBold
+                                 )
+                                 Text(
+-                                    text = "Force WAEX hooks to run on any version without checking (Advanced)",
++                                    text = UiText.get(R.string.waex_ui_force_waex_hooks_to_run_on_any_version_ffdfb190, "Force WAEX hooks to run on any version without checking (Advanced)"),
+                                     style = typography.labelSm,
+                                     color = colors.onSurfaceVariant
+                                 )
+@@ -274,7 +277,7 @@ fun SupportedVersionsScreen() {
+                     verticalAlignment = Alignment.CenterVertically
+                 ) {
+                     Text(
+-                        text = "USER-DEFINED VERSIONS (${customVersionsList.size})",
++                        text = UiText.get(R.string.waex_ui_user_defined_versions_1_s_5f331ced, "USER-DEFINED VERSIONS (%1\$s)", customVersionsList.size),
+                         style = typography.labelSm,
+                         color = colors.primary,
+                         fontWeight = FontWeight.Bold,
+@@ -286,7 +289,7 @@ fun SupportedVersionsScreen() {
+                             if (unsupportedApps.isEmpty()) {
+                                 Toast.makeText(
+                                     context,
+-                                    "No rejected version is available to add. Check each target's rules status; this is not a feature compatibility test.",
++                                    UiText.get(R.string.waex_l10n_no_rejected_versions, "No rejected version is available to add. Check each target's rules status; this is not a feature compatibility test."),
+                                     Toast.LENGTH_SHORT
+                                 ).show()
+                             } else {
+@@ -303,12 +306,12 @@ fun SupportedVersionsScreen() {
+                     ) {
+                         Icon(
+                             imageVector = Icons.Rounded.Add,
+-                            contentDescription = "Add",
++                            contentDescription = UiText.get(R.string.action_add, "Add"),
+                             modifier = Modifier.size(16.dp)
+                         )
+                         Spacer(modifier = Modifier.width(4.dp))
+                         Text(
+-                            text = "Add Rule",
++                            text = UiText.get(R.string.waex_ui_add_rule_968c3cb8, "Add Rule"),
+                             style = typography.labelSm,
+                             fontWeight = FontWeight.Bold
+                         )
+@@ -326,7 +329,7 @@ fun SupportedVersionsScreen() {
+                     ) {
+                         Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
+                             Text(
+-                                text = "No custom version rules added yet.\nTap \"Add Rule\" to select an unsupported app and automatically register its version branch.",
++                                text = UiText.get(R.string.waex_ui_no_custom_version_rules_added_yet_tap_f86be378, "No custom version rules added yet.\nTap \"Add Rule\" to select an unsupported app and automatically register its version branch."),
+                                 style = typography.labelSm,
+                                 color = colors.onSurfaceVariant,
+                                 textAlign = TextAlign.Center
+@@ -338,7 +341,7 @@ fun SupportedVersionsScreen() {
+                 items(customVersionsList) { customVer ->
+                     VersionRuleItem(
+                         version = customVer,
+-                        badge = "User Defined",
++                        badge = UiText.get(R.string.waex_ui_user_defined_7b3c9074, "User Defined"),
+                         badgeColor = colors.primary,
+                         onDeleteClick = {
+                             UniversalVersionValidator.removeCustomVersion(prefs, customVer)
+@@ -352,7 +355,7 @@ fun SupportedVersionsScreen() {
+             item {
+                 Spacer(modifier = Modifier.height(8.dp))
+                 Text(
+-                    text = "UNIVERSAL BUILT-IN VERSIONS",
++                    text = UiText.get(R.string.waex_ui_universal_built_in_versions_3e18e512, "UNIVERSAL BUILT-IN VERSIONS"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant,
+                     fontWeight = FontWeight.Bold,
+@@ -363,7 +366,7 @@ fun SupportedVersionsScreen() {
+             items(UniversalVersionValidator.getBuiltinSupportedVersions(context)) { sysVer ->
+                 VersionRuleItem(
+                     version = sysVer,
+-                    badge = "Universal Base",
++                    badge = UiText.get(R.string.waex_ui_universal_base_c5227bf4, "Universal Base"),
+                     badgeColor = colors.secondary,
+                     onDeleteClick = null
+                 )
+@@ -390,13 +393,13 @@ fun SupportedVersionsScreen() {
+                 verticalArrangement = Arrangement.spacedBy(12.dp)
+             ) {
+                 Text(
+-                    text = "Select Unsupported App",
++                    text = UiText.get(R.string.waex_ui_select_unsupported_app_294b5650, "Select Unsupported App"),
+                     style = typography.headlineMd,
+                     color = colors.onSurface,
+                     fontWeight = FontWeight.Bold
+                 )
+                 Text(
+-                    text = "Select an installed app to automatically generate and register its universal version rule:",
++                    text = UiText.get(R.string.waex_ui_select_an_installed_app_to_automatical_35b59d2f, "Select an installed app to automatically generate and register its universal version rule:"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant
+                 )
+@@ -418,7 +421,7 @@ fun SupportedVersionsScreen() {
+                                     showSelectAppDialog = false
+                                     Toast.makeText(
+                                         context,
+-                                        "Added universal rule $wildcard",
++                                        UiText.get(R.string.waex_ui_added_universal_rule_1_s_6af7d00f, "Added universal rule %1\$s", wildcard),
+                                         Toast.LENGTH_SHORT
+                                     ).show()
+                                 }
+@@ -462,7 +465,7 @@ fun SupportedVersionsScreen() {
+                     modifier = Modifier.fillMaxWidth().height(50.dp),
+                     shape = radius.buttonShape
+                 ) {
+-                    Text("Cancel")
++                    Text(UiText.get(R.string.action_cancel, "Cancel"))
+                 }
+             }
+         }
+@@ -529,7 +532,7 @@ private fun AppVersionStatusCard(
+                             color = colors.onSurface
+                         )
+                         Text(
+-                            text = if (isInstalled) "Installed: v$versionName" else "Not installed on this device",
++                            text = if (isInstalled) UiText.get(R.string.waex_ui_installed_v_1_s_5bf3b702, "Installed: v%1\$s", versionName) else UiText.get(R.string.waex_ui_not_installed_on_this_device_6aac8f5e, "Not installed on this device"),
+                             style = typography.labelSm,
+                             color = colors.onSurfaceVariant
+                         )
+@@ -547,12 +550,12 @@ private fun AppVersionStatusCard(
+                 ) {
+                     Text(
+                         text = when {
+-                            !isInstalled -> "Unavailable"
+-                            decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> "Matches built-in rules"
+-                            decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> "Custom allowance (unverified)"
+-                            decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> "Bypass active (unverified)"
+-                            decision == UniversalVersionValidator.Decision.UNSUPPORTED -> "Version rejected by rules"
+-                            else -> "Version check unavailable"
++                            !isInstalled -> UiText.get(R.string.waex_ui_unavailable_ca184496, "Unavailable")
++                            decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> UiText.get(R.string.waex_l10n_builtin_match, "Matches built-in rules")
++                            decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> UiText.get(R.string.waex_l10n_custom_unverified, "Custom allowance (unverified)")
++                            decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> UiText.get(R.string.waex_l10n_bypass_unverified, "Bypass active (unverified)")
++                            decision == UniversalVersionValidator.Decision.UNSUPPORTED -> UiText.get(R.string.waex_l10n_rejected_rules, "Version rejected by rules")
++                            else -> UiText.get(R.string.waex_l10n_version_check_unavailable, "Version check unavailable")
+                         },
+                         style = typography.labelSm,
+                         fontWeight = FontWeight.Bold,
+@@ -582,7 +585,7 @@ private fun AppVersionStatusCard(
+                     Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                     Spacer(modifier = Modifier.width(6.dp))
+                     Text(
+-                        text = "Add Universal Rule ($wildcard)",
++                        text = UiText.get(R.string.waex_ui_add_universal_rule_1_s_2944d582, "Add Universal Rule (%1\$s)", wildcard),
+                         style = typography.labelSm,
+                         fontWeight = FontWeight.Bold
+                     )
+@@ -645,7 +648,7 @@ private fun VersionRuleItem(
+                 ) {
+                     Icon(
+                         imageVector = Icons.Rounded.Delete,
+-                        contentDescription = "Delete",
++                        contentDescription = UiText.get(R.string.action_delete, "Delete"),
+                         tint = colors.error,
+                         modifier = Modifier.size(18.dp)
+                     )
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/settings/SystemHealthScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/settings/SystemHealthScreen.kt
+index c088dc0..d98a6a3 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/settings/SystemHealthScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/settings/SystemHealthScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.settings
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+@@ -97,13 +100,13 @@ fun SystemHealthScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                "System Diagnostics",
++                UiText.get(R.string.waex_ui_system_diagnostics_005acd73, "System Diagnostics"),
+                 onBackClick = { nav.popBack() },
+                 actions = {
+                     IconButton(onClick = { refreshTrigger++ }) {
+                         Icon(
+                             imageVector = WaexIcons.Refresh,
+-                            contentDescription = "Refresh diagnostics",
++                            contentDescription = UiText.get(R.string.waex_ui_refresh_diagnostics_7bce98ec, "Refresh diagnostics"),
+                             tint = colors.onSurface
+                         )
+                     }
+@@ -128,36 +131,36 @@ fun SystemHealthScreen() {
+                 Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState()).padding(horizontal = spacing.pageMargin, vertical = 20.dp),
+                 verticalArrangement = Arrangement.spacedBy(16.dp)
+             ) {
+-                DiagnosticCard("Module & Framework", listOf(
+-                    "Module status" to if (data.moduleActive) "Active" else "Inactive",
+-                    "Module version" to "${data.moduleVersion} (${data.moduleVersionCode})",
+-                    "Xposed framework" to data.framework.name,
+-                    "Framework package" to (data.framework.packageName ?: "Not available"),
+-                    "Framework version" to (data.framework.version ?: "Not available"),
+-                    "Xposed API" to (data.framework.api?.toString() ?: "Not reported yet"),
+-                    "Root allowed" to if (data.rootAllowed) "Yes" else "No"
++                DiagnosticCard(UiText.get(R.string.waex_ui_module_framework_b4c7101d, "Module & Framework"), listOf(
++                    UiText.get(R.string.waex_ui_module_status_78cf7255, "Module status") to if (data.moduleActive) UiText.get(R.string.diag_status_active, "Active") else UiText.get(R.string.diag_status_inactive, "Inactive"),
++                    UiText.get(R.string.waex_ui_module_version_d923cdd4, "Module version") to "${data.moduleVersion} (${data.moduleVersionCode})",
++                    UiText.get(R.string.waex_ui_xposed_framework_171b0ce2, "Xposed framework") to com.waenhancer.utils.InternalLabels.text(data.framework.name),
++                    UiText.get(R.string.waex_ui_framework_package_2cd0a851, "Framework package") to (data.framework.packageName ?: UiText.get(R.string.waex_ui_not_available_67a926f7, "Not available")),
++                    UiText.get(R.string.waex_ui_framework_version_b4522d19, "Framework version") to (data.framework.version ?: UiText.get(R.string.waex_ui_not_available_67a926f7, "Not available")),
++                    UiText.get(R.string.waex_ui_xposed_api_09eb1963, "Xposed API") to (data.framework.api?.toString() ?: UiText.get(R.string.waex_ui_not_reported_yet_355b4779, "Not reported yet")),
++                    UiText.get(R.string.waex_ui_root_allowed_fb11f039, "Root allowed") to if (data.rootAllowed) UiText.get(R.string.waex_ui_yes_85a39ab3, "Yes") else UiText.get(R.string.waex_ui_no_1ea442a1, "No")
+                 ), if (data.moduleActive) Color(0xFF10B981) else colors.error)
+ 
+-                DiagnosticCard("Device Environment", listOf(
++                DiagnosticCard(UiText.get(R.string.waex_ui_device_environment_663d37f3, "Device Environment"), listOf(
+                     "Android" to "${data.androidVersion} (API ${data.sdk})",
+-                    "Device" to data.device,
+-                    "Supported ABIs" to data.abis,
+-                    "Kernel" to data.kernel,
+-                    "SELinux" to data.selinux
++                    UiText.get(R.string.waex_ui_device_6ba0bdec, "Device") to data.device,
++                    UiText.get(R.string.waex_ui_supported_abis_05063fc8, "Supported ABIs") to data.abis,
++                    UiText.get(R.string.waex_ui_kernel_8a716159, "Kernel") to data.kernel,
++                    "SELinux" to com.waenhancer.utils.InternalLabels.text(data.selinux)
+                 ), colors.primary)
+ 
+                 DiagnosticCard(
+-                    "Hook Runtime",
++                    UiText.get(R.string.waex_ui_hook_runtime_3e54a2b2, "Hook Runtime"),
+                     buildList {
+-                        add("Reported hooked targets" to data.hookedTargets)
+-                        add("Manager process hooked" to if (data.moduleActive) "Yes" else "No")
+-                        add("Runtime API captured" to if (data.framework.api != null) "Yes" else "No")
++                        add(UiText.get(R.string.waex_ui_reported_hooked_targets_0f7b326d, "Reported hooked targets") to com.waenhancer.utils.InternalLabels.text(data.hookedTargets))
++                        add(UiText.get(R.string.waex_ui_manager_process_hooked_a78a75a7, "Manager process hooked") to if (data.moduleActive) UiText.get(R.string.waex_ui_yes_85a39ab3, "Yes") else UiText.get(R.string.waex_ui_no_1ea442a1, "No"))
++                        add(UiText.get(R.string.waex_ui_runtime_api_captured_2625bdc2, "Runtime API captured") to if (data.framework.api != null) UiText.get(R.string.waex_ui_yes_85a39ab3, "Yes") else UiText.get(R.string.waex_ui_no_1ea442a1, "No"))
+                         targetApps.forEach { app ->
+-                            add("${app.appName} hooks" to app.injectionEvidence.label)
+-                            add("${app.appName} preference bridge" to TargetRuntimePresentation.bridge(app))
+-                            add("${app.appName} initialization" to TargetRuntimePresentation.initialization(app))
++                            add(UiText.get(R.string.waex_ui_1_s_hooks_f0333300, "%1\$s hooks", app.appName) to com.waenhancer.utils.InternalLabels.text(app.injectionEvidence.label))
++                            add(UiText.get(R.string.waex_ui_1_s_preference_bridge_c27008b2, "%1\$s preference bridge", app.appName) to com.waenhancer.utils.InternalLabels.text(TargetRuntimePresentation.bridge(app)))
++                            add(UiText.get(R.string.waex_ui_1_s_initialization_a35e3f64, "%1\$s initialization", app.appName) to com.waenhancer.utils.InternalLabels.text(TargetRuntimePresentation.initialization(app)))
+                             app.initializationError?.takeIf { it.isNotBlank() }?.let {
+-                                add("${app.appName} last error" to it)
++                                add(UiText.get(R.string.waex_ui_1_s_last_error_2f54987d, "%1\$s last error", app.appName) to it)
+                             }
+                         }
+                     },
+@@ -177,13 +180,13 @@ fun SystemHealthScreen() {
+                     ) {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Text(
+-                                "Show hook injection toast",
++                                UiText.get(R.string.waex_ui_show_hook_injection_toast_dc03f223, "Show hook injection toast"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.onSurface
+                             )
+                             Text(
+-                                "Show the injecting hooks notification when WhatsApp opens",
++                                UiText.get(R.string.waex_ui_show_the_injecting_hooks_notification_3b01d0c9, "Show the injecting hooks notification when WhatsApp opens"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+@@ -210,13 +213,13 @@ fun SystemHealthScreen() {
+                     ) {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Text(
+-                                "Show restart sheet after changes",
++                                UiText.get(R.string.waex_ui_show_restart_sheet_after_changes_7fd4dac3, "Show restart sheet after changes"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.onSurface
+                             )
+                             Text(
+-                                "Preferences refresh immediately; restarting WhatsApp re-injects hooks that only load at startup",
++                                UiText.get(R.string.waex_ui_preferences_refresh_immediately_restar_e3de7bee, "Preferences refresh immediately; restarting WhatsApp re-injects hooks that only load at startup"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant
+                             )
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/settings/UpdateSettingsScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/settings/UpdateSettingsScreen.kt
+index 25f21b0..c3d9870 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/settings/UpdateSettingsScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/settings/UpdateSettingsScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.settings
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.widget.Toast
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+@@ -72,7 +75,7 @@ fun UpdateSettingsScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Update Settings",
++                title = UiText.get(R.string.update_settings_title, "Update Settings"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -95,7 +98,7 @@ fun UpdateSettingsScreen() {
+             ) {
+                 Column(modifier = Modifier.padding(20.dp)) {
+                     Text(
+-                        text = "AUTOMATED CHECKS",
++                        text = UiText.get(R.string.waex_ui_automated_checks_adf7684a, "AUTOMATED CHECKS"),
+                         style = typography.labelSm,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.primary,
+@@ -109,13 +112,13 @@ fun UpdateSettingsScreen() {
+                     ) {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Text(
+-                                text = "Auto-Check for Updates",
++                                text = UiText.get(R.string.waex_ui_auto_check_for_updates_7598a244, "Auto-Check for Updates"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.onSurface
+                             )
+                             Text(
+-                                text = "Periodically check the WaEnhancerX release service",
++                                text = UiText.get(R.string.waex_ui_periodically_check_the_waenhancerx_rel_0026b98e, "Periodically check the WaEnhancerX release service"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant,
+                                 fontSize = 12.sp
+@@ -133,8 +136,8 @@ fun UpdateSettingsScreen() {
+                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+ 
+                     UpdateSwitchRow(
+-                        title = "Check when module opens",
+-                        description = "Run an eligible update check when WaEnhancerX opens",
++                        title = UiText.get(R.string.waex_ui_check_when_module_opens_147ecac4, "Check when module opens"),
++                        description = UiText.get(R.string.waex_ui_run_an_eligible_update_check_when_waen_57552a51, "Run an eligible update check when WaEnhancerX opens"),
+                         checked = checkModuleOpen,
+                         onCheckedChange = {
+                             checkModuleOpen = it
+@@ -145,8 +148,8 @@ fun UpdateSettingsScreen() {
+                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+ 
+                     UpdateSwitchRow(
+-                        title = "Check when WhatsApp opens",
+-                        description = "Ask the module to check when WhatsApp starts",
++                        title = UiText.get(R.string.waex_ui_check_when_whatsapp_opens_112f6dcc, "Check when WhatsApp opens"),
++                        description = UiText.get(R.string.waex_ui_ask_the_module_to_check_when_whatsapp_eef51246, "Ask the module to check when WhatsApp starts"),
+                         checked = checkWhatsAppOpen,
+                         onCheckedChange = {
+                             checkWhatsAppOpen = it
+@@ -165,10 +168,10 @@ fun UpdateSettingsScreen() {
+                         verticalAlignment = Alignment.CenterVertically
+                     ) {
+                         Column(Modifier.weight(1f)) {
+-                            Text("Check frequency", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
++                            Text(UiText.get(R.string.waex_ui_check_frequency_12e9b9ef, "Check frequency"), style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                             Text(frequencyLabel(updateFrequency), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+                         }
+-                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
++                        Text(UiText.get(R.string.waex_ui_change_c0bf75bd, "Change"), color = colors.primary, fontWeight = FontWeight.Bold)
+                     }
+ 
+                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
+@@ -182,10 +185,10 @@ fun UpdateSettingsScreen() {
+                         verticalAlignment = Alignment.CenterVertically
+                     ) {
+                         Column(Modifier.weight(1f)) {
+-                            Text("After ignoring an update", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
++                            Text(UiText.get(R.string.waex_ui_after_ignoring_an_update_0072f0fc, "After ignoring an update"), style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                             Text(ignoredLabel(ignoredBehavior), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
+                         }
+-                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
++                        Text(UiText.get(R.string.waex_ui_change_c0bf75bd, "Change"), color = colors.primary, fontWeight = FontWeight.Bold)
+                     }
+ 
+                     HorizontalDivider(
+@@ -200,13 +203,13 @@ fun UpdateSettingsScreen() {
+                     ) {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Text(
+-                                text = "Allow Version Downgrades",
++                                text = UiText.get(R.string.waex_ui_allow_version_downgrades_cb84c618, "Allow Version Downgrades"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.onSurface
+                             )
+                             Text(
+-                                text = "Install older builds over newer versions (Root needed)",
++                                text = UiText.get(R.string.waex_ui_install_older_builds_over_newer_versio_0fccde02, "Install older builds over newer versions (Root needed)"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant,
+                                 fontSize = 12.sp
+@@ -223,7 +226,7 @@ fun UpdateSettingsScreen() {
+                                     if (granted) {
+                                         allowDowngrades = true
+                                         prefManager.putBoolean("downgrades_enabled", true)
+-                                    } else Toast.makeText(context, "Root access is required to enable version downgrades", Toast.LENGTH_LONG).show()
++                                    } else Toast.makeText(context, UiText.get(R.string.waex_ui_root_access_is_required_to_enable_vers_650bb903, "Root access is required to enable version downgrades"), Toast.LENGTH_LONG).show()
+                                 }
+                             }
+                         )
+@@ -241,13 +244,13 @@ fun UpdateSettingsScreen() {
+                     ) {
+                         Column(modifier = Modifier.weight(1f)) {
+                             Text(
+-                                text = "Silent Root Install",
++                                text = UiText.get(R.string.waex_ui_silent_root_install_6fff1c8e, "Silent Root Install"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.SemiBold,
+                                 color = colors.onSurface
+                             )
+                             Text(
+-                                text = "Automatically install downloaded APK via root shell",
++                                text = UiText.get(R.string.waex_ui_automatically_install_downloaded_apk_v_c1ae30db, "Automatically install downloaded APK via root shell"),
+                                 style = typography.bodyMd,
+                                 color = colors.onSurfaceVariant,
+                                 fontSize = 12.sp
+@@ -264,7 +267,7 @@ fun UpdateSettingsScreen() {
+                                     if (granted) {
+                                         rootAutoInstall = true
+                                         prefManager.putBoolean("root_auto_install", true)
+-                                    } else Toast.makeText(context, "Root access is required to enable silent installation", Toast.LENGTH_LONG).show()
++                                    } else Toast.makeText(context, UiText.get(R.string.waex_ui_root_access_is_required_to_enable_sile_8a319a7a, "Root access is required to enable silent installation"), Toast.LENGTH_LONG).show()
+                                 }
+                             }
+                         )
+@@ -296,15 +299,15 @@ private fun UpdateSwitchRow(
+ }
+ 
+ private fun frequencyLabel(value: String) = when (value) {
+-    "every_open" -> "Every eligible app open"
+-    "six_hours" -> "At most every 6 hours"
+-    "weekly" -> "At most once a week"
+-    else -> "At most once a day"
++    "every_open" -> UiText.get(R.string.waex_ui_every_eligible_app_open_dadc9b2a, "Every eligible app open")
++    "six_hours" -> UiText.get(R.string.waex_ui_at_most_every_6_hours_6e9a44b5, "At most every 6 hours")
++    "weekly" -> UiText.get(R.string.waex_ui_at_most_once_a_week_8226a663, "At most once a week")
++    else -> UiText.get(R.string.waex_ui_at_most_once_a_day_9198c451, "At most once a day")
+ }
+ 
+ private fun ignoredLabel(value: String) = when (value) {
+-    "next_check" -> "Show it again on the next check"
+-    "after_day" -> "Remind me again after one day"
+-    "after_week" -> "Remind me again after one week"
+-    else -> "Wait until a newer release is available"
++    "next_check" -> UiText.get(R.string.waex_ui_show_it_again_on_the_next_check_40bbb328, "Show it again on the next check")
++    "after_day" -> UiText.get(R.string.waex_ui_remind_me_again_after_one_day_6522d8db, "Remind me again after one day")
++    "after_week" -> UiText.get(R.string.waex_ui_remind_me_again_after_one_week_31ebcd1e, "Remind me again after one week")
++    else -> UiText.get(R.string.waex_ui_wait_until_a_newer_release_is_availabl_9e7d1559, "Wait until a newer release is available")
+ }
+diff --git a/app/src/main/java/com/waenhancer/update/ChangelogParser.kt b/app/src/main/java/com/waenhancer/update/ChangelogParser.kt
+index ed9027d..b2c9dab 100644
+--- a/app/src/main/java/com/waenhancer/update/ChangelogParser.kt
++++ b/app/src/main/java/com/waenhancer/update/ChangelogParser.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.update
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ /**
+  * Represents a categorized changelog section (e.g. Added, Fixed, Removed, Improvements).
+  */
+@@ -39,7 +42,7 @@ object ChangelogParser {
+                 sections.add(ChangelogSection(title, currentItems.toList()))
+             } else if (title == null && currentItems.isNotEmpty()) {
+                 // Intro text or ungrouped text
+-                sections.add(ChangelogSection("Overview", currentItems.toList()))
++                sections.add(ChangelogSection(UiText.get(R.string.waex_ui_overview_d4b1ea57, "Overview"), currentItems.toList()))
+             }
+             currentItems.clear()
+         }
+diff --git a/app/src/main/java/com/waenhancer/update/UpdateCheckCoordinator.kt b/app/src/main/java/com/waenhancer/update/UpdateCheckCoordinator.kt
+index 169b4b6..33c42fe 100644
+--- a/app/src/main/java/com/waenhancer/update/UpdateCheckCoordinator.kt
++++ b/app/src/main/java/com/waenhancer/update/UpdateCheckCoordinator.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.update
+ 
++import com.waenhancer.utils.UiText
++
+ import android.Manifest
+ import android.app.NotificationChannel
+ import android.app.NotificationManager
+@@ -131,7 +133,7 @@ object UpdateCheckCoordinator {
+             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+         manager.notify(NOTIFICATION_ID, NotificationCompat.Builder(context, CHANNEL_ID)
+             .setSmallIcon(R.drawable.ic_waex_download)
+-            .setContentTitle("WAEX ${release.version} is available")
++            .setContentTitle(UiText.get(R.string.waex_ui_waex_1_s_is_available_8b796483, "WAEX %1\$s is available", release.version))
+             .setContentText(release.name)
+             .setStyle(NotificationCompat.BigTextStyle().bigText(release.body.take(500)))
+             .setContentIntent(pending)
+diff --git a/app/src/main/java/com/waenhancer/update/UpdateDownloader.kt b/app/src/main/java/com/waenhancer/update/UpdateDownloader.kt
+index 4aeaf25..64af049 100644
+--- a/app/src/main/java/com/waenhancer/update/UpdateDownloader.kt
++++ b/app/src/main/java/com/waenhancer/update/UpdateDownloader.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.update
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.Context
+ import android.content.ContextWrapper
+@@ -137,12 +140,12 @@ object UpdateDownloader {
+     fun installApk(context: Context, apkFile: File, expectedVersion: String) {
+         val activity = context.findActivity() ?: return
+         if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+-            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_apk_does_not_match_selected_version_1_2285cdd0, "APK does not match selected version %1\$s", expectedVersion), Toast.LENGTH_LONG).show()
+             return
+         }
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.packageManager.canRequestPackageInstalls()) {
+             activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")))
+-            Toast.makeText(activity, "Please allow WaEnhancer X to install apps", Toast.LENGTH_LONG).show()
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_please_allow_waenhancer_x_to_install_a_cde29fd6, "Please allow WaEnhancer X to install apps"), Toast.LENGTH_LONG).show()
+             return
+         }
+         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", apkFile)
+@@ -153,7 +156,7 @@ object UpdateDownloader {
+     fun installApkWithRoot(context: Context, apkFile: File, expectedVersion: String) {
+         val activity = context.findActivity() ?: return
+         if (!isValidModuleApk(activity, apkFile, expectedVersion)) {
+-            Toast.makeText(activity, "APK does not match selected version $expectedVersion", Toast.LENGTH_LONG).show()
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_apk_does_not_match_selected_version_1_2285cdd0, "APK does not match selected version %1\$s", expectedVersion), Toast.LENGTH_LONG).show()
+             return
+         }
+         Thread {
+@@ -186,11 +189,11 @@ object UpdateDownloader {
+             val success = result?.trim()?.startsWith("Success", ignoreCase = true) == true
+             activity.runOnUiThread {
+                 if (success) {
+-                    Toast.makeText(activity, "Installation successful. Restarting...", Toast.LENGTH_LONG).show()
++                    Toast.makeText(activity, UiText.get(R.string.waex_ui_installation_successful_restarting_dbd45bac, "Installation successful. Restarting..."), Toast.LENGTH_LONG).show()
+                     Handler(Looper.getMainLooper()).postDelayed({ Process.killProcess(Process.myPid()) }, 2000)
+                 } else Toast.makeText(
+                     activity,
+-                    "Root installation failed: ${result?.trim().orEmpty().ifEmpty { "Unable to execute the root installer" }}",
++                    UiText.get(R.string.waex_ui_root_installation_failed_1_s_eb2c4718, "Root installation failed: %1\$s", result?.trim().orEmpty().ifEmpty { UiText.get(R.string.waex_ui_unable_to_execute_the_root_installer_798f1547, "Unable to execute the root installer") }),
+                     Toast.LENGTH_LONG
+                 ).show()
+             }
+diff --git a/app/src/main/java/com/waenhancer/utils/DisplayLocalePolicy.java b/app/src/main/java/com/waenhancer/utils/DisplayLocalePolicy.java
+new file mode 100644
+index 0000000..46ad3cf
+--- /dev/null
++++ b/app/src/main/java/com/waenhancer/utils/DisplayLocalePolicy.java
+@@ -0,0 +1,20 @@
++package com.waenhancer.utils;
++
++import java.util.Locale;
++
++/** Pure locale selection policy; never persists values or changes Locale.getDefault(). */
++public final class DisplayLocalePolicy {
++    private DisplayLocalePolicy() {}
++    public static String canonicalCode(String code) {
++        if (code == null || code.trim().isEmpty()) return "system";
++        if (code.equals("es")) return "es-419"; // Keep existing app_language selections working.
++        return code;
++    }
++    public static Locale resolve(String code, Locale system) {
++        String canonical = canonicalCode(code);
++        if (canonical.equals("system")) return system != null ? system : Locale.ENGLISH;
++        if (canonical.equals("in")) return Locale.forLanguageTag("id-ID");
++        Locale result = Locale.forLanguageTag(canonical);
++        return result.getLanguage().isEmpty() ? (system != null ? system : Locale.ENGLISH) : result;
++    }
++}
+diff --git a/app/src/main/java/com/waenhancer/utils/InternalLabels.java b/app/src/main/java/com/waenhancer/utils/InternalLabels.java
+new file mode 100644
+index 0000000..b2845da
+--- /dev/null
++++ b/app/src/main/java/com/waenhancer/utils/InternalLabels.java
+@@ -0,0 +1,182 @@
++package com.waenhancer.utils;
++import com.waenhancer.app.R;
++/** Presentation-only labels. Never pass message bodies, contact names or server content. */
++public final class InternalLabels {
++    private InternalLabels() {}
++    public static String text(String value) {
++        if (value == null) return "";
++        final String obsoletePrefix = "Last report (not current): ";
++        if (value.startsWith(obsoletePrefix)) {
++            final String suffix = value.substring(obsoletePrefix.length());
++            return UiText.get(R.string.waex_l10n_last_report,
++                    "Last report (not current): %1$s", text(suffix));
++        }
++        switch (value) {
++            case "All": return UiText.get(R.string.filter_all, "All");
++            case "Light": return UiText.get(R.string.theme_light, "Light");
++            case "Dark": return UiText.get(R.string.theme_dark, "Dark");
++            case "System": return UiText.get(R.string.waex_ui_system_6725e7bb, "System");
++            case "Stable": return UiText.get(R.string.waex_ui_stable_90ee3057, "Stable");
++            case "Beta": return UiText.get(R.string.waex_ui_beta_70339031, "Beta");
++            case "Release": return UiText.get(R.string.waex_ui_release_e020e3c6, "Release");
++            case "Debug": return UiText.get(R.string.waex_ui_debug_1a03bd2f, "Debug");
++            case "ACTIVE": return UiText.get(R.string.waex_ui_active_630c2f1c, "ACTIVE");
++            case "FAILED": return UiText.get(R.string.waex_ui_failed_02bd3492, "FAILED");
++            case "DISABLED": return UiText.get(R.string.waex_ui_disabled_0c7ef33e, "DISABLED");
++            case "PENDING": return UiText.get(R.string.waex_ui_pending_332011b9, "PENDING");
++            case "Active": return UiText.get(R.string.diag_status_active, "Active");
++            case "Failed": return UiText.get(R.string.waex_ui_failed_031a8f0f, "Failed");
++            case "Disabled": return UiText.get(R.string.waex_ui_disabled_75081b59, "Disabled");
++            case "Privacy": return UiText.get(R.string.tab_privacy, "Privacy");
++            case "Conversation": return UiText.get(R.string.tab_conversation, "Conversation");
++            case "Customization": return UiText.get(R.string.customization_coming_soon_title, "Customization");
++            case "Media": return UiText.get(R.string.catalog_tab_media, "Media");
++            case "Automation": return UiText.get(R.string.subtab_automation, "Automation");
++            case "Licensing": return UiText.get(R.string.waex_ui_licensing_75b38c87, "Licensing");
++            case "General": return UiText.get(R.string.waex_ui_general_c910d474, "General");
++            case "Permissive": return UiText.get(R.string.waex_ui_permissive_3bd46607, "Permissive");
++            case "Enforcing": return UiText.get(R.string.waex_ui_enforcing_1ca5672a, "Enforcing");
++            case "Unknown": return UiText.get(R.string.waex_ui_unknown_b764cdc0, "Unknown");
++            case "Not detected": return UiText.get(R.string.waex_ui_not_detected_9f4a1062, "Not detected");
++            case "None reported": return UiText.get(R.string.waex_ui_none_reported_ffcae7fc, "None reported");
++            case "Xposed-compatible framework": return UiText.get(R.string.waex_ui_xposed_compatible_framework_7b13131b, "Xposed-compatible framework");
++            case "Hide Receipts": return UiText.get(R.string.waex_ui_hide_receipts_c2702133, "Hide Receipts");
++            case "Hide Seen": return UiText.get(R.string.waex_ui_hide_seen_28cfe6b3, "Hide Seen");
++            case "Freeze Last Seen": return UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen");
++            case "Anti-Revoke": return UiText.get(R.string.waex_ui_anti_revoke_e16be3ed, "Anti-Revoke");
++            case "Anti Revoke": return UiText.get(R.string.waex_ui_anti_revoke_c56cb768, "Anti Revoke");
++            case "Anti-Revoke Status": return UiText.get(R.string.waex_ui_anti_revoke_status_8c7b6e5c, "Anti-Revoke Status");
++            case "Anti-Edit Messages": return UiText.get(R.string.waex_ui_anti_edit_messages_5a3cecdb, "Anti-Edit Messages");
++            case "Anti-Disappearing Messages": return UiText.get(R.string.waex_ui_anti_disappearing_messages_f4d02052, "Anti-Disappearing Messages");
++            case "Hide Typing": return UiText.get(R.string.feat_always_typing_title, "Hide Typing");
++            case "Always Online": return UiText.get(R.string.feat_always_online_title, "Always Online");
++            case "Call Privacy": return UiText.get(R.string.waex_ui_call_privacy_230ae481, "Call Privacy");
++            case "Hide Forwarded Tag": return UiText.get(R.string.waex_ui_hide_forwarded_tag_a4f281a7, "Hide Forwarded Tag");
++            case "Custom Privacy": return UiText.get(R.string.waex_ui_custom_privacy_76f9c20d, "Custom Privacy");
++            case "Hide Recording": return UiText.get(R.string.waex_ui_hide_recording_52e7a008, "Hide Recording");
++            case "Hide Online": return UiText.get(R.string.waex_ui_hide_online_d0b23371, "Hide Online");
++            case "Blue On Reply": return UiText.get(R.string.waex_ui_blue_on_reply_afb645a1, "Blue On Reply");
++            case "Blue on Reply": return UiText.get(R.string.waex_ui_blue_on_reply_d4d34105, "Blue on Reply");
++            case "New Chat": return UiText.get(R.string.feat_direct_chat_dialer_title, "New Chat");
++            case "Message Bomber": return UiText.get(R.string.feat_message_bomber_title, "Message Bomber");
++            case "Audio to Voice Status": return UiText.get(R.string.feat_send_audio_as_voice_status_title, "Audio to Voice Status");
++            case "Status Splitter": return UiText.get(R.string.waex_ui_status_splitter_89951412, "Status Splitter");
++            case "File Size Spoofer": return UiText.get(R.string.feat_file_size_spoofer_title, "File Size Spoofer");
++            case "Unlock WA Plus": return UiText.get(R.string.feat_unlock_premium_customization_title, "Unlock WA Plus");
++            case "Bootloader Spoofing & Integrity": return UiText.get(R.string.waex_ui_bootloader_spoofing_integrity_54acd305, "Bootloader Spoofing & Integrity");
++            case "Chat Limits Bypass": return UiText.get(R.string.waex_ui_chat_limits_bypass_3746bd63, "Chat Limits Bypass");
++            case "Double Tap Reaction": return UiText.get(R.string.waex_ui_double_tap_reaction_b4b8e267, "Double Tap Reaction");
++            case "MinorFixes": return UiText.get(R.string.waex_ui_minorfixes_c42ace17, "MinorFixes");
++            case "MessageDeviceSource": return UiText.get(R.string.waex_ui_messagedevicesource_6086ae2c, "MessageDeviceSource");
++            case "Home Header Actions": return UiText.get(R.string.waex_ui_home_header_actions_98c6aa19, "Home Header Actions");
++            case "Chat List Customizations": return UiText.get(R.string.waex_ui_chat_list_customizations_e7528188, "Chat List Customizations");
++            case "Download View Once": return UiText.get(R.string.feat_download_view_once_title, "Download View Once");
++            case "Status Download": return UiText.get(R.string.waex_ui_status_download_bbc8b7f1, "Status Download");
++            case "Media Quality Bypass": return UiText.get(R.string.waex_ui_media_quality_bypass_699781cb, "Media Quality Bypass");
++            case "Media Preview": return UiText.get(R.string.waex_ui_media_preview_2e70b815, "Media Preview");
++            case "Disable Proximity Sensor": return UiText.get(R.string.waex_ui_disable_proximity_sensor_9f5bf89d, "Disable Proximity Sensor");
++            case "Call Recording": return UiText.get(R.string.feat_call_recording_title, "Call Recording");
++            case "Profile Photo Download": return UiText.get(R.string.waex_ui_profile_photo_download_95f7b1b8, "Profile Photo Download");
++            case "Presence Toasts": return UiText.get(R.string.waex_ui_presence_toasts_ee8f508c, "Presence Toasts");
++            case "Online Presence Indicators": return UiText.get(R.string.waex_ui_online_presence_indicators_05934fbe, "Online Presence Indicators");
++            case "Tasker Integration": return UiText.get(R.string.waex_ui_tasker_integration_87cf63e8, "Tasker Integration");
++            case "Filter Items": return UiText.get(R.string.waex_ui_filter_items_954cac3d, "Filter Items");
++            case "Custom DPI": return UiText.get(R.string.waex_ui_custom_dpi_749aab90, "Custom DPI");
++            case "Custom Time Format": return UiText.get(R.string.waex_ui_custom_time_format_dfda77a8, "Custom Time Format");
++            case "Custom Toolbar": return UiText.get(R.string.waex_ui_custom_toolbar_1fde08d6, "Custom Toolbar");
++            case "Bubble Colors": return UiText.get(R.string.waex_ui_bubble_colors_8926b38c, "Bubble Colors");
++            case "Hide Home Tabs": return UiText.get(R.string.waex_ui_hide_home_tabs_1bb26596, "Hide Home Tabs");
++            case "Instagram Status Layout": return UiText.get(R.string.waex_ui_instagram_status_layout_59eb72e4, "Instagram Status Layout");
++            case "Separate Groups": return UiText.get(R.string.feat_separate_groups_tabs_title, "Separate Groups");
++            case "Floating Bottom Bar": return UiText.get(R.string.feat_floating_bottom_bar_title, "Floating Bottom Bar");
++            case "CSS Theme": return UiText.get(R.string.waex_ui_css_theme_5cd3abac, "CSS Theme");
++            case "Chat Filters": return UiText.get(R.string.waex_ui_chat_filters_444a8afd, "Chat Filters");
++            case "Stickers": return UiText.get(R.string.waex_ui_stickers_dbf9cbbe, "Stickers");
++            case "Prevent Revoke": return UiText.get(R.string.waex_ui_prevent_revoke_35c7d01c, "Prevent Revoke");
++            case "Anti View Once": return UiText.get(R.string.waex_ui_anti_view_once_73413cd8, "Anti View Once");
++            case "Custom Theme CSS": return UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS");
++            case "FilterItems": return UiText.get(R.string.waex_ui_filteritems_13d0396f, "FilterItems");
++            case "Custom Privacy (Per-Contact)": return UiText.get(R.string.waex_ui_custom_privacy_per_contact_ec801065, "Custom Privacy (Per-Contact)");
++            case "Chat Filter Display": return UiText.get(R.string.waex_ui_chat_filter_display_09f142ed, "Chat Filter Display");
++            case "Seconds on Timestamp": return UiText.get(R.string.waex_ui_seconds_on_timestamp_4f657076, "Seconds on Timestamp");
++            case "Enable IGStatus on Home Screen": return UiText.get(R.string.waex_ui_enable_igstatus_on_home_screen_ce457dd6, "Enable IGStatus on Home Screen");
++            case "New Settings Style": return UiText.get(R.string.waex_ui_new_settings_style_75a5f9e2, "New Settings Style");
++            case "Separate Chats and Groups": return UiText.get(R.string.waex_ui_separate_chats_and_groups_0f02fb58, "Separate Chats and Groups");
++            case "CallRecording": return UiText.get(R.string.waex_ui_callrecording_54cdad34, "CallRecording");
++            case "ProfilePhotoDownload": return UiText.get(R.string.waex_ui_profilephotodownload_fc5a91b0, "ProfilePhotoDownload");
++            case "AntiDisappearingMessagesHook": return UiText.get(R.string.waex_ui_antidisappearingmessageshook_a65958d9, "AntiDisappearingMessagesHook");
++            case "Anti-View Once": return UiText.get(R.string.waex_ui_anti_view_once_a41c8a43, "Anti-View Once");
++            case "AutoNextStatusHook": return UiText.get(R.string.waex_ui_autonextstatushook_36e09852, "AutoNextStatusHook");
++            case "Do Not Disturb (DND) Mode": return UiText.get(R.string.waex_ui_do_not_disturb_dnd_mode_953bfab9, "Do Not Disturb (DND) Mode");
++            case "Freeze Last Seen & Hide Online": return UiText.get(R.string.waex_ui_freeze_last_seen_hide_online_cc51a92d, "Freeze Last Seen & Hide Online");
++            case "Hide Archived Chats": return UiText.get(R.string.waex_ui_hide_archived_chats_2e849c18, "Hide Archived Chats");
++            case "Hide Locked Chats": return UiText.get(R.string.waex_ui_hide_locked_chats_158db2ee, "Hide Locked Chats");
++            case "Locked Chats Enhancer": return UiText.get(R.string.waex_ui_locked_chats_enhancer_9e4efc4c, "Locked Chats Enhancer");
++            case "Typing Privacy": return UiText.get(R.string.waex_ui_typing_privacy_275e0699, "Typing Privacy");
++            case "Hide Read Receipts": return UiText.get(R.string.waex_ui_hide_read_receipts_8570ec32, "Hide Read Receipts");
++            case "Anti Edit Messages": return UiText.get(R.string.waex_ui_anti_edit_messages_ba78575f, "Anti Edit Messages");
++            case "Hide Anti Revoke": return UiText.get(R.string.waex_ui_hide_anti_revoke_31415448, "Hide Anti Revoke");
++            case "Message Device Source": return UiText.get(R.string.waex_ui_message_device_source_07c0fd57, "Message Device Source");
++            case "Minor Fixes": return UiText.get(R.string.waex_ui_minor_fixes_d7dd47fe, "Minor Fixes");
++            case "Preserve Delete For Me": return UiText.get(R.string.waex_ui_preserve_delete_for_me_6b1bbc80, "Preserve Delete For Me");
++            case "Copy Status Text": return UiText.get(R.string.waex_ui_copy_status_text_2a137dd9, "Copy Status Text");
++            case "Unknown Feature": return UiText.get(R.string.waex_ui_unknown_feature_b9dd509c, "Unknown Feature");
++            case "Not Installed": return UiText.get(R.string.waex_ui_not_installed_d08041a7, "Not Installed");
++            case "Not reported yet": return UiText.get(R.string.waex_ui_not_reported_yet_355b4779, "Not reported yet");
++            case "Overview": return UiText.get(R.string.waex_ui_overview_d4b1ea57, "Overview");
++            case "Fixes": return UiText.get(R.string.waex_ui_fixes_59e59654, "Fixes");
++            case "Fixed": return UiText.get(R.string.waex_ui_fixed_1246fc93, "Fixed");
++            case "Improvements": return UiText.get(R.string.waex_ui_improvements_c3eb9e6f, "Improvements");
++            case "Added": return UiText.get(R.string.waex_ui_added_6b02e0d3, "Added");
++            case "New Language": return UiText.get(R.string.waex_ui_new_language_4625c9e3, "New Language");
++            case "Community contribution": return UiText.get(R.string.waex_ui_community_contribution_b81681ab, "Community contribution");
++            case "Notes": return UiText.get(R.string.waex_ui_notes_8a7525b1, "Notes");
++            case "Chat Bubble Colors": return UiText.get(R.string.waex_ui_chat_bubble_colors_6fb86fab, "Chat Bubble Colors");
++            case "Channel Recommendations Filter": return UiText.get(R.string.waex_ui_channel_recommendations_filter_94085776, "Channel Recommendations Filter");
++            case "Jump to First Message": return UiText.get(R.string.feat_jump_to_first_message_title, "Jump to First Message");
++            case "Anti Edit": return UiText.get(R.string.waex_ui_anti_edit_c3d97416, "Anti Edit");
++            case "Media Status": return UiText.get(R.string.waex_ui_media_status_498f9960, "Media Status");
++            case "Not installed": return UiText.get(R.string.waex_l10n_runtime_001, "Not installed");
++            case "Module inactive": return UiText.get(R.string.waex_l10n_runtime_002, "Module inactive");
++            case "Injection confirmed": return UiText.get(R.string.waex_l10n_runtime_003, "Injection confirmed");
++            case "Injection unconfirmed: boot identity unavailable": return UiText.get(R.string.waex_l10n_runtime_004, "Injection unconfirmed: boot identity unavailable");
++            case "Injection unconfirmed: report from another boot": return UiText.get(R.string.waex_l10n_runtime_005, "Injection unconfirmed: report from another boot");
++            case "Injection unconfirmed: no runtime report": return UiText.get(R.string.waex_l10n_runtime_006, "Injection unconfirmed: no runtime report");
++            case "Injection unconfirmed: report expired or clock changed": return UiText.get(R.string.waex_l10n_runtime_007, "Injection unconfirmed: report expired or clock changed");

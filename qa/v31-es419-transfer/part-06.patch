@@ -1,0 +1,1000 @@
++            case "Injection unconfirmed: process check unavailable": return UiText.get(R.string.waex_l10n_runtime_008, "Injection unconfirmed: process check unavailable");
++            case "Reported process is not running": return UiText.get(R.string.waex_l10n_runtime_009, "Reported process is not running");
++            case "Injection unconfirmed: process changed": return UiText.get(R.string.waex_l10n_runtime_010, "Injection unconfirmed: process changed");
++            case "Injected • Compatibility check unavailable": return UiText.get(R.string.waex_l10n_runtime_011, "Injected • Compatibility check unavailable");
++            case "Injected • Paused by target version guard": return UiText.get(R.string.waex_l10n_runtime_012, "Injected • Paused by target version guard");
++            case "Injected • Initialization failed": return UiText.get(R.string.waex_l10n_runtime_013, "Injected • Initialization failed");
++            case "Injected • Local version check requires review": return UiText.get(R.string.waex_l10n_runtime_014, "Injected • Local version check requires review");
++            case "Injected • Initialization in progress": return UiText.get(R.string.waex_l10n_runtime_015, "Injected • Initialization in progress");
++            case "Injected • Settings connection unavailable": return UiText.get(R.string.waex_l10n_runtime_016, "Injected • Settings connection unavailable");
++            case "Injected • Using settings fallback": return UiText.get(R.string.waex_l10n_runtime_017, "Injected • Using settings fallback");
++            case "Injected • Some features failed": return UiText.get(R.string.waex_l10n_runtime_018, "Injected • Some features failed");
++            case "Injected • Feature readiness unconfirmed": return UiText.get(R.string.waex_l10n_runtime_019, "Injected • Feature readiness unconfirmed");
++            case "Injected • Settings connection unconfirmed": return UiText.get(R.string.waex_l10n_runtime_020, "Injected • Settings connection unconfirmed");
++            case "Injected • Version bypass active": return UiText.get(R.string.waex_l10n_runtime_021, "Injected • Version bypass active");
++            case "Injected • Custom version allowance; unverified": return UiText.get(R.string.waex_l10n_runtime_022, "Injected • Custom version allowance; unverified");
++            case "Injected • Initialization reported complete": return UiText.get(R.string.waex_l10n_runtime_023, "Injected • Initialization reported complete");
++            case "Connected directly": return UiText.get(R.string.waex_l10n_runtime_024, "Connected directly");
++            case "Using disk fallback": return UiText.get(R.string.waex_l10n_runtime_025, "Using disk fallback");
++            case "Unavailable": return UiText.get(R.string.waex_l10n_runtime_026, "Unavailable");
++            case "Not reported": return UiText.get(R.string.waex_l10n_runtime_027, "Not reported");
++            case "Completed": return UiText.get(R.string.waex_l10n_runtime_028, "Completed");
++            case "Completed with hook failures": return UiText.get(R.string.waex_l10n_runtime_029, "Completed with hook failures");
++            case "In progress": return UiText.get(R.string.waex_l10n_runtime_030, "In progress");
++            case "Paused: compatibility check unavailable": return UiText.get(R.string.waex_l10n_runtime_031, "Paused: compatibility check unavailable");
++            case "Paused: unsupported version": return UiText.get(R.string.waex_l10n_runtime_032, "Paused: unsupported version");
++            case "Injection detected": return UiText.get(R.string.waex_l10n_runtime_034, "Injection detected");
++            case "No installed target detected": return UiText.get(R.string.waex_l10n_runtime_035, "No installed target detected");
++            case "Version rules require review": return UiText.get(R.string.waex_l10n_runtime_036, "Version rules require review");
++            case "Target runtime requires review": return UiText.get(R.string.waex_l10n_runtime_037, "Target runtime requires review");
++            case "Version bypass active; compatibility unverified": return UiText.get(R.string.waex_l10n_runtime_038, "Version bypass active; compatibility unverified");
++            case "Custom version allowance; compatibility unverified": return UiText.get(R.string.waex_l10n_runtime_039, "Custom version allowance; compatibility unverified");
++            case "Version rules accepted; runtime unconfirmed": return UiText.get(R.string.waex_l10n_runtime_040, "Version rules accepted; runtime unconfirmed");
++            case "Rules accepted; initialization reported": return UiText.get(R.string.waex_l10n_runtime_041, "Rules accepted; initialization reported");
++            default: return value;
++        }
++    }
++}
+diff --git a/app/src/main/java/com/waenhancer/utils/LocaleHelper.kt b/app/src/main/java/com/waenhancer/utils/LocaleHelper.kt
+index 0dd895e..2a52211 100644
+--- a/app/src/main/java/com/waenhancer/utils/LocaleHelper.kt
++++ b/app/src/main/java/com/waenhancer/utils/LocaleHelper.kt
+@@ -16,7 +16,7 @@ object LocaleHelper {
+         LanguageOption("system", "Follow System", "System Default"),
+         LanguageOption("en", "English", "English"),
+         LanguageOption("zh-CN", "Chinese (Simplified)", "简体中文"),
+-        LanguageOption("es", "Spanish", "Español"),
++        LanguageOption("es-419", "Spanish (Latin America)", "Español (Latinoamérica)"),
+         LanguageOption("ar", "Arabic", "العربية"),
+         LanguageOption("pt", "Portuguese", "Português"),
+         LanguageOption("in", "Indonesian", "Bahasa Indonesia"),
+@@ -30,30 +30,28 @@ object LocaleHelper {
+ 
+     fun getSelectedLanguageCode(context: Context): String {
+         val prefs = PreferenceStores.publicStore(context)
+-        return prefs.getString(PREF_APP_LANGUAGE, "system") ?: "system"
++        return DisplayLocalePolicy.canonicalCode(prefs.getString(PREF_APP_LANGUAGE, "system"))
+     }
+ 
+     fun getLanguageDisplayName(code: String): String {
+-        val opt = SUPPORTED_LANGUAGES.find { it.code == code }
+-        return opt?.nativeName ?: "Follow System"
++        val canonical = DisplayLocalePolicy.canonicalCode(code)
++        if (canonical == "system") return UiText.get(com.waenhancer.app.R.string.language_default, "System Default")
++        if (canonical == "es-419") return "Español (Latinoamérica)"
++        return SUPPORTED_LANGUAGES.find { it.code == canonical }?.nativeName ?: canonical
++    }
++
++    /** Localized language names, without changing the persisted BCP-47 values. */
++    fun getLanguageExplanation(code: String): String {
++        if (code == "system") return getLanguageDisplayName(code)
++        return DisplayLocalePolicy.resolve(code, java.util.Locale.ENGLISH)
++            .getDisplayName(UiText.displayLocale())
+     }
+ 
+     fun applyLanguage(context: Context, langCode: String) {
+         val prefs = PreferenceStores.publicStore(context)
+         prefs.edit().putString(PREF_APP_LANGUAGE, langCode).apply()
+ 
+-        val locale = if (langCode == "system") {
+-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+-                Resources.getSystem().configuration.locales[0]
+-            } else {
+-                @Suppress("DEPRECATION")
+-                Resources.getSystem().configuration.locale
+-            }
+-        } else if (langCode == "in") {
+-            Locale("in", "ID")
+-        } else {
+-            Locale.forLanguageTag(langCode)
+-        }
++        val locale = DisplayLocalePolicy.resolve(langCode, Resources.getSystem().configuration.locales[0])
+         Locale.setDefault(locale)
+     }
+ 
+@@ -61,7 +59,7 @@ object LocaleHelper {
+         val langCode = getSelectedLanguageCode(context)
+         if (langCode == "system") return context
+ 
+-        val locale = if (langCode == "in") Locale("in", "ID") else Locale.forLanguageTag(langCode)
++        val locale = DisplayLocalePolicy.resolve(langCode, Resources.getSystem().configuration.locales[0])
+         Locale.setDefault(locale)
+ 
+         val config = Configuration(context.resources.configuration)
+diff --git a/app/src/main/java/com/waenhancer/utils/PreferenceLabels.java b/app/src/main/java/com/waenhancer/utils/PreferenceLabels.java
+new file mode 100644
+index 0000000..5e7602f
+--- /dev/null
++++ b/app/src/main/java/com/waenhancer/utils/PreferenceLabels.java
+@@ -0,0 +1,122 @@
++package com.waenhancer.utils;
++import com.waenhancer.app.R;
++/** Display-only catalog lookup; no preference writes or changes to stored keys. */
++public final class PreferenceLabels {
++    private PreferenceLabels() {}
++    public static String text(String key) {
++        if (key == null) key = "";
++        switch (key) {
++            case "always_online": return UiText.get(R.string.feat_always_online_title, "Always Online");
++            case "always_typing": return UiText.get(R.string.feat_always_typing_title, "Hide Typing");
++            case "anti_edit_messages": return UiText.get(R.string.feat_anti_edit_messages_title, "Show Edited Message History");
++            case "anti_revoke": return UiText.get(R.string.feat_anti_revoke_title, "Anti-Revoke Messages");
++            case "anti_view_once": return UiText.get(R.string.feat_anti_view_once_title, "Unlimited View Once");
++            case "antidisappearing": return UiText.get(R.string.feat_antidisappearing_title, "Anti Disappearing Messages");
++            case "antirevoke": return UiText.get(R.string.feat_anti_revoke_title, "Anti-Revoke Messages");
++            case "antirevokestatus": return UiText.get(R.string.feat_antirevokestatus_title, "Anti-Delete Status");
++            case "autonext_status": return UiText.get(R.string.feat_autonext_status_title, "Disable Auto Skip Status");
++            case "blueonreply": return UiText.get(R.string.feat_blueonreply_title, "Send Blue Ticks upon Reply");
++            case "bootloader_spoofer": return UiText.get(R.string.feat_bootloader_spoofer_title, "Bootloader Spoofer");
++            case "broadcast_tag": return UiText.get(R.string.feat_broadcast_tag_title, "Show chat broadcast icon");
++            case "bubble_colors": return UiText.get(R.string.feat_bubble_colors_title, "Change Bubble Colors");
++            case "bypass_version_check": return UiText.get(R.string.feat_bypass_version_check_title, "Disable Version Check");
++            case "call_privacy": return UiText.get(R.string.feat_call_privacy_title, "Block Calls");
++            case "call_recording": return UiText.get(R.string.feat_call_recording_title, "Call Recording");
++            case "call_type_controller": return UiText.get(R.string.feat_call_type_controller_title, "Enable selection of call type");
++            case "change_dpi": return UiText.get(R.string.feat_custom_view_dpi_title, "Change Default DPI");
++            case "channels_enhancements": return UiText.get(R.string.feat_channels_enhancements_title, "Remove Channel Recomendations");
++            case "chat_filters": return UiText.get(R.string.feat_chat_filters_title, "Enable filter chats for type");
++            case "chatfilter": return UiText.get(R.string.feat_chat_filters_title, "Enable filter chats for type");
++            case "contact_blocked_verify": return UiText.get(R.string.feat_contact_blocked_verify_title, "Show Contact Added Status in Conversation");
++            case "copy_status_text": return UiText.get(R.string.feat_copy_status_text_title, "Enable Copy Status");
++            case "css_theme": return UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS");
++            case "custom_css": return UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS");
++            case "custom_filters": return UiText.get(R.string.feat_custom_filters_title, "Custom Appearance Filters");
++            case "custom_privacy": return UiText.get(R.string.feat_custom_privacy_title, "Custom Privacy per contact");
++            case "custom_theme": return UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS");
++            case "custom_time_format": return UiText.get(R.string.feat_custom_time_format_title, "Seconds on Timestamp");
++            case "custom_toolbar": return UiText.get(R.string.feat_custom_toolbar_title, "New Settings Style");
++            case "custom_view_dpi": return UiText.get(R.string.feat_custom_view_dpi_title, "Change Default DPI");
++            case "direct_chat_dialer": return UiText.get(R.string.feat_direct_chat_dialer_title, "New Chat");
++            case "disable_sensor_proximity": return UiText.get(R.string.feat_disable_sensor_proximity_title, "Disable Screen off on proximity sensor");
++            case "dnd_mode": return UiText.get(R.string.feat_dnd_mode_title, "DND Mode");
++            case "dotonline": return UiText.get(R.string.feat_dotonline_title, "Show Online Dot in Conversation List");
++            case "doubletap2like": return UiText.get(R.string.feat_doubletap2like_title, "Enable Double Click to React");
++            case "doubletap2like_emoji": return UiText.get(R.string.feat_doubletap2like_emoji_title, "Custom Reaction Emoji");
++            case "download_profile": return UiText.get(R.string.feat_download_profile_title, "Download Profile Photo");
++            case "download_view_once": return UiText.get(R.string.feat_download_view_once_title, "Download View Once");
++            case "downloadstatus": return UiText.get(R.string.feat_status_downloader_title, "Download and Share Status");
++            case "downloadviewonce": return UiText.get(R.string.feat_download_view_once_title, "Download View Once");
++            case "file_size_spoofer": return UiText.get(R.string.feat_file_size_spoofer_title, "File Size Spoofer");
++            case "filter_items": return UiText.get(R.string.feat_filter_items_title, "Filter Items By ID");
++            case "floating_bottom_bar": return UiText.get(R.string.feat_floating_bottom_bar_title, "Floating Bottom Bar");
++            case "freeze_last_seen": return UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen");
++            case "freezelastseen": return UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen");
++            case "ghostmode": return UiText.get(R.string.feat_ghostmode_title, "Show Ghost Mode Button");
++            case "ghostmode_r": return UiText.get(R.string.feat_ghostmode_r_title, "Hide Recording Audio");
++            case "ghostmode_t": return UiText.get(R.string.feat_ghostmode_t_title, "Hide Typing");
++            case "group_admin_tools": return UiText.get(R.string.feat_group_admin_tools_title, "Show Admin Group Icon");
++            case "hide_anti_revoke": return UiText.get(R.string.feat_hide_anti_revoke_title, "Add Hide Anti-Revoke to Chat Menu");
++            case "hide_chats": return UiText.get(R.string.feat_hide_chats_title, "Hide Locked Chats");
++            case "hide_delivery_receipts": return UiText.get(R.string.feat_hide_delivery_receipts_title, "Hide Delivered");
++            case "hide_forwarded_tag": return UiText.get(R.string.feat_hide_forwarded_tag_title, "Hide \"Forwarded\" Tag");
++            case "hide_read_receipts": return UiText.get(R.string.feat_hide_read_receipts_title, "Hide Blue Ticks");
++            case "hide_seen_receipts": return UiText.get(R.string.feat_hide_seen_receipts_title, "Hide audio seen");
++            case "hide_ui_tabs": return UiText.get(R.string.feat_hide_ui_tabs_title, "Hide Tabs on Home");
++            case "hideonceseen": return UiText.get(R.string.feat_hideonceseen_title, "Hide View Once Seen");
++            case "hideread_group": return UiText.get(R.string.feat_hideread_group_title, "Hide Blue Tick in Groups");
++            case "hidetabs": return UiText.get(R.string.feat_hide_ui_tabs_title, "Hide Tabs on Home");
++            case "igstatus": return UiText.get(R.string.feat_instagram_status_layout_title, "Enable IGStatus on Home Screen");
++            case "inline_translation": return UiText.get(R.string.feat_inline_translation_title, "Enable Google Translate");
++            case "instagram_status_layout": return UiText.get(R.string.feat_instagram_status_layout_title, "Enable IGStatus on Home Screen");
++            case "jump_to_first_message": return UiText.get(R.string.feat_jump_to_first_message_title, "Jump to First Message");
++            case "license_verification": return UiText.get(R.string.feat_license_verification_title, "License Verification & Activation");
++            case "locked_chats_enhancer": return UiText.get(R.string.feat_locked_chats_enhancer_title, "Enhanced Locked Chats");
++            case "media_preview": return UiText.get(R.string.feat_media_preview_title, "Enable Media Preview");
++            case "media_upload_quality": return UiText.get(R.string.feat_media_upload_quality_title, "HD Quality Images & Videos");
++            case "message_bomber": return UiText.get(R.string.feat_message_bomber_title, "Message Bomber");
++            case "message_device_source": return UiText.get(R.string.feat_message_device_source_title, "Show Message Device Source");
++            case "miscellaneous_enhancements": return UiText.get(R.string.feat_disable_sensor_proximity_title, "Disable Screen off on proximity sensor");
++            case "novaconfig": return UiText.get(R.string.feat_custom_toolbar_title, "New Settings Style");
++            case "open_wae": return UiText.get(R.string.feat_open_wae_title, "Enable WAEX Button");
++            case "open_waex": return UiText.get(R.string.feat_open_wae_title, "Enable WAEX Button");
++            case "preserve_delete_for_me": return UiText.get(R.string.feat_preserve_delete_for_me_title, "Delete (for me)");
++            case "preserve_own_revoke": return UiText.get(R.string.feat_preserve_own_revoke_title, "Keep My Revoked Messages");
++            case "pro_features_unlock": return UiText.get(R.string.feat_pro_features_unlock_title, "Pro Feature Management");
++            case "quick_home_menu": return UiText.get(R.string.feat_quick_home_menu_title, "Quick Action Home Menu");
++            case "removeforwardlimit": return UiText.get(R.string.feat_removeforwardlimit_title, "Remove Forward Limit");
++            case "removeseemore": return UiText.get(R.string.feat_removeseemore_title, "Remove \"See More\" Button");
++            case "restartbutton": return UiText.get(R.string.feat_restartbutton_title, "Enable Restart Button");
++            case "revokeallmessages": return UiText.get(R.string.feat_revokeallmessages_title, "Increase limit of \"Delete for everyone\" option");
++            case "seen_tick_customization": return UiText.get(R.string.feat_seen_tick_customization_title, "View Seen Tick");
++            case "seentick": return UiText.get(R.string.feat_seentick_title, "Show Button to send blue tick");
++            case "segundos": return UiText.get(R.string.feat_custom_time_format_title, "Seconds on Timestamp");
++            case "send_audio_as_voice_status": return UiText.get(R.string.feat_send_audio_as_voice_status_title, "Audio to Voice Status");
++            case "separate_groups_tabs": return UiText.get(R.string.feat_separate_groups_tabs_title, "Separate Groups");
++            case "show_dndmode": return UiText.get(R.string.feat_show_dndmode_title, "Show DND Button");
++            case "show_home_menu": return UiText.get(R.string.feat_quick_home_menu_title, "Quick Action Home Menu");
++            case "show_hook_toast": return UiText.get(R.string.feat_show_hook_toast_title, "Show Hook Injection Toast");
++            case "show_restart_sheet": return UiText.get(R.string.feat_show_restart_sheet_title, "Show Restart Sheet");
++            case "showonlinetext": return UiText.get(R.string.feat_showonlinetext_title, "Show Online/Last seen in Conversation List");
++            case "stamp_copied_message": return UiText.get(R.string.feat_stamp_copied_message_title, "Remove Stamp from Copied Messages");
++            case "status_downloader": return UiText.get(R.string.feat_status_downloader_title, "Download and Share Status");
++            case "status_text_composer": return UiText.get(R.string.feat_status_text_composer_title, "Custom colors for text status");
++            case "status_video_splitter": return UiText.get(R.string.feat_status_video_splitter_title, "Status Video Splitter");
++            case "stealth_status_view": return UiText.get(R.string.feat_stealth_status_view_title, "Hide Status View");
++            case "sticker_confirm_alert": return UiText.get(R.string.feat_sticker_confirm_alert_title, "Confirmation Before Sending Sticker");
++            case "supported_versions": return UiText.get(R.string.feat_supported_versions_title, "Supported WhatsApp Versions");
++            case "tasker_integration": return UiText.get(R.string.feat_tasker_integration_title, "Enable Tasker Automation");
++            case "toast_viewed_message": return UiText.get(R.string.feat_toast_viewed_message_title, "Show toast on viewed your message");
++            case "toast_viewed_status": return UiText.get(R.string.feat_toast_viewed_status_title, "Show toast on viewed your status");
++            case "toastdeleted": return UiText.get(R.string.feat_toastdeleted_title, "Show toast notification on delete message");
++            case "typearchive": return UiText.get(R.string.feat_typearchive_title, "Hide Archived Chats");
++            case "typing_online_toasts": return UiText.get(R.string.feat_typing_online_toasts_title, "Show toast on contact online");
++            case "unlimited_pinned_chats": return UiText.get(R.string.feat_unlimited_pinned_chats_title, "Disable Pinned Chats Limit");
++            case "unlock_premium_customization": return UiText.get(R.string.feat_unlock_premium_customization_title, "Unlock WA Plus");
++            case "verify_blocked_contact": return UiText.get(R.string.feat_contact_blocked_verify_title, "Show Contact Added Status in Conversation");
++            case "voice_transcription": return UiText.get(R.string.feat_voice_transcription_title, "Audio Transcription");
++            case "waex_menu_style": return UiText.get(R.string.feat_quick_home_menu_title, "Quick Action Home Menu");
++            default: return UiText.get(R.string.waex_ui_setting_1_s_58e12775, "Setting: %1$s", key);
++        }
++    }
++}
+diff --git a/app/src/main/java/com/waenhancer/utils/UiText.java b/app/src/main/java/com/waenhancer/utils/UiText.java
+new file mode 100644
+index 0000000..1ed0b8c
+--- /dev/null
++++ b/app/src/main/java/com/waenhancer/utils/UiText.java
+@@ -0,0 +1,136 @@
++package com.waenhancer.utils;
++
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.content.res.Configuration;
++import android.content.res.Resources;
++import android.os.LocaleList;
++import java.util.IllegalFormatException;
++import java.util.Locale;
++
++/**
++ * Resolves WAEX-owned display resources, including when code runs inside a host app.
++ * Inputs are static resource IDs and display-only arguments, never host resource IDs.
++ * Does not change the host's default locale or write to the preference bridge.
++ */
++public final class UiText {
++    private static final String MODULE_PACKAGE = "com.waenhancer";
++    private static volatile Source source;
++    private static volatile Cached configured;
++
++    private UiText() {}
++
++    private static final class Source {
++        final Context application;
++        final Context module;
++        final SharedPreferences preferences;
++        Source(Context application, Context module, SharedPreferences preferences) {
++            this.application = application;
++            this.module = module;
++            this.preferences = preferences;
++        }
++    }
++    private static final class Cached {
++        final Source source;
++        final String tag;
++        final int configurationHash;
++        final Resources resources;
++        Cached(Source source, String tag, int hash, Resources resources) {
++            this.source = source;
++            this.tag = tag;
++            this.configurationHash = hash;
++            this.resources = resources;
++        }
++    }
++
++    /** Call once with an Application context and the existing read-only/public preferences. */
++    public static synchronized void initialize(Context context, SharedPreferences preferences) {
++        if (context == null) return;
++        Context app = context.getApplicationContext();
++        if (app == null) app = context;
++        Context module = null;
++        try {
++            module = MODULE_PACKAGE.equals(app.getPackageName())
++                    ? app : app.createPackageContext(MODULE_PACKAGE, 0);
++            if (!MODULE_PACKAGE.equals(module.getPackageName())) module = null;
++        } catch (Exception unavailable) {
++            // A hidden/unavailable module must not crash the host. No resource IDs cross packages.
++        }
++        source = new Source(app, module, preferences);
++        configured = null;
++    }
++
++    public static Locale displayLocale() {
++        Source current = source;
++        String code = "system";
++        if (current != null && current.preferences != null) {
++            try { code = current.preferences.getString("app_language", "system"); }
++            catch (RuntimeException unreadable) { code = "system"; }
++        }
++        Locale system = Resources.getSystem().getConfiguration().getLocales().get(0);
++        return DisplayLocalePolicy.resolve(code, system);
++    }
++
++    private static Resources resources(Locale locale) {
++        Source current = source;
++        if (current == null || current.module == null) return null;
++        Configuration original = current.module.getResources().getConfiguration();
++        int hash = original.hashCode();
++        String tag = locale.toLanguageTag();
++        Cached old = configured;
++        if (old != null && old.source == current && old.configurationHash == hash
++                && old.tag.equals(tag)) return old.resources;
++        synchronized (UiText.class) {
++            old = configured;
++            if (old != null && old.source == current && old.configurationHash == hash
++                    && old.tag.equals(tag)) return old.resources;
++            Resources result;
++            try {
++                Configuration config = new Configuration(original);
++                config.setLocales(new LocaleList(locale));
++                result = current.module.createConfigurationContext(config).getResources();
++            }
++            catch (RuntimeException unavailable) { return null; }
++            configured = new Cached(current, tag, hash, result);
++            return result;
++        }
++    }
++
++    /** The English fallback is a static source template; arguments are never translated. */
++    public static String get(int resourceId, String englishFallback, Object... arguments) {
++        Locale locale = displayLocale();
++        Resources res = resources(locale);
++        String template = englishFallback;
++        if (res != null) {
++            try {
++                if (MODULE_PACKAGE.equals(res.getResourcePackageName(resourceId))) {
++                    template = res.getString(resourceId);
++                }
++            } catch (Resources.NotFoundException missing) { /* Preserve diagnostic/display fallback. */ }
++        }
++        return format(template, englishFallback, locale, arguments);
++    }
++
++    public static String quantity(int resourceId, int count, String englishFallback, Object... arguments) {
++        Locale locale = displayLocale();
++        Resources res = resources(locale);
++        String template = englishFallback;
++        if (res != null) {
++            try {
++                if (MODULE_PACKAGE.equals(res.getResourcePackageName(resourceId))) {
++                    template = res.getQuantityString(resourceId, count);
++                }
++            } catch (Resources.NotFoundException missing) { /* Do not crash during error feedback. */ }
++        }
++        return format(template, englishFallback, locale, arguments);
++    }
++
++    private static String format(String template, String fallback, Locale locale, Object[] arguments) {
++        if (arguments == null || arguments.length == 0) return template;
++        try { return String.format(locale, template, arguments); }
++        catch (IllegalFormatException malformedTranslation) {
++            try { return String.format(Locale.ENGLISH, fallback, arguments); }
++            catch (IllegalFormatException malformedSource) { return fallback; }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/waenhancer/utils/WhatsAppPackageDetector.kt b/app/src/main/java/com/waenhancer/utils/WhatsAppPackageDetector.kt
+index cec955d..dd3980e 100644
+--- a/app/src/main/java/com/waenhancer/utils/WhatsAppPackageDetector.kt
++++ b/app/src/main/java/com/waenhancer/utils/WhatsAppPackageDetector.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.utils
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.Context
+ import android.content.Intent
+ import android.content.pm.PackageManager
+@@ -280,7 +283,7 @@ object WhatsAppPackageDetector {
+                     HookedAppInfo(
+                         packageName = pkg,
+                         appName = friendlyName,
+-                        versionName = "v${pInfo.versionName ?: "Unknown"}",
++                        versionName = "v${pInfo.versionName ?: UiText.get(R.string.waex_ui_unknown_b764cdc0, "Unknown")}",
+                         isInstalled = true,
+                         isHooked = isInjected,
+                         injectedHooks = injectedHooks,
+@@ -300,7 +303,7 @@ object WhatsAppPackageDetector {
+                         HookedAppInfo(
+                             packageName = pkg,
+                             appName = name,
+-                            versionName = "Not Installed",
++                            versionName = UiText.get(R.string.waex_ui_not_installed_d08041a7, "Not Installed"),
+                             isInstalled = false,
+                             isHooked = false,
+                             injectedHooks = emptyList(),
+diff --git a/app/src/main/java/com/waenhancer/xposed/MainHook.java b/app/src/main/java/com/waenhancer/xposed/MainHook.java
+index 39e9e67..0c7c700 100644
+--- a/app/src/main/java/com/waenhancer/xposed/MainHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/MainHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.annotation.SuppressLint;
+ import android.content.Context;
+ import android.content.ContextWrapper;
+@@ -239,6 +242,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
+                                         resolvedBridge.awaitInitialSync();
+                                     }
+                                     final PreferenceBridgeClient bridgeClient = resolvedBridge;
++                                    com.waenhancer.utils.UiText.initialize(appContext, bridgeClient);
+                                     reportTargetRuntime(
+                                             appContext,
+                                             packageName,
+@@ -366,7 +370,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
+                         if (!INJECTION_TOAST_SHOWN.compareAndSet(false, true)) return;
+                         activity.runOnUiThread(() -> android.widget.Toast.makeText(
+                                 activity,
+-                                "WAEX hooks injected",
++                                UiText.get(R.string.waex_ui_waex_hooks_injected_0b677cb2, "WAEX hooks injected"),
+                                 android.widget.Toast.LENGTH_SHORT
+                         ).show());
+                     }
+@@ -489,22 +493,22 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+             new com.waenhancer.xposed.core.components.WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("WaEnhancer X injection failed")
++                    .setTitle(UiText.get(R.string.waex_ui_waenhancer_x_injection_failed_8387f7f8, "WaEnhancer X injection failed"))
+                     .setMessage(
+-                            "WaEnhancer X could not finish loading its hooks.\n\n"
++                            UiText.get(R.string.waex_ui_waenhancer_x_could_not_finish_loading_b154030c, "WaEnhancer X could not finish loading its hooks.\n\n")
+                                     + error
+-                                    + "\n\nCopy the error details when reporting this issue."
++                                    + UiText.get(R.string.waex_ui_copy_the_error_details_when_reporting_8ec1cba5, "\n\nCopy the error details when reporting this issue.")
+                     )
+-                    .setPositiveButton("Copy error", (dialog, which) -> {
++                    .setPositiveButton(UiText.get(R.string.waex_ui_copy_error_19dc540f, "Copy error"), (dialog, which) -> {
+                         android.content.ClipboardManager clipboard =
+                                 (android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                         if (clipboard != null) {
+                             clipboard.setPrimaryClip(
+-                                    android.content.ClipData.newPlainText("WaEnhancer X injection error", diagnostic)
++                                    android.content.ClipData.newPlainText(UiText.get(R.string.waex_ui_waenhancer_x_injection_error_87f8b907, "WaEnhancer X injection error"), diagnostic)
+                             );
+                         }
+                     })
+-                    .setNegativeButton("Close", (dialog, which) -> dialog.dismiss())
++                    .setNegativeButton(UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"), (dialog, which) -> dialog.dismiss())
+                     .show();
+         });
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/core/RestartPromptController.java b/app/src/main/java/com/waenhancer/xposed/core/RestartPromptController.java
+index c7f5c44..fcfca30 100644
+--- a/app/src/main/java/com/waenhancer/xposed/core/RestartPromptController.java
++++ b/app/src/main/java/com/waenhancer/xposed/core/RestartPromptController.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.core;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.app.Dialog;
+ import android.content.SharedPreferences;
+@@ -92,13 +95,13 @@ public final class RestartPromptController {
+         try {
+             Dialog dialog = new WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("Restart required")
++                    .setTitle(UiText.get(R.string.waex_ui_restart_required_b4687115, "Restart required"))
+                     .setMessage(message)
+-                    .setPositiveButton("Restart WhatsApp", (d, which) -> {
++                    .setPositiveButton(UiText.get(R.string.waex_ui_restart_whatsapp_e68a0fd3, "Restart WhatsApp"), (d, which) -> {
+                         if (d != null) d.dismiss();
+                         WhatsAppProcessRestarter.restart(activity);
+                     })
+-                    .setNegativeButton("Later", null)
++                    .setNegativeButton(UiText.get(R.string.waex_ui_later_73b6e48a, "Later"), null)
+                     .show();
+             if (dialog == null) {
+                 SHOWING.set(false);
+@@ -113,20 +116,20 @@ public final class RestartPromptController {
+ 
+     static String buildMessage(Set<String> changes) {
+         if (changes == null || changes.isEmpty()) {
+-            return "Your WA Enhancer preferences changed. Restart WhatsApp to apply them.";
++            return UiText.get(R.string.waex_ui_your_wa_enhancer_preferences_changed_r_eaa93890, "Your WA Enhancer preferences changed. Restart WhatsApp to apply them.");
+         }
+         List<String> sorted = new ArrayList<>();
+         for (String change : changes) {
+             // Resolve catalog titles first and generate a readable label for subordinate or
+             // legacy preference keys. Catalog-only features must not leak raw keys to the UI.
+-            sorted.add(PreferenceRestartTracker.displayName(change));
++            sorted.add(com.waenhancer.utils.PreferenceLabels.text(change));
+         }
+         sorted.sort(String.CASE_INSENSITIVE_ORDER);
+-        StringBuilder message = new StringBuilder("Restart WhatsApp to apply:\n\n");
++        StringBuilder message = new StringBuilder(UiText.get(R.string.waex_ui_restart_whatsapp_to_apply_f249101e, "Restart WhatsApp to apply:\n\n"));
+         int shown = Math.min(sorted.size(), 8);
+         for (int i = 0; i < shown; i++) message.append("• ").append(sorted.get(i)).append('\n');
+         if (sorted.size() > shown) {
+-            message.append("• ").append(sorted.size() - shown).append(" more\n");
++            message.append("• ").append(sorted.size() - shown).append(UiText.get(R.string.waex_ui_more_d2740bc9, " more\n"));
+         }
+         return message.toString().trim();
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/core/VersionGuard.kt b/app/src/main/java/com/waenhancer/xposed/core/VersionGuard.kt
+index 54229d8..d2ecd47 100644
+--- a/app/src/main/java/com/waenhancer/xposed/core/VersionGuard.kt
++++ b/app/src/main/java/com/waenhancer/xposed/core/VersionGuard.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.core
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.Context
+ import android.content.Intent
+@@ -32,16 +35,22 @@ object VersionGuard {
+     internal fun noticeMessage(version: String, decision: UniversalVersionValidator.Decision): String {
+         val reason = when (decision) {
+             UniversalVersionValidator.Decision.UNSUPPORTED ->
+-                "Your WhatsApp version ($version) does not match the configured version rules."
++                UiText.get(R.string.waex_l10n_guard_unsupported,
++                    "Your WhatsApp version (%1\$s) does not match the configured version rules.", version)
+             UniversalVersionValidator.Decision.RULES_UNAVAILABLE ->
+-                "WAEX could not read its version rules from this WhatsApp process. " +
+-                "Check that WhatsApp can access the WAEX package and its resources."
++                UiText.get(R.string.waex_l10n_guard_rules_unavailable,
++                    "WAEX could not read its version rules from this WhatsApp process. Check that WhatsApp can access the WAEX package and its resources.")
+             UniversalVersionValidator.Decision.PREFERENCES_UNAVAILABLE ->
+-                "WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp."
+-            else -> "WAEX could not determine the installed WhatsApp version."
++                UiText.get(R.string.waex_l10n_guard_prefs_unavailable,
++                    "WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp.")
++            else -> UiText.get(R.string.waex_l10n_guard_version_unknown,
++                "WAEX could not determine the installed WhatsApp version.")
+         }
+-        return reason + "\n\nWAEX features are paused for safety. This is not confirmation of functional compatibility." +
+-            "\n\nOpen WAEX settings to review the problem. Do not enable a version bypass just to hide an access error."
++        return reason + "\n\n" +
++            UiText.get(R.string.waex_l10n_guard_paused,
++                "WAEX features are paused for safety. This is not confirmation of functional compatibility.") +
++            "\n\n" + UiText.get(R.string.waex_l10n_guard_review,
++                "Open WAEX settings to review the problem. Do not enable a version bypass just to hide an access error.")
+     }
+ 
+     @JvmStatic
+@@ -112,9 +121,9 @@ object VersionGuard {
+                 }
+ 
+                 WaexBottomSheet(activity)
+-                    .setTitle("WAEX Compatibility Notice")
++                    .setTitle(UiText.get(R.string.waex_ui_waex_compatibility_notice_a91003b3, "WAEX Compatibility Notice"))
+                     .setMessage(noticeMessage(currentVersion, decision))
+-                    .setPositiveButton("Open WAEX Settings") { dialog, _ ->
++                    .setPositiveButton(UiText.get(R.string.waex_ui_open_waex_settings_51efb194, "Open WAEX Settings")) { dialog, _ ->
+                         try {
+                             val pm = activity.packageManager
+                             val intent = pm.getLaunchIntentForPackage("com.waenhancer") ?: Intent().apply {
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java b/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java
+index a1f2605..0f8de8f 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.automation;
+ 
++
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.content.Context;
+ import android.content.SharedPreferences;
+ import android.database.Cursor;
+@@ -111,7 +115,7 @@ public class PresenceToastsHook extends BaseFeature {
+                             if (!PresenceStateStore.isCurrentOnline(event.jid, transitionId)) return;
+                             try {
+                                 String name = ContactNameResolver.INSTANCE.resolveName(context, event.jid, null, null);
+-                                showToastSafely(name + " is online", () -> isOnlineToastEnabled()
++                                showToastSafely(name + UiText.get(R.string.waex_ui_is_online_e0992fa5, " is online"), () -> isOnlineToastEnabled()
+                                         && PresenceStateStore.isCurrentOnline(event.jid, transitionId));
+                             } catch (RuntimeException | LinkageError ignored) { /* Optional name lookup. */ }
+                         });
+@@ -182,7 +186,7 @@ public class PresenceToastsHook extends BaseFeature {
+                             if (rawJid != null && !rawJid.isEmpty()) {
+                                 asyncExecutor.execute(() -> {
+                                     String contactName = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
+-                                    showToastSafely(contactName + " viewed your status");
++                                    showToastSafely(contactName + UiText.get(R.string.waex_ui_viewed_your_status_44b3e59c, " viewed your status"));
+                                 });
+                             }
+                         }
+@@ -269,13 +273,13 @@ public class PresenceToastsHook extends BaseFeature {
+                 if (receiptType == 13 && statusToast) {
+                     emitToastWithThrottle(rawJid, "status", () -> {
+                         String name = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
+-                        return name + " viewed your status";
++                        return name + UiText.get(R.string.waex_ui_viewed_your_status_44b3e59c, " viewed your status");
+                     });
+                 } else if ((receiptType == 13 || receiptType == 5) && msgToast) {
+                     // Type 5 / 13 for read message receipt
+                     emitToastWithThrottle(rawJid, "msg", () -> {
+                         String name = ContactNameResolver.INSTANCE.resolveName(context, rawJid, null, null);
+-                        return name + " viewed your message";
++                        return name + UiText.get(R.string.waex_ui_viewed_your_message_1fbdce3c, " viewed your message");
+                     });
+                 }
+             }
+@@ -309,8 +313,8 @@ public class PresenceToastsHook extends BaseFeature {
+ 
+         TOAST_EXECUTOR.execute(() -> {
+             try {
+-                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : "A contact";
+-                String text = name + " deleted a message";
++                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : UiText.get(R.string.waex_ui_a_contact_f7f0de9a, "A contact");
++                String text = name + UiText.get(R.string.waex_ui_deleted_a_message_475dad17, " deleted a message");
+                 handler.post(() -> {
+                     try {
+                         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt b/app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt
+index 0be7144..2da282e 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.conversation
+ 
++
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.ClipData
+ import android.content.ClipboardManager
+@@ -395,7 +399,7 @@ class AntiEditMessagesHook(
+         val allVersions = loadAllChronologicalVersions(context, rowId, keyId, currentText)
+ 
+         val bottomSheet = WaexBottomSheet(currentActivity).asBottomSheet()
+-        bottomSheet.setTitle("Edited Message History")
++        bottomSheet.setTitle(UiText.get(R.string.waex_ui_edited_message_history_492e60cb, "Edited Message History"))
+ 
+         val density = currentActivity.resources.displayMetrics.density
+         val dp = { v: Int -> (v * density).toInt() }
+@@ -415,7 +419,7 @@ class AntiEditMessagesHook(
+         }
+ 
+         val switchLabel = TextView(currentActivity).apply {
+-            text = "Show changes"
++            text = UiText.get(R.string.waex_ui_show_changes_b12a6ef8, "Show changes")
+             textSize = 13f
+             setTextColor(0xFF8696A0.toInt())
+             setPadding(0, 0, dp(6), 0)
+@@ -458,10 +462,10 @@ class AntiEditMessagesHook(
+                 val timeStr = if (item.timestamp > 0) timeFormatter.get().format(Date(item.timestamp)) else ""
+ 
+                 val title = when {
+-                    isLatest -> "Version ${item.versionNumber} (Latest) • $timeStr"
+-                    isFirst && totalVersions > 1 -> "Version 1 (Original) • $timeStr"
+-                    totalVersions == 1 -> "Version 1 (Latest) • $timeStr"
+-                    else -> "Version ${item.versionNumber} • $timeStr"
++                    isLatest -> UiText.get(R.string.waex_ui_version_1_s_latest_2_s_d802e8b0, "Version %1\$s (Latest) • %2\$s", item.versionNumber, timeStr)
++                    isFirst && totalVersions > 1 -> UiText.get(R.string.waex_ui_version_1_original_1_s_ac2f8fb2, "Version 1 (Original) • %1\$s", timeStr)
++                    totalVersions == 1 -> UiText.get(R.string.waex_ui_version_1_latest_1_s_7e28fc56, "Version 1 (Latest) • %1\$s", timeStr)
++                    else -> UiText.get(R.string.waex_ui_version_1_s_2_s_4d9f20e0, "Version %1\$s • %2\$s", item.versionNumber, timeStr)
+                 }
+                 val color = if (isLatest) 0xFF21C063.toInt() else 0xFF00A884.toInt()
+ 
+@@ -474,7 +478,7 @@ class AntiEditMessagesHook(
+             }
+         } else {
+             val emptyNotice = TextView(currentActivity).apply {
+-                text = "Message was edited by sender."
++                text = UiText.get(R.string.waex_ui_message_was_edited_by_sender_9724779c, "Message was edited by sender.")
+                 textSize = 14f
+                 gravity = Gravity.CENTER
+                 setPadding(0, dp(16), 0, dp(16))
+@@ -483,7 +487,7 @@ class AntiEditMessagesHook(
+         }
+ 
+         bottomSheet.setView(contentLayout)
+-        bottomSheet.setPositiveButton("Close", null)
++        bottomSheet.setPositiveButton(UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"), null)
+         bottomSheet.show()
+     }
+ 
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/conversation/CopyStatusTextHook.kt b/app/src/main/java/com/waenhancer/xposed/features/conversation/CopyStatusTextHook.kt
+index c6bf062..9e5982f 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/conversation/CopyStatusTextHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/conversation/CopyStatusTextHook.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.conversation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.ClipData
+ import android.content.ClipboardManager
+ import android.content.Context
+@@ -72,9 +75,9 @@ class CopyStatusTextHook(
+     private fun copyToClipboard(context: Context, text: String) {
+         try {
+             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+-            val clip = ClipData.newPlainText("Status Text", text)
++            val clip = ClipData.newPlainText(UiText.get(R.string.waex_ui_status_text_b35d0184, "Status Text"), text)
+             clipboard?.setPrimaryClip(clip)
+-            Toast.makeText(context, "Copied status text to clipboard", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_copied_status_text_to_clipboard_b81c6089, "Copied status text to clipboard"), Toast.LENGTH_SHORT).show()
+         } catch (t: Throwable) {
+             XposedBridge.log("$TAG Failed to copy to clipboard: ${t.message}")
+         }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/conversation/JumpFirstMessageHook.kt b/app/src/main/java/com/waenhancer/xposed/features/conversation/JumpFirstMessageHook.kt
+index 877f4b7..14bc072 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/conversation/JumpFirstMessageHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/conversation/JumpFirstMessageHook.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.conversation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.Context
+ import android.content.Intent
+@@ -123,12 +126,12 @@ class JumpFirstMessageHook(
+ 
+         if (menu.findItem(MENU_ITEM_ID) != null) return
+ 
+-        val menuItem = menu.add(Menu.NONE, MENU_ITEM_ID, Menu.NONE, MENU_LABEL)
++        val menuItem = menu.add(Menu.NONE, MENU_ITEM_ID, Menu.NONE, UiText.get(R.string.feat_jump_to_first_message_title, MENU_LABEL))
+         menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+         menuItem.setOnMenuItemClickListener {
+             val chatJid = extractChatJidFromActivity(activity)
+             if (chatJid.isNullOrEmpty()) {
+-                Toast.makeText(activity, "Unable to determine chat JID", Toast.LENGTH_SHORT).show()
++                Toast.makeText(activity, UiText.get(R.string.waex_ui_unable_to_determine_chat_jid_fb5fdb1b, "Unable to determine chat JID"), Toast.LENGTH_SHORT).show()
+                 return@setOnMenuItemClickListener true
+             }
+ 
+@@ -136,7 +139,7 @@ class JumpFirstMessageHook(
+                 val firstMsg = queryFirstMessage(activity, chatJid)
+                 if (firstMsg == null) {
+                     activity.runOnUiThread {
+-                        Toast.makeText(activity, "No message history found", Toast.LENGTH_SHORT).show()
++                        Toast.makeText(activity, UiText.get(R.string.waex_ui_no_message_history_found_d6380f22, "No message history found"), Toast.LENGTH_SHORT).show()
+                     }
+                     return@execute
+                 }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/conversation/MessageDeviceSourceHook.java b/app/src/main/java/com/waenhancer/xposed/features/conversation/MessageDeviceSourceHook.java
+index 61fc8c0..fabfbd5 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/conversation/MessageDeviceSourceHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/conversation/MessageDeviceSourceHook.java
+@@ -1,5 +1,7 @@
+ package com.waenhancer.xposed.features.conversation;
+ 
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.Context;
+ import android.content.SharedPreferences;
+@@ -400,9 +402,9 @@ public class MessageDeviceSourceHook extends BaseFeature {
+         textView.setOnClickListener(v -> {
+             Context ctx = v.getContext();
+             if (deviceId == 0) {
+-                Toast.makeText(ctx, "This message was sent via Phone", Toast.LENGTH_SHORT).show();
++                Toast.makeText(ctx, UiText.get(R.string.message_sent_via_phone, "This message was sent via Phone"), Toast.LENGTH_SHORT).show();
+             } else {
+-                Toast.makeText(ctx, "This message was sent via a Linked Device (Desktop/Phone)", Toast.LENGTH_SHORT).show();
++                Toast.makeText(ctx, UiText.get(R.string.waex_ui_this_message_was_sent_via_a_linked_dev_7be749b8, "This message was sent via a Linked Device (Desktop/Phone)"), Toast.LENGTH_SHORT).show();
+             }
+         });
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/conversation/StickerConfirmHook.kt b/app/src/main/java/com/waenhancer/xposed/features/conversation/StickerConfirmHook.kt
+index f30af33..d2aad18 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/conversation/StickerConfirmHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/conversation/StickerConfirmHook.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.conversation
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.Context
+ import android.content.SharedPreferences
+ import android.view.Gravity
+@@ -69,8 +72,8 @@ class StickerConfirmHook(
+         val drawable = stickerImageView?.drawable
+ 
+         val bottomSheet = WaexBottomSheet(currentActivity).asBottomSheet()
+-        bottomSheet.setTitle("Send Sticker?")
+-        bottomSheet.setMessage("Do you want to send this sticker to the chat?")
++        bottomSheet.setTitle(UiText.get(R.string.waex_ui_send_sticker_29e230ec, "Send Sticker?"))
++        bottomSheet.setMessage(UiText.get(R.string.waex_ui_do_you_want_to_send_this_sticker_to_th_962b373b, "Do you want to send this sticker to the chat?"))
+ 
+         if (drawable != null) {
+             val previewContainer = LinearLayout(currentActivity).apply {
+@@ -88,10 +91,10 @@ class StickerConfirmHook(
+             bottomSheet.setView(previewContainer)
+         }
+ 
+-        bottomSheet.setPositiveButton("Send") { _, _ ->
++        bottomSheet.setPositiveButton(UiText.get(R.string.waex_ui_send_f6f4688f, "Send")) { _, _ ->
+             onConfirmListener?.onClick(view)
+         }
+-        bottomSheet.setNegativeButton("Cancel", null)
++        bottomSheet.setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), null)
+ 
+         bottomSheet.show()
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/customization/FloatingBottomBarHook.java b/app/src/main/java/com/waenhancer/xposed/features/customization/FloatingBottomBarHook.java
+index 130297a..f0f4c37 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/customization/FloatingBottomBarHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/customization/FloatingBottomBarHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.customization;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.animation.Animator;
+ import android.animation.AnimatorListenerAdapter;
+ import android.animation.AnimatorSet;
+@@ -1203,7 +1206,7 @@ public class FloatingBottomBarHook extends BaseFeature {
+             View child = bar.getChildAt(i);
+             if (!(child instanceof ViewGroup)) continue;
+             ViewGroup menu = (ViewGroup) child;
+-            if (menu.getChildCount() < 2 || !containsText(menu.getChildAt(1), "Groups")) continue;
++            if (menu.getChildCount() < 2 || !(containsText(menu.getChildAt(1), "Groups") || containsText(menu.getChildAt(1), UiText.get(R.string.waex_ui_groups_39bbb719, "Groups")))) continue;
+ 
+             boolean firstReconciliation = !forcedSelectedTabs.containsKey(menu);
+             int selectedIndex;
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt b/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+index 041b498..ac55111 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.customization
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.Context
+ import android.content.SharedPreferences
+ import android.graphics.Color
+@@ -298,10 +301,10 @@ class OnlinePresenceIndicatorsHook(
+         overlay.findViewById<TextView>(ID_TEXT)?.let { text ->
+             when {
+                 state == null || !state.known -> { text.text = ""; text.visibility = View.GONE }
+-                state.online -> { text.text = "online"; text.visibility = View.VISIBLE }
++                state.online -> { text.text = UiText.get(R.string.waex_ui_online_f6fc84c9, "online"); text.visibility = View.VISIBLE }
+                 else -> {
+                     val time = DateFormat.getTimeFormat(row.context).format(state.changedAtMillis)
+-                    text.text = "last seen $time"
++                    text.text = UiText.get(R.string.waex_ui_last_seen_1_s_752c705a, "last seen %1\$s", time)
+                     text.visibility = View.VISIBLE
+                 }
+             }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/customization/SeparateGroupsHook.java b/app/src/main/java/com/waenhancer/xposed/features/customization/SeparateGroupsHook.java
+index 9fb6d9a..647dcf4 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/customization/SeparateGroupsHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/customization/SeparateGroupsHook.java
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.customization;
+ 
++
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.content.Context;
+ import android.content.SharedPreferences;
+ import android.view.MenuItem;
+@@ -217,7 +221,7 @@ public final class SeparateGroupsHook extends BaseFeature {
+                         || !CharSequence.class.isAssignableFrom(method.getReturnType())) continue;
+                 XposedBridge.hookMethod(method, new XC_MethodHook() {
+                     @Override protected void beforeHookedMethod(MethodHookParam param) {
+-                        if ((int) param.args[0] == GROUPS) param.setResult("Groups");
++                        if ((int) param.args[0] == GROUPS) param.setResult(UiText.get(R.string.waex_ui_groups_39bbb719, "Groups"));
+                     }
+                 });
+             }
+@@ -239,7 +243,7 @@ public final class SeparateGroupsHook extends BaseFeature {
+                     @Override protected void afterHookedMethod(MethodHookParam param) {
+                         MenuItem item = (MenuItem) param.getResult();
+                         if (item != null && item.getItemId() == GROUPS) {
+-                            item.setTitle("Groups");
++                            item.setTitle(UiText.get(R.string.waex_ui_groups_39bbb719, UiText.get(R.string.waex_ui_groups_39bbb719, "Groups")));
+                             item.setIcon(communities);
+                             item.setCheckable(true);
+                         }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/homescreen/HomeScreenHeaderActionsHook.java b/app/src/main/java/com/waenhancer/xposed/features/homescreen/HomeScreenHeaderActionsHook.java
+index 6ae981a..a03ab6a 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/homescreen/HomeScreenHeaderActionsHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/homescreen/HomeScreenHeaderActionsHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.homescreen;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.app.AlarmManager;
+ import android.app.PendingIntent;
+@@ -491,7 +494,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+         if (isEnabled("ghostmode", false)) {
+             boolean active = prefs.getBoolean("ghostmode_active", false);
+             MenuItem item = target.add(Menu.NONE, MENU_ID_GHOST_MODE, Menu.NONE,
+-                    active ? "Ghost Mode: ON" : "Ghost Mode: OFF");
++                    active ? UiText.get(R.string.waex_ui_ghost_mode_on_c6fad9c9, "Ghost Mode: ON") : UiText.get(R.string.waex_ui_ghost_mode_off_33af0cd9, "Ghost Mode: OFF"));
+             item.setShowAsAction(showAsAction);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+@@ -499,7 +502,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+         if (isEnabled("freezelastseen", false)) {
+             boolean active = prefs.getBoolean("freeze_last_seen_active", false);
+             MenuItem item = target.add(Menu.NONE, MENU_ID_FREEZE_LS, Menu.NONE,
+-                    active ? "Freeze Last Seen: ON" : "Freeze Last Seen: OFF");
++                    active ? UiText.get(R.string.waex_ui_freeze_last_seen_on_ad444fb9, "Freeze Last Seen: ON") : UiText.get(R.string.waex_ui_freeze_last_seen_off_2cb42c68, "Freeze Last Seen: OFF"));
+             item.setShowAsAction(showAsAction);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+@@ -507,19 +510,19 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+         if (isEnabled("show_dndmode", false)) {
+             boolean active = isEnabled("dnd_mode", false);
+             MenuItem item = target.add(Menu.NONE, MENU_ID_DND, Menu.NONE,
+-                    active ? "DND: ON" : "DND: OFF");
++                    active ? UiText.get(R.string.waex_ui_dnd_on_58025d4c, "DND: ON") : UiText.get(R.string.waex_ui_dnd_off_1695672b, "DND: OFF"));
+             item.setShowAsAction(showAsAction);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+ 
+         if (isEnabled("restartbutton", false)) {
+-            MenuItem item = target.add(Menu.NONE, MENU_ID_RESTART, Menu.NONE, "Restart WhatsApp");
++            MenuItem item = target.add(Menu.NONE, MENU_ID_RESTART, Menu.NONE, UiText.get(R.string.waex_ui_restart_whatsapp_e68a0fd3, "Restart WhatsApp"));
+             item.setShowAsAction(showAsAction);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+ 
+         if (isEnabled("open_wae", false)) {
+-            MenuItem item = target.add(Menu.NONE, MENU_ID_SETTINGS, Menu.NONE, "WA Enhancer Settings");
++            MenuItem item = target.add(Menu.NONE, MENU_ID_SETTINGS, Menu.NONE, UiText.get(R.string.waex_ui_wa_enhancer_settings_ff30ce0c, "WA Enhancer Settings"));
+             item.setShowAsAction(showAsAction);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+@@ -529,12 +532,12 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+     /** Always place recovery actions in overflow, not as conspicuous toolbar icons. */
+     private void appendRecoveryEntries(Menu target, Activity activity) {
+         if (isArchivedHidden() && isArchiveMenuEnabled()) {
+-            MenuItem item = target.add(Menu.NONE, MENU_ID_ARCHIVED, Menu.NONE, "Open archived chats");
++            MenuItem item = target.add(Menu.NONE, MENU_ID_ARCHIVED, Menu.NONE, UiText.get(R.string.waex_ui_open_archived_chats_791f3567, "Open archived chats"));
+             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+         if (isHideLockedChatsEnabled() && isLockedMenuEnabled()) {
+-            MenuItem item = target.add(Menu.NONE, MENU_ID_LOCKED, Menu.NONE, "Open locked chats");
++            MenuItem item = target.add(Menu.NONE, MENU_ID_LOCKED, Menu.NONE, UiText.get(R.string.waex_ui_open_locked_chats_d1a58216, "Open locked chats"));
+             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+             item.setOnMenuItemClickListener(mi -> handleItemSelected(mi, activity));
+         }
+@@ -711,14 +714,14 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+                     "com.whatsapp.conversation.conversationslist.ArchivedConversationsActivity",
+                     classLoader);
+             if (archived == null || !Activity.class.isAssignableFrom(archived)) {
+-                Toast.makeText(activity, "Archived chats unavailable in this WhatsApp build",
++                Toast.makeText(activity, UiText.get(R.string.waex_ui_archived_chats_unavailable_in_this_wha_a75f8af5, "Archived chats unavailable in this WhatsApp build"),
+                         Toast.LENGTH_SHORT).show();
+                 return;
+             }
+             activity.startActivity(new Intent(activity, archived));
+         } catch (Throwable t) {
+             XposedBridge.log(TAG + " Cannot open archived chats: " + t.getClass().getSimpleName());
+-            Toast.makeText(activity, "Could not open archived chats", Toast.LENGTH_SHORT).show();
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_could_not_open_archived_chats_d18485fc, "Could not open archived chats"), Toast.LENGTH_SHORT).show();
+         }
+     }
+ 
+@@ -734,14 +737,14 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+                     "com.whatsapp.conversation.conversationslist.LockedConversationsActivity",
+                     classLoader);
+             if (locked == null || !Activity.class.isAssignableFrom(locked)) {
+-                Toast.makeText(activity, "Locked chats unavailable in this WhatsApp build",
++                Toast.makeText(activity, UiText.get(R.string.waex_ui_locked_chats_unavailable_in_this_whats_05439a78, "Locked chats unavailable in this WhatsApp build"),
+                         Toast.LENGTH_SHORT).show();
+                 return;
+             }
+             activity.startActivity(new Intent(activity, locked));
+         } catch (Throwable t) {
+             XposedBridge.log(TAG + " Cannot open locked chats: " + t.getClass().getSimpleName());
+-            Toast.makeText(activity, "Could not open locked chats", Toast.LENGTH_SHORT).show();
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_could_not_open_locked_chats_cfe581e0, "Could not open locked chats"), Toast.LENGTH_SHORT).show();

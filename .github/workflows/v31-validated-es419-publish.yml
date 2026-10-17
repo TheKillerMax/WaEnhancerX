@@ -1,0 +1,65 @@
+name: V31 validated es-419 branch publication
+
+on:
+  push:
+    branches: ['test/es419-validated-transfer-v31-2026-10-17']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reconstruct checked patch and validate the base
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=f6ec7d4e6f47a246ebb413848d66358217fa9c08
+          test "$(git rev-parse HEAD^)" = "$base"
+          cat qa/v31-es419-transfer/part-*.patch > /tmp/waex-es419.patch
+          echo '04d183a47f78c36e81cee6ea3e0e839232d47f5585dced82b788255295369b56  /tmp/waex-es419.patch' | sha256sum -c -
+          test "$(git hash-object /tmp/waex-es419.patch)" = e54913fe74873a075352ab9cefc9dbbb6b03a9a1
+          git switch -c feat/es419-latin-america-2026-10-17 "$base"
+          git apply --check /tmp/waex-es419.patch
+          git apply /tmp/waex-es419.patch
+          git diff --check
+          test -f app/src/main/res/values-b+es+419/ui_strings.xml
+          test -f qa/test_es419_runtime.py
+      - name: Test localized public source and related regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          kotlinc -version
+          python3 qa/test_es419_localization.py
+          python3 qa/test_es419_runtime.py
+          python3 qa/test_style_non_boolean_guard.py
+          python3 qa/test_restart_safety.py
+          python3 qa/test_runtime_diagnostics.py
+          python3 qa/test_presence_event_contract.py
+          python3 qa/test_update_download_contract.py
+          python3 qa/test_update_session.py
+          python3 qa/check_syntax.py --root app/src/main/java
+      - name: Commit reviewed sources and publish actual contribution branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -ge 95
+          git -c user.name='waex-l10n-review' -c user.email='waex-l10n-review@users.noreply.github.com' commit -m 'feat(i18n): localize public WAEX interfaces for Spanish Latin America'
+          git push origin HEAD:refs/heads/feat/es419-latin-america-2026-10-17
+          echo "Published $(git rev-parse HEAD) to feat/es419-latin-america-2026-10-17"

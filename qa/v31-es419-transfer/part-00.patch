@@ -1,0 +1,1000 @@
+diff --git a/.github/workflows/source-qa.yml b/.github/workflows/source-qa.yml
+index c5a18f1..a1a7aea 100644
+--- a/.github/workflows/source-qa.yml
++++ b/.github/workflows/source-qa.yml
+@@ -84,6 +84,16 @@ jobs:
+             echo '::endgroup::'
+           done
+ 
++      - name: Verify public Spanish Latin America resources and runtime lookup
++        shell: bash
++        run: |
++          set -euo pipefail
++          test -f qa/localization_support.py
++          test -f qa/test_es419_localization.py
++          test -f qa/test_es419_runtime.py
++          python3 qa/test_es419_localization.py
++          python3 qa/test_es419_runtime.py
++
+       - name: Require tests for merged runtime and resource contracts
+         shell: bash
+         run: |
+diff --git a/app/src/main/java/com/waenhancer/app/PermissionsActivity.kt b/app/src/main/java/com/waenhancer/app/PermissionsActivity.kt
+index 8267ed6..069ba68 100644
+--- a/app/src/main/java/com/waenhancer/app/PermissionsActivity.kt
++++ b/app/src/main/java/com/waenhancer/app/PermissionsActivity.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.app
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.Manifest
+ import android.content.Context
+ import android.content.Intent
+@@ -202,8 +205,8 @@ class PermissionsActivity : ComponentActivity() {
+                 items.add(
+                     PermissionItem(
+                         id = "media_photos_video",
+-                        title = "Photos & Media Storage",
+-                        description = "Required to save status photos, split videos, and load custom wallpaper themes.",
++                        title = UiText.get(R.string.waex_ui_photos_media_storage_38774dc5, "Photos & Media Storage"),
++                        description = UiText.get(R.string.waex_ui_required_to_save_status_photos_split_v_63d9ba8a, "Required to save status photos, split videos, and load custom wallpaper themes."),
+                         icon = WaexIcons.Image,
+                         type = PermissionType.RUNTIME,
+                         permissions = listOf(
+@@ -217,8 +220,8 @@ class PermissionsActivity : ComponentActivity() {
+                 items.add(
+                     PermissionItem(
+                         id = "storage_legacy",
+-                        title = "Storage Access",
+-                        description = "Required to save status updates, backup configurations, and export recordings.",
++                        title = UiText.get(R.string.waex_ui_storage_access_a334c4ca, "Storage Access"),
++                        description = UiText.get(R.string.waex_ui_required_to_save_status_updates_backup_14a75a0b, "Required to save status updates, backup configurations, and export recordings."),
+                         icon = WaexIcons.Folder,
+                         type = PermissionType.RUNTIME,
+                         permissions = listOf(
+@@ -234,8 +237,8 @@ class PermissionsActivity : ComponentActivity() {
+                 items.add(
+                     PermissionItem(
+                         id = "manage_storage",
+-                        title = "All Files Access",
+-                        description = "Required for WhatsApp database backups, file spoofing, and restoring chat vaults.",
++                        title = UiText.get(R.string.waex_ui_all_files_access_c5936362, "All Files Access"),
++                        description = UiText.get(R.string.waex_ui_required_for_whatsapp_database_backups_961af6f4, "Required for WhatsApp database backups, file spoofing, and restoring chat vaults."),
+                         icon = WaexIcons.Folder,
+                         type = PermissionType.MANAGE_ALL_FILES
+                     )
+@@ -246,8 +249,8 @@ class PermissionsActivity : ComponentActivity() {
+             items.add(
+                 PermissionItem(
+                     id = "contacts",
+-                    title = "Contacts Access",
+-                    description = "Required to resolve contact names and setup per-contact privacy rules.",
++                    title = UiText.get(R.string.waex_ui_contacts_access_af7abbb0, "Contacts Access"),
++                    description = UiText.get(R.string.waex_ui_required_to_resolve_contact_names_and_d8a90ce5, "Required to resolve contact names and setup per-contact privacy rules."),
+                     icon = WaexIcons.Contacts,
+                     type = PermissionType.RUNTIME,
+                     permissions = listOf(Manifest.permission.READ_CONTACTS)
+@@ -258,8 +261,8 @@ class PermissionsActivity : ComponentActivity() {
+             items.add(
+                 PermissionItem(
+                     id = "audio_recording",
+-                    title = "Microphone & Call Recording",
+-                    description = "Required for automatic call recording and AI voice-to-text message transcription.",
++                    title = UiText.get(R.string.waex_ui_microphone_call_recording_db09aa48, "Microphone & Call Recording"),
++                    description = UiText.get(R.string.waex_ui_required_for_automatic_call_recording_109166ae, "Required for automatic call recording and AI voice-to-text message transcription."),
+                     icon = WaexIcons.Mic,
+                     type = PermissionType.RUNTIME,
+                     permissions = listOf(Manifest.permission.RECORD_AUDIO)
+@@ -271,8 +274,8 @@ class PermissionsActivity : ComponentActivity() {
+                 items.add(
+                     PermissionItem(
+                         id = "notifications",
+-                        title = "Post Notifications",
+-                        description = "Required for download progress indicators, online toast alerts, and Tasker sync.",
++                        title = UiText.get(R.string.waex_ui_post_notifications_515765d2, "Post Notifications"),
++                        description = UiText.get(R.string.waex_ui_required_for_download_progress_indicat_70ce5a66, "Required for download progress indicators, online toast alerts, and Tasker sync."),
+                         icon = WaexIcons.Notifications,
+                         type = PermissionType.RUNTIME,
+                         permissions = listOf(Manifest.permission.POST_NOTIFICATIONS)
+@@ -284,8 +287,8 @@ class PermissionsActivity : ComponentActivity() {
+             items.add(
+                 PermissionItem(
+                     id = "overlay",
+-                    title = "Display Over Other Apps",
+-                    description = "Required to display floating action bubbles, online toasts, and chat quick menus.",
++                    title = UiText.get(R.string.waex_ui_display_over_other_apps_9a1d9177, "Display Over Other Apps"),
++                    description = UiText.get(R.string.waex_ui_required_to_display_floating_action_bu_a9a30dce, "Required to display floating action bubbles, online toasts, and chat quick menus."),
+                     icon = WaexIcons.Layers,
+                     type = PermissionType.SYSTEM_ALERT_WINDOW
+                 )
+@@ -295,8 +298,8 @@ class PermissionsActivity : ComponentActivity() {
+             items.add(
+                 PermissionItem(
+                     id = "battery",
+-                    title = "Ignore Battery Optimizations",
+-                    description = "Prevents system throttling for background Tasker automations and persistent stealth hooks.",
++                    title = UiText.get(R.string.waex_ui_ignore_battery_optimizations_58d12723, "Ignore Battery Optimizations"),
++                    description = UiText.get(R.string.waex_ui_prevents_system_throttling_for_backgro_663fb76c, "Prevents system throttling for background Tasker automations and persistent stealth hooks."),
+                     icon = WaexIcons.Battery,
+                     type = PermissionType.BATTERY_OPTIMIZATION
+                 )
+@@ -307,8 +310,8 @@ class PermissionsActivity : ComponentActivity() {
+                 items.add(
+                     PermissionItem(
+                         id = "install_packages",
+-                        title = "Install Unknown Apps",
+-                        description = "Required for seamless in-app version update downloads and module installations.",
++                        title = UiText.get(R.string.waex_ui_install_unknown_apps_d293d7b0, "Install Unknown Apps"),
++                        description = UiText.get(R.string.waex_ui_required_for_seamless_in_app_version_u_d1c6c3a3, "Required for seamless in-app version update downloads and module installations."),
+                         icon = WaexIcons.Install,
+                         type = PermissionType.INSTALL_PACKAGES
+                     )
+@@ -504,7 +507,7 @@ fun PermissionsScreen(
+                             horizontalArrangement = Arrangement.spacedBy(8.dp)
+                         ) {
+                             Text(
+-                                text = "Continue to WaEnhancerX",
++                                text = UiText.get(R.string.waex_ui_continue_to_waenhancerx_44fe727b, "Continue to WaEnhancerX"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.Bold
+                             )
+@@ -518,7 +521,7 @@ fun PermissionsScreen(
+ 
+                     if (!allGranted) {
+                         Text(
+-                            text = "$grantedCount of $totalCount granted. Missing permissions will be requested when a feature needs them.",
++                            text = UiText.get(R.string.waex_ui_1_s_of_2_s_granted_missing_permissions_d52260f9, "%1\$s of %2\$s granted. Missing permissions will be requested when a feature needs them.", grantedCount, totalCount),
+                             style = typography.labelSm,
+                             color = colors.onSurfaceVariant,
+                             textAlign = TextAlign.Center,
+@@ -565,7 +568,7 @@ fun PermissionsScreen(
+                     Spacer(modifier = Modifier.height(16.dp))
+ 
+                     Text(
+-                        text = "Optional Permissions",
++                        text = UiText.get(R.string.waex_ui_optional_permissions_766be476, "Optional Permissions"),
+                         style = typography.displayLgMobile,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.onBackground
+@@ -575,7 +578,7 @@ fun PermissionsScreen(
+                     Spacer(modifier = Modifier.height(6.dp))
+ 
+                     Text(
+-                        text = "Grant everything now for convenience, or continue and allow permissions only when a feature needs them.",
++                        text = UiText.get(R.string.waex_ui_grant_everything_now_for_convenience_o_022cad3f, "Grant everything now for convenience, or continue and allow permissions only when a feature needs them."),
+                         style = typography.bodyMd,
+                         color = colors.onSurfaceVariant,
+                         lineHeight = 20.sp
+@@ -597,13 +600,13 @@ fun PermissionsScreen(
+                                 verticalAlignment = Alignment.CenterVertically
+                             ) {
+                                 Text(
+-                                    text = "Setup Progress",
++                                    text = UiText.get(R.string.waex_ui_setup_progress_c4b08e4f, "Setup Progress"),
+                                     style = typography.bodyMd,
+                                     fontWeight = FontWeight.Bold,
+                                     color = colors.onSurface
+                                 )
+                                 Text(
+-                                    text = "$grantedCount of $totalCount Granted",
++                                    text = UiText.get(R.string.waex_ui_1_s_of_2_s_granted_f824e2d7, "%1\$s of %2\$s Granted", grantedCount, totalCount),
+                                     style = typography.labelSm,
+                                     fontWeight = FontWeight.Bold,
+                                     color = if (allGranted) Color(0xFF22C55E) else colors.primary
+diff --git a/app/src/main/java/com/waenhancer/app/RootAccessRequirementScreen.kt b/app/src/main/java/com/waenhancer/app/RootAccessRequirementScreen.kt
+index 9343293..0f3d0f3 100644
+--- a/app/src/main/java/com/waenhancer/app/RootAccessRequirementScreen.kt
++++ b/app/src/main/java/com/waenhancer/app/RootAccessRequirementScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.app
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.activity.compose.BackHandler
+ import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.background
+@@ -88,7 +91,7 @@ fun RootAccessRequirementScreen(
+         Spacer(modifier = Modifier.height(24.dp))
+ 
+         Text(
+-            text = if (checking) "Checking root access" else "Root access is required",
++            text = if (checking) UiText.get(R.string.waex_ui_checking_root_access_76c86676, "Checking root access") else UiText.get(R.string.waex_ui_root_access_is_required_a22936b2, "Root access is required"),
+             style = typography.displayLgMobile,
+             fontWeight = FontWeight.Bold,
+             color = colors.onBackground,
+@@ -99,9 +102,9 @@ fun RootAccessRequirementScreen(
+ 
+         Text(
+             text = if (checking) {
+-                "Approve the superuser request if your root manager asks for permission."
++                UiText.get(R.string.waex_ui_approve_the_superuser_request_if_your_eb6a2e6a, "Approve the superuser request if your root manager asks for permission.")
+             } else {
+-                "WaEnhancerX supports rooted devices with an approved Xposed framework only. The app cannot continue until root access is available."
++                UiText.get(R.string.waex_ui_waenhancerx_supports_rooted_devices_wi_a07ec3e0, "WaEnhancerX supports rooted devices with an approved Xposed framework only. The app cannot continue until root access is available.")
+             },
+             style = typography.bodyMd,
+             color = colors.onSurfaceVariant,
+@@ -122,16 +125,16 @@ fun RootAccessRequirementScreen(
+                 verticalArrangement = Arrangement.spacedBy(16.dp)
+             ) {
+                 RequirementRow(
+-                    title = "Why this is required",
+-                    description = "Root lets WAEnhancerX verify the module scope and supported runtime environment. Non-root injection methods such as LSPatch and Shizuku-based alternatives are not supported."
++                    title = UiText.get(R.string.waex_ui_why_this_is_required_78ad78a4, "Why this is required"),
++                    description = UiText.get(R.string.waex_ui_root_lets_waenhancerx_verify_the_modul_415333af, "Root lets WAEnhancerX verify the module scope and supported runtime environment. Non-root injection methods such as LSPatch and Shizuku-based alternatives are not supported.")
+                 )
+                 RequirementRow(
+-                    title = "Account protection",
+-                    description = "Unsupported setups may behave unpredictably and may increase the risk of WhatsApp restrictions. Root access does not remove every risk of using modifications."
++                    title = UiText.get(R.string.waex_ui_account_protection_2b24d9b9, "Account protection"),
++                    description = UiText.get(R.string.waex_ui_unsupported_setups_may_behave_unpredic_ac8b9130, "Unsupported setups may behave unpredictably and may increase the risk of WhatsApp restrictions. Root access does not remove every risk of using modifications.")
+                 )
+                 RequirementRow(
+-                    title = "Your privacy",
+-                    description = "This check runs locally using the system identity command. No root details or command output are uploaded."
++                    title = UiText.get(R.string.waex_ui_your_privacy_d2a7115d, "Your privacy"),
++                    description = UiText.get(R.string.waex_ui_this_check_runs_locally_using_the_syst_53890e09, "This check runs locally using the system identity command. No root details or command output are uploaded.")
+                 )
+             }
+         }
+@@ -156,7 +159,7 @@ fun RootAccessRequirementScreen(
+                 modifier = Modifier.size(20.dp)
+             )
+             Text(
+-                text = if (checking) "Checking…" else "Check again",
++                text = if (checking) UiText.get(R.string.diag_status_checking, "Checking…") else UiText.get(R.string.waex_ui_check_again_fb7099ad, "Check again"),
+                 modifier = Modifier.padding(start = 8.dp),
+                 style = typography.bodyLg,
+                 fontWeight = FontWeight.Bold
+@@ -174,7 +177,7 @@ fun RootAccessRequirementScreen(
+             border = BorderStroke(1.dp, colors.outlineVariant)
+         ) {
+             Text(
+-                text = "Exit WaEnhancerX",
++                text = UiText.get(R.string.waex_ui_exit_waenhancerx_7cb55953, "Exit WaEnhancerX"),
+                 style = typography.bodyMd,
+                 color = colors.onSurface
+             )
+diff --git a/app/src/main/java/com/waenhancer/app/WaexApp.kt b/app/src/main/java/com/waenhancer/app/WaexApp.kt
+index 76d8b77..5d3f2d4 100644
+--- a/app/src/main/java/com/waenhancer/app/WaexApp.kt
++++ b/app/src/main/java/com/waenhancer/app/WaexApp.kt
+@@ -28,6 +28,7 @@ class WaexApp : Application() {
+ 
+     override fun onCreate() {
+         super.onCreate()
++        com.waenhancer.utils.UiText.initialize(this, PreferenceStores.publicStore(this))
+         FeatureCatalog.initialize(this)
+         val lang = LocaleHelper.getSelectedLanguageCode(this)
+         if (lang != "system") {
+diff --git a/app/src/main/java/com/waenhancer/ui/components/BuildTypeSelectionSheet.kt b/app/src/main/java/com/waenhancer/ui/components/BuildTypeSelectionSheet.kt
+index 9b27090..7fabbd6 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/BuildTypeSelectionSheet.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/BuildTypeSelectionSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.Arrangement
+@@ -60,14 +63,14 @@ fun BuildTypeSelectionSheet(
+         ) {
+             Column {
+                 Text(
+-                    text = "Select Build Type",
++                    text = UiText.get(R.string.waex_ui_select_build_type_7aca4b93, "Select Build Type"),
+                     style = typography.headlineMd,
+                     fontWeight = FontWeight.Bold,
+                     color = colors.onSurface
+                 )
+                 Spacer(modifier = Modifier.height(4.dp))
+                 Text(
+-                    text = "Available APK assets for ${release.tagName}",
++                    text = UiText.get(R.string.waex_ui_available_apk_assets_for_1_s_8419f6c4, "Available APK assets for %1\$s", release.tagName),
+                     style = typography.bodyMd,
+                     color = colors.onSurfaceVariant
+                 )
+@@ -146,7 +149,7 @@ fun BuildTypeSelectionSheet(
+                 onClick = onDismiss,
+                 modifier = Modifier.fillMaxWidth()
+             ) {
+-                Text("Cancel")
++                Text(UiText.get(R.string.action_cancel, "Cancel"))
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/components/NoticeBottomSheet.kt b/app/src/main/java/com/waenhancer/ui/components/NoticeBottomSheet.kt
+index aafddd1..a2b82ed 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/NoticeBottomSheet.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/NoticeBottomSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.content.Intent
+ import android.net.Uri
+ import android.widget.TextView
+@@ -80,9 +83,9 @@ fun NoticeBottomSheet(
+     }
+ 
+     val severityLabel = when (notice.severityRank) {
+-        3 -> "URGENT"
+-        2 -> "IMPORTANT"
+-        else -> "ANNOUNCEMENT"
++        3 -> UiText.get(R.string.waex_ui_urgent_ee603f0d, "URGENT")
++        2 -> UiText.get(R.string.waex_ui_important_ed99f4e1, "IMPORTANT")
++        else -> UiText.get(R.string.waex_ui_announcement_35236c01, "ANNOUNCEMENT")
+     }
+ 
+     ModalBottomSheet(
+@@ -165,7 +168,7 @@ fun NoticeBottomSheet(
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.Clear,
+-                            contentDescription = "Dismiss",
++                            contentDescription = UiText.get(R.string.waex_ui_dismiss_48845bff, "Dismiss"),
+                             tint = colors.onSurfaceVariant,
+                             modifier = Modifier.size(16.dp)
+                         )
+@@ -262,7 +265,7 @@ fun NoticeBottomSheet(
+                 }
+ 
+                 if (!hasPrimary && !hasSecondary && notice.dismissible) {
+-                    val dismissLabel = dismissAction?.label?.takeIf { it.isNotBlank() } ?: "Dismiss"
++                    val dismissLabel = dismissAction?.label?.takeIf { it.isNotBlank() } ?: UiText.get(R.string.waex_ui_dismiss_48845bff, "Dismiss")
+                     OutlinedButton(
+                         onClick = onDismiss,
+                         modifier = Modifier
+diff --git a/app/src/main/java/com/waenhancer/ui/components/UpdateAvailableBottomSheet.kt b/app/src/main/java/com/waenhancer/ui/components/UpdateAvailableBottomSheet.kt
+index f60f52a..4ed9fed 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/UpdateAvailableBottomSheet.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/UpdateAvailableBottomSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.animation.AnimatedVisibility
+ import androidx.compose.animation.core.animateFloatAsState
+ import androidx.compose.animation.expandVertically
+@@ -122,13 +125,13 @@ fun UpdateAvailableBottomSheet(
+                 Spacer(modifier = Modifier.size(14.dp))
+                 Column(modifier = Modifier.weight(1f)) {
+                     Text(
+-                        text = "Update Available",
++                        text = UiText.get(R.string.waex_ui_update_available_5ae200f9, "Update Available"),
+                         style = typography.titleLg,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.onSurface
+                     )
+                     Text(
+-                        text = "Version ${release.version}",
++                        text = UiText.get(R.string.waex_ui_version_1_s_b65bfa7f, "Version %1\$s", release.version),
+                         style = typography.bodyMd,
+                         color = colors.primary,
+                         fontWeight = FontWeight.SemiBold
+@@ -152,7 +155,7 @@ fun UpdateAvailableBottomSheet(
+                 ) {
+                     if (sections.isEmpty()) {
+                         Text(
+-                            text = "General stability improvements and bug fixes.",
++                            text = UiText.get(R.string.waex_ui_general_stability_improvements_and_bug_d6cabb44, "General stability improvements and bug fixes."),
+                             style = typography.bodyMd,
+                             color = colors.onSurfaceVariant,
+                             modifier = Modifier.padding(vertical = 12.dp)
+@@ -191,7 +194,7 @@ fun UpdateAvailableBottomSheet(
+                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                 ) {
+                     Text(
+-                        text = "Update Now",
++                        text = UiText.get(R.string.waex_ui_update_now_f96f4d46, "Update Now"),
+                         fontWeight = FontWeight.Bold,
+                         color = colors.onPrimary
+                     )
+@@ -206,14 +209,14 @@ fun UpdateAvailableBottomSheet(
+                         modifier = Modifier.weight(1f),
+                         shape = RoundedCornerShape(14.dp)
+                     ) {
+-                        Text("View Details")
++                        Text(UiText.get(R.string.waex_ui_view_details_90789c12, "View Details"))
+                     }
+                     OutlinedButton(
+                         onClick = onDismiss,
+                         modifier = Modifier.weight(1f),
+                         shape = RoundedCornerShape(14.dp)
+                     ) {
+-                        Text("Later")
++                        Text(UiText.get(R.string.waex_ui_later_73b6e48a, "Later"))
+                     }
+                 }
+             }
+@@ -240,7 +243,7 @@ private fun NativeChangelogSectionRow(
+                 .padding(vertical = 10.dp)
+         ) {
+             Text(
+-                text = section.title,
++                text = com.waenhancer.utils.InternalLabels.text(section.title),
+                 style = typography.titleMd,
+                 fontWeight = FontWeight.Bold,
+                 color = colors.onSurface,
+@@ -259,7 +262,7 @@ private fun NativeChangelogSectionRow(
+ 
+             Icon(
+                 imageVector = WaexIcons.ChevronRight,
+-                contentDescription = if (isExpanded) "Collapse" else "Expand",
++                contentDescription = if (isExpanded) UiText.get(R.string.waex_ui_collapse_be6eb1fc, "Collapse") else UiText.get(R.string.waex_ui_expand_07548c2c, "Expand"),
+                 tint = colors.onSurfaceVariant,
+                 modifier = Modifier
+                     .size(18.dp)
+diff --git a/app/src/main/java/com/waenhancer/ui/components/UpdateDownloadSheet.kt b/app/src/main/java/com/waenhancer/ui/components/UpdateDownloadSheet.kt
+index b2b8abe..5a6c085 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/UpdateDownloadSheet.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/UpdateDownloadSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.widget.Toast
+ import android.os.Handler
+ import android.os.Looper
+@@ -98,7 +101,7 @@ fun UpdateDownloadSheet(
+                     if (!session.claimTerminal()) return@post
+                     mainHandler.removeCallbacks(progressTask)
+                     dismiss()
+-                    Toast.makeText(context, "Download failed: ${error.message}", Toast.LENGTH_LONG).show()
++                    Toast.makeText(context, UiText.get(R.string.waex_ui_download_failed_1_s_1f37f501, "Download failed: %1\$s", error.message), Toast.LENGTH_LONG).show()
+                 }
+             }
+         }, expectedSha256, expectedSize)
+@@ -122,7 +125,7 @@ fun UpdateDownloadSheet(
+                 .padding(horizontal = 24.dp, vertical = 20.dp),
+             verticalArrangement = Arrangement.spacedBy(16.dp)
+         ) {
+-            Text("Downloading update", style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
++            Text(UiText.get(R.string.waex_ui_downloading_update_01436823, "Downloading update"), style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+             LinearProgressIndicator(
+                 progress = { downloadProgress / 100f },
+                 modifier = Modifier.fillMaxWidth(),
+@@ -134,7 +137,7 @@ fun UpdateDownloadSheet(
+                 style = typography.bodyMd,
+                 color = colors.onSurfaceVariant
+             )
+-            OutlinedButton(onClick = { session.cancel(); dismiss() }, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
++            OutlinedButton(onClick = { session.cancel(); dismiss() }, modifier = Modifier.fillMaxWidth()) { Text(UiText.get(R.string.action_cancel, "Cancel")) }
+         }
+     }
+ }
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexColorPickerDialog.kt b/app/src/main/java/com/waenhancer/ui/components/WaexColorPickerDialog.kt
+index 606bc49..77d4396 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexColorPickerDialog.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexColorPickerDialog.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.graphics.Color as AndroidColor
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+@@ -112,7 +115,7 @@ fun WaexColorPickerDialog(
+                 .padding(bottom = 24.dp)
+         ) {
+                 Text(
+-                    text = "Select Accent Color",
++                    text = UiText.get(R.string.waex_ui_select_accent_color_ba07cfa2, "Select Accent Color"),
+                     style = typography.headlineMd,
+                     color = colors.onSurface,
+                     fontWeight = FontWeight.Bold
+@@ -145,7 +148,7 @@ fun WaexColorPickerDialog(
+                                 }
+                             } catch (_: Throwable) {}
+                         },
+-                        label = { Text("Hex Code", style = typography.labelSm) },
++                        label = { Text(UiText.get(R.string.waex_ui_hex_code_fc70e187, "Hex Code"), style = typography.labelSm) },
+                         textStyle = typography.bodyMd.copy(fontWeight = FontWeight.Bold),
+                         modifier = Modifier.weight(1f),
+                         singleLine = true,
+@@ -157,7 +160,7 @@ fun WaexColorPickerDialog(
+ 
+                 // Presets Palette
+                 Text(
+-                    text = "Presets",
++                    text = UiText.get(R.string.waex_ui_presets_954f93fe, "Presets"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant,
+                     fontWeight = FontWeight.Medium
+@@ -200,7 +203,7 @@ fun WaexColorPickerDialog(
+ 
+                 // Sliders (Hue, Saturation, Brightness)
+                 Text(
+-                    text = "Hue",
++                    text = UiText.get(R.string.waex_ui_hue_4d7056f0, "Hue"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant
+                 )
+@@ -218,7 +221,7 @@ fun WaexColorPickerDialog(
+                 )
+ 
+                 Text(
+-                    text = "Saturation",
++                    text = UiText.get(R.string.waex_ui_saturation_993f024b, "Saturation"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant
+                 )
+@@ -236,7 +239,7 @@ fun WaexColorPickerDialog(
+                 )
+ 
+                 Text(
+-                    text = "Brightness",
++                    text = UiText.get(R.string.waex_ui_brightness_ec811d30, "Brightness"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant
+                 )
+@@ -265,7 +268,7 @@ fun WaexColorPickerDialog(
+                     shape = radius.buttonShape,
+                     modifier = Modifier.fillMaxWidth().height(50.dp)
+                 ) {
+-                    Text("Apply", color = colors.onPrimary, fontWeight = FontWeight.Bold)
++                    Text(UiText.get(R.string.action_apply, "Apply"), color = colors.onPrimary, fontWeight = FontWeight.Bold)
+                 }
+                 Spacer(modifier = Modifier.height(10.dp))
+                 OutlinedButton(
+@@ -273,7 +276,7 @@ fun WaexColorPickerDialog(
+                     shape = radius.buttonShape,
+                     modifier = Modifier.fillMaxWidth().height(50.dp)
+                 ) {
+-                    Text("Cancel", color = colors.onSurface)
++                    Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
+                 }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexConfirmationBottomSheet.kt b/app/src/main/java/com/waenhancer/ui/components/WaexConfirmationBottomSheet.kt
+index c918f32..a7c10d8 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexConfirmationBottomSheet.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexConfirmationBottomSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+@@ -83,7 +86,7 @@ fun WaexConfirmationBottomSheet(
+                 shape = radius.buttonShape,
+                 border = BorderStroke(1.dp, colors.outlineVariant)
+             ) {
+-                Text("Cancel", color = colors.onSurface)
++                Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexEmojiPickerDialog.kt b/app/src/main/java/com/waenhancer/ui/components/WaexEmojiPickerDialog.kt
+index 1136248..2de3b6e 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexEmojiPickerDialog.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexEmojiPickerDialog.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.Arrangement
+@@ -83,14 +86,14 @@ fun WaexEmojiPickerDialog(
+         ) {
+                 // Header
+                 Text(
+-                    text = "Custom Reaction Emoji",
++                    text = UiText.get(R.string.feat_doubletap2like_emoji_title, "Custom Reaction Emoji"),
+                     style = typography.titleMd,
+                     color = colors.onSurface,
+                     fontWeight = FontWeight.Bold
+                 )
+ 
+                 Text(
+-                    text = "Select or type the default emoji sent when double-tapping a message.",
++                    text = UiText.get(R.string.waex_ui_select_or_type_the_default_emoji_sent_1489519d, "Select or type the default emoji sent when double-tapping a message."),
+                     style = typography.bodySm,
+                     color = colors.onSurfaceVariant,
+                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+@@ -98,7 +101,7 @@ fun WaexEmojiPickerDialog(
+ 
+                 // Quick Presets
+                 Text(
+-                    text = "Popular Reactions",
++                    text = UiText.get(R.string.waex_ui_popular_reactions_c2b82def, "Popular Reactions"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant,
+                     modifier = Modifier.padding(bottom = 8.dp)
+@@ -135,7 +138,7 @@ fun WaexEmojiPickerDialog(
+ 
+                 // Custom Input Field
+                 Text(
+-                    text = "Or enter custom emoji",
++                    text = UiText.get(R.string.waex_ui_or_enter_custom_emoji_8442012c, "Or enter custom emoji"),
+                     style = typography.labelSm,
+                     color = colors.onSurfaceVariant,
+                     modifier = Modifier.padding(bottom = 6.dp)
+@@ -158,7 +161,7 @@ fun WaexEmojiPickerDialog(
+                         unfocusedTextColor = colors.onSurface
+                     ),
+                     placeholder = {
+-                        Text("e.g. 👍", color = colors.onSurfaceVariant)
++                        Text(UiText.get(R.string.waex_ui_e_g_007cd8a1, "e.g. 👍"), color = colors.onSurfaceVariant)
+                     }
+                 )
+ 
+@@ -175,7 +178,7 @@ fun WaexEmojiPickerDialog(
+                     shape = radius.buttonShape,
+                     modifier = Modifier.fillMaxWidth().height(50.dp)
+                 ) {
+-                    Text("Save", color = colors.onPrimary, fontWeight = FontWeight.Bold)
++                    Text(UiText.get(R.string.action_save, "Save"), color = colors.onPrimary, fontWeight = FontWeight.Bold)
+                 }
+                 Spacer(modifier = Modifier.height(10.dp))
+                 OutlinedButton(
+@@ -183,7 +186,7 @@ fun WaexEmojiPickerDialog(
+                     shape = radius.buttonShape,
+                     modifier = Modifier.fillMaxWidth().height(50.dp)
+                 ) {
+-                    Text("Cancel", color = colors.onSurface)
++                    Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
+                 }
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexProChip.kt b/app/src/main/java/com/waenhancer/ui/components/WaexProChip.kt
+index dfbeccb..8b0cc67 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexProChip.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexProChip.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.layout.Arrangement
+@@ -132,7 +135,7 @@ fun WaexProChip(
+         ) {
+             Icon(
+                 imageVector = WaexIcons.Lock,
+-                contentDescription = "Locked Pro feature",
++                contentDescription = UiText.get(R.string.waex_ui_locked_pro_feature_8239ac16, "Locked Pro feature"),
+                 tint = lockedContentColor,
+                 modifier = Modifier.size(9.dp)
+             )
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexProModals.kt b/app/src/main/java/com/waenhancer/ui/components/WaexProModals.kt
+index d72f4d7..962d2a1 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexProModals.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexProModals.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+ import androidx.compose.foundation.clickable
+@@ -103,13 +106,13 @@ fun LicenseActivationModal(
+                 }
+                 Column {
+                     Text(
+-                        text = "Activate Pro License",
++                        text = UiText.get(R.string.waex_ui_activate_pro_license_9b27501f, "Activate Pro License"),
+                         style = typography.headlineMd,
+                         fontWeight = FontWeight.Bold,
+                         color = colors.onSurface
+                     )
+                     Text(
+-                        text = "Hardware-locked feature activation",
++                        text = UiText.get(R.string.waex_ui_hardware_locked_feature_activation_946923fc, "Hardware-locked feature activation"),
+                         style = typography.labelSm,
+                         color = colors.onSurfaceVariant
+                     )
+@@ -126,7 +129,7 @@ fun LicenseActivationModal(
+             ) {
+                 Icon(
+                     imageVector = WaexIcons.Clear,
+-                    contentDescription = "Close",
++                    contentDescription = UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"),
+                     tint = colors.onSurfaceVariant,
+                     modifier = Modifier.size(14.dp)
+                 )
+@@ -221,12 +224,12 @@ fun LicenseActivationModal(
+                 val trimmedKey = licenseKey.trim().uppercase(Locale.US)
+                 if (trimmedKey.isEmpty()) {
+                     verifyState = "error"
+-                    errorMessage = "Please enter your license key."
++                    errorMessage = UiText.get(R.string.waex_ui_please_enter_your_license_key_49b0976f, "Please enter your license key.")
+                     return@Button
+                 }
+                 if (!LicenseManager.isValidLicensePattern(trimmedKey)) {
+                     verifyState = "error"
+-                    errorMessage = "Invalid key format. Expected: WAEX-XXXX-XXXX-XXXX"
++                    errorMessage = UiText.get(R.string.waex_ui_invalid_key_format_expected_waex_xxxx_8bf26cd1, "Invalid key format. Expected: WAEX-XXXX-XXXX-XXXX")
+                     return@Button
+                 }
+ 
+@@ -245,7 +248,7 @@ fun LicenseActivationModal(
+ 
+                         override fun onError(message: String?) {
+                             verifyState = "error"
+-                            errorMessage = message ?: "Verification failed."
++                            errorMessage = message ?: UiText.get(R.string.waex_ui_verification_failed_f07240d4, "Verification failed.")
+                         }
+                     }
+                 )
+@@ -268,7 +271,7 @@ fun LicenseActivationModal(
+                     strokeWidth = 2.dp
+                 )
+                 Spacer(modifier = Modifier.width(8.dp))
+-                Text(text = "Verifying with Server…", style = typography.bodyMd, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.waex_ui_verifying_with_server_88342cf7, "Verifying with Server…"), style = typography.bodyMd, fontWeight = FontWeight.Bold)
+             } else if (verifyState == "success") {
+                 Icon(
+                     imageVector = WaexIcons.Success,
+@@ -277,9 +280,9 @@ fun LicenseActivationModal(
+                     modifier = Modifier.size(18.dp)
+                 )
+                 Spacer(modifier = Modifier.width(8.dp))
+-                Text(text = "Pro License Activated!", style = typography.bodyMd, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.waex_ui_pro_license_activated_b27626fb, "Pro License Activated!"), style = typography.bodyMd, fontWeight = FontWeight.Bold)
+             } else {
+-                Text(text = "Verify & Activate", style = typography.bodyMd, fontWeight = FontWeight.Bold)
++                Text(text = UiText.get(R.string.waex_ui_verify_activate_acf94d3b, "Verify & Activate"), style = typography.bodyMd, fontWeight = FontWeight.Bold)
+             }
+         }
+ 
+@@ -317,7 +320,7 @@ fun LicenseActivationModal(
+                 )
+                 Spacer(modifier = Modifier.width(8.dp))
+                 Text(
+-                    text = "Get or manage license via @waenhancerx_bot",
++                    text = UiText.get(R.string.waex_ui_get_or_manage_license_via_waenhancerx_266f2cff, "Get or manage license via @waenhancerx_bot"),
+                     style = typography.bodyMd.copy(color = colors.primary, fontWeight = FontWeight.Medium),
+                     fontSize = 13.sp
+                 )
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexSearchBar.kt b/app/src/main/java/com/waenhancer/ui/components/WaexSearchBar.kt
+index c80d5e2..4eeadcd 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexSearchBar.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexSearchBar.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.BorderStroke
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Row
+@@ -91,7 +94,7 @@ fun WaexSearchBar(
+                 ) {
+                     Icon(
+                         imageVector = WaexIcons.Clear,
+-                        contentDescription = "Clear search",
++                        contentDescription = UiText.get(R.string.waex_ui_clear_search_3b7ea517, "Clear search"),
+                         tint = colors.onSurfaceVariant,
+                         modifier = Modifier.size(18.dp)
+                     )
+diff --git a/app/src/main/java/com/waenhancer/ui/components/WaexTopBar.kt b/app/src/main/java/com/waenhancer/ui/components/WaexTopBar.kt
+index 644bd60..3e9e090 100644
+--- a/app/src/main/java/com/waenhancer/ui/components/WaexTopBar.kt
++++ b/app/src/main/java/com/waenhancer/ui/components/WaexTopBar.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.components
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.RowScope
+@@ -57,7 +60,7 @@ fun WaexTopBar(
+                     ) {
+                         Icon(
+                             imageVector = WaexIcons.Back,
+-                            contentDescription = "Back",
++                            contentDescription = UiText.get(R.string.action_back, "Back"),
+                             tint = colors.onSurface
+                         )
+                     }
+diff --git a/app/src/main/java/com/waenhancer/ui/navigation/Navigation.kt b/app/src/main/java/com/waenhancer/ui/navigation/Navigation.kt
+index 4fc6488..dffacf3 100644
+--- a/app/src/main/java/com/waenhancer/ui/navigation/Navigation.kt
++++ b/app/src/main/java/com/waenhancer/ui/navigation/Navigation.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.ui.navigation
+ 
++import com.waenhancer.utils.UiText
++
+ import com.waenhancer.licensing.LicenseManager
+ import androidx.activity.compose.BackHandler
+ 
+@@ -296,7 +298,7 @@ fun MainContainerScreen() {
+                 (context as? Activity)?.finish()
+             } else {
+                 lastBackPressTime = currentTime
+-                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
++                Toast.makeText(context, UiText.get(R.string.waex_ui_press_back_again_to_exit_c151b888, "Press back again to exit"), Toast.LENGTH_SHORT).show()
+             }
+         }
+     }
+@@ -385,7 +387,7 @@ fun MainContainerScreen() {
+                                 ) {
+                                     Icon(
+                                         imageVector = WaexIcons.Back,
+-                                        contentDescription = "Back",
++                                        contentDescription = UiText.get(R.string.action_back, "Back"),
+                                         tint = colors.onBackground,
+                                         modifier = Modifier.size(20.dp)
+                                     )
+@@ -421,9 +423,9 @@ fun MainContainerScreen() {
+                                     else -> colors.onSurfaceVariant
+                                 }
+                                 val chipLabel = when (licenseState) {
+-                                    "pro" -> "Pro"
+-                                    "trial" -> "Trial"
+-                                    else -> "Free"
++                                    "pro" -> UiText.get(R.string.pro_feature_tag, "Pro")
++                                    "trial" -> UiText.get(R.string.waex_ui_trial_98a66e97, "Trial")
++                                    else -> UiText.get(R.string.waex_ui_free_f411a1fb, "Free")
+                                 }
+ 
+                                 Box(
+@@ -453,7 +455,7 @@ fun MainContainerScreen() {
+                             ) {
+                                 Icon(
+                                     imageVector = WaexIcons.Search,
+-                                    contentDescription = "Search",
++                                    contentDescription = UiText.get(R.string.action_search, "Search"),
+                                     tint = colors.onBackground,
+                                     modifier = Modifier.size(20.dp)
+                                 )
+@@ -472,7 +474,7 @@ fun MainContainerScreen() {
+                                 ) {
+                                     Icon(
+                                         imageVector = WaexIcons.MoreVert,
+-                                        contentDescription = "More Options",
++                                        contentDescription = UiText.get(R.string.waex_ui_more_options_6285ce5d, "More Options"),
+                                         tint = colors.onBackground,
+                                         modifier = Modifier.size(20.dp)
+                                     )
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/audio/AudioTranscriptionScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/audio/AudioTranscriptionScreen.kt
+index 4d0596e..b97044a 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/audio/AudioTranscriptionScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/audio/AudioTranscriptionScreen.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.ui.screens.audio
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+@@ -44,7 +47,7 @@ fun AudioTranscriptionScreen() {
+     Scaffold(
+         topBar = {
+             WaexTopBar(
+-                title = "Audio & AI Summary",
++                title = UiText.get(R.string.title_audio_ai_summary, "Audio & AI Summary"),
+                 onBackClick = { navController.popBack() }
+             )
+         },
+@@ -59,31 +62,31 @@ fun AudioTranscriptionScreen() {
+             verticalArrangement = Arrangement.spacedBy(spacing.stackLg)
+         ) {
+             WaexSectionHeader(
+-                title = "Voice Note AI Rules",
+-                subtitle = "Transcribe voice notes automatically using local model"
++                title = UiText.get(R.string.waex_ui_voice_note_ai_rules_a5996bf0, "Voice Note AI Rules"),
++                subtitle = UiText.get(R.string.waex_ui_transcribe_voice_notes_automatically_u_0d57d8de, "Transcribe voice notes automatically using local model")
+             )
+ 
+             WaexCard(modifier = Modifier.fillMaxWidth()) {
+                 Column {
+                     WaexSwitchPreference(
+-                        title = "Voice Transcription",
+-                        description = "Convert received voice notes to readable chat text bubbles.",
++                        title = UiText.get(R.string.waex_ui_voice_transcription_677b2813, "Voice Transcription"),
++                        description = UiText.get(R.string.waex_ui_convert_received_voice_notes_to_readab_47e047f7, "Convert received voice notes to readable chat text bubbles."),
+                         checked = enableTranscriptionChecked,
+                         onCheckedChange = { enableTranscriptionChecked = it },
+                         icon = WaexIcons.Mic,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Summarize Long Audios",
+-                        description = "Use Gemini nano to write bulleted abstracts for long notes.",
++                        title = UiText.get(R.string.waex_ui_summarize_long_audios_107bd840, "Summarize Long Audios"),
++                        description = UiText.get(R.string.waex_ui_use_gemini_nano_to_write_bulleted_abst_ab74bf14, "Use Gemini nano to write bulleted abstracts for long notes."),
+                         checked = enableSummaryChecked,
+                         onCheckedChange = { enableSummaryChecked = it },
+                         icon = WaexIcons.Settings,
+                         showDivider = true
+                     )
+                     WaexSwitchPreference(
+-                        title = "Auto Download Models",
+-                        description = "Get Whisper models over Wi-Fi automatically.",
++                        title = UiText.get(R.string.waex_ui_auto_download_models_6789ddb3, "Auto Download Models"),
++                        description = UiText.get(R.string.waex_ui_get_whisper_models_over_wi_fi_automati_445a151d, "Get Whisper models over Wi-Fi automatically."),
+                         checked = autoDownloadChecked,
+                         onCheckedChange = { autoDownloadChecked = it },
+                         icon = WaexIcons.Folder,
+@@ -93,15 +96,15 @@ fun AudioTranscriptionScreen() {
+             }
+ 
+             WaexSectionHeader(
+-                title = "Language & Downloads",
+-                subtitle = "Set speech interpretation locale"
++                title = UiText.get(R.string.waex_ui_language_downloads_2c65f45e, "Language & Downloads"),
++                subtitle = UiText.get(R.string.waex_ui_set_speech_interpretation_locale_92437d43, "Set speech interpretation locale")
+             )
+ 
+             WaexCard(modifier = Modifier.fillMaxWidth()) {
+                 Column {
+                     WaexPreferenceItem(
+-                        title = "Default Language",
+-                        description = "Selected speech locale: English (US)",
++                        title = UiText.get(R.string.waex_ui_default_language_28bee244, "Default Language"),
++                        description = UiText.get(R.string.waex_ui_selected_speech_locale_english_us_90b823a7, "Selected speech locale: English (US)"),
+                         icon = WaexIcons.Info,
+                         onClick = {},
+                         showDivider = true,
+@@ -110,13 +113,13 @@ fun AudioTranscriptionScreen() {
+                         }
+                     )
+                     WaexPreferenceItem(
+-                        title = "Model Download Status",
+-                        description = "Base translation dictionary: 42 MB",
++                        title = UiText.get(R.string.waex_ui_model_download_status_ff625765, "Model Download Status"),
++                        description = UiText.get(R.string.waex_ui_base_translation_dictionary_42_mb_41e8799d, "Base translation dictionary: 42 MB"),
+                         icon = WaexIcons.Success,
+                         onClick = {},
+                         showDivider = false,
+                         trailing = {
+-                            WaexStatusChip(text = "Ready", color = colors.primaryContainer)
++                            WaexStatusChip(text = UiText.get(R.string.waex_ui_ready_5fa7aac5, "Ready"), color = colors.primaryContainer)
+                         }
+                     )
+                 }
+diff --git a/app/src/main/java/com/waenhancer/ui/screens/automation/AutomationTaskerScreen.kt b/app/src/main/java/com/waenhancer/ui/screens/automation/AutomationTaskerScreen.kt
+index 1adb819..e4f122a 100644
+--- a/app/src/main/java/com/waenhancer/ui/screens/automation/AutomationTaskerScreen.kt
++++ b/app/src/main/java/com/waenhancer/ui/screens/automation/AutomationTaskerScreen.kt
+@@ -1,5 +1,7 @@
+ package com.waenhancer.ui.screens.automation
+ 
++import com.waenhancer.utils.UiText
++
+ import com.waenhancer.app.R
+ import androidx.compose.ui.res.stringResource
+ import com.waenhancer.ui.components.WaexProChip
+@@ -457,13 +459,13 @@ fun AutomationTaskerScreen() {
+                             verticalArrangement = Arrangement.spacedBy(4.dp)
+                         ) {
+                             Text(
+-                                text = "Audio Transcription",
++                                text = UiText.get(R.string.feat_voice_transcription_title, "Audio Transcription"),
+                                 style = typography.bodyLg,
+                                 fontWeight = FontWeight.Bold,
+                                 color = colors.onSurface
+                             )
+                             Text(

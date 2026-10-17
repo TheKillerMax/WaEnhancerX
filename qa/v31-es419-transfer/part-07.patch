@@ -1,0 +1,1000 @@
+         }
+     }
+ 
+@@ -767,30 +770,30 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+         if (!active) {
+             new WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("Activate Ghost Mode?")
+-                    .setMessage("Ghost Mode hides your online status, freezes last seen, and silences typing & read receipts from all contacts.\n\nRestart WhatsApp to apply changes?")
+-                    .setPositiveButton("Activate & Restart", (d, w) -> {
++                    .setTitle(UiText.get(R.string.waex_ui_activate_ghost_mode_2481d3ff, "Activate Ghost Mode?"))
++                    .setMessage(UiText.get(R.string.waex_ui_ghost_mode_hides_your_online_status_fr_aef9e9dc, "Ghost Mode hides your online status, freezes last seen, and silences typing & read receipts from all contacts.\n\nRestart WhatsApp to apply changes?"))
++                    .setPositiveButton(UiText.get(R.string.waex_ui_activate_restart_017ecc0d, "Activate & Restart"), (d, w) -> {
+                         prefs.edit().putBoolean("ghostmode_active", true).apply();
+-                        Toast.makeText(activity, "Ghost Mode Activated", Toast.LENGTH_SHORT).show();
++                        Toast.makeText(activity, UiText.get(R.string.waex_ui_ghost_mode_activated_970ac067, "Ghost Mode Activated"), Toast.LENGTH_SHORT).show();
+                         activity.invalidateOptionsMenu();
+                         d.dismiss();
+                         forceRestartWhatsApp(activity);
+                     })
+-                    .setNegativeButton("Cancel", (d, w) -> d.dismiss())
++                    .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), (d, w) -> d.dismiss())
+                     .show();
+         } else {
+             new WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("Deactivate Ghost Mode?")
+-                    .setMessage("Deactivating restores your normal online visibility, typing indicators, and read receipts.\n\nRestart WhatsApp to apply changes?")
+-                    .setPositiveButton("Deactivate & Restart", (d, w) -> {
++                    .setTitle(UiText.get(R.string.waex_ui_deactivate_ghost_mode_ae52c22b, "Deactivate Ghost Mode?"))
++                    .setMessage(UiText.get(R.string.waex_ui_deactivating_restores_your_normal_onli_e7fff0e3, "Deactivating restores your normal online visibility, typing indicators, and read receipts.\n\nRestart WhatsApp to apply changes?"))
++                    .setPositiveButton(UiText.get(R.string.waex_ui_deactivate_restart_5f1c0ebe, "Deactivate & Restart"), (d, w) -> {
+                         prefs.edit().putBoolean("ghostmode_active", false).apply();
+-                        Toast.makeText(activity, "Ghost Mode Deactivated", Toast.LENGTH_SHORT).show();
++                        Toast.makeText(activity, UiText.get(R.string.waex_ui_ghost_mode_deactivated_7b9d7043, "Ghost Mode Deactivated"), Toast.LENGTH_SHORT).show();
+                         activity.invalidateOptionsMenu();
+                         d.dismiss();
+                         forceRestartWhatsApp(activity);
+                     })
+-                    .setNegativeButton("Cancel", (d, w) -> d.dismiss())
++                    .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), (d, w) -> d.dismiss())
+                     .show();
+         }
+     }
+@@ -800,30 +803,30 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
+         if (!active) {
+             new WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("Freeze Last Seen?")
+-                    .setMessage("Locks your last seen timestamp so contacts won't see when you're active.\n\nRestart WhatsApp to apply changes?")
+-                    .setPositiveButton("Freeze & Restart", (d, w) -> {
++                    .setTitle(UiText.get(R.string.waex_ui_freeze_last_seen_200aea50, "Freeze Last Seen?"))
++                    .setMessage(UiText.get(R.string.waex_ui_locks_your_last_seen_timestamp_so_cont_3c49d617, "Locks your last seen timestamp so contacts won't see when you're active.\n\nRestart WhatsApp to apply changes?"))
++                    .setPositiveButton(UiText.get(R.string.waex_ui_freeze_restart_bfdfd4fc, "Freeze & Restart"), (d, w) -> {
+                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
+-                        Toast.makeText(activity, "Last Seen Frozen", Toast.LENGTH_SHORT).show();
++                        Toast.makeText(activity, UiText.get(R.string.waex_ui_last_seen_frozen_263b4306, "Last Seen Frozen"), Toast.LENGTH_SHORT).show();
+                         activity.invalidateOptionsMenu();
+                         d.dismiss();
+                         forceRestartWhatsApp(activity);
+                     })
+-                    .setNegativeButton("Cancel", (d, w) -> d.dismiss())
++                    .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), (d, w) -> d.dismiss())
+                     .show();
+         } else {
+             new WaexBottomSheet(activity)
+                     .asBottomSheet()
+-                    .setTitle("Unfreeze Last Seen?")
+-                    .setMessage("WhatsApp will resume updating your last seen timestamp normally.\n\nRestart WhatsApp to apply changes?")
+-                    .setPositiveButton("Unfreeze & Restart", (d, w) -> {
++                    .setTitle(UiText.get(R.string.waex_ui_unfreeze_last_seen_2b755d69, "Unfreeze Last Seen?"))
++                    .setMessage(UiText.get(R.string.waex_ui_whatsapp_will_resume_updating_your_las_13fe4e9d, "WhatsApp will resume updating your last seen timestamp normally.\n\nRestart WhatsApp to apply changes?"))
++                    .setPositiveButton(UiText.get(R.string.waex_ui_unfreeze_restart_482e080f, "Unfreeze & Restart"), (d, w) -> {
+                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
+-                        Toast.makeText(activity, "Last Seen Unfrozen", Toast.LENGTH_SHORT).show();
++                        Toast.makeText(activity, UiText.get(R.string.waex_ui_last_seen_unfrozen_9b59cac2, "Last Seen Unfrozen"), Toast.LENGTH_SHORT).show();
+                         activity.invalidateOptionsMenu();
+                         d.dismiss();
+                         forceRestartWhatsApp(activity);
+                     })
+-                    .setNegativeButton("Cancel", (d, w) -> d.dismiss())
++                    .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), (d, w) -> d.dismiss())
+                     .show();
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/homescreen/WaexQuickActionsSheet.java b/app/src/main/java/com/waenhancer/xposed/features/homescreen/WaexQuickActionsSheet.java
+index f4c3678..d0b89df 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/homescreen/WaexQuickActionsSheet.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/homescreen/WaexQuickActionsSheet.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.homescreen;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.app.Dialog;
+ import android.content.Context;
+@@ -214,8 +217,8 @@ final class WaexQuickActionsSheet {
+                 if (prefs.getBoolean("freezelastseen", false)) {
+                     boolean freezeOn = gActive || prefs.getBoolean("freeze_last_seen_active", false);
+                     addSwitchRow(dependentContainer, activity, dialog,
+-                            "Freeze Last Seen",
+-                            gActive ? "Managed by Ghost Mode" : "Lock your last seen timestamp",
++                            UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen"),
++                            gActive ? UiText.get(R.string.waex_ui_managed_by_ghost_mode_43c1f096, "Managed by Ghost Mode") : UiText.get(R.string.waex_ui_lock_your_last_seen_timestamp_3ffb4b47, "Lock your last seen timestamp"),
+                             freezeOn,
+                             gActive,
+                             finalPrimaryText, finalSecondaryText,
+@@ -228,8 +231,8 @@ final class WaexQuickActionsSheet {
+                 if (prefs.getBoolean("show_dndmode", false)) {
+                     boolean dndOn = gActive || prefs.getBoolean("dnd_mode", false);
+                     addSwitchRow(dependentContainer, activity, dialog,
+-                            "DND Mode",
+-                            gActive ? "Managed by Ghost Mode" : "Mute all incoming notifications",
++                            UiText.get(R.string.waex_ui_dnd_mode_09024263, "DND Mode"),
++                            gActive ? UiText.get(R.string.waex_ui_managed_by_ghost_mode_43c1f096, "Managed by Ghost Mode") : UiText.get(R.string.waex_ui_mute_all_incoming_notifications_543d04fe, "Mute all incoming notifications"),
+                             dndOn,
+                             gActive,
+                             finalPrimaryText, finalSecondaryText,
+@@ -243,8 +246,8 @@ final class WaexQuickActionsSheet {
+             if (prefs.getBoolean("ghostmode", false)) {
+                 boolean ghostActive = prefs.getBoolean("ghostmode_active", false);
+                 addSwitchRow(content, activity, dialog,
+-                        "Ghost Mode",
+-                        "Hide online status, typing & read receipts",
++                        UiText.get(R.string.waex_ui_ghost_mode_48b2b30e, "Ghost Mode"),
++                        UiText.get(R.string.waex_ui_hide_online_status_typing_read_receipt_d3490518, "Hide online status, typing & read receipts"),
+                         ghostActive,
+                         false,
+                         finalPrimaryText, finalSecondaryText,
+@@ -278,8 +281,8 @@ final class WaexQuickActionsSheet {
+ 
+             if (prefs.getBoolean("restartbutton", false)) {
+                 addTileRow(content, activity,
+-                        "Restart WhatsApp",
+-                        "Force close and relaunch WhatsApp",
++                        UiText.get(R.string.waex_ui_restart_whatsapp_e68a0fd3, "Restart WhatsApp"),
++                        UiText.get(R.string.waex_ui_force_close_and_relaunch_whatsapp_780fd6fd, "Force close and relaunch WhatsApp"),
+                         finalPrimaryText, finalSecondaryText,
+                         () -> {
+                             dialog.dismiss();
+@@ -289,8 +292,8 @@ final class WaexQuickActionsSheet {
+ 
+             if (prefs.getBoolean("open_wae", false)) {
+                 addTileRow(content, activity,
+-                        "WA Enhancer Settings",
+-                        "Open WAEX settings and preferences",
++                        UiText.get(R.string.waex_ui_wa_enhancer_settings_ff30ce0c, "WA Enhancer Settings"),
++                        UiText.get(R.string.waex_ui_open_waex_settings_and_preferences_8ec5880a, "Open WAEX settings and preferences"),
+                         finalPrimaryText, finalSecondaryText,
+                         () -> {
+                             dialog.dismiss();
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java b/app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java
+index fb3e312..a37feec 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.media;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.Context;
+ import android.content.SharedPreferences;
+@@ -77,7 +80,7 @@ public class DownloadViewOnceHook extends BaseFeature {
+                     if (menu.findItem(MENU_ID_DOWNLOAD) != null) return;
+ 
+                     Activity activity = (Activity) param.thisObject;
+-                    MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
++                    MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
+                     item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+ 
+                     Drawable icon = MenuIconLoader.load(activity, "ic_waex_download");
+@@ -90,13 +93,13 @@ public class DownloadViewOnceHook extends BaseFeature {
+                             try {
+                                 File mediaFile = extractMediaFileFromActivity(activity);
+                                 if (mediaFile == null || !mediaFile.exists()) {
+-                                    showToast(activity, "Media not cached or available yet");
++                                    showToast(activity, UiText.get(R.string.waex_ui_media_not_cached_or_available_yet_45e16ba0, "Media not cached or available yet"));
+                                     return;
+                                 }
+                                 saveMediaFile(activity, mediaFile);
+                             } catch (Throwable t) {
+                                 XposedBridge.log(TAG + " Error saving view once from Activity: " + t.getMessage());
+-                                showToast(activity, "Failed to save: " + t.getMessage());
++                                showToast(activity, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
+                             }
+                         });
+                         return true;
+@@ -162,7 +165,7 @@ public class DownloadViewOnceHook extends BaseFeature {
+                         if (menu == null || menu.findItem(MENU_ID_DOWNLOAD) != null) return;
+ 
+                         final Object targetMessage = fmessageObj;
+-                        MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
++                        MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
+                         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+ 
+                         Drawable icon = MenuIconLoader.load(context, "ic_waex_download");
+@@ -180,10 +183,10 @@ public class DownloadViewOnceHook extends BaseFeature {
+                                             return;
+                                         }
+                                     }
+-                                    showToast(context, "Media not available yet");
++                                    showToast(context, UiText.get(R.string.waex_ui_media_not_available_yet_c504582c, "Media not available yet"));
+                                 } catch (Throwable t) {
+                                     XposedBridge.log(TAG + " Error saving media: " + t.getMessage());
+-                                    showToast(context, "Failed to save: " + t.getMessage());
++                                    showToast(context, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
+                                 }
+                             });
+                             return true;
+@@ -298,10 +301,10 @@ public class DownloadViewOnceHook extends BaseFeature {
+     private void saveMediaFile(Context ctx, File srcFile) {
+         try {
+             GalleryMediaExporter.export(ctx, srcFile);
+-            showToast(ctx, "Media saved (WAEX)");
++            showToast(ctx, UiText.get(R.string.waex_ui_media_saved_v30, "Media saved (WAEX)"));
+         } catch (Exception failure) {
+             XposedBridge.log(TAG + " Export failed: " + failure.getClass().getSimpleName());
+-            showToast(ctx, "Unable to save this media file");
++            showToast(ctx, UiText.get(R.string.waex_ui_media_save_failed_v30, "Unable to save this media file"));
+         }
+     }
+ 
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/media/MediaPreviewHook.kt b/app/src/main/java/com/waenhancer/xposed/features/media/MediaPreviewHook.kt
+index 72696f6..b5b5d20 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/media/MediaPreviewHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/media/MediaPreviewHook.kt
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.media
+ 
++
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.annotation.SuppressLint
+ import android.app.Dialog
+ import android.content.Context
+@@ -373,7 +377,7 @@ class MediaPreviewHook(
+ 
+             if (rowId <= 0L && !inMemoryMedia.isUsable()) {
+                 XposedBridge.log("[WAEX][MediaPreview] Unable to resolve message row/key or in-memory media")
+-                Toast.makeText(context, "Error finding message info", Toast.LENGTH_SHORT).show()
++                Toast.makeText(context, UiText.get(R.string.waex_ui_error_finding_message_info_d5e24fb5, "Error finding message info"), Toast.LENGTH_SHORT).show()
+                 return
+             }
+ 
+@@ -381,7 +385,7 @@ class MediaPreviewHook(
+             startPlayer(rowId.takeIf { it > 0L }, context, isNewsletter, messageSource, inMemoryMedia)
+         } catch (t: Throwable) {
+             XposedBridge.log("[WAEX][MediaPreview] startPreview error: ${t.javaClass.simpleName}")
+-            Toast.makeText(context, "Error launching preview: ${t.message}", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_error_launching_preview_1_s_e1200bff, "Error launching preview: %1\$s", t.message), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -519,7 +523,7 @@ class MediaPreviewHook(
+                     }
+                 } else {
+                     mainHandler.post {
+-                        Toast.makeText(context, "Full-quality media info is unavailable", Toast.LENGTH_LONG).show()
++                        Toast.makeText(context, UiText.get(R.string.waex_ui_full_quality_media_info_is_unavailable_a93af643, "Full-quality media info is unavailable"), Toast.LENGTH_LONG).show()
+                     }
+                     cleanupDialog(executor)
+                 }
+@@ -570,7 +574,7 @@ class MediaPreviewHook(
+             }
+             setTextColor(Color.WHITE)
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+-            text = if (mimeType != null && mimeType.startsWith("image")) "Image Preview" else "Video Preview"
++            text = if (mimeType != null && mimeType.startsWith("image")) UiText.get(R.string.waex_ui_image_preview_eec6294a, "Image Preview") else UiText.get(R.string.waex_ui_video_preview_95068058, "Video Preview")
+         }
+         header.addView(title)
+ 
+@@ -619,7 +623,7 @@ class MediaPreviewHook(
+         val title = TextView(context).apply {
+             setTextColor(Color.WHITE)
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+-            text = "Preparing preview"
++            text = UiText.get(R.string.waex_ui_preparing_preview_21580387, "Preparing preview")
+         }
+         card.addView(title)
+ 
+@@ -651,7 +655,7 @@ class MediaPreviewHook(
+             gravity = Gravity.CENTER
+             setTextColor(Color.parseColor("#D9E1E3"))
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+-            text = "Connecting… 0%"
++            text = UiText.get(R.string.waex_ui_connecting_0_bf886e36, "Connecting… 0%")
+         }
+         card.addView(progressText)
+ 
+@@ -667,7 +671,7 @@ class MediaPreviewHook(
+             setPadding(dipToPixels(context, 18f), 0, dipToPixels(context, 18f), 0)
+             setTextColor(Color.parseColor("#53BDEB"))
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+-            text = "Cancel"
++            text = UiText.get(R.string.action_cancel, "Cancel")
+             isClickable = true
+             isFocusable = true
+             background = GradientDrawable().apply {
+@@ -740,7 +744,7 @@ class MediaPreviewHook(
+                         if (bitmap != null) {
+                             displayImage(context, contentContainer, bitmap)
+                         } else {
+-                            Toast.makeText(context, "The full-quality image could not be decoded", Toast.LENGTH_LONG).show()
++                            Toast.makeText(context, UiText.get(R.string.waex_ui_the_full_quality_image_could_not_be_de_355cd5b2, "The full-quality image could not be decoded"), Toast.LENGTH_LONG).show()
+                         }
+                     } else {
+                         displayVideo(context, contentContainer, file)
+@@ -814,7 +818,7 @@ class MediaPreviewHook(
+         lastProgressPostAt = now
+         mainHandler.post {
+             progressBar.progress = progress
+-            progressText.text = "Downloading… $progress%\n$sizeInfo"
++            progressText.text = UiText.get(R.string.waex_ui_downloading_1_s_2_s_3186d141, "Downloading… %1\$s%%\n%2\$s", progress, sizeInfo)
+         }
+     }
+ 
+@@ -829,7 +833,7 @@ class MediaPreviewHook(
+             }
+             container.addView(imageView)
+         } catch (e: Exception) {
+-            Toast.makeText(context, "Error displaying image: ${e.message}", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_error_displaying_image_1_s_9844d874, "Error displaying image: %1\$s", e.message), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -844,7 +848,7 @@ class MediaPreviewHook(
+                 loadingContainer.visibility = View.GONE
+                 if (mimeType.startsWith("image")) {
+                     if (bitmap != null) displayImage(context, contentContainer, bitmap)
+-                    else Toast.makeText(context, "The full-quality image could not be decoded", Toast.LENGTH_LONG).show()
++                    else Toast.makeText(context, UiText.get(R.string.waex_ui_the_full_quality_image_could_not_be_de_355cd5b2, "The full-quality image could not be decoded"), Toast.LENGTH_LONG).show()
+                 } else {
+                     displayVideo(context, contentContainer, file)
+                 }
+@@ -895,11 +899,11 @@ class MediaPreviewHook(
+             }
+ 
+             videoView.setOnErrorListener { _, _, _ ->
+-                Toast.makeText(context, "Error playing video", Toast.LENGTH_SHORT).show()
++                Toast.makeText(context, UiText.get(R.string.waex_ui_error_playing_video_14f39a6f, "Error playing video"), Toast.LENGTH_SHORT).show()
+                 true
+             }
+         } catch (e: Exception) {
+-            Toast.makeText(context, "Error displaying video: ${e.message}", Toast.LENGTH_SHORT).show()
++            Toast.makeText(context, UiText.get(R.string.waex_ui_error_displaying_video_1_s_6a5f9a50, "Error displaying video: %1\$s", e.message), Toast.LENGTH_SHORT).show()
+         }
+     }
+ 
+@@ -1124,7 +1128,7 @@ class MediaPreviewHook(
+         val message = if (e is InvocationTargetException) e.cause?.message else e.message
+         XposedBridge.log("[WAEX][MediaPreview] Error: ${e.javaClass.simpleName}")
+         mainHandler.post {
+-            Toast.makeText(context, message ?: "Unknown preview error", Toast.LENGTH_LONG).show()
++            Toast.makeText(context, message ?: UiText.get(R.string.waex_ui_unknown_preview_error_8c54371c, "Unknown preview error"), Toast.LENGTH_LONG).show()
+         }
+         cleanupDialog(executor)
+     }
+@@ -1459,7 +1463,7 @@ class MediaPreviewHook(
+             textSize = 24f
+             setTextColor(Color.WHITE)
+             gravity = Gravity.CENTER
+-            contentDescription = "Close preview"
++            contentDescription = UiText.get(R.string.waex_ui_close_preview_7d8ab368, "Close preview")
+             background = GradientDrawable().apply {
+                 shape = GradientDrawable.OVAL
+                 setColor(0x99000000.toInt())
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/media/ProfilePhotoDownloadHook.java b/app/src/main/java/com/waenhancer/xposed/features/media/ProfilePhotoDownloadHook.java
+index 6077096..66af1af 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/media/ProfilePhotoDownloadHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/media/ProfilePhotoDownloadHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.media;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.ContentValues;
+ import android.content.Context;
+@@ -99,13 +102,13 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
+ 
+     private void installMenuAction(Activity activity, Menu menu) {
+         if (menu.findItem(MENU_ID) != null) return;
+-        MenuItem item = menu.add(Menu.NONE, MENU_ID, Menu.NONE, "Download");
++        MenuItem item = menu.add(Menu.NONE, MENU_ID, Menu.NONE, UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
+         item.setIcon(android.R.drawable.stat_sys_download_done);
+         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+         item.setOnMenuItemClickListener(ignored -> {
+             Bitmap bitmap = captureDisplayedPhoto(activity);
+             if (bitmap == null) {
+-                Toast.makeText(activity, "Profile photo is not ready yet", Toast.LENGTH_SHORT).show();
++                Toast.makeText(activity, UiText.get(R.string.waex_ui_profile_photo_is_not_ready_yet_8ff494b5, "Profile photo is not ready yet"), Toast.LENGTH_SHORT).show();
+                 return true;
+             }
+             io.execute(() -> saveBitmap(activity, bitmap));
+@@ -204,8 +207,8 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
+             bitmap.recycle();
+             boolean saved = success;
+             activity.runOnUiThread(() -> Toast.makeText(activity,
+-                    saved ? "Profile photo saved to Pictures/WAEX/Profile Photos"
+-                            : "Couldn't save profile photo",
++                    saved ? UiText.get(R.string.waex_ui_profile_photo_saved_to_pictures_waex_p_a8c4bd76, "Profile photo saved to Pictures/WAEX/Profile Photos")
++                            : UiText.get(R.string.waex_ui_couldn_t_save_profile_photo_296d0ed9, "Couldn't save profile photo"),
+                     Toast.LENGTH_LONG).show());
+         }
+     }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/media/StatusDownloadHook.java b/app/src/main/java/com/waenhancer/xposed/features/media/StatusDownloadHook.java
+index 6af59f5..0071b80 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/media/StatusDownloadHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/media/StatusDownloadHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.media;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.ClipData;
+ import android.content.ClipboardManager;
+@@ -220,7 +223,7 @@ public class StatusDownloadHook extends BaseFeature {
+                 Menu.NONE,
+                 MENU_ID_STATUS_DOWNLOAD,
+                 Menu.NONE,
+-                isTextStatus ? "Copy text" : "Download"
++                isTextStatus ? UiText.get(R.string.waex_ui_copy_text_b0ac9cea, "Copy text") : UiText.get(R.string.waex_ui_download_d6eafe82, "Download")
+         );
+         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+ 
+@@ -244,7 +247,7 @@ public class StatusDownloadHook extends BaseFeature {
+                     downloadCurrentStatus(sourceObject);
+                 } catch (Throwable t) {
+                     XposedBridge.log(TAG + " Download error: " + t.getClass().getSimpleName());
+-                    showToast(context, "Failed to download status: " + t.getMessage());
++                    showToast(context, UiText.get(R.string.waex_ui_failed_to_download_status_19426d76, "Failed to download status: ") + t.getMessage());
+                 }
+             });
+             return true;
+@@ -260,7 +263,7 @@ public class StatusDownloadHook extends BaseFeature {
+         } else {
+             showToast(
+                     context,
+-                    "Please wait until the status finishes downloading, then try again",
++                    UiText.get(R.string.waex_ui_please_wait_until_the_status_finishes_0ef2b7ff, "Please wait until the status finishes downloading, then try again"),
+                     Toast.LENGTH_LONG
+             );
+         }
+@@ -606,7 +609,7 @@ public class StatusDownloadHook extends BaseFeature {
+                             while ((len = in.read(buf)) > 0) {
+                                 out.write(buf, 0, len);
+                             }
+-                            showToast(ctx, "Status saved to Gallery (WAEX)");
++                            showToast(ctx, UiText.get(R.string.waex_ui_status_saved_to_gallery_waex_9f345669, "Status saved to Gallery (WAEX)"));
+                             return;
+                         }
+                     }
+@@ -628,13 +631,13 @@ public class StatusDownloadHook extends BaseFeature {
+                     while ((len = in.read(buf)) > 0) {
+                         out.write(buf, 0, len);
+                     }
+-                    showToast(ctx, "Saved to: " + dest.getAbsolutePath());
++                    showToast(ctx, UiText.get(R.string.waex_ui_saved_to_b95e47d2, "Saved to: ") + dest.getAbsolutePath());
+                     return;
+                 }
+             }
+         } catch (Throwable t) {
+             XposedBridge.log(TAG + " saveMediaFile error: " + t.getClass().getSimpleName());
+-            showToast(ctx, "Error saving status media: " + t.getMessage());
++            showToast(ctx, UiText.get(R.string.waex_ui_error_saving_status_media_de3da11e, "Error saving status media: ") + t.getMessage());
+         }
+     }
+ 
+@@ -718,10 +721,10 @@ public class StatusDownloadHook extends BaseFeature {
+         new Handler(Looper.getMainLooper()).post(() -> {
+             try {
+                 ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+-                ClipData clip = ClipData.newPlainText("Status Text", text);
++                ClipData clip = ClipData.newPlainText(UiText.get(R.string.waex_ui_status_text_b35d0184, "Status Text"), text);
+                 if (clipboard != null) {
+                     clipboard.setPrimaryClip(clip);
+-                    Toast.makeText(ctx, "Copied status text to clipboard", Toast.LENGTH_SHORT).show();
++                    Toast.makeText(ctx, UiText.get(R.string.waex_ui_copied_status_text_to_clipboard_b81c6089, "Copied status text to clipboard"), Toast.LENGTH_SHORT).show();
+                 }
+             } catch (Throwable ignored) {}
+         });
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java b/app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java
+index 25e0c98..1c9fd36 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.privacy;
+ 
++
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.ContentValues;
+ import android.content.Context;
+@@ -1800,7 +1804,7 @@ public class AntiRevokeHook extends BaseFeature {
+ 
+             if (indicatorType == 1) { // Show "Deleted" text
+                 dateTextView.setCompoundDrawables(null, null, null, null);
+-                String newText = "Deleted • " + originalDate;
++                String newText = UiText.get(R.string.waex_ui_deleted_576d3831, "Deleted • ") + originalDate;
+                 dateTextView.setText(newText);
+             } else { // indicatorType == 2 (Default: Show deleted icon)
+                 Drawable deleteDrawable = getDeletedIconDrawable(rowContext);
+@@ -1824,7 +1828,7 @@ public class AntiRevokeHook extends BaseFeature {
+                 String formattedTime = TIME_FORMAT.get().format(new Date(deletedTimestamp));
+                 dateTextView.getPaint().setUnderlineText(true);
+                 dateTextView.setOnClickListener(v ->
+-                        Toast.makeText(rowContext, "Deleted at: " + formattedTime, Toast.LENGTH_LONG).show()
++                        Toast.makeText(rowContext, UiText.get(R.string.waex_ui_deleted_at_36fa22d4, "Deleted at: ") + formattedTime, Toast.LENGTH_LONG).show()
+                 );
+             }
+         } catch (Throwable t) {
+@@ -1844,7 +1848,7 @@ public class AntiRevokeHook extends BaseFeature {
+             }
+             dateTextView.setCompoundDrawables(null, null, null, null);
+             dateTextView.setCompoundDrawablePadding(0);
+-            dateTextView.setText("🚫 Deleted • " + originalDate);
++            dateTextView.setText(UiText.get(R.string.waex_ui_deleted_504973e7, "🚫 Deleted • ") + originalDate);
+         } catch (Throwable t) {
+             XposedBridge.log(TAG + " Status emoji decoration failed: " + t.getClass().getSimpleName());
+         }
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java b/app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java
+index 8751be5..fd843ee 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.privacy;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.content.Context;
+ import android.content.Intent;
+ import android.content.SharedPreferences;
+@@ -333,7 +336,7 @@ public class BlueOnReplyHook extends BaseFeature {
+         }
+         if (menu.findItem(MENU_SEND_BLUE_TICK) != null) return;
+ 
+-        MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, "Send blue tick");
++        MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, UiText.get(R.string.waex_ui_send_blue_tick_a14924d4, "Send blue tick"));
+         android.graphics.drawable.Drawable icon = MenuIconLoader.load(context, "ic_waex_mark_read");
+         if (icon == null) {
+             int iconId = context.getResources().getIdentifier(
+@@ -350,8 +353,8 @@ public class BlueOnReplyHook extends BaseFeature {
+             Context toastContext = conversation instanceof Context
+                     ? (Context) conversation : context;
+             Toast.makeText(toastContext,
+-                    jid == null ? "Cannot verify chat recipient"
+-                            : (sent > 0 ? "Blue tick sent" : "No hidden read receipt to send"),
++                    jid == null ? UiText.get(R.string.waex_l10n_recipient_unconfirmed, "Cannot verify chat recipient")
++                            : (sent > 0 ? UiText.get(R.string.waex_ui_blue_tick_sent_22828691, "Blue tick sent") : UiText.get(R.string.waex_ui_no_hidden_read_receipt_to_send_15d6cfc0, "No hidden read receipt to send")),
+                     Toast.LENGTH_SHORT).show();
+             return true;
+         });
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/privacy/CallPrivacyHook.java b/app/src/main/java/com/waenhancer/xposed/features/privacy/CallPrivacyHook.java
+index 3988d9d..448a38e 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/privacy/CallPrivacyHook.java
++++ b/app/src/main/java/com/waenhancer/xposed/features/privacy/CallPrivacyHook.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.privacy;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.annotation.SuppressLint;
+ import android.app.NotificationChannel;
+ import android.app.NotificationManager;
+@@ -394,14 +397,14 @@ public class CallPrivacyHook extends BaseFeature {
+         }
+ 
+         if (!TextUtils.isEmpty(contactName) && !contactName.equals("Unknown") && !contactName.equals(rawJid)) {
+-            sb.append("Contact: ").append(contactName).append("\n");
++            sb.append(UiText.get(R.string.waex_ui_contact_8fe6d397, "Contact: ")).append(contactName).append("\n");
+         }
+ 
+         if (!TextUtils.isEmpty(resolvedPhone)) {
+             String formattedPhone = resolvedPhone.startsWith("+") ? resolvedPhone : "+" + resolvedPhone;
+-            sb.append("Number: ").append(formattedPhone).append("\n");
++            sb.append(UiText.get(R.string.waex_ui_number_45bd4956, "Number: ")).append(formattedPhone).append("\n");
+         } else if (contactName != null && contactName.startsWith("+")) {
+-            sb.append("Number: ").append(contactName).append("\n");
++            sb.append(UiText.get(R.string.waex_ui_number_45bd4956, "Number: ")).append(contactName).append("\n");
+         }
+ 
+         String ip = (String) getObjectFieldSafe(wamCall, "callPeerIpStr");
+@@ -421,16 +424,16 @@ public class CallPrivacyHook extends BaseFeature {
+                         String timeZone = json.optString("timezone", "null");
+ 
+                         if (!"null".equals(isp) && !TextUtils.isEmpty(isp)) {
+-                            sb.append("ISP: ").append(isp).append("\n");
++                            sb.append(UiText.get(R.string.waex_ui_isp_3dc5d9b0, "ISP: ")).append(isp).append("\n");
+                         }
+                         if (!"null".equals(region) && !TextUtils.isEmpty(region)) {
+-                            sb.append("Region: ").append(region).append("\n");
++                            sb.append(UiText.get(R.string.waex_ui_region_82dd7dd1, "Region: ")).append(region).append("\n");
+                         }
+                         if (!"null".equals(timeZone) && !TextUtils.isEmpty(timeZone)) {
+-                            sb.append("Timezone: ").append(timeZone).append("\n");
++                            sb.append(UiText.get(R.string.waex_ui_timezone_60d86213, "Timezone: ")).append(timeZone).append("\n");
+                         }
+-                        sb.append("Country: ").append(country).append("\n");
+-                        sb.append("City: ").append(city).append("\n");
++                        sb.append(UiText.get(R.string.waex_ui_country_bb1b735c, "Country: ")).append(country).append("\n");
++                        sb.append(UiText.get(R.string.waex_ui_city_9890558c, "City: ")).append(city).append("\n");
+                         sb.append("IP: ").append(ip).append("\n");
+                     } else {
+                         sb.append("IP: ").append(ip).append("\n");
+@@ -443,17 +446,17 @@ public class CallPrivacyHook extends BaseFeature {
+ 
+         String platform = (String) getObjectFieldSafe(wamCall, "callPeerPlatform");
+         if (!TextUtils.isEmpty(platform)) {
+-            sb.append("Platform: ").append(platform).append("\n");
++            sb.append(UiText.get(R.string.waex_ui_platform_b458abe9, "Platform: ")).append(platform).append("\n");
+         }
+ 
+         String wppVersion = (String) getObjectFieldSafe(wamCall, "callPeerAppVersion");
+         if (!TextUtils.isEmpty(wppVersion)) {
+-            sb.append("WhatsApp Version: ").append(wppVersion).append("\n");
++            sb.append(UiText.get(R.string.waex_ui_whatsapp_version_a69b25df, "WhatsApp Version: ")).append(wppVersion).append("\n");
+         }
+ 
+         String callSummary = sb.toString().trim();
+         if (!callSummary.isEmpty()) {
+-            showNotification("Call Information", callSummary);
++            showNotification(UiText.get(R.string.waex_ui_call_information_1e683bf5, "Call Information"), callSummary);
+         }
+     }
+ 
+@@ -463,14 +466,14 @@ public class CallPrivacyHook extends BaseFeature {
+                 String contactName = ContactNameResolver.INSTANCE.resolveName(context, callerJid, null, null);
+                 String resolvedPhone = ContactNameResolver.INSTANCE.resolveLidToPhone(context, callerJid);
+ 
+-                String title = "Call Blocked";
++                String title = UiText.get(R.string.waex_ui_call_blocked_f8914b51, "Call Blocked");
+                 String body;
+                 if (!TextUtils.isEmpty(contactName) && !contactName.equals("Unknown") && !contactName.startsWith("+") && ContactNameResolver.INSTANCE.isValidDisplayName(contactName)) {
+-                    body = "Call from " + contactName + " (" + reason + ")";
++                    body = UiText.get(R.string.waex_ui_call_from_e08ca331, "Call from ") + contactName + " (" + reason + ")";
+                 } else if (!TextUtils.isEmpty(resolvedPhone) && !ContactNameResolver.INSTANCE.isLidJid(resolvedPhone)) {
+-                    body = "Call from +" + resolvedPhone + " (" + reason + ")";
++                    body = UiText.get(R.string.waex_ui_call_from_861d44f2, "Call from +") + resolvedPhone + " (" + reason + ")";
+                 } else {
+-                    body = "Call from Unknown Caller (" + reason + ")";
++                    body = UiText.get(R.string.waex_ui_call_from_unknown_caller_5fc833e1, "Call from Unknown Caller (") + reason + ")";
+                 }
+ 
+                 showNotification(title, body);
+@@ -479,11 +482,11 @@ public class CallPrivacyHook extends BaseFeature {
+     }
+ 
+     private String getFriendlyBlockType(String type) {
+-        if ("no_internet".equals(type)) return "No Internet";
+-        if ("busy".equals(type)) return "User Busy";
+-        if ("declined".equals(type)) return "Call Declined";
+-        if ("uncallable".equals(type)) return "Not Available";
+-        if ("ended".equals(type)) return "Ended";
++        if ("no_internet".equals(type)) return UiText.get(R.string.waex_ui_no_internet_ff1eadfe, "No Internet");
++        if ("busy".equals(type)) return UiText.get(R.string.waex_ui_user_busy_0ee28857, "User Busy");
++        if ("declined".equals(type)) return UiText.get(R.string.waex_ui_call_declined_f695a2f2, "Call Declined");
++        if ("uncallable".equals(type)) return UiText.get(R.string.waex_ui_not_available_2ab64517, "Not Available");
++        if ("ended".equals(type)) return UiText.get(R.string.waex_ui_ended_7cdc804e, "Ended");
+         return type;
+     }
+ 
+@@ -496,7 +499,7 @@ public class CallPrivacyHook extends BaseFeature {
+             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                 NotificationChannel channel = new NotificationChannel(
+                         channelId,
+-                        "WhatsApp Call Information",
++                        UiText.get(R.string.waex_ui_whatsapp_call_information_d0f6cd71, "WhatsApp Call Information"),
+                         NotificationManager.IMPORTANCE_HIGH
+                 );
+                 notificationManager.createNotificationChannel(channel);
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/privacy/CustomPrivacyHook.kt b/app/src/main/java/com/waenhancer/xposed/features/privacy/CustomPrivacyHook.kt
+index c03b851..b4e3efb 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/privacy/CustomPrivacyHook.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/privacy/CustomPrivacyHook.kt
+@@ -1,5 +1,9 @@
+ package com.waenhancer.xposed.features.privacy
+ 
++
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.Context
+ import android.content.DialogInterface
+@@ -158,7 +162,7 @@ class CustomPrivacyHook(
+ 
+         if (menu.findItem(MENU_ID_CUSTOM_PRIVACY) != null) return
+ 
+-        val menuItem = menu.add(0, MENU_ID_CUSTOM_PRIVACY, 100, "Custom Privacy")
++        val menuItem = menu.add(0, MENU_ID_CUSTOM_PRIVACY, 100, UiText.get(R.string.waex_ui_custom_privacy_76f9c20d, "Custom Privacy"))
+         menuItem.setOnMenuItemClickListener {
+             val jid = extractJid(activity)
+             showCustomPrivacyBottomSheet(activity, jid)
+@@ -277,14 +281,14 @@ class CustomPrivacyHook(
+         }
+ 
+         val titleView = TextView(activity).apply {
+-            text = "Custom Privacy"
++            text = UiText.get(R.string.waex_ui_custom_privacy_76f9c20d, "Custom Privacy")
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+             setTextColor(if (isDark) 0xFFE9EDEF.toInt() else 0xFF111B21.toInt())
+         }
+         textContainer.addView(titleView)
+ 
+         val summaryView = TextView(activity).apply {
+-            text = "Enable or customize per-contact privacy rules"
++            text = UiText.get(R.string.waex_ui_enable_or_customize_per_contact_privac_50106974, "Enable or customize per-contact privacy rules")
+             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f)
+             setTextColor(if (isDark) 0xFF8696A0.toInt() else 0xFF667781.toInt())
+             setPadding(0, dp(activity, 2), 0, 0)
+@@ -302,13 +306,13 @@ class CustomPrivacyHook(
+         val existingJson = getContactPrivacy(prefs, jid) ?: JSONObject()
+ 
+         val rulesList = listOf(
+-            Triple("HideSeen", "Hide Blue Ticks", "Don't send read receipts for received messages"),
+-            Triple("HideViewStatus", "Hide Status View", "View contact's status updates anonymously"),
+-            Triple("HideReceipt", "Hide Delivered Receipts", "Don't send second delivery checkmark"),
+-            Triple("HideTyping", "Hide Typing Indicator", "Don't show typing status when composing"),
+-            Triple("HideRecording", "Hide Voice Recording", "Don't show recording audio status"),
+-            Triple("AntiRevoke", "Anti-Revoke Messages", "Preserve deleted messages in this chat"),
+-            Triple("BlockCall", "Block Incoming Calls", "Silently decline calls from this contact")
++            Triple("HideSeen", UiText.get(R.string.waex_ui_hide_blue_ticks_4e92202b, "Hide Blue Ticks"), UiText.get(R.string.waex_ui_don_t_send_read_receipts_for_received_2768604b, "Don't send read receipts for received messages")),
++            Triple("HideViewStatus", UiText.get(R.string.waex_ui_hide_status_view_9e96ff07, "Hide Status View"), UiText.get(R.string.waex_ui_view_contact_s_status_updates_anonymou_f261e1d8, "View contact's status updates anonymously")),
++            Triple("HideReceipt", UiText.get(R.string.waex_ui_hide_delivered_receipts_ebd5864a, "Hide Delivered Receipts"), UiText.get(R.string.waex_ui_don_t_send_second_delivery_checkmark_2ec75e29, "Don't send second delivery checkmark")),
++            Triple("HideTyping", UiText.get(R.string.waex_ui_hide_typing_indicator_e48b0c04, "Hide Typing Indicator"), UiText.get(R.string.waex_ui_don_t_show_typing_status_when_composin_53881600, "Don't show typing status when composing")),
++            Triple("HideRecording", UiText.get(R.string.waex_ui_hide_voice_recording_5ddf1ff6, "Hide Voice Recording"), UiText.get(R.string.waex_ui_don_t_show_recording_audio_status_2771c3ab, "Don't show recording audio status")),
++            Triple("AntiRevoke", UiText.get(R.string.feat_anti_revoke_title, "Anti-Revoke Messages"), UiText.get(R.string.waex_ui_preserve_deleted_messages_in_this_chat_33da3410, "Preserve deleted messages in this chat")),
++            Triple("BlockCall", UiText.get(R.string.waex_ui_block_incoming_calls_caf90480, "Block Incoming Calls"), UiText.get(R.string.waex_ui_silently_decline_calls_from_this_conta_ff63b7eb, "Silently decline calls from this contact"))
+         )
+ 
+         val checkStateMap = mutableMapOf<String, Boolean>()
+@@ -345,9 +349,9 @@ class CustomPrivacyHook(
+ 
+         // WhatsApp WDS Bottom Sheet
+         val bottomSheet = WaexBottomSheet(activity)
+-            .setTitle("Custom Privacy")
++            .setTitle(UiText.get(R.string.waex_ui_custom_privacy_76f9c20d, "Custom Privacy"))
+             .setView(contentLayout)
+-            .setPositiveButton("Save", DialogInterface.OnClickListener { dialog, _ ->
++            .setPositiveButton(UiText.get(R.string.action_save, "Save"), DialogInterface.OnClickListener { dialog, _ ->
+                 try {
+                     val updatedJson = JSONObject()
+                     for ((k, v) in checkStateMap) {
+@@ -363,13 +367,13 @@ class CustomPrivacyHook(
+                         .putString("per_contact_rules_$jid", jsonStr)
+                         .apply()
+ 
+-                    Toast.makeText(activity, "Custom privacy saved", Toast.LENGTH_SHORT).show()
++                    Toast.makeText(activity, UiText.get(R.string.waex_ui_custom_privacy_saved_f499fef5, "Custom privacy saved"), Toast.LENGTH_SHORT).show()
+                 } catch (t: Throwable) {
+                     XposedBridge.log("$TAG Failed to save custom privacy: ${t.javaClass.simpleName}")
+                 }
+                 dialog.dismiss()
+             })
+-            .setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, _ ->
++            .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), DialogInterface.OnClickListener { dialog, _ ->
+                 dialog.dismiss()
+             })
+ 
+diff --git a/app/src/main/java/com/waenhancer/xposed/features/updates/WhatsAppUpdateSheet.kt b/app/src/main/java/com/waenhancer/xposed/features/updates/WhatsAppUpdateSheet.kt
+index 5861a70..e3c5aba 100644
+--- a/app/src/main/java/com/waenhancer/xposed/features/updates/WhatsAppUpdateSheet.kt
++++ b/app/src/main/java/com/waenhancer/xposed/features/updates/WhatsAppUpdateSheet.kt
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.features.updates
+ 
++import com.waenhancer.app.R
++import com.waenhancer.utils.UiText
++
+ import android.app.Activity
+ import android.content.Context
+ import android.content.Intent
+@@ -74,9 +77,9 @@ object WhatsAppUpdateSheet {
+                 val customChangelogView = buildNativeChangelogView(activity, availableBody)
+ 
+                 WaexBottomSheet(activity)
+-                    .setTitle("$availableName Available")
++                    .setTitle(UiText.get(R.string.waex_ui_1_s_available_24c71695, "%1\$s Available", availableName))
+                     .setView(customChangelogView)
+-                    .setPositiveButton("Update Now") { dialog, _ ->
++                    .setPositiveButton(UiText.get(R.string.waex_ui_update_now_f96f4d46, "Update Now")) { dialog, _ ->
+                         try {
+                             val intent = Intent().apply {
+                                 setClassName("com.waenhancer", "com.waenhancer.app.MainActivity")
+@@ -89,7 +92,7 @@ object WhatsAppUpdateSheet {
+                         }
+                         dialog.dismiss()
+                     }
+-                    .setNegativeButton("Ignore") { dialog, _ ->
++                    .setNegativeButton(UiText.get(R.string.waex_ui_ignore_fce77c34, "Ignore")) { dialog, _ ->
+                         publicPrefs.edit()
+                             .putString("ignored_version", availableVersion)
+                             .putLong("ignored_timestamp", System.currentTimeMillis())
+@@ -145,7 +148,7 @@ object WhatsAppUpdateSheet {
+         val sections = ChangelogParser.parse(rawBody)
+         if (sections.isEmpty()) {
+             val emptyTv = TextView(context).apply {
+-                text = "General stability improvements and bug fixes."
++                text = UiText.get(R.string.waex_ui_general_stability_improvements_and_bug_d6cabb44, "General stability improvements and bug fixes.")
+                 textSize = 14f
+                 setTextColor(textSecondary)
+                 setPadding(dp(4), dp(8), dp(4), dp(8))
+diff --git a/app/src/main/java/com/waenhancer/xposed/utils/AppRestartHelper.java b/app/src/main/java/com/waenhancer/xposed/utils/AppRestartHelper.java
+index 92187f1..48c6637 100644
+--- a/app/src/main/java/com/waenhancer/xposed/utils/AppRestartHelper.java
++++ b/app/src/main/java/com/waenhancer/xposed/utils/AppRestartHelper.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.utils;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.AlarmManager;
+ import android.app.PendingIntent;
+ import android.content.Context;
+@@ -61,7 +64,7 @@ public final class AppRestartHelper {
+         final Set<String> supported = discoveredScope == null
+                 ? Collections.emptySet() : discoveredScope;
+         if (!RestartTargetPolicy.isSupportedTarget(packageName, supported)) {
+-            toast(context, "Unsupported restart target");
++            toast(context, UiText.get(R.string.waex_ui_unsupported_restart_target_db4c044c, "Unsupported restart target"));
+             return;
+         }
+ 
+@@ -70,16 +73,16 @@ public final class AppRestartHelper {
+             launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+             if (launchIntent == null || launchIntent.getComponent() == null
+                     || !packageName.equals(launchIntent.getComponent().getPackageName())) {
+-                toast(context, "Unable to launch selected WhatsApp app");
++                toast(context, UiText.get(R.string.waex_ui_unable_to_launch_selected_whatsapp_app_db15818c, "Unable to launch selected WhatsApp app"));
+                 return;
+             }
+         } catch (RuntimeException error) {
+-            toast(context, "Unable to find selected WhatsApp app");
++            toast(context, UiText.get(R.string.waex_ui_unable_to_find_selected_whatsapp_app_719a2e57, "Unable to find selected WhatsApp app"));
+             return;
+         }
+         if (!RESTART_PENDING.compareAndSet(false, true)) return;
+ 
+-        toast(context, "Restarting " + (appName == null ? packageName : appName) + "...");
++        toast(context, UiText.get(R.string.waex_ui_restarting_8e116479, "Restarting ") + (appName == null ? packageName : appName) + "...");
+         try {
+             EXECUTOR.execute(() -> {
+                 try {
+@@ -119,22 +122,22 @@ public final class AppRestartHelper {
+                             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                             context.startActivity(launch);
+                             if (!stoppedByRoot) {
+-                                toast(context, "WhatsApp opened; restart not verified");
++                                toast(context, UiText.get(R.string.waex_ui_whatsapp_opened_restart_not_verified_82c7c6d0, "WhatsApp opened; restart not verified"));
+                             }
+                         } catch (RuntimeException ignored) {
+-                            toast(context, "Could not reopen WhatsApp");
++                            toast(context, UiText.get(R.string.waex_ui_could_not_reopen_whatsapp_6cd0efa0, "Could not reopen WhatsApp"));
+                         } finally {
+                             RESTART_PENDING.set(false);
+                         }
+                     }, delay)) RESTART_PENDING.set(false);
+                 } catch (RuntimeException error) {
+-                    toast(context, "Unable to restart WhatsApp");
++                    toast(context, UiText.get(R.string.waex_ui_unable_to_restart_whatsapp_858d4979, "Unable to restart WhatsApp"));
+                     RESTART_PENDING.set(false);
+                 }
+             });
+         } catch (RejectedExecutionException failure) {
+             RESTART_PENDING.set(false);
+-            toast(context, "Restart operation unavailable");
++            toast(context, UiText.get(R.string.waex_ui_restart_operation_unavailable_1da7ab39, "Restart operation unavailable"));
+         }
+     }
+ 
+@@ -143,7 +146,7 @@ public final class AppRestartHelper {
+         if (context == null || !RESTART_PENDING.compareAndSet(false, true)) return;
+         final Context appContext = context.getApplicationContext() != null
+                 ? context.getApplicationContext() : context;
+-        toast(appContext, "Restarting WhatsApp and WAEX...");
++        toast(appContext, UiText.get(R.string.waex_ui_restarting_whatsapp_and_waex_3f47c0c8, "Restarting WhatsApp and WAEX..."));
+ 
+         try {
+             EXECUTOR.execute(() -> {
+@@ -173,12 +176,12 @@ public final class AppRestartHelper {
+                     MAIN.post(() -> relaunchModuleProcess(appContext));
+                 } catch (Throwable error) {
+                     RESTART_PENDING.set(false);
+-                    toast(appContext, "Unable to restart apps");
++                    toast(appContext, UiText.get(R.string.waex_ui_unable_to_restart_apps_94cd4609, "Unable to restart apps"));
+                 }
+             });
+         } catch (RejectedExecutionException failure) {
+             RESTART_PENDING.set(false);
+-            toast(appContext, "Restart operation unavailable");
++            toast(appContext, UiText.get(R.string.waex_ui_restart_operation_unavailable_1da7ab39, "Restart operation unavailable"));
+         }
+     }
+ 
+@@ -188,7 +191,7 @@ public final class AppRestartHelper {
+                     .getLaunchIntentForPackage(context.getPackageName());
+             if (launchIntent == null || launchIntent.getComponent() == null) {
+                 RESTART_PENDING.set(false);
+-                toast(context, "Unable to relaunch WAEX");
++                toast(context, UiText.get(R.string.waex_ui_unable_to_relaunch_waex_f2b8e3cb, "Unable to relaunch WAEX"));
+                 return;
+             }
+             Intent restartIntent = Intent.makeRestartActivityTask(launchIntent.getComponent());
+@@ -201,7 +204,7 @@ public final class AppRestartHelper {
+             AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+             if (alarmManager == null) {
+                 RESTART_PENDING.set(false);
+-                toast(context, "Unable to relaunch WAEX");
++                toast(context, UiText.get(R.string.waex_ui_unable_to_relaunch_waex_f2b8e3cb, "Unable to relaunch WAEX"));
+                 return;
+             }
+             alarmManager.set(
+@@ -213,7 +216,7 @@ public final class AppRestartHelper {
+             System.exit(0);
+         } catch (Throwable error) {
+             RESTART_PENDING.set(false);
+-            toast(context, "Unable to relaunch WAEX");
++            toast(context, UiText.get(R.string.waex_ui_unable_to_relaunch_waex_f2b8e3cb, "Unable to relaunch WAEX"));
+         }
+     }
+ 
+diff --git a/app/src/main/java/com/waenhancer/xposed/views/IGStatusAdapter.java b/app/src/main/java/com/waenhancer/xposed/views/IGStatusAdapter.java
+index 9fa749e..177fb26 100644
+--- a/app/src/main/java/com/waenhancer/xposed/views/IGStatusAdapter.java
++++ b/app/src/main/java/com/waenhancer/xposed/views/IGStatusAdapter.java
+@@ -1,5 +1,8 @@
+ package com.waenhancer.xposed.views;
+ 
++import com.waenhancer.app.R;
++import com.waenhancer.utils.UiText;
++
+ import android.app.Activity;
+ import android.content.Context;
+ import android.content.Intent;
+@@ -151,7 +154,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
+                         return;
+                     }
+                 } catch (Throwable t) {
+-                    Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
++                    Toast.makeText(activity, UiText.get(R.string.waex_ui_error_8eecdde0, "Error: ") + t.getMessage(), Toast.LENGTH_SHORT).show();
+                 }
+             } else {
+                 // Otherwise directly open write text status composer screen
+@@ -168,7 +171,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
+                         activity.startActivity(intent);
+                     }
+                 } catch (Throwable t) {
+-                    Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
++                    Toast.makeText(activity, UiText.get(R.string.waex_ui_error_8eecdde0, "Error: ") + t.getMessage(), Toast.LENGTH_SHORT).show();
+                 }
+             }
+             return;
+@@ -232,7 +235,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
+                 activity.startActivity(intent);
+             }
+         } catch (Throwable t) {
+-            Toast.makeText(activity, "Error opening status: " + t.getMessage(), Toast.LENGTH_SHORT).show();
++            Toast.makeText(activity, UiText.get(R.string.waex_ui_error_opening_status_768e80f2, "Error opening status: ") + t.getMessage(), Toast.LENGTH_SHORT).show();
+         }
+     }
+ 
+@@ -356,7 +359,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
+             if (addBadge != null) {
+                 addBadge.setVisibility(hasActive ? View.GONE : View.VISIBLE);
+             }
+-            if (nameView != null) nameView.setText("My Status");
++            if (nameView != null) nameView.setText(UiText.get(R.string.waex_ui_my_status_43503c17, "My Status"));
+ 
+             Drawable preview = hasActive ? loadMyLatestStatusPreview() : null;
+             if (preview != null && photoView != null) {
+diff --git a/app/src/main/res/raw/waex_localized_ui_keep.xml b/app/src/main/res/raw/waex_localized_ui_keep.xml
+new file mode 100644
+index 0000000..c45ac95
+--- /dev/null
++++ b/app/src/main/res/raw/waex_localized_ui_keep.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Keep this public display contract when release optimizers inline the helper. -->
++<resources xmlns:tools="http://schemas.android.com/tools"
++    tools:keep="@string/waex_ui_*,@plurals/waex_recordings_deleted" />
+diff --git a/app/src/main/res/values-b+es+419/strings.xml b/app/src/main/res/values-b+es+419/strings.xml
+new file mode 100644
+index 0000000..41067da
+--- /dev/null
++++ b/app/src/main/res/values-b+es+419/strings.xml
+@@ -0,0 +1,368 @@
++<?xml version="1.0" encoding="utf-8"?>
