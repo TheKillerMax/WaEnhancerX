@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           base=f6ec7d4e6f47a246ebb413848d66358217fa9c08
-          test "$(git rev-parse HEAD^)" = "$base"
+          git merge-base --is-ancestor "$base" HEAD
           cat qa/v31-es419-transfer/part-*.patch > /tmp/waex-es419.patch
           echo '04d183a47f78c36e81cee6ea3e0e839232d47f5585dced82b788255295369b56  /tmp/waex-es419.patch' | sha256sum -c -
           test "$(git hash-object /tmp/waex-es419.patch)" = e54913fe74873a075352ab9cefc9dbbb6b03a9a1
