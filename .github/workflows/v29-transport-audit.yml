@@ -1,0 +1,38 @@
+name: V29 transport audit
+on:
+  push:
+    branches: ['test/qa-v29-review-2026-10-17']
+    paths: ['.github/workflows/v29-transport-audit.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Audit without executing payload
+        run: |
+          python3 - <<'PY'
+          import pathlib,shutil,json,hashlib,base64,zlib
+          out=pathlib.Path('v29-transport-audit');out.mkdir()
+          stats=[];parts=[]
+          for i in range(1,5):
+              src=pathlib.Path(f'qa/v29-transfer/part{i}.b64');data=src.read_bytes()
+              shutil.copyfile(src,out/src.name)
+              stats.append({'part':i,'length':len(data),'sha256':hashlib.sha256(data).hexdigest()});parts.append(data.strip())
+          try:
+              raw=zlib.decompress(base64.b64decode(b''.join(parts),validate=True))
+              result={'sha256':hashlib.sha256(raw).hexdigest(),'length':len(raw)}
+          except Exception as e:result={'transfer_error':type(e).__name__+': '+str(e)}
+          (out/'audit.json').write_text(json.dumps({'parts':stats,'result':result},indent=2))
+          print(json.dumps({'parts':stats,'result':result},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waex-v29-transport-audit
+          path: v29-transport-audit/
+          retention-days: 3
