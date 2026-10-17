@@ -932,6 +932,8 @@ fun MainContainerScreen() {
         val availableUpdate by UpdateCheckCoordinator.availableRelease.collectAsState()
         var downloadingUrl by remember { mutableStateOf<String?>(null) }
         var downloadingVersion by remember { mutableStateOf<String?>(null) }
+        var downloadingSha256 by remember { mutableStateOf<String?>(null) }
+        var downloadingSize by remember { mutableStateOf(0L) }
 
         availableUpdate?.let { update ->
             UpdateAvailableBottomSheet(
@@ -941,6 +943,8 @@ fun MainContainerScreen() {
                     if (asset != null) {
                         downloadingUrl = asset.downloadUrl
                         downloadingVersion = update.version
+                        downloadingSha256 = asset.sha256
+                        downloadingSize = asset.size
                     } else {
                         navController.navigateTo(Screen.ReleaseDetails(update.tagName))
                     }
@@ -962,10 +966,14 @@ fun MainContainerScreen() {
             UpdateDownloadSheet(
                 url = url,
                 version = version,
+                expectedSha256 = downloadingSha256,
+                expectedSize = downloadingSize,
                 useRoot = useRoot,
                 onDismiss = {
                     downloadingUrl = null
                     downloadingVersion = null
+                    downloadingSha256 = null
+                    downloadingSize = 0L
                 }
             )
         }

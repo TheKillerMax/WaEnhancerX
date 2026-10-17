@@ -7,7 +7,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /** Runs root shell commands with bounded wait and captured output (but always drains stdout). */
-final class RootCommandRunner {
+public final class RootCommandRunner {
+    /** Shared bounded root execution for the manager and injected utility callers. */
+    public static String run(String command, long timeoutMillis) {
+        return run(command, timeoutMillis,
+                value -> new ProcessBuilder("su", "-c", value).redirectErrorStream(true).start());
+    }
+
     private static final int MAX_CAPTURE_CHARS = 8192;
     private static final int READ_CHUNK = 1024;
 
