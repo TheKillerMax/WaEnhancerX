@@ -198,13 +198,42 @@ WaEnhancerX follows strict architectural layering to prevent dependency leaks an
 
 Thank you to everyone who has contributed code, reported issues, tested builds, or improved the documentation for WaEnhancerX!
 
+Thanks go to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="180">
+      <a href="https://github.com/mubashardev">
+        <img src="https://avatars.githubusercontent.com/u/72978007?v=4" width="100px" alt="Mubashar Dev" /><br />
+        <sub><b>Mubashar Dev</b></sub>
+      </a><br />
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/commits?author=mubashardev" title="Code">💻</a>
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/pulls?q=is%3Apr+author%3Amubashardev" title="Project Management">📆</a>
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/commits?author=mubashardev" title="Documentation">📖</a>
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/releases" title="Maintenance">🚧</a>
+    </td>
+    <td align="center" valign="top" width="180">
+      <a href="https://github.com/TheKillerMax">
+        <img src="https://avatars.githubusercontent.com/u/70108066?v=4" width="100px" alt="TheKillerMax" /><br />
+        <sub><b>TheKillerMax</b></sub>
+      </a><br />
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/commits?author=TheKillerMax" title="Code">💻</a>
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/pulls?q=is%3Apr+author%3ATheKillerMax" title="Testing">⚠️</a>
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/commits?author=TheKillerMax" title="Documentation">📖</a>
+    </td>
+    <td align="center" valign="top" width="180">
+      <a href="https://github.com/wilsonmilson">
+        <img src="https://avatars.githubusercontent.com/u/98002834?v=4" width="100px" alt="wilson meow" /><br />
+        <sub><b>wilson meow</b></sub>
+      </a><br />
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/pull/49" title="Translation">🌍</a>
+    </td>
+  </tr>
+</table>
+
+See the complete [GitHub contribution history](https://github.com/WaEnhancerX/WaEnhancerX/graphs/contributors).
+
 <div align="center">
-
-<a href="https://github.com/WaEnhancerX/WaEnhancerX/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=WaEnhancerX/WaEnhancerX" alt="Contributors" />
-</a>
-
-<br/><br/>
 
 Contributions of all kinds are welcome! Check out our [Contributing Guidelines](CONTRIBUTING.md) to get started.
 
@@ -247,4 +276,3 @@ You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 ```
-
