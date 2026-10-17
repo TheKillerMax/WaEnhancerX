@@ -317,6 +317,15 @@
     <string name="diag_label_compatibility">Target compatibility</string>
     <string name="diag_status_supported">Supported</string>
     <string name="diag_status_review_required">Review required</string>
+    <string name="diag_label_hma">App isolation (HMA)</string>
+    <string name="diag_hma_not_active">Not active</string>
+    <string name="diag_hma_clean">No targets hidden</string>
+    <string name="diag_hma_blocked">Hiding module</string>
+    <string name="diag_hma_checking">Checking…</string>
+    <string name="diag_hma_sheet_title">App Isolation Diagnostics</string>
+    <string name="diag_hma_sheet_desc">Overview of Hide My Applist isolation rules affecting target packages and module visibility.</string>
+    <string name="diag_hma_active_targets">Configured Targets</string>
+    <string name="diag_hma_inactive_targets">Other Targets</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

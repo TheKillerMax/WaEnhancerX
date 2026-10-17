@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
     <string name="xposed_description">面向 WhatsApp 和 WhatsApp Business 的模块化增强框架。</string>
@@ -317,6 +316,15 @@
     <string name="diag_label_compatibility">目标应用兼容性</string>
     <string name="diag_status_supported">受支持</string>
     <string name="diag_status_review_required">需要检查</string>
+    <string name="diag_label_hma">应用隔离 (HMA)</string>
+    <string name="diag_hma_not_active">未激活</string>
+    <string name="diag_hma_clean">无隐藏目标</string>
+    <string name="diag_hma_blocked">正在隐藏模块</string>
+    <string name="diag_hma_checking">正在检查…</string>
+    <string name="diag_hma_sheet_title">应用隔离诊断</string>
+    <string name="diag_hma_sheet_desc">影响目标软件包和模块可见性的 Hide My Applist 隔离规则概览。</string>
+    <string name="diag_hma_active_targets">已配置目标</string>
+    <string name="diag_hma_inactive_targets">其他目标</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

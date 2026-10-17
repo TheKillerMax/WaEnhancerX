@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
     <string name="xposed_description">إطار عمل تعزيزي معياري لتطبيقي WhatsApp وWhatsApp Business.</string>
@@ -317,6 +316,15 @@
     <string name="diag_label_compatibility">توافق الهدف</string>
     <string name="diag_status_supported">مدعوم</string>
     <string name="diag_status_review_required">مراجعة مطلوبة</string>
+    <string name="diag_label_hma">عزل التطبيقات (HMA)</string>
+    <string name="diag_hma_not_active">غير نشط</string>
+    <string name="diag_hma_clean">لا توجد أهداف مخفية</string>
+    <string name="diag_hma_blocked">إخفاء الموديول</string>
+    <string name="diag_hma_checking">جاري الفحص…</string>
+    <string name="diag_hma_sheet_title">تشخيص عزل التطبيقات</string>
+    <string name="diag_hma_sheet_desc">نظرة عامة على قواعد عزل Hide My Applist التي تؤثر على حزم الأهداف وظهور الموديول.</string>
+    <string name="diag_hma_active_targets">الأهداف المكونة</string>
+    <string name="diag_hma_inactive_targets">أهداف أخرى</string>
     <string name="diag_label_android">أندرويد</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">روت</string>

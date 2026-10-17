@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
     <string name="xposed_description">Marco de mejora modular para WhatsApp y WhatsApp Business.</string>
@@ -317,6 +316,15 @@
     <string name="diag_label_compatibility">Compatibilidad de destino</string>
     <string name="diag_status_supported">Compatible</string>
     <string name="diag_status_review_required">Revisión requerida</string>
+    <string name="diag_label_hma">Aislamiento de apps (HMA)</string>
+    <string name="diag_hma_not_active">No activo</string>
+    <string name="diag_hma_clean">Ningún objetivo oculto</string>
+    <string name="diag_hma_blocked">Ocultando módulo</string>
+    <string name="diag_hma_checking">Comprobando…</string>
+    <string name="diag_hma_sheet_title">Diagnóstico de aislamiento de apps</string>
+    <string name="diag_hma_sheet_desc">Resumen de las reglas de aislamiento de Hide My Applist que afectan a los paquetes de destino y la visibilidad del módulo.</string>
+    <string name="diag_hma_active_targets">Objetivos configurados</string>
+    <string name="diag_hma_inactive_targets">Otros objetivos</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

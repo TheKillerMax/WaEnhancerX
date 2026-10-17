@@ -82,6 +82,7 @@ import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
+import com.waenhancer.utils.HmaDiagnostics
 import com.waenhancer.utils.HookedAppInfo
 import com.waenhancer.utils.InjectedHookItem
 import com.waenhancer.utils.SystemDiagnostics
@@ -152,6 +153,10 @@ fun MainDashboardScreen(
     var systemDiagnostics by remember {
         mutableStateOf(SystemDiagnosticsReader.cached())
     }
+    var hmaRefreshTrigger by remember { mutableIntStateOf(0) }
+    var hmaStatus by remember {
+        mutableStateOf<HmaDiagnostics.HmaReport?>(HmaDiagnostics.cached())
+    }
 
     LaunchedEffect(refreshTrigger) {
         systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
@@ -166,6 +171,19 @@ fun MainDashboardScreen(
             XposedRuntimeInspector.inspect(packages)
         }
         runtimeSnapshot = refreshed
+    }
+
+    LaunchedEffect(hmaRefreshTrigger) {
+        val targets = withContext(Dispatchers.IO) {
+            WhatsAppPackageDetector.detectWhatsAppApps(context, runtimeSnapshot)
+                .filter { it.isInstalled }.map { it.packageName }
+        }
+        val report = HmaDiagnostics.checkHmaStatus(
+            context = context,
+            targetPackages = targets,
+            forceRefresh = hmaRefreshTrigger > 0
+        )
+        hmaStatus = report
     }
 
     // Re-check target apps on resume and whenever target app sends active broadcast
@@ -217,6 +235,7 @@ fun MainDashboardScreen(
 
     var showCustomizationSoon by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
+    var showHmaDetailSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -505,9 +524,14 @@ fun MainDashboardScreen(
             DashboardDiagnosticsCard(
                 diagnostics = systemDiagnostics,
                 targetSummary = targetSummary,
-                onRefresh = { refreshTrigger++ },
+                hmaReport = hmaStatus,
+                onRefresh = {
+                    refreshTrigger++
+                    hmaRefreshTrigger++
+                },
                 onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
-                onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) }
+                onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) },
+                onOpenHmaDetails = { showHmaDetailSheet = true }
             )
 
             // Quick Backup & Maintenance Row
@@ -680,6 +704,213 @@ fun MainDashboardScreen(
                 }
             }
         }
+
+        // HMA Isolation Details Bottom Sheet
+        if (showHmaDetailSheet && hmaStatus != null) {
+            HmaDetailsBottomSheet(
+                report = hmaStatus!!,
+                onDismiss = { showHmaDetailSheet = false }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HmaDetailsBottomSheet(
+    report: HmaDiagnostics.HmaReport,
+    onDismiss: () -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val activeTargets = remember(report) { report.targetDetails.filter { it.isBlocking } }
+    val cleanTargets = remember(report) { report.targetDetails.filter { !it.isBlocking } }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(radius.defaultShape)
+                        .background(
+                            if (report.state == HmaDiagnostics.HmaState.BLOCKING_TARGETS) {
+                                colors.error.copy(alpha = 0.12f)
+                            } else {
+                                colors.primaryContainer
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.Security,
+                        contentDescription = null,
+                        tint = if (report.state == HmaDiagnostics.HmaState.BLOCKING_TARGETS) colors.error else colors.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.diag_hma_sheet_title),
+                        style = typography.titleLg,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.diag_hma_sheet_desc),
+                        style = typography.bodySm,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (activeTargets.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.diag_hma_active_targets),
+                    style = typography.labelLg,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.error
+                )
+                activeTargets.forEach { item ->
+                    Surface(
+                        shape = radius.cardShape,
+                        color = colors.error.copy(alpha = 0.05f),
+                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.error)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = item.appName,
+                                    style = typography.bodyMd,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.onSurface
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = item.packageName,
+                                style = typography.bodySm,
+                                color = colors.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Reason: ${item.reason}",
+                                style = typography.bodySm,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.error
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (cleanTargets.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.diag_hma_inactive_targets),
+                    style = typography.labelLg,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurfaceVariant
+                )
+                cleanTargets.forEach { item ->
+                    Surface(
+                        shape = radius.cardShape,
+                        color = colors.surfaceDim.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.primary)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = item.appName,
+                                    style = typography.bodyMd,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.onSurface
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = item.packageName,
+                                style = typography.bodySm,
+                                color = colors.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Status: ${item.reason}",
+                                style = typography.bodySm,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = onDismiss,
+                shape = radius.mdShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.action_ok),
+                    style = typography.bodyMd,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 
@@ -687,9 +918,11 @@ fun MainDashboardScreen(
 private fun DashboardDiagnosticsCard(
     diagnostics: SystemDiagnostics?,
     targetSummary: TargetRuntimePresentation.Summary,
+    hmaReport: HmaDiagnostics.HmaReport?,
     onRefresh: () -> Unit,
     onViewDetails: () -> Unit,
-    onViewSupportedVersions: () -> Unit
+    onViewSupportedVersions: () -> Unit,
+    onOpenHmaDetails: () -> Unit
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
@@ -769,6 +1002,22 @@ private fun DashboardDiagnosticsCard(
                 label = stringResource(R.string.diag_label_compatibility),
                 value = targetSummary.text,
                 healthy = targetSummary.healthy
+            )
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+            DashboardDiagnosticRow(
+                label = stringResource(R.string.diag_label_hma),
+                value = when (hmaReport?.state) {
+                    HmaDiagnostics.HmaState.BLOCKING_TARGETS -> stringResource(R.string.diag_hma_blocked)
+                    HmaDiagnostics.HmaState.CLEAN -> stringResource(R.string.diag_hma_clean)
+                    HmaDiagnostics.HmaState.NOT_ACTIVE, HmaDiagnostics.HmaState.NOT_CONFIGURED -> stringResource(R.string.diag_hma_not_active)
+                    HmaDiagnostics.HmaState.CHECKING, null -> stringResource(R.string.diag_hma_checking)
+                },
+                healthy = when (hmaReport?.state) {
+                    HmaDiagnostics.HmaState.BLOCKING_TARGETS -> false
+                    HmaDiagnostics.HmaState.CLEAN, HmaDiagnostics.HmaState.NOT_ACTIVE, HmaDiagnostics.HmaState.NOT_CONFIGURED -> true
+                    HmaDiagnostics.HmaState.CHECKING, null -> null
+                },
+                onClick = if (hmaReport?.targetDetails?.isNotEmpty() == true) onOpenHmaDetails else null
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -857,20 +1106,33 @@ private fun DashboardDiagnosticsCard(
 private fun DashboardDiagnosticRow(
     label: String,
     value: String,
-    healthy: Boolean?
+    healthy: Boolean?,
+    onClick: (() -> Unit)? = null
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
     val stateColor = when (healthy) {
         true -> colors.primary
         false -> colors.error
         null -> colors.onSurfaceVariant
     }
 
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .then(
+            if (onClick != null) {
+                Modifier
+                    .clip(radius.smShape)
+                    .clickable(onClick = onClick)
+                    .padding(vertical = 10.dp, horizontal = 4.dp)
+            } else {
+                Modifier.padding(vertical = 12.dp)
+            }
+        )
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -891,10 +1153,19 @@ private fun DashboardDiagnosticRow(
             text = value,
             style = typography.bodyMd,
             fontWeight = FontWeight.SemiBold,
-            color = colors.onSurface,
+            color = if (onClick != null && healthy == false) colors.error else colors.onSurface,
             textAlign = androidx.compose.ui.text.style.TextAlign.End,
             modifier = Modifier.weight(1f)
         )
+        if (onClick != null) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = WaexIcons.ChevronRight,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 

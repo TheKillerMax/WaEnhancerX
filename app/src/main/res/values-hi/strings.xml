@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
     <string name="xposed_description">व्हाट्सएप और व्हाट्सएप बिजनेस के लिए मॉड्यूलर एन्हांसमेंट फ्रेमवर्क।</string>
@@ -317,6 +316,15 @@
     <string name="diag_label_compatibility">लक्ष्य अनुकूलता</string>
     <string name="diag_status_supported">समर्थित</string>
     <string name="diag_status_review_required">समीक्षा आवश्यक</string>
+    <string name="diag_label_hma">ऐप आइसोलेशन (HMA)</string>
+    <string name="diag_hma_not_active">सक्रिय नहीं है</string>
+    <string name="diag_hma_clean">कोई लक्ष्य छिपा नहीं है</string>
+    <string name="diag_hma_blocked">मॉड्यूल छिपा हुआ है</string>
+    <string name="diag_hma_checking">जाँच हो रही है…</string>
+    <string name="diag_hma_sheet_title">ऐप आइसोलेशन डायग्नोस्टिक्स</string>
+    <string name="diag_hma_sheet_desc">Hide My Applist आइसोलेशन नियमों का विवरण जो लक्ष्य पैकेज और मॉड्यूल दृश्यता को प्रभावित करते हैं।</string>
+    <string name="diag_hma_active_targets">कॉन्फ़िगर किए गए लक्ष्य</string>
+    <string name="diag_hma_inactive_targets">अन्य लक्ष्य</string>
     <string name="diag_label_android">एंड्रॉइड</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">रूट</string>

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
     <string name="xposed_description">واٹس ایپ اور واٹس ایپ بزنس کے لیے ماڈیولر اینہانسمنٹ فریم ورک۔</string>
@@ -317,6 +316,15 @@
     <string name="diag_label_compatibility">ہدف کی مطابقت</string>
     <string name="diag_status_supported">تائید شدہ</string>
     <string name="diag_status_review_required">جائزہ درکار ہے</string>
+    <string name="diag_label_hma">ایپ آئسولیشن (HMA)</string>
+    <string name="diag_hma_not_active">غیر فعال</string>
+    <string name="diag_hma_clean">کوئی ہدف پوشیدہ نہیں</string>
+    <string name="diag_hma_blocked">ماڈیول پوشیدہ ہے</string>
+    <string name="diag_hma_checking">چیک کیا جا رہا ہے…</string>
+    <string name="diag_hma_sheet_title">ایپ آئسولیشن تشخیص</string>
+    <string name="diag_hma_sheet_desc">ہائیڈ مائی ایپ لسٹ کے آئسولیشن قواعد کا جائزہ جو ہدف پیکیجز اور ماڈیول کی نمائش پر اثر انداز ہوتے ہیں۔</string>
+    <string name="diag_hma_active_targets">کنفیگرڈ اہداف</string>
+    <string name="diag_hma_inactive_targets">دیگر اہداف</string>
     <string name="diag_label_android">اینڈرائیڈ</string>
     <string name="diag_label_selinux">ایس ای لینوکس</string>
     <string name="diag_label_root">روٹ</string>
