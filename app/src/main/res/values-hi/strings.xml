@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">Hide My Applist आइसोलेशन नियमों का विवरण जो लक्ष्य पैकेज और मॉड्यूल दृश्यता को प्रभावित करते हैं।</string>
     <string name="diag_hma_active_targets">कॉन्फ़िगर किए गए लक्ष्य</string>
     <string name="diag_hma_inactive_targets">अन्य लक्ष्य</string>
+    <string name="diag_hma_btn_fix">ठीक करें</string>
+    <string name="diag_hma_fix_title">ऐप आइसोलेशन ठीक करें</string>
+    <string name="diag_hma_fix_message">यह %1$s से मॉड्यूल ब्लॉकिंग नियमों और प्रीसेट को हटाने के लिए Hide My Applist कॉन्फ़िगरेशन को अपडेट करेगा।</string>
+    <string name="diag_hma_fix_success">ऐप आइसोलेशन नियम सफलतापूर्वक अपडेट किए गए</string>
+    <string name="diag_hma_fix_failed">HMA कॉन्फ़िगरेशन अपडेट करने में विफल</string>
     <string name="diag_label_android">एंड्रॉइड</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">रूट</string>

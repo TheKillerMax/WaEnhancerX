@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">نظرة عامة على قواعد عزل Hide My Applist التي تؤثر على حزم الأهداف وظهور الموديول.</string>
     <string name="diag_hma_active_targets">الأهداف المكونة</string>
     <string name="diag_hma_inactive_targets">أهداف أخرى</string>
+    <string name="diag_hma_btn_fix">إصلاح</string>
+    <string name="diag_hma_fix_title">إصلاح عزل التطبيقات</string>
+    <string name="diag_hma_fix_message">سيؤدي هذا إلى تعديل إعدادات Hide My Applist لإزالة قواعد حظر الموديول والإعدادات المسبقة من %1$s، مما يسمح لـ WaEnhancerX بالعمل بشكل صحيح.</string>
+    <string name="diag_hma_fix_success">تم تحديث قواعد عزل التطبيقات بنجاح</string>
+    <string name="diag_hma_fix_failed">فشل تحديث إعدادات HMA</string>
     <string name="diag_label_android">أندرويد</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">روت</string>

@@ -802,54 +802,59 @@ private fun HmaDetailsBottomSheet(
             if (activeTargets.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.diag_hma_active_targets),
-                    style = typography.labelLg,
+                    style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.error
                 )
                 activeTargets.forEach { item ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                    Surface(
+                        shape = radius.smShape,
+                        color = colors.error.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
                                 shape = CircleShape,
                                 color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(26.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = WaexIcons.Clear,
                                         contentDescription = null,
                                         tint = Color(0xFFEF4444),
-                                        modifier = Modifier.size(13.dp)
+                                        modifier = Modifier.size(15.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = item.appName,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.onSurface
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.appName,
+                                    style = typography.bodyMd,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.onSurface
+                                )
+                                Text(
+                                    text = item.packageName,
+                                    style = typography.labelSm,
+                                    color = colors.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = item.reason,
+                                    style = typography.labelSm,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colors.error
+                                )
+                            }
                         }
-                        Text(
-                            text = item.packageName,
-                            style = typography.labelSm,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
-                        )
-                        Text(
-                            text = item.reason,
-                            style = typography.bodySm,
-                            color = colors.error,
-                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
-                        )
                     }
                 }
             }
@@ -857,54 +862,58 @@ private fun HmaDetailsBottomSheet(
             if (cleanTargets.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.diag_hma_inactive_targets),
-                    style = typography.labelLg,
+                    style = typography.labelSm,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurfaceVariant
                 )
                 cleanTargets.forEach { item ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                    Surface(
+                        shape = radius.smShape,
+                        color = colors.surfaceDim.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.6f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
                                 shape = CircleShape,
                                 color = Color(0xFF10B981).copy(alpha = 0.15f),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(26.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = WaexIcons.Check,
                                         contentDescription = null,
                                         tint = Color(0xFF10B981),
-                                        modifier = Modifier.size(13.dp)
+                                        modifier = Modifier.size(15.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = item.appName,
-                                style = typography.bodyMd,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.onSurface
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.appName,
+                                    style = typography.bodyMd,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.onSurface
+                                )
+                                Text(
+                                    text = item.packageName,
+                                    style = typography.labelSm,
+                                    color = colors.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = item.reason,
+                                    style = typography.labelSm,
+                                    color = colors.onSurfaceVariant
+                                )
+                            }
                         }
-                        Text(
-                            text = item.packageName,
-                            style = typography.labelSm,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
-                        )
-                        Text(
-                            text = item.reason,
-                            style = typography.bodySm,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
-                        )
                     }
                 }
             }

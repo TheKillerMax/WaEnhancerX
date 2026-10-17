@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">影响目标软件包和模块可见性的 Hide My Applist 隔离规则概览。</string>
     <string name="diag_hma_active_targets">已配置目标</string>
     <string name="diag_hma_inactive_targets">其他目标</string>
+    <string name="diag_hma_btn_fix">修复</string>
+    <string name="diag_hma_fix_title">修复应用隔离</string>
+    <string name="diag_hma_fix_message">这将更新 Hide My Applist 配置，从 %1$s 中移除模块阻止规则和预设，确保 WaEnhancerX 正常运行。</string>
+    <string name="diag_hma_fix_success">应用隔离规则更新成功</string>
+    <string name="diag_hma_fix_failed">更新 HMA 配置失败</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

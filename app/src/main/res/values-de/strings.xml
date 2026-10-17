@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">Übersicht über Hide My Applist-Isolationsregeln, die Zielpakete und Modulsichtbarkeit betreffen.</string>
     <string name="diag_hma_active_targets">Konfigurierte Ziele</string>
     <string name="diag_hma_inactive_targets">Weitere Ziele</string>
+    <string name="diag_hma_btn_fix">Beheben</string>
+    <string name="diag_hma_fix_title">App-Isolation beheben</string>
+    <string name="diag_hma_fix_message">Dadurch wird die Konfiguration von Hide My Applist aktualisiert, um Modul-Blockierungsregeln und Voreinstellungen für %1$s zu entfernen.</string>
+    <string name="diag_hma_fix_success">App-Isolationsregeln erfolgreich aktualisiert</string>
+    <string name="diag_hma_fix_failed">Aktualisierung der HMA-Konfiguration fehlgeschlagen</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

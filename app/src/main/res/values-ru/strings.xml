@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">Обзор правил изоляции Hide My Applist, влияющих на целевые пакеты и видимость модуля.</string>
     <string name="diag_hma_active_targets">Настроенные цели</string>
     <string name="diag_hma_inactive_targets">Другие цели</string>
+    <string name="diag_hma_btn_fix">Исправить</string>
+    <string name="diag_hma_fix_title">Исправить изоляцию приложений</string>
+    <string name="diag_hma_fix_message">Это обновит конфигурацию Hide My Applist для удаления правил блокировки модуля и пресетов для %1$s.</string>
+    <string name="diag_hma_fix_success">Правила изоляции приложений успешно обновлены</string>
+    <string name="diag_hma_fix_failed">Не удалось обновить конфигурацию HMA</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

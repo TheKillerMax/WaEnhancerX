@@ -326,6 +326,11 @@
     <string name="diag_hma_sheet_desc">Overview of Hide My Applist isolation rules affecting target packages and module visibility.</string>
     <string name="diag_hma_active_targets">Configured Targets</string>
     <string name="diag_hma_inactive_targets">Other Targets</string>
+    <string name="diag_hma_btn_fix">Fix</string>
+    <string name="diag_hma_fix_title">Fix App Isolation</string>
+    <string name="diag_hma_fix_message">This will update Hide My Applist configuration to remove module blocking rules and presets from %1$s, allowing WaEnhancerX to function properly.</string>
+    <string name="diag_hma_fix_success">App isolation rules updated successfully</string>
+    <string name="diag_hma_fix_failed">Failed to update HMA configuration</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>

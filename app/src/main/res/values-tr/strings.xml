@@ -325,6 +325,11 @@
     <string name="diag_hma_sheet_desc">Hedef paketleri ve modül görünürlüğünü etkileyen Hide My Applist izolasyon kurallarına genel bakış.</string>
     <string name="diag_hma_active_targets">Yapılandırılmış Hedefler</string>
     <string name="diag_hma_inactive_targets">Diğer Hedefler</string>
+    <string name="diag_hma_btn_fix">Düzelt</string>
+    <string name="diag_hma_fix_title">Uygulama İzolasyonunu Düzelt</string>
+    <string name="diag_hma_fix_message">Bu işlem, %1$s için modül engelleme kurallarını ve ön ayarları kaldırmak üzere Hide My Applist yapılandırmasını güncelleyecektir.</string>
+    <string name="diag_hma_fix_success">Uygulama izolasyon kuralları başarıyla güncellendi</string>
+    <string name="diag_hma_fix_failed">HMA yapılandırması güncellenemedi</string>
     <string name="diag_label_android">Android</string>
     <string name="diag_label_selinux">SELinux</string>
     <string name="diag_label_root">Root</string>
