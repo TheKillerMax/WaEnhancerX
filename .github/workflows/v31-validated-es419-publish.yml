@@ -57,6 +57,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # GitHub Actions tokens cannot update workflow files. Publish code first;
+          # a connector commit restores this verified QA workflow after publication.
+          git checkout f6ec7d4e6f47a246ebb413848d66358217fa9c08 -- .github/workflows/source-qa.yml
           git add -A
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -ge 95
