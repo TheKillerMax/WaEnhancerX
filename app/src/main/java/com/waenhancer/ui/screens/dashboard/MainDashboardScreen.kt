@@ -870,7 +870,7 @@ private fun DashboardDiagnosticRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -884,15 +884,16 @@ private fun DashboardDiagnosticRow(
             text = label,
             style = typography.bodyMd,
             color = colors.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
+            maxLines = 1
         )
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = value,
             style = typography.bodyMd,
             fontWeight = FontWeight.SemiBold,
             color = colors.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.weight(1f)
         )
     }
 }
