@@ -1,0 +1,64 @@
+name: V32 complete failed-log recovery
+on:
+  push:
+    branches: ['test/qa-v32-systematic-review-2026-10-17']
+    paths: ['.github/workflows/v32-log-recovery.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  logs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Fetch paginated jobs and failed logs with safe cross-host redirects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, urllib.request, urllib.error, concurrent.futures
+          root=pathlib.Path('/tmp/v32-logs');root.mkdir();fail=[]
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs):return None
+          opener=urllib.request.build_opener(NoRedirect())
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'User-Agent':'waex-audit','Accept':'application/vnd.github+json'}
+          def get(path):
+              with urllib.request.urlopen(urllib.request.Request('https://api.github.com/'+path,headers=headers),timeout=60) as r:return json.load(r)
+          def pages(path,key):
+              rows=[];page=1
+              while True:
+                  r=get(path+('?' if '?' not in path else '&')+'per_page=100&page='+str(page))[key];rows+=r
+                  if len(r)<100:return rows
+                  page+=1
+          jobs=[]
+          for repo in ['WaEnhancerX/WaEnhancerX','TheKillerMax/WaEnhancerX']:
+              for r in pages('repos/'+repo+'/actions/runs','workflow_runs'):
+                  if r.get('conclusion')!='failure':continue
+                  for j in pages('repos/'+repo+'/actions/runs/'+str(r['id'])+'/jobs','jobs'):
+                      if j.get('conclusion')=='failure':jobs.append((repo,r['id'],j['id']))
+          def fetch(row):
+              repo,run,job=row
+              try:
+                  u='https://api.github.com/repos/'+repo+'/actions/jobs/'+str(job)+'/logs'
+                  try:res=opener.open(urllib.request.Request(u,headers=headers),timeout=60)
+                  except urllib.error.HTTPError as e:
+                      if e.code not in (301,302,303,307,308):raise
+                      target=e.headers['Location'];assert target.startswith('https://')
+                      res=urllib.request.urlopen(urllib.request.Request(target,headers={'User-Agent':'waex-audit'}),timeout=60)
+                  with res: data=res.read(20*1024*1024+1)
+                  assert len(data)<=20*1024*1024
+                  p=root/repo.split('/')[0]/(str(run)+'-'+str(job)+'.log');p.parent.mkdir(exist_ok=True);p.write_bytes(data)
+                  return {'repository':repo,'run':run,'job':job,'bytes':len(data),'path':str(p.relative_to(root))}
+              except Exception as e:fail.append({'repository':repo,'run':run,'job':job,'error':str(e)});return None
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:rows=list(pool.map(fetch,jobs))
+          (root/'manifest.json').write_text(json.dumps({'logs':[r for r in rows if r],'unavailable':fail},indent=2))
+          print('failed jobs',len(jobs),'downloaded',sum(r is not None for r in rows),'unavailable',len(fail))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v32-failed-logs
+          path: /tmp/v32-logs/
+          retention-days: 7
