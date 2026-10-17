@@ -1,0 +1,44 @@
+name: V29 reviewed candidate validation
+on:
+  push:
+    branches: ['test/qa-v29-review-2026-10-17']
+    paths: ['.github/workflows/v29-reviewed-validation.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Require real compilers
+        run: |
+          java -version
+          javac -version
+          command -v kotlinc
+          kotlinc -version
+      - name: Verify transported bytes and run complete independent/combined checks
+        run: python3 qa/v29-transfer/validate.py
+      - name: Store exact tested public-source blobs without moving refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 qa/v29-transfer/validate.py --store-blobs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v29-reviewed-validation
+          path: v29-validation/
+          include-hidden-files: true
+          retention-days: 7
