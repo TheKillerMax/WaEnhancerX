@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(Devre dışı: Önce \"Mavi Tikleri Gizle\" özelliğini açın)</string>
     <string name="title_call_configurations">Arama Yapılandırmaları</string>
     <string name="title_call_recordings">Kayıtlar</string>
+
+    <string name="diag_target_sheet_title">Hedef Uyumluluğu</string>
+    <string name="diag_target_sheet_desc">Algılanan tüm WhatsApp yüklemelerinde canlı enjeksiyon ve kanca durumu.</string>
+    <string name="diag_target_sheet_partial_warning">Yüklü bazı WhatsApp uygulamaları henüz etkin enjeksiyon bildirmedi. Kancaları başlatmak ve uyumluluğu doğrulamak için bunları bir kez açın.</string>
+    <string name="diag_target_sheet_all_ok">Yüklü tüm WhatsApp uygulamaları etkin ve başarıyla enjekte edildi.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">Çalışma Zamanı Doğrulanmadı</string>
+    <string name="diag_target_sheet_injected_badge">Enjekte Edildi</string>
+    <string name="diag_target_sheet_section_targets">Yüklü Hedefler</string>
 </resources>

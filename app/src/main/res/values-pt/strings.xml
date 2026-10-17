@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(Desativado: ative primeiro \"Ocultar tiques azuis\")</string>
     <string name="title_call_configurations">Configurações de Chamada</string>
     <string name="title_call_recordings">Gravações</string>
+
+    <string name="diag_target_sheet_title">Compatibilidade do alvo</string>
+    <string name="diag_target_sheet_desc">Status de injeção e hooks em tempo real em todas as instalações do WhatsApp detectadas.</string>
+    <string name="diag_target_sheet_partial_warning">Alguns aplicativos do WhatsApp instalados não relataram injeção ativa. Abra-os uma vez para inicializar os hooks e confirmar a compatibilidade.</string>
+    <string name="diag_target_sheet_all_ok">Todos os aplicativos do WhatsApp instalados estão ativos e injetados.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">Tempo de execução não confirmado</string>
+    <string name="diag_target_sheet_injected_badge">Injetado</string>
+    <string name="diag_target_sheet_section_targets">Alvos instalados</string>
 </resources>

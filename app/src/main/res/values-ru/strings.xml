@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(Отключено: сначала включите \"Скрыть синие галочки\")</string>
     <string name="title_call_configurations">Настройки вызовов</string>
     <string name="title_call_recordings">Записи</string>
+
+    <string name="diag_target_sheet_title">Совместимость целей</string>
+    <string name="diag_target_sheet_desc">Текущий статус внедрения и хуков во всех обнаруженных установках WhatsApp.</string>
+    <string name="diag_target_sheet_partial_warning">Некоторые установленные приложения WhatsApp еще не сообщили об активном внедрении. Откройте их один раз для инициализации хуков и подтверждения совместимости.</string>
+    <string name="diag_target_sheet_all_ok">Все установленные приложения WhatsApp активны и успешно внедрены.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">Не подтверждено в работе</string>
+    <string name="diag_target_sheet_injected_badge">Внедрено</string>
+    <string name="diag_target_sheet_section_targets">Установленные цели</string>
 </resources>

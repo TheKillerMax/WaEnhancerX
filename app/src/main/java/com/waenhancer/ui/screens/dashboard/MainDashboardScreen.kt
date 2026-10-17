@@ -245,6 +245,7 @@ fun MainDashboardScreen(
     var showCustomizationSoon by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
     var showHmaDetailSheet by remember { mutableStateOf(false) }
+    var showTargetCompatibilitySheet by remember { mutableStateOf(false) }
     var isFixingHma by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -541,7 +542,8 @@ fun MainDashboardScreen(
                 },
                 onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
                 onViewSupportedVersions = { navController.navigateTo(Screen.SupportedVersions) },
-                onOpenHmaDetails = { showHmaDetailSheet = true }
+                onOpenHmaDetails = { showHmaDetailSheet = true },
+                onOpenTargetCompatibility = { showTargetCompatibilitySheet = true }
             )
 
             // Quick Backup & Maintenance Row
@@ -743,6 +745,301 @@ fun MainDashboardScreen(
                 },
                 onDismiss = { showHmaDetailSheet = false }
             )
+        }
+
+        // Target Compatibility Details Bottom Sheet
+        if (showTargetCompatibilitySheet) {
+            TargetCompatibilityBottomSheet(
+                apps = detectedApps,
+                targetSummary = targetSummary,
+                onDismiss = { showTargetCompatibilitySheet = false }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TargetCompatibilityBottomSheet(
+    apps: List<HookedAppInfo>,
+    targetSummary: TargetRuntimePresentation.Summary,
+    onDismiss: () -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val radius = WaexTheme.radius
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val installedTargets = remember(apps) { apps.filter { it.isInstalled } }
+    val isYellow = targetSummary.healthy == null
+    val isRed = targetSummary.healthy == false
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(colors.outlineVariant)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.diag_target_sheet_title),
+                    style = typography.titleLg,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.diag_target_sheet_desc),
+                    style = typography.bodySm,
+                    color = colors.onSurfaceVariant
+                )
+            }
+
+            // Status Banner explaining why it is yellow / unconfirmed
+            val bannerColor = when {
+                isRed -> Color(0xFFEF4444)
+                isYellow -> Color(0xFFF59E0B)
+                else -> Color(0xFF10B981)
+            }
+
+            Surface(
+                shape = radius.mdShape,
+                color = bannerColor.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, bannerColor.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = bannerColor.copy(alpha = 0.2f),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = when {
+                                    isRed -> WaexIcons.Clear
+                                    isYellow -> WaexIcons.Help
+                                    else -> WaexIcons.Check
+                                },
+                                contentDescription = null,
+                                tint = bannerColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = targetSummary.text,
+                            style = typography.bodyMd,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = when {
+                                isYellow -> stringResource(R.string.diag_target_sheet_partial_warning)
+                                isRed -> stringResource(R.string.diag_status_review_required)
+                                else -> stringResource(R.string.diag_target_sheet_all_ok)
+                            },
+                            style = typography.bodySm,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Target Apps list
+            Text(
+                text = stringResource(R.string.diag_target_sheet_section_targets),
+                style = typography.labelSm,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurfaceVariant
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                installedTargets.forEach { app ->
+                    val appIcon = remember(app.packageName) {
+                        WhatsAppPackageDetector.getAppIcon(context, app.packageName)
+                    }
+                    val isAppReady = app.isHooked && app.runtimeStatus == "READY" && app.bridgeStatus == "PROVIDER"
+                    val itemColor = if (isAppReady) Color(0xFF10B981) else Color(0xFFF59E0B)
+
+                    Surface(
+                        shape = radius.smShape,
+                        color = colors.surfaceDim,
+                        border = BorderStroke(1.dp, if (!isAppReady) itemColor.copy(alpha = 0.4f) else colors.outlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // App Icon
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.surface),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (appIcon != null) {
+                                        Image(
+                                            bitmap = appIcon,
+                                            contentDescription = app.appName,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = WaexIcons.Security,
+                                            contentDescription = app.appName,
+                                            tint = itemColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = app.appName,
+                                            style = typography.bodyMd,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        // Badge
+                                        Surface(
+                                            shape = radius.smShape,
+                                            color = itemColor.copy(alpha = 0.15f),
+                                            border = BorderStroke(0.5.dp, itemColor.copy(alpha = 0.4f))
+                                        ) {
+                                            Text(
+                                                text = if (isAppReady) {
+                                                    stringResource(R.string.diag_target_sheet_injected_badge)
+                                                } else {
+                                                    stringResource(R.string.diag_target_sheet_unconfirmed_badge)
+                                                },
+                                                style = typography.labelSm,
+                                                color = itemColor,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${app.packageName} • ${app.versionName}",
+                                        style = typography.labelSm,
+                                        color = colors.onSurfaceVariant.copy(alpha = 0.85f),
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // Status Icon Indicator
+                                Surface(
+                                    shape = CircleShape,
+                                    color = itemColor.copy(alpha = 0.15f),
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = if (isAppReady) WaexIcons.Check else WaexIcons.Help,
+                                            contentDescription = null,
+                                            tint = itemColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Sub-details: Injection details, Hooks count, and why unconfirmed
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(thickness = 0.5.dp, color = colors.outlineVariant.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val detailStatusText = when {
+                                isAppReady && app.injectedHooks.isNotEmpty() -> {
+                                    val activeCount = app.injectedHooks.count { it.status == "ACTIVE" }
+                                    "Injected & active ($activeCount/${app.injectedHooks.size} hooks active)"
+                                }
+                                isAppReady -> "Injected • Initialization reported complete"
+                                !app.isHooked -> app.injectionEvidence.label
+                                app.runtimeStatus != "READY" -> "Injected • Initialization: ${TargetRuntimePresentation.initialization(app)}"
+                                else -> "Injected • Bridge: ${TargetRuntimePresentation.bridge(app)}"
+                            }
+
+                            Text(
+                                text = detailStatusText,
+                                style = typography.bodySm,
+                                color = if (isAppReady) colors.onSurfaceVariant else itemColor,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Button(
+                onClick = onDismiss,
+                shape = radius.mdShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.action_ok),
+                    style = typography.bodyMd,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -1049,7 +1346,8 @@ private fun DashboardDiagnosticsCard(
     onRefresh: () -> Unit,
     onViewDetails: () -> Unit,
     onViewSupportedVersions: () -> Unit,
-    onOpenHmaDetails: () -> Unit
+    onOpenHmaDetails: () -> Unit,
+    onOpenTargetCompatibility: () -> Unit
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography
@@ -1147,14 +1445,16 @@ private fun DashboardDiagnosticsCard(
                 label = stringResource(R.string.diag_label_framework),
                 value = diagnostics?.framework?.name ?: stringResource(R.string.diag_framework_detecting),
                 healthy = diagnostics?.let { it.moduleActive && it.framework.name != "Not detected" },
-                isLoading = diagnostics == null
+                isLoading = diagnostics == null,
+                showValueText = true
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
                 label = stringResource(R.string.diag_label_compatibility),
                 value = targetSummary.text,
                 healthy = targetSummary.healthy,
-                isLoading = false
+                isLoading = false,
+                onClick = onOpenTargetCompatibility
             )
             HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
             DashboardDiagnosticRow(
@@ -1263,6 +1563,7 @@ private fun DashboardDiagnosticRow(
     value: String,
     healthy: Boolean?,
     isLoading: Boolean = false,
+    showValueText: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val colors = WaexTheme.colors
@@ -1294,6 +1595,18 @@ private fun DashboardDiagnosticRow(
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(12.dp))
+
+        if (showValueText && !isLoading) {
+            Text(
+                text = value,
+                style = typography.bodyMd,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
 
         if (isLoading) {
             CircularProgressIndicator(

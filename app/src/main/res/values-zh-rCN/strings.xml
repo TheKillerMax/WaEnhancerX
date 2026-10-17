@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">（已禁用：请先开启“隐藏消息已读情况”）</string>
     <string name="title_call_configurations">通话配置</string>
     <string name="title_call_recordings">通话录音</string>
+
+    <string name="diag_target_sheet_title">目标兼容性</string>
+    <string name="diag_target_sheet_desc">所有已检测到的 WhatsApp 安装的实时注入与 Hook 状态。</string>
+    <string name="diag_target_sheet_partial_warning">部分已安装的 WhatsApp 应用尚未报告处于活跃注入状态。请打开它们一次以初始化 Hook 并确认兼容性。</string>
+    <string name="diag_target_sheet_all_ok">所有已安装的 WhatsApp 应用均处于活跃状态并已成功注入。</string>
+    <string name="diag_target_sheet_unconfirmed_badge">运行时未确认</string>
+    <string name="diag_target_sheet_injected_badge">已注入</string>
+    <string name="diag_target_sheet_section_targets">已安装的目标应用</string>
 </resources>

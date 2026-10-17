@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(معطل: قم بتشغيل \"إخفاء الصحين الأزرقين\" أولاً)</string>
     <string name="title_call_configurations">إعدادات المكالمات</string>
     <string name="title_call_recordings">التسجيلات</string>
+
+    <string name="diag_target_sheet_title">توافق الهدف</string>
+    <string name="diag_target_sheet_desc">حالة الحقن والخطافات المباشرة عبر جميع تثبيتات واتساب المكتشفة.</string>
+    <string name="diag_target_sheet_partial_warning">لم تبلغ بعض تطبيقات واتساب المثبتة عن حقن نشط. افتحها مرة واحدة لتهيئة الخطافات وتأكيد التوافق.</string>
+    <string name="diag_target_sheet_all_ok">جميع تطبيقات واتساب المثبتة نشطة ومحقونة بنجاح.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">غير مؤكد أثناء التشغيل</string>
+    <string name="diag_target_sheet_injected_badge">تم الحقن</string>
+    <string name="diag_target_sheet_section_targets">الأهداف المثبتة</string>
 </resources>

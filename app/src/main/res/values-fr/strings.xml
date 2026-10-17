@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(Désactivé : activez d\'abord \"Masquer les coches bleues\")</string>
     <string name="title_call_configurations">Configurations d\'appel</string>
     <string name="title_call_recordings">Enregistrements</string>
+
+    <string name="diag_target_sheet_title">Compatibilité des cibles</string>
+    <string name="diag_target_sheet_desc">État de l\'injection et des hooks en direct sur toutes les installations WhatsApp détectées.</string>
+    <string name="diag_target_sheet_partial_warning">Certaines applications WhatsApp installées n\'ont pas signalé d\'injection active. Ouvrez-les une fois pour initialiser les hooks et confirmer la compatibilité.</string>
+    <string name="diag_target_sheet_all_ok">Toutes les applications WhatsApp installées sont actives et injectées.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">Exécution non confirmée</string>
+    <string name="diag_target_sheet_injected_badge">Injecté</string>
+    <string name="diag_target_sheet_section_targets">Cibles installées</string>
 </resources>

@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(अक्षम: पहले \"नीले टिक छुपाएं\" चालू करें)</string>
     <string name="title_call_configurations">कॉल कॉन्फ़िगरेशन</string>
     <string name="title_call_recordings">रिकॉर्डिंग</string>
+
+    <string name="diag_target_sheet_title">टारगेट संगतता</string>
+    <string name="diag_target_sheet_desc">सभी पाए गए व्हाट्सएप इंस्टॉलेशन में लाइव इंजेक्शन और हुक की स्थिति।</string>
+    <string name="diag_target_sheet_partial_warning">कुछ इंस्टॉल किए गए व्हाट्सएप ऐप्स ने सक्रिय इंजेक्शन की रिपोर्ट नहीं दी है। हुक प्रारंभ करने और संगतता की पुष्टि करने के लिए उन्हें एक बार खोलें।</string>
+    <string name="diag_target_sheet_all_ok">सभी इंस्टॉल किए गए व्हाट्सएप ऐप्स सक्रिय और इंजेक्टेड हैं।</string>
+    <string name="diag_target_sheet_unconfirmed_badge">रनटाइम अपुष्ट</string>
+    <string name="diag_target_sheet_injected_badge">इंजेक्टेड</string>
+    <string name="diag_target_sheet_section_targets">इंस्टॉल किए गए टारगेट</string>
 </resources>

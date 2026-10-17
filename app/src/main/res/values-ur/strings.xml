@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(غیر فعال: پہلے \"بلیو ٹکس چھپائیں\" آن کریں)</string>
     <string name="title_call_configurations">کال کنفیگریشنز</string>
     <string name="title_call_recordings">ریکارڈنگز</string>
+
+    <string name="diag_target_sheet_title">ہدف کی مطابقت</string>
+    <string name="diag_target_sheet_desc">تمام دریافت شدہ واٹس ایپ انسٹالیشنز میں لائیو انجیکشن اور ہکس کی کیفیت۔</string>
+    <string name="diag_target_sheet_partial_warning">کچھ انسٹال شدہ واٹس ایپ ایپس نے فعال انجیکشن کی اطلاع نہیں دی ہے۔ ہکس کو شروع کرنے اور مطابقت کی تصدیق کے لیے انہیں ایک بار کھولیں۔</string>
+    <string name="diag_target_sheet_all_ok">تمام انسٹال شدہ واٹس ایپ ایپس فعال اور کامیابی سے انجیکٹ ہیں۔</string>
+    <string name="diag_target_sheet_unconfirmed_badge">رن ٹائم غیر مصدقہ</string>
+    <string name="diag_target_sheet_injected_badge">انجیکٹ شدہ</string>
+    <string name="diag_target_sheet_section_targets">انسٹال شدہ اہداف</string>
 </resources>

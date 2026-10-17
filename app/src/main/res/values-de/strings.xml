@@ -357,4 +357,12 @@
     <string name="dep_disabled_hide_blue_ticks">(Deaktiviert: Zuerst \"Blaue Häkchen ausblenden\" aktivieren)</string>
     <string name="title_call_configurations">Anrufkonfigurationen</string>
     <string name="title_call_recordings">Aufnahmen</string>
+
+    <string name="diag_target_sheet_title">Ziel-Kompatibilität</string>
+    <string name="diag_target_sheet_desc">Live-Injektions- und Hook-Status aller erkannten WhatsApp-Installationen.</string>
+    <string name="diag_target_sheet_partial_warning">Einige installierte WhatsApp-Apps haben noch keine aktive Injektion gemeldet. Öffnen Sie sie einmal, um Hooks zu initialisieren und die Kompatibilität zu bestätigen.</string>
+    <string name="diag_target_sheet_all_ok">Alle installierten WhatsApp-Apps sind aktiv und erfolgreich injiziert.</string>
+    <string name="diag_target_sheet_unconfirmed_badge">Laufzeit unbestätigt</string>
+    <string name="diag_target_sheet_injected_badge">Injiziert</string>
+    <string name="diag_target_sheet_section_targets">Installierte Ziele</string>
 </resources>
