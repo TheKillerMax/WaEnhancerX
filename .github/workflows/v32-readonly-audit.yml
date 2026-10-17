@@ -1,0 +1,89 @@
+name: V32 read-only audit
+on:
+  push:
+    branches: ['test/qa-v32-systematic-review-2026-10-17']
+    paths: ['.github/workflows/v32-readonly-audit.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch paginated public records and all retained run job summaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v32-inventory
+          python3 - <<'PY'
+          import concurrent.futures, json, os, pathlib, time, urllib.request, urllib.error
+          root=pathlib.Path('/tmp/v32-inventory'); problems=[]
+          def get(path):
+              u='https://api.github.com/'+path
+              for attempt in range(4):
+                  try:
+                      req=urllib.request.Request(u,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','User-Agent':'WAEX-V32-readonly-audit'})
+                      with urllib.request.urlopen(req,timeout=60) as r:return json.load(r)
+                  except urllib.error.HTTPError as e:
+                      if e.code not in (429,500,502,503,504) or attempt==3:raise
+                      time.sleep(2**attempt)
+          def pages(path,key=None):
+              result=[]; page=1
+              while True:
+                  data=get(path+('&' if '?' in path else '?')+'per_page=100&page='+str(page)); rows=data if key is None else data[key]
+                  result.extend(rows)
+                  if len(rows)<100:break
+                  page+=1
+              return result
+          def save(path,data):
+              p=root/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(data,ensure_ascii=False,indent=2))
+          up='WaEnhancerX/WaEnhancerX'; fork='TheKillerMax/WaEnhancerX'
+          save('upstream_ref.json',get('repos/'+up+'/git/ref/heads/main'))
+          save('fork_branches.json',pages('repos/'+fork+'/branches'))
+          save('release_metadata.json',pages('repos/'+up+'/releases'))
+          allissues=pages('repos/'+up+'/issues?state=all&sort=created&direction=asc')
+          issues=[i for i in allissues if 'pull_request' not in i]
+          save('issues.json',issues)
+          for i in issues:
+              save('issue_comments/%s.json'%i['number'],pages('repos/'+up+'/issues/%s/comments'%i['number']))
+          prs=pages('repos/'+up+'/pulls?state=all&sort=created&direction=asc');save('prs.json',prs)
+          def prdetail(p):
+              n=p['number'];prefix='repos/'+up+'/pulls/'+str(n)
+              for suffix,file in [('', 'metadata'),('/files','files'),('/reviews','reviews'),('/comments','review_comments')]:
+                  try:save('pulls/%s/%s.json'%(n,file),get(prefix) if not suffix else pages(prefix+suffix))
+                  except Exception as e:problems.append({'pr':n,'kind':file,'error':str(e)})
+              save('pulls/%s/conversation.json'%n,pages('repos/'+up+'/issues/%s/comments'%n))
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(prdetail,prs))
+          for repo,tag in [(up,'upstream'),(fork,'fork')]:
+              save('actions/'+tag+'/workflows.json',pages('repos/'+repo+'/actions/workflows','workflows'))
+              runs=pages('repos/'+repo+'/actions/runs','workflow_runs');save('actions/'+tag+'/runs.json',runs)
+              def runjob(r):
+                  try:
+                      jobs=pages('repos/'+repo+'/actions/runs/'+str(r['id'])+'/jobs','jobs')
+                      save('actions/'+tag+'/jobs/%s.json'%r['id'],jobs)
+                      for j in jobs:
+                          if j.get('conclusion')!='failure':continue
+                          try:
+                              req=urllib.request.Request('https://api.github.com/repos/'+repo+'/actions/jobs/'+str(j['id'])+'/logs',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'User-Agent':'WAEX-V32-readonly-audit'})
+                              with urllib.request.urlopen(req,timeout=60) as response:log=response.read(20*1024*1024).decode('utf-8','replace')
+                              p=root/'actions'/tag/'failed_logs'/('%s-%s.log'%(r['id'],j['id']));p.parent.mkdir(parents=True,exist_ok=True);p.write_text(log)
+                          except Exception as e:problems.append({'repo':repo,'run':r['id'],'job':j['id'],'log_error':str(e)})
+                  except Exception as e:problems.append({'repo':repo,'run':r['id'],'error':str(e)})
+              with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(runjob,runs))
+              print(tag,'runs',len(runs),'workflows inventoried')
+          save('limitations.json',problems)
+          print('issues',len(issues),'PRs',len(prs),'unavailable items',len(problems))
+          PY
+      - name: Archive text-only audit evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waex-v32-readonly-inventory
+          path: /tmp/v32-inventory/
+          retention-days: 7
