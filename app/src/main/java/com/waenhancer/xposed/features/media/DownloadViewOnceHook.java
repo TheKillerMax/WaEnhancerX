@@ -1,16 +1,11 @@
 package com.waenhancer.xposed.features.media;
 
 import android.app.Activity;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -22,15 +17,8 @@ import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -309,53 +297,11 @@ public class DownloadViewOnceHook extends BaseFeature {
      */
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
-            String name = srcFile.getName();
-            boolean isVideo = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".3gp") || name.endsWith(".mov");
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-            String ext = isVideo ? ".mp4" : ".jpg";
-            String outName = "WAEX_VO_" + timestamp + ext;
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, outName);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, isVideo ? "video/mp4" : "image/jpeg");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, isVideo ? Environment.DIRECTORY_MOVIES + "/WAEX" : Environment.DIRECTORY_PICTURES + "/WAEX");
-
-                Uri collection = isVideo ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                Uri itemUri = ctx.getContentResolver().insert(collection, values);
-                if (itemUri != null) {
-                    try (InputStream in = new FileInputStream(srcFile);
-                         OutputStream out = ctx.getContentResolver().openOutputStream(itemUri)) {
-                        if (out != null) {
-                            byte[] buf = new byte[8192];
-                            int len;
-                            while ((len = in.read(buf)) > 0) {
-                                out.write(buf, 0, len);
-                            }
-                            showToast(ctx, "Saved to Gallery (WAEX)");
-                            return;
-                        }
-                    }
-                }
-            } else {
-                File dir = new File(Environment.getExternalStoragePublicDirectory(isVideo ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES), "WAEX");
-                if (!dir.exists()) dir.mkdirs();
-                File dest = new File(dir, outName);
-
-                try (InputStream in = new FileInputStream(srcFile);
-                     OutputStream out = new FileOutputStream(dest)) {
-                    byte[] buf = new byte[8192];
-                    int len;
-                    while ((len = in.read(buf)) > 0) {
-                        out.write(buf, 0, len);
-                    }
-                    showToast(ctx, "Saved to: " + dest.getAbsolutePath());
-                    return;
-                }
-            }
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " saveMediaFile error: " + t.getMessage());
-            showToast(ctx, "Error saving media: " + t.getMessage());
+            GalleryMediaExporter.export(ctx, srcFile);
+            showToast(ctx, "Media saved (WAEX)");
+        } catch (Exception failure) {
+            XposedBridge.log(TAG + " Export failed: " + failure.getClass().getSimpleName());
+            showToast(ctx, "Unable to save this media file");
         }
     }
 

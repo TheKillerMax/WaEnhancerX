@@ -1,0 +1,9 @@
+# Local media export: scope and acceptance
+
+Based on reviewed upstream 025ff5494df4c9f4a94a7cada787c299f68a95d2. This is a storage correction after the host has supplied a File, not certification of the menu/file resolver or all View Once features.
+
+Run `python3 qa/test_gallery_export.py`. The full production exporter is compiled with explicit Android storage doubles and real JVM file IO. A header identifies a supported container family, not decodability or the identity of a message. BMFF brands do not guarantee a video stream. Unsupported formats (including unrecognized WebM/Matroska, HEIF/AVIF and audio brands) are rejected; no generic JPEG fallback is used. The export ceiling is 512 MiB. This ceiling may reject a legitimate larger item.
+
+On an authorized build/device, use only media the test participants permit retaining. Verify that the menu belongs to the displayed message and selects its correct cached File, not a thumbnail or another object's file. Exercise API 24/28 legacy storage and API 29+ MediaStore, including permission denial, empty/missing/changing files, write/flush/close failure, failed publication and failed cleanup. A cleanup failure can leave a pending row; it must not produce a success notification. Check file bytes, actual media playback and Gallery indexing separately. Run two simultaneous saves and verify independent names. The existing asynchronous menu work is not a new bounded queue or a cancellation mechanism.
+
+No full signed WAEX build, MediaProvider execution, permission dialog, native DexKit scan, real media decoding, WhatsApp/LSPosed execution or account acceptance was performed in the local JVM regression. The supplied host has a Debug signer and does not certify official builds. Production license, signing, authorization and privacy choices remain unchanged.
