@@ -36,6 +36,8 @@ fun main(args:Array<String>){
         ck("Boolean API compatible $v",UniversalVersionValidator.isSupported(host,v,prefs),true)
     }
     ck("host table not consulted",host.resources.reads.size,0)
+    ck("module context requested by exact package",host.contextRequests.isNotEmpty() && host.contextRequests.all{it.first=="com.waenhancer"},true)
+    ck("resource access never requests application code",host.contextRequests.all{it.second and Context.CONTEXT_INCLUDE_CODE==0},true)
     val hidden=Context("com.whatsapp",Resources("com.whatsapp",emptyMap(),mapOf(R.array.universal_supported_versions to arrayOf("9.99.1"))))
     ck("unavailable not unsupported",UniversalVersionValidator.evaluate(hidden,"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     ck("reject foreign matching numeric table",UniversalVersionValidator.isSupported(hidden,"9.99.1",prefs),false)
@@ -43,9 +45,26 @@ fun main(args:Array<String>){
     ck("null context cannot resolve builtins",UniversalVersionValidator.evaluate(null,"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     ck("no-context bool remains fail closed",UniversalVersionValidator.isSupported("2.26.40.76",prefs),false)
     ck("wrong context returned",UniversalVersionValidator.evaluate(Context("com.whatsapp",hidden.resources,hidden),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
+    val foreignMatching=Context("com.whatsapp",Resources("com.whatsapp",names,mapOf(R.array.universal_supported_versions to rules)))
+    ck("matching rules in wrong context rejected",UniversalVersionValidator.evaluate(Context("com.whatsapp",hidden.resources,foreignMatching),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
+    ck("wrong context rejected before its array read",foreignMatching.resources.reads.size,0)
+    val misplacedModuleResources=Resources("com.waenhancer",names,mapOf(R.array.universal_supported_versions to rules))
+    val wrongPackageContext=Context("com.whatsapp",misplacedModuleResources)
+    ck("requested module must not return a host context",UniversalVersionValidator.evaluate(Context("com.whatsapp",hidden.resources,wrongPackageContext),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
+    ck("unexpected context is rejected before reading even matching arrays",misplacedModuleResources.reads.size,0)
     ck("wrong owner at same number",UniversalVersionValidator.evaluate(module(rules,"com.whatsapp:array/universal_supported_versions"),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     ck("wrong name at same number",UniversalVersionValidator.evaluate(module(rules,"com.waenhancer:array/another_array"),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     ck("own numeric fallback verified by full name",UniversalVersionValidator.evaluate(module(rules,"com.waenhancer:array/universal_supported_versions",emptyMap()),"2.26.40.76",prefs),D.BUILTIN_RULE)
+    for(failure in listOf(SecurityException("blocked"),android.content.pm.PackageManager.NameNotFoundException(),NoClassDefFoundError("unavailable"))){
+        val inaccessible=Context("com.whatsapp",hidden.resources,mod).apply{contextFailure=failure}
+        ck("resource access failure remains unavailable ${failure.javaClass.simpleName}",UniversalVersionValidator.evaluate(inaccessible,"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
+    }
+    for(failure in listOf(AssertionError("controlled assertion"),OutOfMemoryError("controlled VM failure"),ThreadDeath())){
+        val broken=Context("com.whatsapp",hidden.resources,mod).apply{contextFailure=failure}
+        var caught:Throwable?=null
+        try { UniversalVersionValidator.evaluate(broken,"2.26.40.76",prefs) } catch(t:Throwable){caught=t}
+        ck("fatal or assertion error is not a rules result ${failure.javaClass.simpleName}",caught===failure,true)
+    }
     for(list in listOf(emptyArray<String>(),arrayOf("bad"),arrayOf(""),arrayOf("2.26.40.xx",""),arrayOf("*.xx"))){
         ck("invalid builtin contents not usable",UniversalVersionValidator.evaluate(module(list),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     }

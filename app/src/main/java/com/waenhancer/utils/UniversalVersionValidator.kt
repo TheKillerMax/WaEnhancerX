@@ -21,19 +21,26 @@ object UniversalVersionValidator {
     }
 
     /**
-     * Only read a resource in the module namespace. A numeric R ID is not portable
-     * to the host Resources. null means unavailable; it is not a valid empty range.
+     * Read only the module's version-rule array. Numeric resource IDs are local
+     * to a resource table, so a host or unrelated array must never supply rules.
      */
     private fun readBuiltinRules(context: Context?): List<String>? {
         if (context == null) return null
         return try {
-            val moduleContext = if (context.packageName == MODULE_PACKAGE) context
-                else context.createPackageContext(MODULE_PACKAGE, Context.CONTEXT_IGNORE_SECURITY)
+            val moduleContext = if (context.packageName == MODULE_PACKAGE) {
+                context
+            } else {
+                context.createPackageContext(
+                    MODULE_PACKAGE,
+                    Context.CONTEXT_IGNORE_SECURITY
+                )
+            }
             if (moduleContext.packageName != MODULE_PACKAGE) return null
             val resources = moduleContext.resources
-            val namedId = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
-            // The static reference also keeps this array reachable in optimized builds.
-            val id = if (namedId != 0) namedId else R.array.universal_supported_versions
+            // Resource access does not require loading the module's code in the host.
+            // The static fallback also keeps the array reachable in optimized builds.
+            val id = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
+                .takeIf { it != 0 } ?: R.array.universal_supported_versions
             if (resources.getResourceName(id) != "$MODULE_PACKAGE:array/universal_supported_versions") return null
             val rules = resources.getStringArray(id).map { it.trim() }
             val syntax = Regex("[0-9]+(?:\\.[0-9]+)+(?:\\.(?:xx|\\*))?", RegexOption.IGNORE_CASE)
