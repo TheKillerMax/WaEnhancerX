@@ -48,12 +48,25 @@ do not change those compatibility flags as an incidental documentation fix.
 
 ### Full APK builds
 
-The `:licensing` project is a private submodule declared in
-[.gitmodules](.gitmodules). Builders with access should initialize it:
+The `:licensing` project requires a separate, authorized checkout of
+[`mubashardev/waex-licensing`](https://github.com/mubashardev/waex-licensing)
+at the repository's `licensing/` path. Although [.gitmodules](.gitmodules)
+declares that path and URL, the public revision documented here has no Git
+submodule entry (gitlink) and therefore pins no licensing commit.
+`git submodule update --init --recursive` alone does not obtain this module.
+Builders who already have access can obtain its repository with:
 
 ```bash
-git submodule update --init --recursive
+git clone https://github.com/mubashardev/waex-licensing.git licensing
 ```
+
+Before building, check out a licensing revision confirmed compatible with the
+selected public app revision by the maintainers. Record both commit SHAs in the
+build evidence; the private repository's latest default branch is not an
+established compatibility pin. If a later public revision adds a gitlink, use and
+record that pinned revision. The current public
+[source QA workflow](.github/workflows/source-qa.yml) does not fetch or build
+`licensing`.
 
 Both Debug and Release use `releaseConfig`, which requires a keystore whose
 certificate matches the fingerprint checked in `app/build.gradle.kts`. The
@@ -152,7 +165,7 @@ and sample identity without redistributing the host binary.
 
 The implemented source map is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 `app` contains the manager UI, configuration, preferences, update code, bridge and
-Xposed features; `licensing` is the required private module. There are no separate
+Xposed features; `licensing` is the required, separately obtained private module. There are no separate
 `core-ui`, `feature-*` or `plugin-host` Gradle modules in this tree.
 
 Use existing Compose/Material components for manager UI and the existing native

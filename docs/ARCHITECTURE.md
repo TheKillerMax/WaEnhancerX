@@ -11,11 +11,14 @@ implemented API described here.
 
 [settings.gradle.kts](../settings.gradle.kts) includes `:app` and `:licensing`.
 The public manager, UI, configuration, bridge and hook implementations are packages
-inside `:app`. `:licensing` is a private submodule declared in
-[.gitmodules](../.gitmodules) and required by
-[app/build.gradle.kts](../app/build.gradle.kts). A public checkout can run the
-isolated QA suites, but a full APK build also requires that module and the configured
-signing key. See [the build instructions](../CONTRIBUTING.md#development-setup).
+inside `:app`. `:licensing` is a required private project: its repository URL is
+declared in [.gitmodules](../.gitmodules), and
+[app/build.gradle.kts](../app/build.gradle.kts) depends on it. This public revision
+contains no gitlink and pins no licensing commit. A full APK build therefore
+requires a separate, authorized checkout of a compatible licensing revision at
+`licensing/`, plus the configured signing key. A public checkout can run the
+isolated QA suites without that module. See
+[the build instructions](../CONTRIBUTING.md#development-setup).
 
 | Area | Implemented responsibility | Source |
 |---|---|---|

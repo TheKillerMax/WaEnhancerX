@@ -63,7 +63,7 @@ Most WhatsApp modifications require replacing your official application with sus
 
 The public manager and hooks use Kotlin/Java, Jetpack Compose, Hilt and Android
 framework APIs. Features are grouped into packages inside `:app`, with a required
-private `:licensing` submodule. The [architecture guide](docs/ARCHITECTURE.md)
+private `:licensing` module. The [architecture guide](docs/ARCHITECTURE.md)
 maps the implemented components and their responsibilities.
 
 The APK declares `minSdk 24` and `targetSdk 36`. These build settings do not imply
@@ -170,15 +170,23 @@ AGP release. The Kotlin catalog entry is 2.0.20; the resolved Gradle plugin/comp
 version also depends on AGP and should be recorded when validating a full build.
 
 **A public clone alone cannot produce the configured APK.** Both Debug and Release
-require the private `:licensing` submodule and the original configured signing key;
-the build verifies its certificate during configuration. Authorized builders can
-run:
+require the private `:licensing` module and the original configured signing key;
+the build verifies its certificate during configuration. The current revision
+declares a licensing URL in `.gitmodules` but contains no gitlink or pinned
+licensing commit, so recursive submodule initialization alone cannot supply it.
+Builders with access must obtain it separately:
 
 ```bash
 git clone https://github.com/WaEnhancerX/WaEnhancerX.git
 cd WaEnhancerX
-git submodule update --init --recursive
-# Configure the Android SDK and authorized signing properties first.
+git clone https://github.com/mubashardev/waex-licensing.git licensing
+```
+
+Before building, select a compatible licensing revision supplied by the
+maintainers and record both commit SHAs. Configure the Android SDK and authorized
+signing properties as described in [CONTRIBUTING.md](CONTRIBUTING.md), then run:
+
+```bash
 ./gradlew :app:assembleDebug
 ```
 
