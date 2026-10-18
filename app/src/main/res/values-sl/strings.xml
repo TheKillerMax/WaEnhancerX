@@ -16,6 +16,7 @@
     <string name="stargazers_title">Naši podporniki</string>
     <string name="stargazers_thank_you">Hvala za podporo za WaEnhancer X</string>
     <string name="stargazers_message">Vsaka zvezdica pomaga več ljudem odkriti projekt. Ta stena je namenjena vsem, ki so izkazali svojo podporo.</string>
+    <string name="stargazers_last_updated">Nazadnje posodobljeno: %1$s</string>
     <string name="support">Podpora</string>
     <string name="support_desc">Če naletiš na kakršne koli težave ali imaš vprašanja o WaEnhancer X, obišči Telegram.</string>
     <string name="license">Licenca</string>
@@ -279,6 +280,8 @@
     <string name="feat_license_verification_desc">Upravljanje vnosa in preverjanja licenčnega ključa</string>
     <string name="feat_pro_features_unlock_title">Upravljaj premium funkcije</string>
     <string name="feat_pro_features_unlock_desc">Dinamično zaklepanje/odklepanje premium funkcij</string>
+    <string name="feat_metaai_title">Skrij gumb Meta AI</string>
+    <string name="feat_metaai_desc">Skrij gumb Meta AI na zaslonu klepetov.</string>
     <string name="sec_chat_group_utilities">Orodja za klepet in skupine</string>
     <string name="sec_conversation_list_activity_presence">Dejavnost na seznamu klepetov in prisotnost</string>
     <string name="sec_visual_styles">Vizualni slogi</string>
@@ -365,4 +368,5 @@
     <string name="dep_disabled_hide_blue_ticks">(Onemogočeno: najprej vklopi možnost Skrij modre kljukice)</string>
     <string name="title_call_configurations">Nastavitve klicev</string>
     <string name="title_call_recordings">Posnetki</string>
+    <string name="view_once_setting_save_failed">Nastavitve ni bilo mogoče shraniti</string>
 </resources>
