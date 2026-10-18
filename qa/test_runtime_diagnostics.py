@@ -59,8 +59,14 @@ import android.content.res.Resources
 import android.content.pm.PackageManager
 open class Context(val packageName:String,val resources:Resources,val module:Context?=null) {
  val packageManager=PackageManager()
- open fun createPackageContext(name:String,flags:Int):Context=module?:throw PackageManager.NameNotFoundException()
- companion object {const val CONTEXT_IGNORE_SECURITY=2}
+ val contextRequests=mutableListOf<Pair<String,Int>>()
+ var contextFailure:Throwable?=null
+ open fun createPackageContext(name:String,flags:Int):Context {
+  contextRequests.add(name to flags)
+  contextFailure?.let{throw it}
+  return module?:throw PackageManager.NameNotFoundException()
+ }
+ companion object {const val CONTEXT_INCLUDE_CODE=1;const val CONTEXT_IGNORE_SECURITY=2}
 }
 class Intent {fun setClassName(a:String,b:String){};fun putExtra(a:String,b:String){};fun addFlags(f:Int){}
  companion object {const val FLAG_ACTIVITY_NEW_TASK=1;const val FLAG_ACTIVITY_CLEAR_TOP=2;const val FLAG_ACTIVITY_SINGLE_TOP=4}}

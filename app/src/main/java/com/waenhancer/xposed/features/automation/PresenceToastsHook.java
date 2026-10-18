@@ -303,18 +303,36 @@ public class PresenceToastsHook extends BaseFeature {
 
     public static void showDeletedMessageToast(Context context, SharedPreferences prefs,
                                                String senderJid, Handler handler) {
+        showDeletedToast(context, prefs, senderJid, handler, "message");
+    }
+
+    public static void showDeletedStatusToast(Context context, SharedPreferences prefs,
+                                              String senderJid, Handler handler) {
+        showDeletedToast(context, prefs, senderJid, handler, "status");
+    }
+
+    private static void showDeletedToast(Context context, SharedPreferences prefs,
+                                         String senderJid, Handler handler, String subject) {
         if (context == null || prefs == null || handler == null) return;
         boolean enabled = prefs.getBoolean("toastdeleted", false);
         if (!enabled) return;
 
-        String key = (senderJid != null ? senderJid : "unknown") + "_deleted";
+        String key = (senderJid != null ? senderJid : "unknown") + "_deleted_" + subject;
         long now = System.currentTimeMillis();
         if (!TOAST_THROTTLE.shouldEmit(key, now)) return;
 
         TOAST_EXECUTOR.execute(() -> {
             try {
-                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : UiText.get(R.string.waex_ui_a_contact_f7f0de9a, "A contact");
-                String text = name + UiText.get(R.string.waex_ui_deleted_a_message_475dad17, " deleted a message");
+                String name = senderJid != null
+                        ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null)
+                        : null;
+                if (!ContactNameResolver.INSTANCE.isValidDisplayName(name)
+                        || "Unknown".equalsIgnoreCase(name)) {
+                    name = UiText.get(R.string.waex_ui_a_contact_f7f0de9a, "A contact");
+                }
+                String text = name + ("status".equals(subject)
+                        ? UiText.get(R.string.waex_ui_deleted_a_status, " deleted a status")
+                        : UiText.get(R.string.waex_ui_deleted_a_message_475dad17, " deleted a message"));
                 handler.post(() -> {
                     try {
                         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();

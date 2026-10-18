@@ -58,8 +58,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.mutableStateMapOf
 import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.DndPreferencePolicy
 import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
@@ -75,6 +80,7 @@ import com.waenhancer.ui.navigation.LocalOnActivatePro
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
 import com.waenhancer.ui.navigation.Screen
 import com.waenhancer.ui.screens.privacy.DeletedIndicatorPreferencePolicy
+import com.waenhancer.ui.screens.media.MediaQuickSettingPolicy
 
 
 @Composable
@@ -131,7 +137,7 @@ fun GlobalPrivacySettingsScreen(
             "ghostmode_enabled", "ghostmode", "ghostmode_t", "ghostmode_r", "typing_privacy",
             "hide_read_receipts", "hideread_group", "blueonreply", "seentick", "hide_delivery_receipts", "hide_seen_receipts", "hideonceseen",
             "stealth_status_view", "autonext_status", "toast_viewed_status",
-            "anti_view_once", "downloadviewonce",
+            "anti_view_once", "downloadviewonce", "download_view_once",
             "anti_revoke", "hide_anti_revoke", "preserve_own_revoke", "antirevokestatus", "antidisappearing", "toastdeleted", "toast_viewed_message",
             "locked_chats_enhancer", "typearchive", "dnd_mode", "hide_chats", "custom_privacy",
             "message_bomber", "anti_edit_messages", "message_device_source", "preserve_delete_for_me", "revokeallmessages", "hide_forwarded_tag", "removeforwardlimit",
@@ -183,10 +189,16 @@ fun GlobalPrivacySettingsScreen(
         mutableStateOf(preferenceManager.getBoolean("locked_open_via_title_triple_tap", false))
     }
 
-    val settingsState = remember {
+    fun readViewOnceDownload(): Boolean = MediaQuickSettingPolicy.isEnabled("download_view_once") { key ->
+        preferenceManager.getBoolean(key, false)
+    }
+
+    val settingsState = remember(preferenceManager) {
         mutableStateMapOf<String, Boolean>().apply {
             privacyKeys.forEach { key ->
-                var boolVal = preferenceManager.getBoolean(key, false)
+                var boolVal = if (key == "downloadviewonce" || key == "download_view_once") {
+                    readViewOnceDownload()
+                } else preferenceManager.getBoolean(key, false)
                 if (!boolVal && key == "typearchive") {
                     val strVal = preferenceManager.getString("typearchive", "0")
                     boolVal = (strVal != null && strVal != "0" && !strVal.equals("false", ignoreCase = true))
@@ -196,10 +208,38 @@ fun GlobalPrivacySettingsScreen(
                 }
                 put(key, boolVal)
             }
+            put("dnd_mode", DndPreferencePolicy.isEnabled(
+                { key -> preferenceManager.getAll().containsKey(key) },
+                { key -> preferenceManager.getBoolean(key, false) }
+            ))
         }
     }
 
-    val updatePreference: (String, Boolean) -> Unit = { key, value ->
+    // The same setting also appears in Media. Refresh both display keys on return.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, preferenceManager) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val enabled = readViewOnceDownload()
+                settingsState["downloadviewonce"] = enabled
+                settingsState["download_view_once"] = enabled
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val updatePreference: (String, Boolean) -> Unit = update@{ key, value ->
+        if (key == "downloadviewonce" || key == "download_view_once") {
+            if (preferenceManager.putBooleans(MediaQuickSettingPolicy.changesFor(key, value))) {
+                val enabled = readViewOnceDownload()
+                settingsState["downloadviewonce"] = enabled
+                settingsState["download_view_once"] = enabled
+            } else {
+                Toast.makeText(context, context.getString(R.string.view_once_setting_save_failed), Toast.LENGTH_SHORT).show()
+            }
+            return@update
+        }
         settingsState[key] = value
         if (key == "seentick") {
             seenTickPlacement = if (value) "1" else "0"

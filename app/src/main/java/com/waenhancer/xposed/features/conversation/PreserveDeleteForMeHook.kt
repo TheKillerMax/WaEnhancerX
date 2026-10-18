@@ -59,8 +59,11 @@ class PreserveDeleteForMeHook(
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (!isEnabled(PREF_KEY, false)) return
-                            if (deleteMethod.name == "run" && !isDeleteForMeRunnable(param.thisObject)) return
-                            captureRunnableMessages(param.thisObject)
+                            if (deleteMethod.name == "run") {
+                                // Multiplexed Runnables are shared by unrelated WhatsApp features.
+                                // Only enter the delete scope after resolving real message keys.
+                                if (!captureRunnableMessages(param.thisObject)) return
+                            }
                             deleteForMeScope.set(true)
                         }
 
@@ -321,27 +324,26 @@ class PreserveDeleteForMeHook(
             DexSearchEngine.getInstance().findMethodWithCache(
                 context,
                 classLoader,
-                "wpp_delete_for_me_method_v5",
+                "wpp_delete_for_me_method_v7",
                 { bridge, loader ->
-                    val data = bridge.findMethod(
+                    resolveCurrentDeleteForMeRunnable(bridge, loader) ?: bridge.findMethod(
                         FindMethod.create().matcher(
                             MethodMatcher.create().addUsingString(
                                 "CoreMessageStore/deleteMessageForMe",
                                 StringMatchType.Contains
                             )
                         )
-                    ).firstOrNull() ?: bridge.findMethod(
+                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
+                        it.name != "run" || it.parameterCount > 0
+                    } ?: bridge.findMethod(
                         FindMethod.create().matcher(
                             MethodMatcher.create().addUsingString(
                                 "msgstore/delete-for-me",
                                 StringMatchType.Contains
                             )
                         )
-                    ).firstOrNull()
-                    if (data != null) {
-                        data.getMethodInstance(loader)
-                    } else {
-                        resolveCurrentDeleteForMeRunnable(bridge, loader)
+                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
+                        it.name != "run" || it.parameterCount > 0
                     }
                 }
             )
@@ -352,67 +354,60 @@ class PreserveDeleteForMeHook(
     }
 
     /**
-     * WhatsApp 2.26.41+ moved local deletion into a multiplexed Runnable. Resolve it from the
-     * delete-dialog contract instead of relying on an obfuscated class or method name:
-     * dialog builder -> Delete-for-me listener -> Runnable constructor -> run().
+     * Resolve the local-delete Runnable from WhatsApp's stable semantic and interface graph rather
+     * than obfuscated names, synthetic switch values, or constructor arity:
+     * message-key helper string -> dialog builder(Set) -> positive listener -> Runnable -> run().
      */
     private fun resolveCurrentDeleteForMeRunnable(
         bridge: org.luckypray.dexkit.DexKitBridge,
         loader: ClassLoader
     ): Method? {
-        val dialogMethod = bridge.findMethod(
+        val deleteDialogAnchors = bridge.findMethod(
             FindMethod.create().matcher(
                 MethodMatcher.create().addUsingString(
-                    "dialog/delete no messages",
+                    "DeleteMessagesDialog/getSampleMessageForMediaType/multi chat jid delete",
                     StringMatchType.Equals
                 )
             )
-        ).singleOrNull() ?: return null
+        )
+        val deleteDialogAnchor = deleteDialogAnchors.firstOrNull() ?: return null
 
-        val deleteListenerConstructor = dialogMethod.invokes.singleOrNull { invoked ->
-            if (!invoked.isConstructor) return@singleOrNull false
+        val dialogBuilders = deleteDialogAnchor.declaredClass?.methods?.filter { method ->
+            val params = method.paramTypeNames
+            "java.util.Set" in params && "boolean" in params && params.size >= 6
+        }.orEmpty()
+        val dialogBuilder = dialogBuilders.firstOrNull() ?: return null
+
+        val deleteListenerConstructor = dialogBuilder.invokes.firstOrNull { invoked ->
+            if (!invoked.isConstructor) return@firstOrNull false
             val params = invoked.paramTypeNames
             if (params.firstOrNull() != "android.widget.CheckBox" ||
-                "java.util.Set" !in params) return@singleOrNull false
-            val declaredClass = invoked.declaredClass ?: return@singleOrNull false
+                "java.util.Set" !in params) return@firstOrNull false
+            val declaredClass = invoked.declaredClass ?: return@firstOrNull false
             declaredClass.interfaces.any {
                 it.name == "android.content.DialogInterface\$OnClickListener"
             }
         } ?: return null
 
         val deleteListenerClass = deleteListenerConstructor.declaredClass ?: return null
-        val onClick = deleteListenerClass.methods.singleOrNull { method ->
+        val onClick = deleteListenerClass.methods.firstOrNull { method ->
             method.name == "onClick" &&
                 method.paramTypeNames == listOf("android.content.DialogInterface", "int") &&
                 method.returnTypeName == "void"
         } ?: return null
 
-        val deleteRunnableConstructor = onClick.invokes.singleOrNull { invoked ->
-            if (!invoked.isConstructor || "int" !in invoked.paramTypeNames) {
-                return@singleOrNull false
-            }
-            val declaredClass = invoked.declaredClass ?: return@singleOrNull false
+        val deleteRunnableConstructor = onClick.invokes.firstOrNull { invoked ->
+            if (!invoked.isConstructor) return@firstOrNull false
+            val params = invoked.paramTypeNames
+            if ("int" !in params || "boolean" !in params) return@firstOrNull false
+            val declaredClass = invoked.declaredClass ?: return@firstOrNull false
             declaredClass.interfaces.any { it.name == "java.lang.Runnable" }
         } ?: return null
 
         val deleteRunnableClass = deleteRunnableConstructor.declaredClass ?: return null
-        return deleteRunnableClass.methods.singleOrNull { method ->
+        return deleteRunnableClass.methods.firstOrNull { method ->
             method.name == "run" && method.paramCount == 0 && method.returnTypeName == "void"
         }?.getMethodInstance(loader)
-    }
-
-    private fun isDeleteForMeRunnable(instance: Any?): Boolean {
-        if (instance == null) return false
-        return try {
-            val discriminator = instance.javaClass.declaredFields.singleOrNull {
-                it.type == Int::class.javaPrimitiveType
-            } ?: return false
-            discriminator.isAccessible = true
-            // Reviewed in WhatsApp Business 2.26.41.3: case 6 is Delete for me.
-            discriminator.getInt(instance) == 6
-        } catch (_: Throwable) {
-            false
-        }
     }
 
     /**
@@ -420,27 +415,28 @@ class PreserveDeleteForMeHook(
      * SQLiteDatabase.delete(). The Delete-for-me Runnable still owns the selected message Set, so
      * copy those rows to the WAEX vault before allowing the Runnable to continue.
      */
-    private fun captureRunnableMessages(instance: Any?) {
-        if (instance == null) return
+    private fun captureRunnableMessages(instance: Any?): Boolean {
+        if (instance == null) return false
         try {
-            val messages = instance.javaClass.declaredFields.asSequence()
+            val messageSets = instance.javaClass.declaredFields.asSequence()
                 .filterNot { it.type.isPrimitive }
                 .mapNotNull { field ->
                     field.isAccessible = true
                     field.get(instance) as? Set<*>
                 }
-                .firstOrNull() ?: return
+                .toList()
+            if (messageSets.isEmpty()) return false
 
-            val keys = messages.mapNotNull(::extractMessageKey).distinctBy { it.id }
+            val keys = messageSets.flatten().mapNotNull(::extractMessageKey).distinctBy { it.id }
             if (keys.isEmpty()) {
                 XposedBridge.log("$TAG Warning: selected message keys were not resolved")
-                return
+                return false
             }
 
             val dbFile = context.getDatabasePath("msgstore.db")
             if (!dbFile.exists()) {
                 XposedBridge.log("$TAG Warning: msgstore.db was not found")
-                return
+                return false
             }
 
             var captured = 0
@@ -479,8 +475,10 @@ class PreserveDeleteForMeHook(
                 }
             }
             XposedBridge.log("$TAG Copied $captured Delete for me message(s) to vault")
+            return captured > 0
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error copying selected messages: ${t.javaClass.simpleName}")
+            return false
         }
     }
 
@@ -492,11 +490,19 @@ class PreserveDeleteForMeHook(
     private fun extractMessageKey(message: Any?): SelectedMessageKey? {
         if (message == null) return null
         return try {
-            val key = message.javaClass.methods.firstOrNull {
+            val methodKey = message.javaClass.methods.firstOrNull {
                 it.name == "Atl" && it.parameterCount == 0
-            }?.invoke(message) ?: return null
+            }?.invoke(message)
+            val key = methodKey ?: allInstanceFields(message.javaClass)
+                .filterNot { it.type.isPrimitive || it.type == String::class.java }
+                .mapNotNull { field ->
+                    field.isAccessible = true
+                    field.get(message)
+                }
+                .firstOrNull(::looksLikeMessageKey)
+                ?: return null
             val fields = key.javaClass.declaredFields.onEach { it.isAccessible = true }
-            val id = fields.firstOrNull { it.type == String::class.java }
+            val id = fields.singleOrNull { it.type == String::class.java }
                 ?.get(key) as? String ?: return null
             val jid = fields.firstOrNull {
                 !it.type.isPrimitive && it.type != String::class.java
@@ -505,5 +511,20 @@ class PreserveDeleteForMeHook(
         } catch (_: Throwable) {
             null
         }
+    }
+
+    private fun allInstanceFields(type: Class<*>): Sequence<java.lang.reflect.Field> = sequence {
+        var current: Class<*>? = type
+        while (current != null && current != Any::class.java) {
+            yieldAll(current.declaredFields.asSequence())
+            current = current.superclass
+        }
+    }
+
+    private fun looksLikeMessageKey(candidate: Any): Boolean {
+        val fields = candidate.javaClass.declaredFields
+        return fields.count { it.type == String::class.java } == 1 &&
+            fields.count { it.type == Boolean::class.javaPrimitiveType } == 1 &&
+            fields.any { !it.type.isPrimitive && it.type != String::class.java }
     }
 }

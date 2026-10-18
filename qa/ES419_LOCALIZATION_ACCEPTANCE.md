@@ -74,3 +74,16 @@ updater and media-export PRs rather than replacing their entire files. This bran
 is based on upstream main and does not silently absorb those other contributions.
 No full app build, optimized final artifact, screenshot/device review, Binder,
 LSPosed execution or all-feature certification was performed here.
+
+## Reconciliation with the Slovenian locale
+
+`values-sl` retains complete coverage of the resource groups already translated
+in main. The newly externalized `ui_strings.xml` interfaces fall back to the
+default English table outside Spanish, just as their earlier hardcoded text did.
+`test_slovenian_locale.py` continues to require every default resource outside
+that new file, rejects orphan translations, and validates placeholders for every
+Slovenian translation that is supplied. This PR does not claim to translate the
+new interface strings into Slovenian.
+
+The Freeze Last Seen confirmation keeps the current main Activate/Deactivate
+wording and the confirmed-restart mutation timing.

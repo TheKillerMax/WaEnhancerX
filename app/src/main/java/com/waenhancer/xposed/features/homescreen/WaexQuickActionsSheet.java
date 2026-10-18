@@ -30,6 +30,7 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import androidx.core.widget.NestedScrollView;
+import com.waenhancer.config.DndPreferencePolicy;
 import de.robv.android.xposed.XposedBridge;
 
 /**
@@ -40,7 +41,7 @@ import de.robv.android.xposed.XposedBridge;
  *   │  ╌╌╌  (drag handle)             │
  *   │  WAEX                            │
  *   │  ──────────────────────────────  │
- *   │  Ghost Mode              [  ○  ] │   ← WDSSwitch row (live toggle)
+ *   │  Ghost Mode              [  ○  ] │   ← WDSSwitch row (confirmed restart)
  *   │  Freeze Last Seen        [  ○  ] │
  *   │  DND Mode                [  ○  ] │
  *   │  ──────────────────────────────  │
@@ -57,12 +58,18 @@ final class WaexQuickActionsSheet {
      *
      * @param activity      WhatsApp's HomeActivity
      * @param prefs         Shared preferences (PreferenceBridgeClient)
+     * @param onGhostToggle Opens the confirmation sheet without changing state
+     * @param onFreezeToggle Opens the confirmation sheet without changing state
+     * @param onDndToggle   Opens the confirmation sheet without changing state
      * @param onRestart     Runnable called when "Restart WhatsApp" is tapped
      * @param onSettings    Runnable called when "WA Enhancer Settings" is tapped
      * @param onMenuInvalidate  Runnable called after any toggle so the options menu refreshes
      */
     static void show(Activity activity,
                      SharedPreferences prefs,
+                     Runnable onGhostToggle,
+                     Runnable onFreezeToggle,
+                     Runnable onDndToggle,
                      Runnable onRestart,
                      Runnable onSettings,
                      Runnable onMenuInvalidate) {
@@ -223,13 +230,14 @@ final class WaexQuickActionsSheet {
                             gActive,
                             finalPrimaryText, finalSecondaryText,
                             checked -> {
-                                prefs.edit().putBoolean("freeze_last_seen_active", checked).apply();
-                                if (onMenuInvalidate != null) onMenuInvalidate.run();
+                                dialog.dismiss();
+                                if (onFreezeToggle != null) onFreezeToggle.run();
                             });
                 }
 
                 if (prefs.getBoolean("show_dndmode", false)) {
-                    boolean dndOn = gActive || prefs.getBoolean("dnd_mode", false);
+                    boolean dndOn = gActive || DndPreferencePolicy.isEnabled(
+                            prefs::contains, key -> prefs.getBoolean(key, false));
                     addSwitchRow(dependentContainer, activity, dialog,
                             UiText.get(R.string.waex_ui_dnd_mode_09024263, "DND Mode"),
                             gActive ? UiText.get(R.string.waex_ui_managed_by_ghost_mode_43c1f096, "Managed by Ghost Mode") : UiText.get(R.string.waex_ui_mute_all_incoming_notifications_543d04fe, "Mute all incoming notifications"),
@@ -237,8 +245,8 @@ final class WaexQuickActionsSheet {
                             gActive,
                             finalPrimaryText, finalSecondaryText,
                             checked -> {
-                                prefs.edit().putBoolean("dnd_mode", checked).apply();
-                                if (onMenuInvalidate != null) onMenuInvalidate.run();
+                                dialog.dismiss();
+                                if (onDndToggle != null) onDndToggle.run();
                             });
                 }
             };
@@ -252,17 +260,8 @@ final class WaexQuickActionsSheet {
                         false,
                         finalPrimaryText, finalSecondaryText,
                         checked -> {
-                            prefs.edit().putBoolean("ghostmode_active", checked).apply();
-                            if (checked) {
-                                // Force-enable sub-features when activating
-                                prefs.edit()
-                                        .putBoolean("freeze_last_seen_active", true)
-                                        .putBoolean("dnd_mode", true)
-                                        .apply();
-                            }
-                            // Instantly re-render the dependent rows in the open sheet
-                            rebuildDependentRows.run();
-                            if (onMenuInvalidate != null) onMenuInvalidate.run();
+                            dialog.dismiss();
+                            if (onGhostToggle != null) onGhostToggle.run();
                         });
             }
 
@@ -423,7 +422,6 @@ final class WaexQuickActionsSheet {
                     new ColorDrawable(Color.TRANSPARENT), null));
             row.setOnClickListener(v -> {
                 boolean next = !sw.isChecked();
-                sw.setChecked(next);
                 callback.onToggled(next);
             });
         }

@@ -34,6 +34,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.shape.CircleShape
 import com.waenhancer.ui.designsystem.WaexIcons
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun BootloaderSpooferScreen() {
@@ -178,9 +182,19 @@ fun BootloaderSpooferScreen() {
     if (showReport && report != null) VerificationSheet(report!!, onDismiss = { showReport = false })
 }
 
-private fun formatUpdated(value: String): String = value
-    .replace("T", " ")
-    .replace(Regex("\\.\\d+Z$"), " UTC")
+private fun formatUpdated(value: String): String {
+    if (value.isBlank()) return ""
+    return runCatching {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val cleanValue = value.replace(Regex("\\.\\d+Z$|Z$"), "")
+        val formatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
+        formatter.format(parser.parse(cleanValue) ?: Date())
+    }.getOrElse {
+        value.replace("T", " ")
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

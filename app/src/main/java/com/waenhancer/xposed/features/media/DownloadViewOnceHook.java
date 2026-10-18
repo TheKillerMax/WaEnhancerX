@@ -98,7 +98,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                                 }
                                 saveMediaFile(activity, mediaFile);
                             } catch (Throwable t) {
-                                XposedBridge.log(TAG + " Error saving view once from Activity: " + t.getMessage());
+                                XposedBridge.log(TAG + " Error saving view once from Activity: " + t.getClass().getSimpleName());
                                 showToast(activity, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
                             }
                         });
@@ -108,7 +108,7 @@ public class DownloadViewOnceHook extends BaseFeature {
             });
 
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking ViewOnceViewerActivity: " + t.getMessage());
+            XposedBridge.log(TAG + " Error hooking ViewOnceViewerActivity: " + t.getClass().getSimpleName());
         }
     }
 
@@ -185,7 +185,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                                     }
                                     showToast(context, UiText.get(R.string.waex_ui_media_not_available_yet_c504582c, "Media not available yet"));
                                 } catch (Throwable t) {
-                                    XposedBridge.log(TAG + " Error saving media: " + t.getMessage());
+                                    XposedBridge.log(TAG + " Error saving media: " + t.getClass().getSimpleName());
                                     showToast(context, UiText.get(R.string.waex_ui_failed_to_save_706247c6, "Failed to save: ") + t.getMessage());
                                 }
                             });
@@ -195,7 +195,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                 });
             }
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error finding media viewer menu method: " + t.getMessage());
+            XposedBridge.log(TAG + " Error finding media viewer menu method: " + t.getClass().getSimpleName());
         }
     }
 

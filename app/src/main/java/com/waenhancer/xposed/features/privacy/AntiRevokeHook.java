@@ -202,15 +202,17 @@ public class AntiRevokeHook extends BaseFeature {
             }
 
             statusToMessageMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context, classLoader, "wpp_status_to_message_mapper_v1",
+                    context, classLoader, "wpp_status_to_message_mapper_v2",
                     (bridge, loader) -> {
-                        MethodData data = bridge.findMethod(FindMethod.create()
+                        Set<Method> candidates = new LinkedHashSet<>();
+                        for (MethodData data : bridge.findMethod(FindMethod.create()
                                 .matcher(MethodMatcher.create().addUsingString(
-                                        "mapFStatusToFMessageForForwarding", StringMatchType.Contains)))
-                                .firstOrNull();
-                        return data != null ? data.getMethodInstance(loader) : null;
+                                        "mapFStatusToFMessageForForwarding", StringMatchType.Contains)))) {
+                            candidates.add(data.getMethodInstance(loader));
+                        }
+                        return StatusHookContract.selectStatusMapper(candidates, fMessageClass);
                     });
-            if (statusToMessageMethod != null && statusToMessageMethod.getParameterCount() > 0) {
+            if (StatusHookContract.isStatusMapper(statusToMessageMethod, fMessageClass)) {
                 statusToMessageMethod.setAccessible(true);
                 statusModelClass = statusToMessageMethod.getParameterTypes()[0];
                 XposedBridge.hookAllConstructors(statusToMessageMethod.getDeclaringClass(),
@@ -220,6 +222,8 @@ public class AntiRevokeHook extends BaseFeature {
                                 statusToMessageMapper = param.thisObject;
                             }
                         });
+            } else {
+                statusToMessageMethod = null;
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error initializing message key classes: " + t.getClass().getSimpleName());
@@ -307,62 +311,58 @@ public class AntiRevokeHook extends BaseFeature {
     private void hookStatusBytecodeRevocation() {
         try {
             statusKeyClass = DexSearchEngine.getInstance().findClassWithCache(
-                    context, classLoader, "wpp_status_key_class_v2",
+                    context, classLoader, "wpp_status_key_class_v3",
                     (bridge, loader) -> {
-                        ClassData data = bridge.findClass(FindClass.create()
+                        Class<?> selected = null;
+                        for (ClassData data : bridge.findClass(FindClass.create()
                                 .matcher(ClassMatcher.create()
                                         .addUsingString("Key(id=", StringMatchType.Contains)
-                                        .addUsingString("senderJid", StringMatchType.Contains)))
-                                .firstOrNull();
-                        return data != null ? data.getInstance(loader) : null;
+                                        .addUsingString("senderJid", StringMatchType.Contains)))) {
+                            Class<?> candidate = data.getInstance(loader);
+                            if (!StatusHookContract.supportsKeyClass(candidate)) continue;
+                            if (selected != null && selected != candidate) return null;
+                            selected = candidate;
+                        }
+                        return selected;
                     });
 
             Method revokeStatusMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context, classLoader, "wpp_revoke_status_manager_v2",
+                    context, classLoader, "wpp_revoke_status_manager_v3",
                     (bridge, loader) -> {
                         if (statusKeyClass == null) return null;
 
-                        ClassData managerData = bridge.findClass(FindClass.create()
+                        Set<Method> candidates = new LinkedHashSet<>();
+                        for (ClassData managerData : bridge.findClass(FindClass.create()
                                 .matcher(ClassMatcher.create()
-                                        .addUsingString("RevokeStatusManager/failed", StringMatchType.Contains)))
-                                .firstOrNull();
-                        if (managerData == null) return null;
-
-                        Class<?> managerClass = managerData.getInstance(loader);
-                        Class<?> current = managerClass;
-                        while (current != null && current != Object.class) {
-                            for (Method method : current.getDeclaredMethods()) {
-                                Class<?>[] parameterTypes = method.getParameterTypes();
-                                if (parameterTypes.length > 0
-                                        && statusKeyClass.isAssignableFrom(parameterTypes[0])) {
-                                    return method;
+                                        .addUsingString("RevokeStatusManager/failed", StringMatchType.Contains)))) {
+                            Class<?> current = managerData.getInstance(loader);
+                            while (current != null && current != Object.class) {
+                                for (Method method : current.getDeclaredMethods()) {
+                                    candidates.add(method);
                                 }
+                                current = current.getSuperclass();
                             }
-                            current = current.getSuperclass();
                         }
-                        return null;
+                        return StatusHookContract.selectRevokeMethod(candidates, statusKeyClass);
                     });
 
-            if (revokeStatusMethod != null) {
+            final StatusHookContract contract =
+                    StatusHookContract.resolveRevoke(revokeStatusMethod, statusKeyClass);
+            if (contract != null) {
                 XposedBridge.hookMethod(revokeStatusMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!isAntiRevokeStatusEnabled()) return;
                         try {
-                            Object statusKey = findArgumentOfType(param.args, statusKeyClass);
-                            if (statusKey == null) return;
-
-                            Boolean fromMe = extractIsFromMe(statusKey);
-                            if (fromMe == null || fromMe) return;
-
-                            String keyId = extractKeyIdFromFMessage(statusKey);
-                            if (keyId == null || keyId.isEmpty()) return;
+                            StatusHookContract.Target target = contract.incomingTarget(param.args);
+                            if (target == null) return;
 
                             long now = System.currentTimeMillis();
-                            REVOKED_MESSAGES.put(keyId, now);
-                            DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                            showDeletedMessageToast(extractSenderJid(statusKey));
-                            setHandledResult(param);
+                            REVOKED_MESSAGES.put(target.id, now);
+                            DelMessageStore.getInstance(context).insertMessage(null, target.id, now);
+                            param.setResult(contract.acknowledgement());
+                            showDeletedStatusToast(resolveStatusSenderJid(
+                                    target.key, param.args != null ? param.args[0] : null));
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getClass().getSimpleName());
                         }
@@ -372,15 +372,6 @@ public class AntiRevokeHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking status bytecode revoke: " + t.getClass().getSimpleName());
         }
-    }
-
-    @Nullable
-    private Object findArgumentOfType(@Nullable Object[] args, @Nullable Class<?> expectedType) {
-        if (args == null || expectedType == null) return null;
-        for (Object arg : args) {
-            if (arg != null && expectedType.isInstance(arg)) return arg;
-        }
-        return null;
     }
 
     /** Completes an intercepted revoke with a value compatible with its runtime method. */
@@ -419,7 +410,7 @@ public class AntiRevokeHook extends BaseFeature {
                     if (table == null) return;
 
                     boolean isMsgTable = "message".equals(table) || "messages".equals(table);
-                    boolean isStatusTable = "status".equals(table) || "status_v3".equals(table) || table.contains("status");
+                    boolean isStatusTable = "status".equals(table) || "status_v3".equals(table);
 
                     if (!isMsgTable && !isStatusTable) return;
                     // A user-initiated Delete-for-me must remove the WhatsApp row. The dedicated
@@ -433,70 +424,51 @@ public class AntiRevokeHook extends BaseFeature {
                     // Handle Status table deletion
                     if (isStatusTable) {
                         if (!isAntiRevokeStatusEnabled()) return;
+                        // A whole-table cleanup has no identified revoke target.
+                        if (where == null || where.trim().isEmpty()) return;
                         try {
-                            String query = "SELECT * FROM " + table + (where != null ? " WHERE " + where : "");
-                            boolean foundRemoteStatus = false;
-                            boolean foundOwnStatus = false;
-                            boolean hasOwnershipColumn = false;
-                            try (Cursor cursor = db.rawQuery(query, whereArgs)) {
-                                if (cursor != null && cursor.moveToFirst()) {
-                                    do {
-                                        String jid = null;
-                                        String keyId = null;
-                                        boolean fromMe = false;
-                                        for (int i = 0; i < cursor.getColumnCount(); i++) {
-                                            String col = cursor.getColumnName(i).toLowerCase();
-                                            if (col.equals("from_me") || col.endsWith(".from_me")) {
-                                                hasOwnershipColumn = true;
-                                                fromMe = cursor.getInt(i) == 1;
-                                            } else if (col.contains("jid") && jid == null) {
-                                                jid = cursor.getString(i);
-                                            } else if ((col.contains("key_id") || col.equals("key") || col.contains("msgid")) && keyId == null) {
-                                                keyId = cursor.getString(i);
-                                            }
-                                        }
-                                        if (keyId == null && whereArgs != null && whereArgs.length > 0) {
-                                            keyId = whereArgs[0];
-                                        }
-                                        if (fromMe) {
-                                            foundOwnStatus = true;
-                                            continue;
-                                        }
-                                        if (keyId != null) {
-                                            foundRemoteStatus = true;
-                                            long now = System.currentTimeMillis();
-                                            REVOKED_MESSAGES.put(keyId, now);
-                                            DelMessageStore.getInstance(context).insertMessage(jid, keyId, now);
-                                            showDeletedMessageToast(jid);
-                                        }
-                                    } while (cursor.moveToNext());
-                                }
+                            String query = "SELECT * FROM " + table + " WHERE " + where;
+                            Set<String> keys = readRemoteStatusKeys(db, query, whereArgs);
+                            if (keys == null || keys.isEmpty()) return;
+
+                            // Validate and close the entire cursor before either suppressing the
+                            // delete or writing markers. A mixed/unknown batch stays with the host.
+                            param.setResult(0);
+                            long now = System.currentTimeMillis();
+                            for (String keyId : keys) {
+                                REVOKED_MESSAGES.put(keyId, now);
+                                // No sender identity was verified by this query.
+                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                             }
-                            // A delete can target multiple rows. Never suppress it if an own status is
-                            // included; preventing the user from deleting their status is worse than
-                            // allowing a rare mixed batch to proceed.
-                            if (hasOwnershipColumn && foundRemoteStatus && !foundOwnStatus) {
-                                param.setResult(0);
-                            }
+                            showDeletedMessageToast(null);
                         } catch (Throwable t) {
-                            // Ownership could not be established, so let WhatsApp perform the delete.
-                            XposedBridge.log(TAG + " Error querying status before delete: " + t.getClass().getSimpleName());
+                            // Query/close failures leave the host operation untouched. Once a
+                            // verified plan suppresses it, marker failures must not delete the rows.
+                            XposedBridge.log(TAG + " Error processing status delete: " + t.getClass().getSimpleName());
                         }
                         return;
                     }
 
                     // Handle Message table deletion
                     if (isMsgTable) {
-                        if (where == null || !where.contains("_id=?") || whereArgs == null || whereArgs.length == 0) return;
+                        if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
+                        if (!isSingleRowIdDelete(where, whereArgs)) return;
 
                         String msgId = whereArgs[0];
                         try (Cursor cursor = db.rawQuery(
                                 "SELECT from_me, message_type, key_id, chat_row_id, sender_jid_row_id FROM " + table + " WHERE _id=?",
                                 new String[]{msgId})) {
                             if (cursor != null && cursor.moveToFirst()) {
-                                int fromMe = cursor.getInt(0);
+                                if (cursor.getCount() != 1
+                                        || cursor.getType(0) != Cursor.FIELD_TYPE_INTEGER
+                                        || cursor.getType(1) != Cursor.FIELD_TYPE_INTEGER
+                                        || cursor.getType(2) != Cursor.FIELD_TYPE_STRING) return;
+                                long ownership = cursor.getLong(0);
+                                if (ownership != 0L && ownership != 1L) return;
+                                int fromMe = (int) ownership;
                                 int msgType = cursor.getInt(1);
                                 String keyId = cursor.getString(2);
+                                if (keyId == null || keyId.trim().isEmpty()) return;
                                 long chatRowId = cursor.getLong(3);
                                 long senderJidRowId = cursor.isNull(4) ? 0L : cursor.getLong(4);
 
@@ -554,8 +526,7 @@ public class AntiRevokeHook extends BaseFeature {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     sanitizePreservedOwnRowId(param);
-                    if (!isAntiRevokeEnabled() && !isAntiRevokeStatusEnabled()
-                            && !isPreserveOwnRevokeEnabled()) return;
+                    if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
                     String table = (String) param.args[0];
                     if (!"message".equals(table) && !"messages".equals(table)) return;
 
@@ -567,7 +538,7 @@ public class AntiRevokeHook extends BaseFeature {
                     Integer fromMe = cv.getAsInteger("from_me");
 
                     boolean preserveIncoming = fromMe != null && fromMe == 0
-                            && (isAntiRevokeEnabled() || isAntiRevokeStatusEnabled());
+                            && isAntiRevokeEnabled();
                     boolean preserveOwnRevoke = fromMe != null && fromMe == 1
                             && isPreserveOwnRevokeEnabled();
 
@@ -611,9 +582,73 @@ public class AntiRevokeHook extends BaseFeature {
         }
     }
 
+    /** A bound argument is a row ID only for this exact, single-argument predicate. */
+    private boolean isSingleRowIdDelete(@Nullable String where, @Nullable String[] args) {
+        return where != null && args != null && args.length == 1 && args[0] != null
+                && where.matches("\\s*_id\\s*=\\s*\\?\\s*");
+    }
+
+    /**
+     * Reads only the explicit legacy status schema. SQL arguments, similarly named
+     * columns, unknown ownership and partial batches are not evidence of a status ID.
+     * Null means that the original operation must proceed without marker side effects.
+     */
+    @Nullable
+    private Set<String> readRemoteStatusKeys(@NonNull SQLiteDatabase db, @NonNull String query,
+                                             @Nullable String[] args) {
+        Set<String> keys = new LinkedHashSet<>();
+        try (Cursor cursor = db.rawQuery(query, args)) {
+            if (cursor == null) return null;
+            int keyColumn = -1;
+            int ownershipColumn = -1;
+            for (int i = 0; i < cursor.getColumnCount(); i++) {
+                String column = cursor.getColumnName(i);
+                if ("key_id".equalsIgnoreCase(column)) {
+                    if (keyColumn >= 0) return null;
+                    keyColumn = i;
+                } else if ("from_me".equalsIgnoreCase(column)) {
+                    if (ownershipColumn >= 0) return null;
+                    ownershipColumn = i;
+                }
+            }
+            if (keyColumn < 0 || ownershipColumn < 0) return null;
+            while (cursor.moveToNext()) {
+                if (cursor.getType(keyColumn) != Cursor.FIELD_TYPE_STRING
+                        || cursor.getType(ownershipColumn) != Cursor.FIELD_TYPE_INTEGER
+                        || cursor.getLong(ownershipColumn) != 0L) return null;
+                String key = cursor.getString(keyColumn);
+                if (key == null || key.trim().isEmpty() || !keys.add(key)
+                        || keys.size() > MAX_RECENT_REVOKES) return null;
+            }
+        }
+        return keys;
+    }
+
     private void showDeletedMessageToast(@Nullable String senderJid) {
         com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(
                 context, prefs, senderJid, uiHandler);
+    }
+
+    private void showDeletedStatusToast(@Nullable String senderJid) {
+        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedStatusToast(
+                context, prefs, senderJid, uiHandler);
+    }
+
+    /**
+     * Status target keys commonly expose status@broadcast while the revoke metadata carries
+     * the actual viewer/contact identity. Prefer a real user JID from the target, then reuse
+     * the metadata key as the same identity source used by ordinary message revoke toasts.
+     */
+    @Nullable
+    private String resolveStatusSenderJid(@Nullable Object targetKey, @Nullable Object metadataKey) {
+        String target = extractSenderJid(targetKey);
+        if (isUserJid(target)) return target;
+        String metadata = extractSenderJid(metadataKey);
+        return isUserJid(metadata) ? metadata : null;
+    }
+
+    private boolean isUserJid(@Nullable String jid) {
+        return jid != null && (jid.contains("@s.whatsapp.net") || jid.endsWith("@lid"));
     }
 
     @Nullable
@@ -2135,25 +2170,32 @@ public class AntiRevokeHook extends BaseFeature {
 
     private int getDeletedMessageColor() {
         try {
-            String colorStr = prefs.getString("deleted_message_color", "#EF4444");
+            // Bridge getters return their default for a mismatched type rather
+            // than throwing. A non-null default would hide the schema's INT.
+            String colorStr = prefs.getString("deleted_message_color", null);
             if (colorStr != null && !colorStr.isEmpty()) {
-                return Color.parseColor(colorStr);
+                try {
+                    return Color.parseColor(colorStr);
+                } catch (IllegalArgumentException ignored) {
+                    return Integer.parseInt(colorStr);
+                }
             }
-        } catch (Throwable ignored) {
-            try {
-                return prefs.getInt("deleted_message_color", Color.parseColor("#EF4444"));
-            } catch (Throwable ignored2) {}
-        }
+        } catch (Throwable ignored) {}
+        try {
+            return prefs.getInt("deleted_message_color", Color.parseColor("#EF4444"));
+        } catch (Throwable ignored) {}
         return Color.parseColor("#EF4444");
     }
 
     private int getIndicatorType() {
         try {
-            String strVal = prefs.getString("anti_revoke_indicator", "2");
-            return Integer.parseInt(strVal);
-        } catch (Throwable ignored) {
+            String strVal = prefs.getString("anti_revoke_indicator", null);
+            if (strVal != null) return Integer.parseInt(strVal);
+        } catch (Throwable ignored) {}
+        try {
             return prefs.getInt("anti_revoke_indicator", 2);
-        }
+        } catch (Throwable ignored) {}
+        return 2;
     }
 
     @NonNull

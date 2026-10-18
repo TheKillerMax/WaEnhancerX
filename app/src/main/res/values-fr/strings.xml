@@ -15,6 +15,7 @@
     <string name="stargazers_title">Nos partisans</string>
     <string name="stargazers_thank_you">Merci de soutenir WaEnhancerX</string>
     <string name="stargazers_message">Chaque étoile aide davantage de personnes à découvrir le projet. Ce mur est destiné à tous ceux qui ont manifesté leur soutien.</string>
+    <string name="stargazers_last_updated">Dernière mise à jour: %1$s</string>
     <string name="support">Prise en charge</string>
     <string name="support_desc">Si vous rencontrez des problèmes ou avez des questions sur WaEnhancer X, veuillez visiter Telegram.</string>
     <string name="license">Licence</string>

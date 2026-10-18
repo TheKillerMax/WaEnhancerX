@@ -365,4 +365,5 @@
     <string name="diag_target_sheet_unconfirmed_badge">Tiempo de ejecución no confirmado</string>
     <string name="diag_target_sheet_injected_badge">Inyectado</string>
     <string name="diag_target_sheet_section_targets">Objetivos instalados</string>
+    <string name="stargazers_last_updated">"Última actualización: %1$s"</string>
 </resources>

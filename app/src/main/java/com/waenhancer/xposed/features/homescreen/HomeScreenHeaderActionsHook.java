@@ -22,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import com.waenhancer.config.DndPreferencePolicy;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
@@ -84,6 +85,10 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     @Override
     public void hook() throws Throwable {
         attachMenuHooks();
+    }
+
+    private boolean isDndEnabled() {
+        return DndPreferencePolicy.isEnabled(prefs::contains, key -> isEnabled(key, false));
     }
 
     // -------------------------------------------------------------------------
@@ -468,7 +473,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
 
         MenuItem dnd = menu.findItem(MENU_ID_DND);
         if (dnd != null) {
-            boolean active = isEnabled("dnd_mode", false);
+            boolean active = isDndEnabled();
             Drawable icon = MenuIconLoader.dndIcon(context, active);
             if (icon != null) dnd.setIcon(icon);
         }
@@ -508,7 +513,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
 
         if (isEnabled("show_dndmode", false)) {
-            boolean active = isEnabled("dnd_mode", false);
+            boolean active = isDndEnabled();
             MenuItem item = target.add(Menu.NONE, MENU_ID_DND, Menu.NONE,
                     active ? UiText.get(R.string.waex_ui_dnd_on_58025d4c, "DND: ON") : UiText.get(R.string.waex_ui_dnd_off_1695672b, "DND: OFF"));
             item.setShowAsAction(showAsAction);
@@ -619,6 +624,9 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             WaexQuickActionsSheet.show(
                     activity,
                     prefs,
+                    /* onGhostToggle  */ () -> promptGhostModeSheet(activity),
+                    /* onFreezeToggle */ () -> promptFreezeLastSeenSheet(activity),
+                    /* onDndToggle    */ () -> promptDndModeSheet(activity),
                     /* onRestart   */ () -> forceRestartWhatsApp(activity),
                     /* onSettings  */ () -> {
                         try {
@@ -648,10 +656,8 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
 
         if (id == MENU_ID_DND) {
-            boolean current = isEnabled("dnd_mode", false);
-            prefs.edit().putBoolean("dnd_mode", !current).apply();
             if (activityObj instanceof Activity) {
-                ((Activity) activityObj).invalidateOptionsMenu();
+                promptDndModeSheet((Activity) activityObj);
             }
             return true;
         }
@@ -688,9 +694,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } else if (itemId == MENU_ID_FREEZE_LS) {
             promptFreezeLastSeenSheet(activity);
         } else if (itemId == MENU_ID_DND) {
-            boolean current = isEnabled("dnd_mode", false);
-            prefs.edit().putBoolean("dnd_mode", !current).apply();
-            activity.invalidateOptionsMenu();
+            promptDndModeSheet(activity);
         } else if (itemId == MENU_ID_RESTART) {
             forceRestartWhatsApp(activity);
         } else if (itemId == MENU_ID_SETTINGS) {
@@ -803,7 +807,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         if (!active) {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
-                    .setTitle(UiText.get(R.string.waex_ui_freeze_last_seen_200aea50, "Freeze Last Seen?"))
+                    .setTitle(UiText.get(R.string.waex_ui_freeze_last_seen_200aea50, "Activate Freeze Last Seen?"))
                     .setMessage(UiText.get(R.string.waex_ui_locks_your_last_seen_timestamp_so_cont_3c49d617, "Locks your last seen timestamp so contacts won't see when you're active.\n\nRestart WhatsApp to apply changes?"))
                     .setPositiveButton(UiText.get(R.string.waex_ui_freeze_restart_bfdfd4fc, "Freeze & Restart"), (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
@@ -817,7 +821,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } else {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
-                    .setTitle(UiText.get(R.string.waex_ui_unfreeze_last_seen_2b755d69, "Unfreeze Last Seen?"))
+                    .setTitle(UiText.get(R.string.waex_ui_unfreeze_last_seen_2b755d69, "Deactivate Freeze Last Seen?"))
                     .setMessage(UiText.get(R.string.waex_ui_whatsapp_will_resume_updating_your_las_13fe4e9d, "WhatsApp will resume updating your last seen timestamp normally.\n\nRestart WhatsApp to apply changes?"))
                     .setPositiveButton(UiText.get(R.string.waex_ui_unfreeze_restart_482e080f, "Unfreeze & Restart"), (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
@@ -829,6 +833,30 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                     .setNegativeButton(UiText.get(R.string.action_cancel, "Cancel"), (d, w) -> d.dismiss())
                     .show();
         }
+    }
+
+    private void promptDndModeSheet(Activity activity) {
+        boolean active = isDndEnabled();
+        String title = active ? "Deactivate DND Mode?" : "Activate DND Mode?";
+        String message = active
+                ? "WhatsApp will resume normal incoming notifications.\n\nRestart WhatsApp to apply changes?"
+                : "DND Mode mutes all incoming WhatsApp notifications.\n\nRestart WhatsApp to apply changes?";
+        String action = active ? "Deactivate & Restart" : "Activate & Restart";
+        String toast = active ? "DND Mode Deactivated" : "DND Mode Activated";
+
+        new WaexBottomSheet(activity)
+                .asBottomSheet()
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(action, (d, w) -> {
+                    prefs.edit().putBoolean("dnd_mode", !active).apply();
+                    Toast.makeText(activity, toast, Toast.LENGTH_SHORT).show();
+                    activity.invalidateOptionsMenu();
+                    d.dismiss();
+                    forceRestartWhatsApp(activity);
+                })
+                .setNegativeButton("Cancel", (d, w) -> d.dismiss())
+                .show();
     }
 
     @NonNull

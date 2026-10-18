@@ -228,6 +228,7 @@
     "subTabId": "layout",
     "tabId": "styles",
     "keys": [
+      "metaai",
       "channels_enhancements",
       "chat_filters",
       "hide_ui_tabs",

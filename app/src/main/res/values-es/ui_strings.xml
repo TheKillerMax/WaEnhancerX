@@ -319,7 +319,7 @@
     <string name="waex_ui_free_plan_6d7e546c" formatted="false">"Plan gratuito"</string>
     <string name="waex_ui_free_vs_pro_features_3092c6e5" formatted="false">"Funciones gratuitas y Pro"</string>
     <string name="waex_ui_freeze_509b1035" formatted="false">"Última conexión fija"</string>
-    <string name="waex_ui_freeze_last_seen_200aea50" formatted="false">"¿Congelar la última conexión?"</string>
+    <string name="waex_ui_freeze_last_seen_200aea50" formatted="false">"¿Activar la congelación de la última conexión?"</string>
     <string name="waex_ui_freeze_last_seen_off_2cb42c68" formatted="false">"Última conexión congelada: no"</string>
     <string name="waex_ui_freeze_last_seen_on_ad444fb9" formatted="false">"Última conexión congelada: sí"</string>
     <string name="waex_ui_freeze_restart_bfdfd4fc" formatted="false">"Congelar y reiniciar"</string>
@@ -734,7 +734,7 @@
     <string name="waex_ui_unable_to_remove_the_license_please_tr_9d627156" formatted="false">"No se pudo quitar la licencia. Inténtalo de nuevo."</string>
     <string name="waex_ui_unable_to_save_setting_d9dcb19d" formatted="false">"No se pudo guardar el ajuste"</string>
     <string name="waex_ui_unavailable_ca184496" formatted="false">"No disponible"</string>
-    <string name="waex_ui_unfreeze_last_seen_2b755d69" formatted="false">"¿Dejar de congelar la última conexión?"</string>
+    <string name="waex_ui_unfreeze_last_seen_2b755d69" formatted="false">"¿Desactivar la congelación de la última conexión?"</string>
     <string name="waex_ui_unfreeze_restart_482e080f" formatted="false">"Restablecer y reiniciar"</string>
     <string name="waex_ui_universal_base_c5227bf4" formatted="false">"Base universal"</string>
     <string name="waex_ui_universal_built_in_versions_3e18e512" formatted="false">"VERSIONES UNIVERSALES INCLUIDAS"</string>
@@ -1006,4 +1006,5 @@
     <string name="waex_ui_hma_reason_blocklist_extra">Oculto por la lista de bloqueados (incluido entre las aplicaciones adicionales que se ocultan)</string>
     <string name="waex_ui_hma_reason_template">Oculto por la plantilla de bloqueo «%1$s»</string>
     <string name="waex_ui_hma_reason_preset">Oculto por el ajuste predefinido «xposed» de HMA</string>
+    <string name="waex_ui_deleted_a_status">" eliminó un estado"</string>
 </resources>

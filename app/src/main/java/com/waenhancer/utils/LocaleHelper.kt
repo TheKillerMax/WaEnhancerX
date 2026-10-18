@@ -25,7 +25,8 @@ object LocaleHelper {
         LanguageOption("hi", "Hindi", "हिन्दी"),
         LanguageOption("ur", "Urdu", "اردو"),
         LanguageOption("de", "German", "Deutsch"),
-        LanguageOption("fr", "French", "Français")
+        LanguageOption("fr", "French", "Français"),
+        LanguageOption("sl", "Slovenian", "Slovenščina")
     )
 
     fun getSelectedLanguageCode(context: Context): String {

@@ -319,7 +319,7 @@
     <string name="waex_ui_free_plan_6d7e546c" formatted="false">"Free Plan"</string>
     <string name="waex_ui_free_vs_pro_features_3092c6e5" formatted="false">"Free vs Pro Features"</string>
     <string name="waex_ui_freeze_509b1035" formatted="false">"Freeze"</string>
-    <string name="waex_ui_freeze_last_seen_200aea50" formatted="false">"Freeze Last Seen?"</string>
+    <string name="waex_ui_freeze_last_seen_200aea50" formatted="false">"Activate Freeze Last Seen?"</string>
     <string name="waex_ui_freeze_last_seen_off_2cb42c68" formatted="false">"Freeze Last Seen: OFF"</string>
     <string name="waex_ui_freeze_last_seen_on_ad444fb9" formatted="false">"Freeze Last Seen: ON"</string>
     <string name="waex_ui_freeze_restart_bfdfd4fc" formatted="false">"Freeze &amp; Restart"</string>
@@ -734,7 +734,7 @@
     <string name="waex_ui_unable_to_remove_the_license_please_tr_9d627156" formatted="false">"Unable to remove the license. Please try again."</string>
     <string name="waex_ui_unable_to_save_setting_d9dcb19d" formatted="false">"Unable to save setting"</string>
     <string name="waex_ui_unavailable_ca184496" formatted="false">"Unavailable"</string>
-    <string name="waex_ui_unfreeze_last_seen_2b755d69" formatted="false">"Unfreeze Last Seen?"</string>
+    <string name="waex_ui_unfreeze_last_seen_2b755d69" formatted="false">"Deactivate Freeze Last Seen?"</string>
     <string name="waex_ui_unfreeze_restart_482e080f" formatted="false">"Unfreeze &amp; Restart"</string>
     <string name="waex_ui_universal_base_c5227bf4" formatted="false">"Universal Base"</string>
     <string name="waex_ui_universal_built_in_versions_3e18e512" formatted="false">"UNIVERSAL BUILT-IN VERSIONS"</string>
@@ -1006,4 +1006,5 @@
     <string name="waex_ui_hma_reason_blocklist_extra">Hidden via Blacklist mode (in additional apps to hide)</string>
     <string name="waex_ui_hma_reason_template">Hidden by blacklist template \"%1$s\"</string>
     <string name="waex_ui_hma_reason_preset">Hidden by HMA \"xposed\" preset</string>
+    <string name="waex_ui_deleted_a_status">" deleted a status"</string>
 </resources>
