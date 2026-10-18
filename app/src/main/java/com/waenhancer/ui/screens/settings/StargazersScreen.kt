@@ -202,7 +202,7 @@ fun StargazersScreen() {
     LaunchedEffect(refreshKey) {
         isLoading = true
         errorMessage = null
-        val result = withContext(Dispatchers.IO) { loadStargazers(context) }
+        val result = withContext(Dispatchers.IO) { loadStargazers(context, forceRefresh = refreshKey > 0) }
         result.onSuccess { snapshot ->
             stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
@@ -842,10 +842,22 @@ private fun SupportersConfettiOverlay(progress: Float) {
     }
 }
 
-private fun loadStargazers(context: Context): Result<StargazersSnapshot> = runCatching {
+private fun isCacheValidInCurrentHour(cachedEpochMs: Long, currentEpochMs: Long = System.currentTimeMillis()): Boolean {
+    if (cachedEpochMs <= 0 || currentEpochMs < cachedEpochMs) return false
+    val cachedHourBucket = cachedEpochMs / (60 * 60 * 1000L)
+    val currentHourBucket = currentEpochMs / (60 * 60 * 1000L)
+    return cachedHourBucket == currentHourBucket
+}
+
+private fun loadStargazers(context: Context, forceRefresh: Boolean = false): Result<StargazersSnapshot> = runCatching {
     val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_API_CACHE)
     val cachedJson = prefs.getString("stargazers_json_v3", null)
     val cachedSnapshot = cachedJson?.let { runCatching { parseStargazers(it) }.getOrNull() }
+    val lastFetch = prefs.getLong("stargazers_last_fetch_v3", 0L)
+
+    if (!forceRefresh && cachedSnapshot != null && isCacheValidInCurrentHour(lastFetch) && cachedSnapshot.hasStarredAt()) {
+        return@runCatching cachedSnapshot
+    }
 
     try {
         val request = Request.Builder()
