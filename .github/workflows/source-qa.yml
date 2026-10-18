@@ -148,6 +148,12 @@ jobs:
             test -f qa/test_view_once_download.py
             test -f qa/view_once/ViewOnceDownloadTest.java
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/media/ViewOnceAudioResolver.java ]]; then
+            test -f qa/test_view_once_audio.py
+            test -f qa/view_once_audio_fixtures.py
+            test -f qa/view_once/ViewOnceAudioTest.java
+            test -f qa/view_once/ViewOnceAudioExportTest.java
+          fi
           if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
             test -f qa/test_contact_identity.py
           fi
@@ -212,6 +218,7 @@ jobs:
             qa/test_recorder_cleanup.py \
             qa/test_gallery_export.py \
             qa/test_view_once_download.py \
+            qa/test_view_once_audio.py \
             qa/test_contact_identity.py \
             qa/test_db_migrations.py; do
             echo "::group::$test_script"

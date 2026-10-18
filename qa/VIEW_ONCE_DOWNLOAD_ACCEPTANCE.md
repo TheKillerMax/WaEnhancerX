@@ -30,14 +30,15 @@ zero-argument `MediaViewFragment.A2b()` instead resolves the initial message; it
 cannot stand in for current-page selection.
 
 `ViewOnceViewerActivity` in this input hosts text and type-82 audio fragments.
-The existing `GalleryMediaExporter` does not support text or Ogg/Opus voice notes.
-This photo/video change does not add a misleading gallery action to that activity
-or claim to repair text/audio export.
+Its separate audio path is documented in `qa/VIEW_ONCE_AUDIO_ACCEPTANCE.md`.
+The photo/video route does not add a gallery action to that Activity. Text export
+is not implemented, and Opus audio requires the distinct, verified audio selector
+and explicit audio storage route.
 
 ## Public-source checks
 
-Run `python3 qa/test_view_once_download.py` with JDK 17 or later. It compiles both
-complete production files with explicit Android, host and DexKit metadata doubles;
+Run `python3 qa/test_view_once_download.py` with JDK 17 or later. It compiles the
+complete production hook and resolvers with explicit Android, host and DexKit metadata doubles;
 real Java reflection and a real `ThreadPoolExecutor` execute selection, navigation,
 metadata ambiguity, weak listener targets, configuration changes, failure/retry,
 partial callback-registration rollback, and offer-then-worker-start failure cases.
@@ -45,7 +46,7 @@ If the second menu callback fails to install, the returned first handle is unhoo
 a fatal installation error propagates after this cleanup. Repeated menu preparation performs no
 message/file resolution. A compiled listener owns no fragment, Activity or menu.
 
-Pass `--dexkit-jar /path/to/dexkit-2.2.0.jar` to additionally compile both production
+Pass `--dexkit-jar /path/to/dexkit-2.2.0.jar` to additionally compile these production
 files against the actual DexKit 2.2.0 API without DexKit doubles. That check still
 does not execute the native bridge. The fixture omits constructor edges and avoids
 loading unrelated optional editor/sharing service classes during discovery.
@@ -55,7 +56,7 @@ requires ten deliberately unsafe variants to compile and fail a behavioral
 assertion. Compilation errors, timeouts and unchanged substitutions do not count.
 
 Run `python3 qa/test_gallery_export.py` separately. That existing suite compiles
-the unchanged real exporter, copies real files and exercises Android storage
+the real exporter, copies real files and exercises the existing photo/video contracts with Android storage
 doubles. The hook suite uses an exporter double and therefore does not establish
 MediaStore publication, permissions, decoder support or on-device durability.
 
