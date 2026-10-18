@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">查看设置指南 →</string>
     <string name="tasker_execution_history">执行历史</string>
     <string name="call_recording_config_title">通话录音配置</string>
-    <string name="call_recording_config_desc">配置通过 Root 直接采集音频的方式、音频格式和比特率</string>
+    <string name="call_recording_config_desc">配置音频来源、格式和比特率</string>
     <string name="requires_pro_label">需要 Pro</string>
     <string name="subtab_automation">自动化</string>
     <string name="subtab_audio_ai">音频与 AI</string>

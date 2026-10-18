@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">सेटअप गाइड देखें →</string>
     <string name="tasker_execution_history">निष्पादन इतिहास</string>
     <string name="call_recording_config_title">कॉल रिकॉर्डिंग कॉन्फ़िगरेशन</string>
-    <string name="call_recording_config_desc">रूट डायरेक्ट ऑडियो पाइपलाइन, प्रारूप और बिटरेट कॉन्फ़िगर करें</string>
+    <string name="call_recording_config_desc">ऑडियो स्रोत, प्रारूप और बिटरेट कॉन्फ़िगर करें</string>
     <string name="requires_pro_label">प्रो आवश्यक है</string>
     <string name="subtab_automation">ऑटोमेशन</string>
     <string name="subtab_audio_ai">ऑडियो और एआई</string>

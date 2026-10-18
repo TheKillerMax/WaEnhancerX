@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">Ver guia de configuração →</string>
     <string name="tasker_execution_history">Histórico de execução</string>
     <string name="call_recording_config_title">Configuração de gravação de chamadas</string>
-    <string name="call_recording_config_desc">Configurar pipeline de áudio direto root, formatos e taxa de bits</string>
+    <string name="call_recording_config_desc">Configurar fontes de áudio, formatos e taxa de bits</string>
     <string name="requires_pro_label">Requer Pro</string>
     <string name="subtab_automation">Automação</string>
     <string name="subtab_audio_ai">Áudio e IA</string>

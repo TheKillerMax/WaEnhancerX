@@ -296,7 +296,7 @@ private fun loadRealPreservedChats(context: Context): List<PreservedChat> {
             UiText.get(R.string.waex_ui_preserved_9d31b48b, "Preserved")
         }
         val msg = PreservedMessage(
-            id = rec.id,
+            id = "${if (rec.isFromMe) 1 else 0}:${rec.id}",
             text = rec.text.ifBlank { UiText.get(R.string.waex_ui_preserved_message_547f6da1, "Preserved message") },
             timestamp = dateTimeStr,
             isFromMe = rec.isFromMe,

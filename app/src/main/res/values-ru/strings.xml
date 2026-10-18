@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">Инструкция по настройке →</string>
     <string name="tasker_execution_history">История выполнения</string>
     <string name="call_recording_config_title">Настройка записи звонков</string>
-    <string name="call_recording_config_desc">Настройка прямого аудиоканала root, форматов и битрейта</string>
+    <string name="call_recording_config_desc">Настройка источников звука, форматов и битрейта</string>
     <string name="requires_pro_label">Требуется Pro</string>
     <string name="subtab_automation">Автоматизация</string>
     <string name="subtab_audio_ai">Аудио и ИИ</string>

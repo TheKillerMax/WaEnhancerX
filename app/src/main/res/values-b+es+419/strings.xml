@@ -328,7 +328,7 @@
     <string name="tasker_view_setup_guide">"Ver la guía de configuración →"</string>
     <string name="tasker_execution_history">"Historial de ejecuciones"</string>
     <string name="call_recording_config_title">"Ajustes de grabación de llamadas"</string>
-    <string name="call_recording_config_desc">"Configura la captura directa de audio con acceso de superusuario, los formatos y la tasa de bits"</string>
+    <string name="call_recording_config_desc">"Configura las fuentes de audio, los formatos y la tasa de bits"</string>
     <string name="requires_pro_label">"Requiere Pro"</string>
     <string name="subtab_automation">"Automatización"</string>
     <string name="subtab_audio_ai">"Audio e IA"</string>

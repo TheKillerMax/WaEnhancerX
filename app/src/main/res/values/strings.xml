@@ -142,14 +142,14 @@
     <string name="feat_call_privacy_desc">Block WhatsApp calls based on privacy type</string>
     <string name="feat_autonext_status_title">Disable Auto Skip Status</string>
     <string name="feat_autonext_status_desc">Prevents the current status from advancing automatically to the next one</string>
-    <string name="feat_toast_viewed_status_title">Show toast on viewed your status</string>
-    <string name="feat_toast_viewed_status_desc">Shows a toast if someone views your status</string>
+    <string name="feat_toast_viewed_status_title">Status read receipt alerts</string>
+    <string name="feat_toast_viewed_status_desc">Alerts you when a read receipt for your status is received; repeated receipts may be grouped.</string>
     <string name="feat_antidisappearing_title">Anti Disappearing Messages</string>
     <string name="feat_antidisappearing_desc">Temporary messages will not be deleted for you</string>
     <string name="feat_toastdeleted_title">Show toast notification on delete message</string>
     <string name="feat_toastdeleted_desc">Show toast notification if any contact deletes any message</string>
-    <string name="feat_toast_viewed_message_title">Show toast on viewed your message</string>
-    <string name="feat_toast_viewed_message_desc">Shows a toast if someone views your message</string>
+    <string name="feat_toast_viewed_message_title">Message read receipt alerts</string>
+    <string name="feat_toast_viewed_message_desc">Alerts you when a read receipt for your message is received; repeated receipts may be grouped.</string>
     <string name="feat_ghostmode_title">Show Ghost Mode Button</string>
     <string name="feat_ghostmode_desc">Show a Ghost Mode button on the home screen toolbar</string>
     <string name="feat_show_dndmode_title">Show DND Button</string>
@@ -350,7 +350,7 @@
     <string name="tasker_view_setup_guide">View Setup Guide →</string>
     <string name="tasker_execution_history">Execution History</string>
     <string name="call_recording_config_title">Call Recording Configuration</string>
-    <string name="call_recording_config_desc">Configure root direct audio pipeline, formats &amp; bitrate</string>
+    <string name="call_recording_config_desc">Configure audio sources, formats &amp; bitrate</string>
     <string name="requires_pro_label">Requires Pro</string>
     <string name="subtab_automation">Automation</string>
     <string name="subtab_audio_ai">Audio &amp; AI</string>

@@ -18,7 +18,7 @@ presence = (source / "PresenceToastsHook.java").read_text()
 anti_revoke = (root / "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java").read_text()
 anti_edit = (root / "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt").read_text()
 assert "Executors.newSingleThreadExecutor().execute" not in presence
-assert "ThreadPoolExecutor.DiscardOldestPolicy" in presence
+assert "ReceiptToastDispatch::discardOldest" in presence
 assert "TOAST_THROTTLE.shouldEmit" in presence
 assert "context, prefs, senderJid, uiHandler" in anti_revoke
 assert "private void showDeletedMessageToast(" in anti_revoke

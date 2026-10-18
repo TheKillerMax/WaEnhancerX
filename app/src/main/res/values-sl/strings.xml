@@ -352,7 +352,7 @@
     <string name="tasker_view_setup_guide">Oglej si Navodila za nastavitev →</string>
     <string name="tasker_execution_history">Zgodovina izvedb</string>
     <string name="call_recording_config_title">Konfiguracija snemanja klicev</string>
-    <string name="call_recording_config_desc">Nastavljanje neposrednega avdio kanala z root dostopom, formate in bitno hitrost</string>
+    <string name="call_recording_config_desc">Nastavite zvočne vire, formate in bitno hitrost</string>
     <string name="requires_pro_label">Zahteva različico Pro</string>
     <string name="subtab_automation">Avtomatizacija</string>
     <string name="subtab_audio_ai">Avdio in umetna inteligenca</string>

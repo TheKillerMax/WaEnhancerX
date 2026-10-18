@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">Kurulum Kılavuzunu Görüntüle →</string>
     <string name="tasker_execution_history">Çalıştırma Geçmişi</string>
     <string name="call_recording_config_title">Arama Kaydı Yapılandırması</string>
-    <string name="call_recording_config_desc">Root doğrudan ses ardışık düzenini, biçimleri ve bit hızını yapılandırın</string>
+    <string name="call_recording_config_desc">Ses kaynaklarını, biçimleri ve bit hızını yapılandırın</string>
     <string name="requires_pro_label">Pro Gerektirir</string>
     <string name="subtab_automation">Otomasyon</string>
     <string name="subtab_audio_ai">Ses ve Yapay Zeka</string>

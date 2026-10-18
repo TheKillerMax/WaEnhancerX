@@ -938,6 +938,13 @@
     <string name="waex_ui_media_status_498f9960" formatted="false">"Media Status"</string>
     <string name="waex_ui_media_saved_v30" formatted="false">"Media saved (WAEX)"</string>
     <string name="waex_ui_media_save_failed_v30" formatted="false">"Unable to save this media file"</string>
+    <string name="waex_ui_media_export_in_progress_v36" formatted="false">"A media export is already in progress"</string>
+    <string name="waex_ui_audio_saved_v36" formatted="false">"Audio saved (WAEX)"</string>
+    <string name="waex_ui_audio_save_failed_v36" formatted="false">"Unable to save this audio file"</string>
+    <string name="waex_ui_call_audio_v36" formatted="false">"Call audio"</string>
+    <string name="waex_ui_call_audio_if_supported_v36" formatted="false">"If supported"</string>
+    <string name="waex_ui_standard_audio_v36" formatted="false">"Standard audio"</string>
+    <string name="waex_ui_communication_mic_v36" formatted="false">"Communication / mic"</string>
     <string name="waex_l10n_switch_release">"Switch to Release"</string>
     <string name="waex_l10n_switch_debug">"Switch to Debug"</string>
     <string name="waex_l10n_reinstall_apk">"Reinstall APK"</string>

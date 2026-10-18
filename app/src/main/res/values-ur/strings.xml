@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">سیٹ اپ گائیڈ دیکھیں ←</string>
     <string name="tasker_execution_history">عملدرآمد کی تاریخ</string>
     <string name="call_recording_config_title">کال ریکارڈنگ کنفیگریشن</string>
-    <string name="call_recording_config_desc">روٹ ڈائریکٹ آڈیو پائپ لائن، فارمیٹس اور بٹ ریٹ ترتیب دیں</string>
+    <string name="call_recording_config_desc">آڈیو ذرائع، فارمیٹس اور بٹ ریٹ ترتیب دیں</string>
     <string name="requires_pro_label">پرو درکار ہے</string>
     <string name="subtab_automation">آٹومیشن</string>
     <string name="subtab_audio_ai">آڈیو اور اے آئی</string>
