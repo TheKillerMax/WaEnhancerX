@@ -324,7 +324,7 @@ class PreserveDeleteForMeHook(
             DexSearchEngine.getInstance().findMethodWithCache(
                 context,
                 classLoader,
-                "wpp_delete_for_me_method_v6",
+                "wpp_delete_for_me_method_v7",
                 { bridge, loader ->
                     resolveCurrentDeleteForMeRunnable(bridge, loader) ?: bridge.findMethod(
                         FindMethod.create().matcher(
@@ -333,14 +333,18 @@ class PreserveDeleteForMeHook(
                                 StringMatchType.Contains
                             )
                         )
-                    ).firstOrNull()?.getMethodInstance(loader) ?: bridge.findMethod(
+                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
+                        it.name != "run" || it.parameterCount > 0
+                    } ?: bridge.findMethod(
                         FindMethod.create().matcher(
                             MethodMatcher.create().addUsingString(
                                 "msgstore/delete-for-me",
                                 StringMatchType.Contains
                             )
                         )
-                    ).firstOrNull()?.getMethodInstance(loader)
+                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
+                        it.name != "run" || it.parameterCount > 0
+                    }
                 }
             )
         } catch (t: Throwable) {
@@ -350,9 +354,9 @@ class PreserveDeleteForMeHook(
     }
 
     /**
-     * WhatsApp 2.26.41+ moved local deletion into a multiplexed Runnable. Resolve it from the
-     * delete-dialog contract instead of relying on an obfuscated class or method name:
-     * dialog builder -> Delete-for-me listener -> Runnable constructor -> run().
+     * Resolve the local-delete Runnable from WhatsApp's stable semantic and interface graph rather
+     * than obfuscated names, synthetic switch values, or constructor arity:
+     * message-key helper string -> dialog builder(Set) -> positive listener -> Runnable -> run().
      */
     private fun resolveCurrentDeleteForMeRunnable(
         bridge: org.luckypray.dexkit.DexKitBridge,
@@ -395,8 +399,7 @@ class PreserveDeleteForMeHook(
         val deleteRunnableConstructor = onClick.invokes.firstOrNull { invoked ->
             if (!invoked.isConstructor) return@firstOrNull false
             val params = invoked.paramTypeNames
-            if (params.size != 7 || params.count { it == "boolean" } != 2 ||
-                params.count { it == "int" } != 1) return@firstOrNull false
+            if ("int" !in params || "boolean" !in params) return@firstOrNull false
             val declaredClass = invoked.declaredClass ?: return@firstOrNull false
             declaredClass.interfaces.any { it.name == "java.lang.Runnable" }
         } ?: return null
@@ -426,6 +429,7 @@ class PreserveDeleteForMeHook(
 
             val keys = messageSets.flatten().mapNotNull(::extractMessageKey).distinctBy { it.id }
             if (keys.isEmpty()) {
+                XposedBridge.log("$TAG Warning: selected message keys were not resolved")
                 return false
             }
 
@@ -489,7 +493,7 @@ class PreserveDeleteForMeHook(
             val methodKey = message.javaClass.methods.firstOrNull {
                 it.name == "Atl" && it.parameterCount == 0
             }?.invoke(message)
-            val key = methodKey ?: message.javaClass.declaredFields.asSequence()
+            val key = methodKey ?: allInstanceFields(message.javaClass)
                 .filterNot { it.type.isPrimitive || it.type == String::class.java }
                 .mapNotNull { field ->
                     field.isAccessible = true
@@ -506,6 +510,14 @@ class PreserveDeleteForMeHook(
             SelectedMessageKey(id, jid)
         } catch (_: Throwable) {
             null
+        }
+    }
+
+    private fun allInstanceFields(type: Class<*>): Sequence<java.lang.reflect.Field> = sequence {
+        var current: Class<*>? = type
+        while (current != null && current != Any::class.java) {
+            yieldAll(current.declaredFields.asSequence())
+            current = current.superclass
         }
     }
 
