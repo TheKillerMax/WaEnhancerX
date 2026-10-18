@@ -18,7 +18,7 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
 ) {
     companion object {
         private const val DATABASE_NAME = "waex_preserved_messages.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
         const val TABLE_NAME = "preserved_messages"
 
         const val COL_ID = "_id"
@@ -61,11 +61,12 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
                 $COL_JID TEXT NOT NULL,
                 $COL_NAME TEXT,
                 $COL_SENDER_NAME TEXT,
-                $COL_MSG_ID TEXT UNIQUE,
+                $COL_MSG_ID TEXT,
                 $COL_TEXT TEXT,
                 $COL_TIMESTAMP INTEGER DEFAULT 0,
                 $COL_FROM_ME INTEGER DEFAULT 0,
-                $COL_IS_GROUP INTEGER DEFAULT 0
+                $COL_IS_GROUP INTEGER DEFAULT 0,
+                UNIQUE ($COL_JID, $COL_MSG_ID, $COL_FROM_ME)
             )
             """.trimIndent()
         )
@@ -83,6 +84,18 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
             } else if (COL_SENDER_NAME !in columns) {
                 db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COL_SENDER_NAME TEXT")
             }
+        }
+        if (oldVersion < 3) {
+            // SQLiteOpenHelper wraps onUpgrade in a transaction. A copy error rolls the
+            // entire migration back, including the rename; do not suppress that error.
+            // A UNIQUE column auto-index cannot be dropped, so rebuild the table while
+            // preserving every column and row ID before removing the old schema.
+            db.execSQL("ALTER TABLE $TABLE_NAME RENAME TO preserved_messages_v2_backup")
+            onCreate(db)
+            val columns = "$COL_ID, $COL_JID, $COL_NAME, $COL_SENDER_NAME, $COL_MSG_ID, " +
+                "$COL_TEXT, $COL_TIMESTAMP, $COL_FROM_ME, $COL_IS_GROUP"
+            db.execSQL("INSERT INTO $TABLE_NAME ($columns) SELECT $columns FROM preserved_messages_v2_backup")
+            db.execSQL("DROP TABLE preserved_messages_v2_backup")
         }
     }
 
