@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">Lihat Panduan Penyiapan →</string>
     <string name="tasker_execution_history">Riwayat Eksekusi</string>
     <string name="call_recording_config_title">Konfigurasi Perekaman Panggilan</string>
-    <string name="call_recording_config_desc">Konfigurasikan jalur audio langsung root, format &amp; bitrate</string>
+    <string name="call_recording_config_desc">Konfigurasikan sumber audio, format, dan bitrate</string>
     <string name="requires_pro_label">Memerlukan Pro</string>
     <string name="subtab_automation">Otomatisasi</string>
     <string name="subtab_audio_ai">Audio &amp; AI</string>

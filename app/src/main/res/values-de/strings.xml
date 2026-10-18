@@ -342,7 +342,7 @@
     <string name="tasker_view_setup_guide">Einrichtungsanleitung ansehen →</string>
     <string name="tasker_execution_history">Ausführungsverlauf</string>
     <string name="call_recording_config_title">Anrufaufzeichnung-Konfiguration</string>
-    <string name="call_recording_config_desc">Root-Direkt-Audiopipeline, Formate &amp; Bitrate konfigurieren</string>
+    <string name="call_recording_config_desc">Audioquellen, Formate und Bitrate konfigurieren</string>
     <string name="requires_pro_label">Erfordert Pro</string>
     <string name="subtab_automation">Automatisierung</string>
     <string name="subtab_audio_ai">Audio &amp; KI</string>
