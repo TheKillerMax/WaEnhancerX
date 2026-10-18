@@ -2131,25 +2131,32 @@ public class AntiRevokeHook extends BaseFeature {
 
     private int getDeletedMessageColor() {
         try {
-            String colorStr = prefs.getString("deleted_message_color", "#EF4444");
+            // Bridge getters return their default for a mismatched type rather
+            // than throwing. A non-null default would hide the schema's INT.
+            String colorStr = prefs.getString("deleted_message_color", null);
             if (colorStr != null && !colorStr.isEmpty()) {
-                return Color.parseColor(colorStr);
+                try {
+                    return Color.parseColor(colorStr);
+                } catch (IllegalArgumentException ignored) {
+                    return Integer.parseInt(colorStr);
+                }
             }
-        } catch (Throwable ignored) {
-            try {
-                return prefs.getInt("deleted_message_color", Color.parseColor("#EF4444"));
-            } catch (Throwable ignored2) {}
-        }
+        } catch (Throwable ignored) {}
+        try {
+            return prefs.getInt("deleted_message_color", Color.parseColor("#EF4444"));
+        } catch (Throwable ignored) {}
         return Color.parseColor("#EF4444");
     }
 
     private int getIndicatorType() {
         try {
-            String strVal = prefs.getString("anti_revoke_indicator", "2");
-            return Integer.parseInt(strVal);
-        } catch (Throwable ignored) {
+            String strVal = prefs.getString("anti_revoke_indicator", null);
+            if (strVal != null) return Integer.parseInt(strVal);
+        } catch (Throwable ignored) {}
+        try {
             return prefs.getInt("anti_revoke_indicator", 2);
-        }
+        } catch (Throwable ignored) {}
+        return 2;
     }
 
     @NonNull
