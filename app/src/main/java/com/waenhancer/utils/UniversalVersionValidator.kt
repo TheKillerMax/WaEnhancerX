@@ -21,7 +21,8 @@ object UniversalVersionValidator {
     }
 
     /**
-     * Reads universal supported version rules directly from the module resources (arrays.xml).
+     * Read only the module's version-rule array. Numeric resource IDs are local
+     * to a resource table, so a host or unrelated array must never supply rules.
      */
     private fun readBuiltinRules(context: Context?): List<String>? {
         if (context == null) return null
@@ -31,23 +32,30 @@ object UniversalVersionValidator {
             } else {
                 context.createPackageContext(
                     MODULE_PACKAGE,
-                    Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
+                    Context.CONTEXT_IGNORE_SECURITY
                 )
             }
+            if (moduleContext.packageName != MODULE_PACKAGE) return null
             val resources = moduleContext.resources
-            val resId = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
+            // Resource access does not require loading the module's code in the host.
+            // The static fallback also keeps the array reachable in optimized builds.
+            val id = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
                 .takeIf { it != 0 } ?: R.array.universal_supported_versions
-            val rules = resources.getStringArray(resId).map { it.trim() }
+            if (resources.getResourceName(id) != "$MODULE_PACKAGE:array/universal_supported_versions") return null
+            val rules = resources.getStringArray(id).map { it.trim() }
             val syntax = Regex("[0-9]+(?:\\.[0-9]+)+(?:\\.(?:xx|\\*))?", RegexOption.IGNORE_CASE)
             rules.takeIf { it.isNotEmpty() && it.all(syntax::matches) }
-        } catch (_: Throwable) {
+        } catch (_: RuntimeException) {
+            null
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        } catch (_: LinkageError) {
             null
         }
     }
 
     @JvmStatic
     fun getBuiltinSupportedVersions(context: Context?): List<String> = readBuiltinRules(context).orEmpty()
-
 
     /** A rules decision, not a claim that native methods or every feature were tested. */
     @JvmStatic
