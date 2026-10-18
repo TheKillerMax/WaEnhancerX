@@ -156,6 +156,7 @@ fun MainDashboardScreen(
     }
 
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    var diagnosticsRefreshTrigger by remember { mutableIntStateOf(0) }
     var runtimeSnapshot by remember {
         mutableStateOf(XposedRuntimeInspector.cached())
     }
@@ -167,7 +168,9 @@ fun MainDashboardScreen(
         mutableStateOf<HmaDiagnostics.HmaReport?>(HmaDiagnostics.cached())
     }
 
-    LaunchedEffect(refreshTrigger) {
+    // Target heartbeats arrive every ten seconds. They refresh target evidence, while the
+    // root/framework/package inventory only needs a screen resume or an explicit refresh.
+    LaunchedEffect(diagnosticsRefreshTrigger) {
         systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context) }
     }
 
@@ -199,7 +202,10 @@ fun MainDashboardScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refreshTrigger++
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTrigger++
+                diagnosticsRefreshTrigger++
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
 
@@ -538,6 +544,7 @@ fun MainDashboardScreen(
                 hmaReport = hmaStatus,
                 onRefresh = {
                     refreshTrigger++
+                    diagnosticsRefreshTrigger++
                     hmaRefreshTrigger++
                 },
                 onViewDetails = { navController.navigateTo(Screen.SystemHealth) },
@@ -646,6 +653,7 @@ fun MainDashboardScreen(
                     }
                     preferenceManager.remove("dummy_notify")
                     refreshTrigger++
+                    diagnosticsRefreshTrigger++
                     showResetSettingsDialog = false
                     Toast.makeText(context, "All settings reset to default", Toast.LENGTH_SHORT).show()
                 }
@@ -1605,7 +1613,9 @@ private fun DashboardDiagnosticRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            if (healthy != true) {
+                Spacer(modifier = Modifier.width(8.dp))
+            }
         }
 
         if (isLoading) {
@@ -1614,7 +1624,7 @@ private fun DashboardDiagnosticRow(
                 strokeWidth = 2.dp,
                 color = colors.primary
             )
-        } else {
+        } else if (!showValueText || healthy != true) {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 tooltip = {
