@@ -357,7 +357,8 @@ public class AntiRevokeHook extends BaseFeature {
                             REVOKED_MESSAGES.put(target.id, now);
                             DelMessageStore.getInstance(context).insertMessage(null, target.id, now);
                             param.setResult(contract.acknowledgement());
-                            showDeletedMessageToast(extractSenderJid(target.key));
+                            showDeletedStatusToast(resolveStatusSenderJid(
+                                    target.key, param.args != null ? param.args[0] : null));
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getClass().getSimpleName());
                         }
@@ -622,6 +623,28 @@ public class AntiRevokeHook extends BaseFeature {
     private void showDeletedMessageToast(@Nullable String senderJid) {
         com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedMessageToast(
                 context, prefs, senderJid, uiHandler);
+    }
+
+    private void showDeletedStatusToast(@Nullable String senderJid) {
+        com.waenhancer.xposed.features.automation.PresenceToastsHook.showDeletedStatusToast(
+                context, prefs, senderJid, uiHandler);
+    }
+
+    /**
+     * Status target keys commonly expose status@broadcast while the revoke metadata carries
+     * the actual viewer/contact identity. Prefer a real user JID from the target, then reuse
+     * the metadata key as the same identity source used by ordinary message revoke toasts.
+     */
+    @Nullable
+    private String resolveStatusSenderJid(@Nullable Object targetKey, @Nullable Object metadataKey) {
+        String target = extractSenderJid(targetKey);
+        if (isUserJid(target)) return target;
+        String metadata = extractSenderJid(metadataKey);
+        return isUserJid(metadata) ? metadata : null;
+    }
+
+    private boolean isUserJid(@Nullable String jid) {
+        return jid != null && (jid.contains("@s.whatsapp.net") || jid.endsWith("@lid"));
     }
 
     @Nullable

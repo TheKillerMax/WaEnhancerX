@@ -50,6 +50,8 @@ public final class StatusHookBindingChecks {
     private String extractKeyIdFromFMessage(Object key) { return key instanceof Key ? ((Key) key).id : null; }
     private String extractSenderJid(Object key) { return "fixture"; }
     private void showDeletedMessageToast(String sender) {}
+    private String resolveStatusSenderJid(Object target, Object metadata) { return "fixture"; }
+    private void showDeletedStatusToast(String sender) {}
 
     /* PRODUCTION_METHODS */
 

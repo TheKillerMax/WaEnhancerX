@@ -299,18 +299,34 @@ public class PresenceToastsHook extends BaseFeature {
 
     public static void showDeletedMessageToast(Context context, SharedPreferences prefs,
                                                String senderJid, Handler handler) {
+        showDeletedToast(context, prefs, senderJid, handler, "message");
+    }
+
+    public static void showDeletedStatusToast(Context context, SharedPreferences prefs,
+                                              String senderJid, Handler handler) {
+        showDeletedToast(context, prefs, senderJid, handler, "status");
+    }
+
+    private static void showDeletedToast(Context context, SharedPreferences prefs,
+                                         String senderJid, Handler handler, String subject) {
         if (context == null || prefs == null || handler == null) return;
         boolean enabled = prefs.getBoolean("toastdeleted", false);
         if (!enabled) return;
 
-        String key = (senderJid != null ? senderJid : "unknown") + "_deleted";
+        String key = (senderJid != null ? senderJid : "unknown") + "_deleted_" + subject;
         long now = System.currentTimeMillis();
         if (!TOAST_THROTTLE.shouldEmit(key, now)) return;
 
         TOAST_EXECUTOR.execute(() -> {
             try {
-                String name = senderJid != null ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null) : "A contact";
-                String text = name + " deleted a message";
+                String name = senderJid != null
+                        ? ContactNameResolver.INSTANCE.resolveName(context, senderJid, null, null)
+                        : null;
+                if (!ContactNameResolver.INSTANCE.isValidDisplayName(name)
+                        || "Unknown".equalsIgnoreCase(name)) {
+                    name = "A contact";
+                }
+                String text = name + " deleted a " + subject;
                 handler.post(() -> {
                     try {
                         Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
