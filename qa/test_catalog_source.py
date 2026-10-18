@@ -89,13 +89,33 @@ class CatalogSourceTest(unittest.TestCase):
         self.write(source=SOURCE.replace('"preference_catalog.json"','"../private.json"'));self.rejects()
     def test_unsupported_routing_rejected(self):
         self.write(source=SOURCE.replace('.distinctBy { it.key }','.distinctBy { it.groupId }'));self.rejects()
-    def test_current_tree_uses_asset_and_92_canonical_features(self):
+    def test_current_tree_uses_asset_and_93_canonical_features(self):
         rows=catalog_features(ROOT)
-        self.assertEqual(92,len(rows));self.assertEqual(92,len({r['key'] for r in rows}))
+        self.assertEqual(93,len(rows));self.assertEqual(93,len({r['key'] for r in rows}))
         by_key={r['key']:r for r in rows}
         self.assertEqual('media_utility_downloader',by_key['download_view_once']['group_id'])
         self.assertEqual('media_quality_status',by_key['send_audio_as_voice_status']['group_id'])
         self.assertEqual('layout',by_key['disable_sensor_proximity']['sub_tab_id'])
+        self.assertEqual(('home_layout_navigation', 4, 'layout', False),
+                         (by_key['metaai']['group_id'], by_key['metaai']['tab_index'],
+                          by_key['metaai']['sub_tab_id'], by_key['metaai']['is_pro']))
         self.assertTrue(all(r['label'].strip() for r in rows))
+
+    def test_meta_ai_control_retains_existing_storage_and_hook_contract(self):
+        source=ROOT/'app/src/main/java/com/waenhancer'
+        styles=(source/'ui/screens/settings/StylesSettingsScreen.kt').read_text()
+        keys=styles.split('val stylesKeys = remember {',1)[1].split('val settingsState',1)[0]
+        self.assertIn('"metaai"',keys)
+        self.assertIn('preferenceManager.putBooleans(changes)',styles)
+        hook=(source/'xposed/features/homescreen/ChatListCustomizationsHook.java').read_text()
+        self.assertIn('return isEnabled("metaai", false);',hook)
+        schema=(source/'config/PreferenceSchema.java').read_text()
+        self.assertIn('"metaai", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC',schema)
+        values=[]
+        for folder in ('values-es','values-b+es+419'):
+            tree=ET.parse(ROOT/f'app/src/main/res/{folder}/meta_ai_control.xml')
+            values.append({n.attrib['name']:n.text for n in tree.getroot()})
+        self.assertEqual(values[0],values[1])
+        self.assertEqual({'feat_metaai_title','feat_metaai_desc'},set(values[0]))
 
 if __name__=='__main__': unittest.main()

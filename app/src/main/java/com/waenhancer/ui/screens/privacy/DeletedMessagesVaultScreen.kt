@@ -34,8 +34,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.components.RequestRuntimePermissionOnUse
 import com.waenhancer.ui.components.WaexTopBar
@@ -88,6 +93,7 @@ fun DeletedMessagesVaultScreen() {
     RequestRuntimePermissionOnUse(Manifest.permission.READ_CONTACTS)
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val navController = LocalWaexNavController.current
     val preferenceManager = LocalWaexPreferenceManager.current
     val colors = WaexTheme.colors
@@ -102,18 +108,27 @@ fun DeletedMessagesVaultScreen() {
     var selectedTab by remember { mutableStateOf("individuals") } // "individuals" | "groups"
     var activeChatDetails by remember { mutableStateOf<PreservedChat?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
     val preservedChats = remember { mutableStateListOf<PreservedChat>() }
 
-    // Load real preserved chats from database
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val loadedList = loadRealPreservedChats(context)
-            withContext(Dispatchers.Main) {
-                preservedChats.clear()
-                preservedChats.addAll(loadedList)
-                isLoading = false
-            }
+    // Refresh after returning from WhatsApp. This also updates the currently open chat detail,
+    // so users never need to navigate back to the vault list to see newly preserved messages.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshTrigger++
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(refreshTrigger) {
+        val loadedList = withContext(Dispatchers.IO) { loadRealPreservedChats(context) }
+        preservedChats.clear()
+        preservedChats.addAll(loadedList)
+        activeChatDetails = activeChatDetails?.let { activeChat ->
+            loadedList.firstOrNull { it.jid == activeChat.jid } ?: activeChat
+        }
+        isLoading = false
     }
 
     val filteredChats = if (selectedTab == "individuals") {

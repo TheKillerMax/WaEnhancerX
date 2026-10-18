@@ -114,7 +114,8 @@ fun MediaStatusHubScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
     fun readMediaKey(key: String): Boolean {
         // The UI must reflect the settings consumed by hooks, not stale legacy aliases.
-        if (key == "call_recording" || key == "media_upload_quality") {
+        if (key == "call_recording" || key == "media_upload_quality"
+            || key == "downloadviewonce" || key == "download_view_once") {
             return MediaQuickSettingPolicy.isEnabled(key) { storedKey ->
                 preferenceManager.getBoolean(storedKey, false)
             }

@@ -103,7 +103,7 @@ fun StylesSettingsScreen() {
             "custom_view_dpi", "seen_tick_customization", "floating_bottom_bar",
             "unlock_premium_customization", "custom_filters",
             "dotonline", "showonlinetext", "typing_online_toasts",
-            "channels_enhancements", "chat_filters", "hide_ui_tabs",
+            "metaai", "channels_enhancements", "chat_filters", "hide_ui_tabs",
             "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
             "contact_blocked_verify",
             "send_audio_as_voice_status", "disable_sensor_proximity"

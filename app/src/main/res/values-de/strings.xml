@@ -15,6 +15,7 @@
     <string name="stargazers_title">Unsere Unterstützer</string>
     <string name="stargazers_thank_you">Vielen Dank für die Unterstützung von WaEnhancerX</string>
     <string name="stargazers_message">Jeder Stern hilft mehr Menschen, das Projekt zu entdecken. Diese Pinnwand ist für alle, die ihre Unterstützung gezeigt haben.</string>
+    <string name="stargazers_last_updated">Zuletzt aktualisiert: %1$s</string>
     <string name="support">Unterstützung</string>
     <string name="support_desc">Wenn Sie auf Probleme stoßen oder Fragen zu WaEnhancer X haben, besuchen Sie bitte Telegram.</string>
     <string name="license">Lizenz</string>

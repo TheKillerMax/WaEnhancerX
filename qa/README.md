@@ -8,6 +8,8 @@ These checks are **diagnostics**, not evidence that WhatsApp hooks are working. 
 | --- | --- | --- |
 | `audit_apks.py` | Python 3.10+ standard library; **locally supplied** manager and WhatsApp APKs | ZIP CRC, manifest presence, DEX headers and SHA-1/Adler-32, ABI directory summary, 18 sampled DEX string-pool literals |
 | `test_audit_apks.py` | Python 3.10+ | Synthetic malformed ZIP and DEX fixtures, correct multidex enumeration, CLI exit codes and JSON output |
+| `audit_native_alignment.py` | Python 3.10+; locally supplied APK | Bounded ELF32/ELF64 parsing, 64-bit load-segment alignment and stored native ZIP offsets; distinct structural and alignment exit codes |
+| `test_native_alignment.py` | Python 3.10+ | Synthetic ELF/ZIP corruption, endian/class, alignment, ABI and CLI regressions; see `NATIVE_ALIGNMENT_ACCEPTANCE.md` |
 | `dex_source_anchor_inventory.py` | Python 3.10+; **locally supplied** WhatsApp APK | Generate a full, source-derived list of `addUsingString` literals and report which occur in DEX string tables. An absent anchor blocks **only that literal search**, not all feature implementations. |
 | `test_dex_source_anchor_inventory.py` | Python 3.10+ | Synthetic source/DEX fixtures for complete anchor discovery, strict exit status, malformed checksums and table-only matching |
 | `feature_contract_inventory.py` | Python 3.10+; project source | Read-only catalog/schema/direct Xposed-key reference inventory. Lists review flags, **not** proven broken features or executed hooks. |
