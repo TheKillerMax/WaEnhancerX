@@ -1605,7 +1605,9 @@ private fun DashboardDiagnosticRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            if (healthy != true) {
+                Spacer(modifier = Modifier.width(8.dp))
+            }
         }
 
         if (isLoading) {
@@ -1614,7 +1616,7 @@ private fun DashboardDiagnosticRow(
                 strokeWidth = 2.dp,
                 color = colors.primary
             )
-        } else {
+        } else if (!showValueText || healthy != true) {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 tooltip = {
