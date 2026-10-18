@@ -43,6 +43,7 @@ class RuntimeResourcesTest {
   override fun createPackageContext(pkg:String,flags:Int):Context {
    if(!visible)throw PackageManager.NameNotFoundException()
    assertEquals("com.waenhancer",pkg)
+   assertEquals(0, flags and Context.CONTEXT_INCLUDE_CODE)
    return module
   }
  }
@@ -65,6 +66,15 @@ class RuntimeResourcesTest {
   val p=RuntimeEnvironment.getApplication().getSharedPreferences("bad-type-test",0)
   assertTrue(p.edit().clear().putString("bypass_version_check","not a boolean").commit())
   assertEquals(D.PREFERENCES_UNAVAILABLE,UniversalVersionValidator.evaluate(resourceContext("release","es-CL"),"2.26.40.76",p))
+ }
+ @Test fun numericFallbackCannotUseTheFixtureResourceTable(){
+  val application=RuntimeEnvironment.getApplication()
+  val resourceName=application.resources.getResourceName(com.waenhancer.app.R.array.universal_supported_versions)
+  assertNotEquals("com.waenhancer:array/universal_supported_versions",resourceName)
+  val misleading=object:ContextWrapper(application){
+   override fun getPackageName()="com.waenhancer"
+  }
+  assertEquals(D.RULES_UNAVAILABLE,UniversalVersionValidator.evaluate(misleading,"2.26.40.76",null))
  }
  @Test fun explicitPermissionsRemainDistinct(){
   val p=RuntimeEnvironment.getApplication().getSharedPreferences("explicit-test",0)
@@ -151,8 +161,8 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  tests=failures=errors=skipped=0
  for p in results:
   t=ET.parse(p).getroot();tests+=int(t.get('tests',0));failures+=int(t.get('failures',0));errors+=int(t.get('errors',0));skipped+=int(t.get('skipped',0))
- assert tests==3 and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
+ assert tests==4 and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
  (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled public utilities and clock with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
- print('PASS: real Android/Compose API compilation; 3 Android 14 JUnit methods, 22 compiled-resource contexts; no full app/LSPosed')
+ print('PASS: real Android/Compose API compilation; 4 Android 14 JUnit methods, 22 compiled-resource contexts; no full app/LSPosed')
 
 if __name__=='__main__':main()
