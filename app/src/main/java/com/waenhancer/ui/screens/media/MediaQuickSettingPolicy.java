@@ -20,6 +20,11 @@ public final class MediaQuickSettingPolicy {
         Objects.requireNonNull(displayKey, "displayKey");
         Objects.requireNonNull(readEnabled, "readEnabled");
         switch (displayKey) {
+            case "downloadviewonce":
+            case "download_view_once":
+                // Both catalogue entries control the existing downloader hook.
+                // A stale display-only alias must not claim that the hook is enabled.
+                return readEnabled.test("downloadviewonce");
             case "call_recording":
                 return readEnabled.test("call_recording_enabled");
             case "media_upload_quality":

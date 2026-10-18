@@ -4,6 +4,7 @@
 Does not require proprietary APKs, Gradle or an Android SDK; does not verify LSPosed runtime.
 """
 from pathlib import Path
+from xml.etree import ElementTree as ET
 import subprocess
 import tempfile
 
@@ -102,6 +103,8 @@ with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
                     "com.waenhancer.core.preferences.TestMediaPreferenceBatch"], check=True)
 
 ui = (SRC / "ui/screens/media/MediaStatusHubScreen.kt").read_text()
+privacy_ui = (SRC / "ui/screens/privacy/GlobalPrivacySettingsScreen.kt").read_text()
+privacy_keys = privacy_ui.split("val privacyKeys = remember {", 1)[1].split("var waexMenuStyle", 1)[0]
 manager = (SRC / "core/preferences/WaexPreferenceManager.java").read_text()
 recorder = (SRC / "xposed/features/media/CallRecordingHook.java").read_text()
 media = (SRC / "xposed/features/media/MediaQualityBypassHook.java").read_text()
@@ -119,6 +122,13 @@ checks = {
     "atomic batch used by screen": 'preferenceManager.putBooleans(changes)' in ui,
     "save failure does not update switch": 'if (preferenceManager.putBooleans(changes)) {' in ui,
     "lifecycle refresh": 'Lifecycle.Event.ON_RESUME' in ui,
+    "Privacy initializes catalogue view-once key": '"download_view_once"' in privacy_keys,
+    "Privacy reads downloader policy": 'MediaQuickSettingPolicy.isEnabled("download_view_once")' in privacy_ui,
+    "Privacy commits both download keys": 'preferenceManager.putBooleans(MediaQuickSettingPolicy.changesFor(key, value))' in privacy_ui,
+    "Privacy refreshes downloader after returning": 'Lifecycle.Event.ON_RESUME' in privacy_ui and
+        'settingsState["download_view_once"] = enabled' in privacy_ui,
+    "Media routes downloader reads through policy": '|| key == "downloadviewonce" || key == "download_view_once"' in ui,
+    "Privacy uses localized failure feedback": 'context.getString(R.string.view_once_setting_save_failed)' in privacy_ui,
     "no automatic old alias migration": 'putBoolean("call_recording_enabled", true)' not in ui,
     "batch method defined": 'public boolean putBooleans(java.util.Map<String, Boolean> values)' in manager,
     "batch editor used": 'PreferenceStores.publicStore(context).edit()' in manager,
@@ -136,3 +146,10 @@ for label, passed in checks.items():
     if not passed:
         raise AssertionError(f"Media Hub integration regression: {label}")
 print(f"PASS: {len(checks)} Media Hub/schema/consumer/writer structural assertions")
+for folder, expected in [("values", "Unable to save setting"),
+                         ("values-es", "No se pudo guardar el ajuste"),
+                         ("values-b+es+419", "No se pudo guardar el ajuste")]:
+    resources = ET.parse(ROOT / "app/src/main/res" / folder / "view_once_settings.xml").getroot()
+    feedback = resources.find("string[@name='view_once_setting_save_failed']")
+    assert feedback is not None and feedback.text == expected, f"missing localized feedback in {folder}"
+print("PASS: independent default/es/es-419 save-failure resources")
