@@ -415,7 +415,7 @@ public class AntiRevokeHook extends BaseFeature {
                     if (table == null) return;
 
                     boolean isMsgTable = "message".equals(table) || "messages".equals(table);
-                    boolean isStatusTable = "status".equals(table) || "status_v3".equals(table) || table.contains("status");
+                    boolean isStatusTable = "status".equals(table) || "status_v3".equals(table);
 
                     if (!isMsgTable && !isStatusTable) return;
                     // A user-initiated Delete-for-me must remove the WhatsApp row. The dedicated
@@ -429,70 +429,51 @@ public class AntiRevokeHook extends BaseFeature {
                     // Handle Status table deletion
                     if (isStatusTable) {
                         if (!isAntiRevokeStatusEnabled()) return;
+                        // A whole-table cleanup has no identified revoke target.
+                        if (where == null || where.trim().isEmpty()) return;
                         try {
-                            String query = "SELECT * FROM " + table + (where != null ? " WHERE " + where : "");
-                            boolean foundRemoteStatus = false;
-                            boolean foundOwnStatus = false;
-                            boolean hasOwnershipColumn = false;
-                            try (Cursor cursor = db.rawQuery(query, whereArgs)) {
-                                if (cursor != null && cursor.moveToFirst()) {
-                                    do {
-                                        String jid = null;
-                                        String keyId = null;
-                                        boolean fromMe = false;
-                                        for (int i = 0; i < cursor.getColumnCount(); i++) {
-                                            String col = cursor.getColumnName(i).toLowerCase();
-                                            if (col.equals("from_me") || col.endsWith(".from_me")) {
-                                                hasOwnershipColumn = true;
-                                                fromMe = cursor.getInt(i) == 1;
-                                            } else if (col.contains("jid") && jid == null) {
-                                                jid = cursor.getString(i);
-                                            } else if ((col.contains("key_id") || col.equals("key") || col.contains("msgid")) && keyId == null) {
-                                                keyId = cursor.getString(i);
-                                            }
-                                        }
-                                        if (keyId == null && whereArgs != null && whereArgs.length > 0) {
-                                            keyId = whereArgs[0];
-                                        }
-                                        if (fromMe) {
-                                            foundOwnStatus = true;
-                                            continue;
-                                        }
-                                        if (keyId != null) {
-                                            foundRemoteStatus = true;
-                                            long now = System.currentTimeMillis();
-                                            REVOKED_MESSAGES.put(keyId, now);
-                                            DelMessageStore.getInstance(context).insertMessage(jid, keyId, now);
-                                            showDeletedMessageToast(jid);
-                                        }
-                                    } while (cursor.moveToNext());
-                                }
+                            String query = "SELECT * FROM " + table + " WHERE " + where;
+                            Set<String> keys = readRemoteStatusKeys(db, query, whereArgs);
+                            if (keys == null || keys.isEmpty()) return;
+
+                            // Validate and close the entire cursor before either suppressing the
+                            // delete or writing markers. A mixed/unknown batch stays with the host.
+                            param.setResult(0);
+                            long now = System.currentTimeMillis();
+                            for (String keyId : keys) {
+                                REVOKED_MESSAGES.put(keyId, now);
+                                // No sender identity was verified by this query.
+                                DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
                             }
-                            // A delete can target multiple rows. Never suppress it if an own status is
-                            // included; preventing the user from deleting their status is worse than
-                            // allowing a rare mixed batch to proceed.
-                            if (hasOwnershipColumn && foundRemoteStatus && !foundOwnStatus) {
-                                param.setResult(0);
-                            }
+                            showDeletedMessageToast(null);
                         } catch (Throwable t) {
-                            // Ownership could not be established, so let WhatsApp perform the delete.
-                            XposedBridge.log(TAG + " Error querying status before delete: " + t.getClass().getSimpleName());
+                            // Query/close failures leave the host operation untouched. Once a
+                            // verified plan suppresses it, marker failures must not delete the rows.
+                            XposedBridge.log(TAG + " Error processing status delete: " + t.getClass().getSimpleName());
                         }
                         return;
                     }
 
                     // Handle Message table deletion
                     if (isMsgTable) {
-                        if (where == null || !where.contains("_id=?") || whereArgs == null || whereArgs.length == 0) return;
+                        if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
+                        if (!isSingleRowIdDelete(where, whereArgs)) return;
 
                         String msgId = whereArgs[0];
                         try (Cursor cursor = db.rawQuery(
                                 "SELECT from_me, message_type, key_id, chat_row_id, sender_jid_row_id FROM " + table + " WHERE _id=?",
                                 new String[]{msgId})) {
                             if (cursor != null && cursor.moveToFirst()) {
-                                int fromMe = cursor.getInt(0);
+                                if (cursor.getCount() != 1
+                                        || cursor.getType(0) != Cursor.FIELD_TYPE_INTEGER
+                                        || cursor.getType(1) != Cursor.FIELD_TYPE_INTEGER
+                                        || cursor.getType(2) != Cursor.FIELD_TYPE_STRING) return;
+                                long ownership = cursor.getLong(0);
+                                if (ownership != 0L && ownership != 1L) return;
+                                int fromMe = (int) ownership;
                                 int msgType = cursor.getInt(1);
                                 String keyId = cursor.getString(2);
+                                if (keyId == null || keyId.trim().isEmpty()) return;
                                 long chatRowId = cursor.getLong(3);
                                 long senderJidRowId = cursor.isNull(4) ? 0L : cursor.getLong(4);
 
@@ -550,8 +531,7 @@ public class AntiRevokeHook extends BaseFeature {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     sanitizePreservedOwnRowId(param);
-                    if (!isAntiRevokeEnabled() && !isAntiRevokeStatusEnabled()
-                            && !isPreserveOwnRevokeEnabled()) return;
+                    if (!isAntiRevokeEnabled() && !isPreserveOwnRevokeEnabled()) return;
                     String table = (String) param.args[0];
                     if (!"message".equals(table) && !"messages".equals(table)) return;
 
@@ -563,7 +543,7 @@ public class AntiRevokeHook extends BaseFeature {
                     Integer fromMe = cv.getAsInteger("from_me");
 
                     boolean preserveIncoming = fromMe != null && fromMe == 0
-                            && (isAntiRevokeEnabled() || isAntiRevokeStatusEnabled());
+                            && isAntiRevokeEnabled();
                     boolean preserveOwnRevoke = fromMe != null && fromMe == 1
                             && isPreserveOwnRevokeEnabled();
 
@@ -605,6 +585,48 @@ public class AntiRevokeHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Failed to hook SQLiteDatabase: " + t.getClass().getSimpleName());
         }
+    }
+
+    /** A bound argument is a row ID only for this exact, single-argument predicate. */
+    private boolean isSingleRowIdDelete(@Nullable String where, @Nullable String[] args) {
+        return where != null && args != null && args.length == 1 && args[0] != null
+                && where.matches("\\s*_id\\s*=\\s*\\?\\s*");
+    }
+
+    /**
+     * Reads only the explicit legacy status schema. SQL arguments, similarly named
+     * columns, unknown ownership and partial batches are not evidence of a status ID.
+     * Null means that the original operation must proceed without marker side effects.
+     */
+    @Nullable
+    private Set<String> readRemoteStatusKeys(@NonNull SQLiteDatabase db, @NonNull String query,
+                                             @Nullable String[] args) {
+        Set<String> keys = new LinkedHashSet<>();
+        try (Cursor cursor = db.rawQuery(query, args)) {
+            if (cursor == null) return null;
+            int keyColumn = -1;
+            int ownershipColumn = -1;
+            for (int i = 0; i < cursor.getColumnCount(); i++) {
+                String column = cursor.getColumnName(i);
+                if ("key_id".equalsIgnoreCase(column)) {
+                    if (keyColumn >= 0) return null;
+                    keyColumn = i;
+                } else if ("from_me".equalsIgnoreCase(column)) {
+                    if (ownershipColumn >= 0) return null;
+                    ownershipColumn = i;
+                }
+            }
+            if (keyColumn < 0 || ownershipColumn < 0) return null;
+            while (cursor.moveToNext()) {
+                if (cursor.getType(keyColumn) != Cursor.FIELD_TYPE_STRING
+                        || cursor.getType(ownershipColumn) != Cursor.FIELD_TYPE_INTEGER
+                        || cursor.getLong(ownershipColumn) != 0L) return null;
+                String key = cursor.getString(keyColumn);
+                if (key == null || key.trim().isEmpty() || !keys.add(key)
+                        || keys.size() > MAX_RECENT_REVOKES) return null;
+            }
+        }
+        return keys;
     }
 
     private void showDeletedMessageToast(@Nullable String senderJid) {
