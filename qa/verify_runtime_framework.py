@@ -5,6 +5,7 @@ Isolated test library only: no private licensing, signing, host APK or LSPosed e
 """
 from pathlib import Path
 import argparse,hashlib,json,os,shutil,subprocess,tomllib,urllib.request
+from framework_localization import stage_localization, build_localization_table
 
 TEST=r'''package com.waenhancer.utils
 import android.app.Application
@@ -137,6 +138,15 @@ import android.app.Activity
 class Dialog {fun dismiss(){}}
 class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:String)=this;fun setPositiveButton(s:String,f:(Dialog,Int)->Unit)=this;fun show(){}}
 ''')
+ localized = stage_localization(root, probe, identities)
+ if localized:
+  locale_apk = build_localization_table(root, out/'locale-table')
+  build += '\ntasks.withType<Test>().configureEach { systemProperty("waex.locale.apk", "'+str(locale_apk)+'") }\n'
+  (probe/'build.gradle.kts').write_text(build)
+  fixture=root/'qa/fixtures/LocalizationResourcesTest.kt'
+  write('src/test/java/com/waenhancer/utils/LocalizationResourcesTest.kt',fixture.read_text())
+  shutil.copy2(fixture,e/fixture.name)
+  identities[str(fixture.relative_to(root))]=hashlib.sha256(fixture.read_bytes()).hexdigest()
  write('src/test/java/com/waenhancer/utils/RuntimeResourcesTest.kt',TEST)
  (e/'source-sha256.json').write_text(json.dumps(identities,indent=2));(e/'RuntimeResourcesTest.kt').write_text(TEST);(e/'build.gradle.kts').write_text(build)
  cmd=['bash',str(root/'gradlew'),'-p',str(project),'--no-daemon',':probe:testDebugUnitTest']
@@ -151,8 +161,8 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  tests=failures=errors=skipped=0
  for p in results:
   t=ET.parse(p).getroot();tests+=int(t.get('tests',0));failures+=int(t.get('failures',0));errors+=int(t.get('errors',0));skipped+=int(t.get('skipped',0))
- assert tests==3 and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
- (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled public utilities and clock with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
- print('PASS: real Android/Compose API compilation; 3 Android 14 JUnit methods, 22 compiled-resource contexts; no full app/LSPosed')
+ assert tests==(10 if localized else 3) and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
+ (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'locale_resource_tests':7 if localized else 0,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled public utilities and clock with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
+ print(f'PASS: real Android/Compose API compilation; {tests} Android 14 JUnit methods, 22 published-APK contexts; localized tests={localized}; no full app/LSPosed')
 
 if __name__=='__main__':main()

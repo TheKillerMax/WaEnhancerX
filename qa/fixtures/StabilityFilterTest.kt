@@ -1,5 +1,7 @@
 package com.waenhancer.fixture
 
+import com.waenhancer.app.R
+
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences

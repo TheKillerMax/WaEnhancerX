@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -91,7 +94,7 @@ fun FloatingBottomBarCustomizerScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Floating Bottom Bar",
+                title = UiText.get(R.string.feat_floating_bottom_bar_title, "Floating Bottom Bar"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -107,8 +110,8 @@ fun FloatingBottomBarCustomizerScreen() {
         ) {
             // Live Interactive Preview Card
             WaexSectionHeader(
-                title = "Live Preview",
-                subtitle = "Real-time preview of how WhatsApp bottom navigation pill looks"
+                title = UiText.get(R.string.waex_ui_live_preview_d61b13d1, "Live Preview"),
+                subtitle = UiText.get(R.string.waex_ui_real_time_preview_of_how_whatsapp_bott_e803ed32, "Real-time preview of how WhatsApp bottom navigation pill looks")
             )
 
             Surface(
@@ -228,7 +231,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                     )
                                 }
                                 Text(
-                                    text = "Chats",
+                                    text = UiText.get(R.string.waex_ui_chats_ef5b4049, "Chats"),
                                     fontSize = (textSize * 0.85f).coerceIn(9f, 13f).sp,
                                     fontWeight = FontWeight.Bold,
                                     color = activeTint
@@ -247,7 +250,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                     modifier = Modifier.size((iconSize * 0.8f).coerceIn(16f, 24f).dp)
                                 )
                                 Text(
-                                    text = "Updates",
+                                    text = UiText.get(R.string.waex_ui_updates_22e2bada, "Updates"),
                                     fontSize = (textSize * 0.85f).coerceIn(9f, 13f).sp,
                                     color = Color(0xFF8696A0)
                                 )
@@ -265,7 +268,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                     modifier = Modifier.size((iconSize * 0.8f).coerceIn(16f, 24f).dp)
                                 )
                                 Text(
-                                    text = "Communities",
+                                    text = UiText.get(R.string.waex_ui_communities_c864f329, "Communities"),
                                     fontSize = (textSize * 0.85f).coerceIn(9f, 13f).sp,
                                     color = Color(0xFF8696A0)
                                 )
@@ -283,7 +286,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                     modifier = Modifier.size((iconSize * 0.8f).coerceIn(16f, 24f).dp)
                                 )
                                 Text(
-                                    text = "Calls",
+                                    text = UiText.get(R.string.waex_ui_calls_b73a5e2c, "Calls"),
                                     fontSize = (textSize * 0.85f).coerceIn(9f, 13f).sp,
                                     color = Color(0xFF8696A0)
                                 )
@@ -306,13 +309,13 @@ fun FloatingBottomBarCustomizerScreen() {
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Enable Floating Bottom Bar",
+                            text = UiText.get(R.string.waex_ui_enable_floating_bottom_bar_6888db9b, "Enable Floating Bottom Bar"),
                             style = typography.bodyLg,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
                         )
                         Text(
-                            text = "Transforms the default navigation bar into a modern floating pill",
+                            text = UiText.get(R.string.waex_ui_transforms_the_default_navigation_bar_c18f96ff, "Transforms the default navigation bar into a modern floating pill"),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             fontSize = 12.sp
@@ -333,8 +336,8 @@ fun FloatingBottomBarCustomizerScreen() {
 
                     // Pill Style Selection
                     WaexSectionHeader(
-                        title = "Pill Design Preset",
-                        subtitle = "Select overall aesthetic theme for the floating bar"
+                        title = UiText.get(R.string.waex_ui_pill_design_preset_3b444249, "Pill Design Preset"),
+                        subtitle = UiText.get(R.string.waex_ui_select_overall_aesthetic_theme_for_the_16217000, "Select overall aesthetic theme for the floating bar")
                     )
 
                     Surface(
@@ -345,9 +348,9 @@ fun FloatingBottomBarCustomizerScreen() {
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(
-                                Triple("regular", "Classic (Regular)", "Solid themed floating pill with sleek outline"),
-                                Triple("pro", "Refined (Pro)", "Enhanced adaptive shadows and refined padding"),
-                                Triple("ios_glass", "iOS Frosted Glass", "Translucent glassmorphism with refraction border")
+                                Triple("regular", UiText.get(R.string.waex_ui_classic_regular_2f519419, "Classic (Regular)"), UiText.get(R.string.waex_ui_solid_themed_floating_pill_with_sleek_90c46dd3, "Solid themed floating pill with sleek outline")),
+                                Triple("pro", UiText.get(R.string.waex_ui_refined_pro_277942ba, "Refined (Pro)"), UiText.get(R.string.waex_ui_enhanced_adaptive_shadows_and_refined_107eefd1, "Enhanced adaptive shadows and refined padding")),
+                                Triple("ios_glass", UiText.get(R.string.waex_ui_ios_frosted_glass_21526033, "iOS Frosted Glass"), UiText.get(R.string.waex_ui_translucent_glassmorphism_with_refract_a6528ef4, "Translucent glassmorphism with refraction border"))
                             ).forEach { (styleKey, title, desc) ->
                                 val isSelected = pillDesign == styleKey
                                 val isLocked = styleKey != "regular" && !isPro
@@ -412,8 +415,8 @@ fun FloatingBottomBarCustomizerScreen() {
 
                     // Geometry & Dimensions Controls
                     WaexSectionHeader(
-                        title = "Geometry & Spacing",
-                        subtitle = "Adjust corner curves, margins, and sizing"
+                        title = UiText.get(R.string.waex_ui_geometry_spacing_a08202fb, "Geometry & Spacing"),
+                        subtitle = UiText.get(R.string.waex_ui_adjust_corner_curves_margins_and_sizin_72c8f1f8, "Adjust corner curves, margins, and sizing")
                     )
 
                     WaexCard(modifier = Modifier.fillMaxWidth()) {
@@ -423,7 +426,7 @@ fun FloatingBottomBarCustomizerScreen() {
                         ) {
                             // Corner Radius
                             SliderItem(
-                                label = "Corner Radius",
+                                label = UiText.get(R.string.waex_ui_corner_radius_e1cf3271, "Corner Radius"),
                                 value = cornerRadius,
                                 valueRange = 12f..36f,
                                 unit = "dp",
@@ -437,7 +440,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             // Bottom Margin
                             SliderItem(
-                                label = "Bottom Margin",
+                                label = UiText.get(R.string.waex_ui_bottom_margin_f43447af, "Bottom Margin"),
                                 value = marginBottom,
                                 valueRange = 8f..36f,
                                 unit = "dp",
@@ -451,7 +454,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             // Side Margin
                             SliderItem(
-                                label = "Horizontal Margin",
+                                label = UiText.get(R.string.waex_ui_horizontal_margin_fa46b8a7, "Horizontal Margin"),
                                 value = marginHorizontal,
                                 valueRange = 4f..32f,
                                 unit = "dp",
@@ -465,7 +468,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             // Vertical Padding
                             SliderItem(
-                                label = "Vertical Inner Padding",
+                                label = UiText.get(R.string.waex_ui_vertical_inner_padding_1285094a, "Vertical Inner Padding"),
                                 value = paddingVertical,
                                 valueRange = 2f..14f,
                                 unit = "dp",
@@ -479,7 +482,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             // Icon Size
                             SliderItem(
-                                label = "Icon Size",
+                                label = UiText.get(R.string.waex_ui_icon_size_73cbeb77, "Icon Size"),
                                 value = iconSize,
                                 valueRange = 18f..30f,
                                 unit = "dp",
@@ -493,7 +496,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             // Text Size
                             SliderItem(
-                                label = "Text Size",
+                                label = UiText.get(R.string.waex_ui_text_size_4c676fed, "Text Size"),
                                 value = textSize,
                                 valueRange = 9f..15f,
                                 unit = "sp",
@@ -506,7 +509,7 @@ fun FloatingBottomBarCustomizerScreen() {
                             HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f))
 
                             SliderItem(
-                                label = "Icon & Label Spacing",
+                                label = UiText.get(R.string.waex_ui_icon_label_spacing_55a49e40, "Icon & Label Spacing"),
                                 value = iconLabelSpacing,
                                 valueRange = 0f..8f,
                                 unit = "dp",
@@ -520,8 +523,8 @@ fun FloatingBottomBarCustomizerScreen() {
 
                     // Glassmorphism & Scroll Hide
                     WaexSectionHeader(
-                        title = "Behavior & Translucency",
-                        subtitle = "Configure scroll hide dynamics and backdrop opacity"
+                        title = UiText.get(R.string.waex_ui_behavior_translucency_d145210f, "Behavior & Translucency"),
+                        subtitle = UiText.get(R.string.waex_ui_configure_scroll_hide_dynamics_and_bac_42fabf06, "Configure scroll hide dynamics and backdrop opacity")
                     )
 
                     WaexCard(modifier = Modifier.fillMaxWidth()) {
@@ -539,13 +542,13 @@ fun FloatingBottomBarCustomizerScreen() {
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = "Frosted Glass Effect",
+                                        text = UiText.get(R.string.waex_ui_frosted_glass_effect_294ac5db, "Frosted Glass Effect"),
                                         style = typography.bodyMd,
                                         fontWeight = FontWeight.Bold,
                                         color = colors.onSurface
                                     )
                                     Text(
-                                        text = "Translucent background with blurred backdrop",
+                                        text = UiText.get(R.string.waex_ui_translucent_background_with_blurred_ba_0d5bf87c, "Translucent background with blurred backdrop"),
                                         style = typography.labelSm,
                                         color = colors.onSurfaceVariant
                                     )
@@ -561,7 +564,7 @@ fun FloatingBottomBarCustomizerScreen() {
 
                             if (glassEnabled) {
                                 SliderItem(
-                                    label = "Glass Opacity",
+                                    label = UiText.get(R.string.waex_ui_glass_opacity_fd4ffb38, "Glass Opacity"),
                                     value = glassOpacity,
                                     valueRange = 10f..90f,
                                     unit = "%",
@@ -584,13 +587,13 @@ fun FloatingBottomBarCustomizerScreen() {
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = "Hide on Scroll",
+                                        text = UiText.get(R.string.waex_ui_hide_on_scroll_395216cb, "Hide on Scroll"),
                                         style = typography.bodyMd,
                                         fontWeight = FontWeight.Bold,
                                         color = colors.onSurface
                                     )
                                     Text(
-                                        text = "Automatically hides pill when scrolling chat lists",
+                                        text = UiText.get(R.string.waex_ui_automatically_hides_pill_when_scrollin_cc4932d4, "Automatically hides pill when scrolling chat lists"),
                                         style = typography.labelSm,
                                         color = colors.onSurfaceVariant
                                     )
@@ -609,7 +612,7 @@ fun FloatingBottomBarCustomizerScreen() {
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    listOf("downward" to "Slide Down", "invisible" to "Fade Out").forEach { (modeKey, title) ->
+                                    listOf("downward" to UiText.get(R.string.waex_ui_slide_down_a1a55254, "Slide Down"), "invisible" to UiText.get(R.string.waex_ui_fade_out_7d680202, "Fade Out")).forEach { (modeKey, title) ->
                                         val isSelected = scrollHideMode == modeKey
                                         Surface(
                                             shape = radius.smShape,

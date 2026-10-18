@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
@@ -127,7 +130,7 @@ fun FilterItemsScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Filter Items By ID",
+                title = UiText.get(R.string.feat_filter_items_title, "Filter Items By ID"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -144,7 +147,7 @@ fun FilterItemsScreen() {
             ) {
                 Icon(
                     imageVector = WaexIcons.AutoAwesome,
-                    contentDescription = "Add Filter",
+                    contentDescription = UiText.get(R.string.waex_ui_add_filter_76de3dfc, "Add Filter"),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -158,8 +161,8 @@ fun FilterItemsScreen() {
         ) {
             if (filtersList.isEmpty()) {
                 WaexEmptyState(
-                    title = "No Filters Added",
-                    description = "Tap + to add a view ID to remove or customize in WhatsApp.",
+                    title = UiText.get(R.string.waex_ui_no_filters_added_bc59f30c, "No Filters Added"),
+                    description = UiText.get(R.string.waex_ui_tap_to_add_a_view_id_to_remove_or_cust_55465be9, "Tap + to add a view ID to remove or customize in WhatsApp."),
                     icon = WaexIcons.Palette,
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -230,7 +233,7 @@ fun FilterItemsScreen() {
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = String.format(Locale.US, "%.1fx", item.scale),
+                                                text = String.format(UiText.displayLocale(), "%.1fx", item.scale),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Bold,
                                                 color = colors.primary,
@@ -268,12 +271,12 @@ fun FilterItemsScreen() {
                                         fontWeight = FontWeight.SemiBold,
                                         color = colors.onSurface
                                     )
-                                    val scaleFormatted = String.format(Locale.US, "%.1fx", item.scale)
+                                    val scaleFormatted = String.format(UiText.displayLocale(), "%.1fx", item.scale)
                                     val behaviorText = when (item.behavior) {
-                                        FilterItem.BEHAVIOR_COLOR -> "Behavior: Change Color"
-                                        FilterItem.BEHAVIOR_OPACITY -> "Behavior: Opacity (${item.opacity}%)"
-                                        FilterItem.BEHAVIOR_RESIZE -> "Behavior: Resize ($scaleFormatted)"
-                                        else -> "Behavior: Gone (Remove)"
+                                        FilterItem.BEHAVIOR_COLOR -> UiText.get(R.string.waex_ui_behavior_change_color_7489c095, "Behavior: Change Color")
+                                        FilterItem.BEHAVIOR_OPACITY -> UiText.get(R.string.waex_ui_behavior_opacity_1_s_7e479a2b, "Behavior: Opacity (%1\$s%%)", item.opacity)
+                                        FilterItem.BEHAVIOR_RESIZE -> UiText.get(R.string.waex_ui_behavior_resize_1_s_98639c64, "Behavior: Resize (%1\$s)", scaleFormatted)
+                                        else -> UiText.get(R.string.waex_ui_behavior_gone_remove_c0b72aa7, "Behavior: Gone (Remove)")
                                     }
                                     Text(
                                         text = behaviorText,
@@ -289,7 +292,7 @@ fun FilterItemsScreen() {
                                 ) {
                                     Icon(
                                         imageVector = WaexIcons.Clear,
-                                        contentDescription = "Delete",
+                                        contentDescription = UiText.get(R.string.action_delete, "Delete"),
                                         tint = colors.onSurfaceVariant.copy(alpha = 0.6f),
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -305,9 +308,9 @@ fun FilterItemsScreen() {
     // Delete Confirmation Sheet
     itemToDelete?.let { (index, item) ->
         WaexConfirmationBottomSheet(
-            title = "Delete Filter",
-            message = "Are you sure you want to delete filter \"${item.id}\"?",
-            confirmLabel = "Delete Filter",
+            title = UiText.get(R.string.waex_ui_delete_filter_9cb0dfa6, "Delete Filter"),
+            message = UiText.get(R.string.waex_ui_are_you_sure_you_want_to_delete_filter_5aa1a0e8, "Are you sure you want to delete filter \"%1\$s\"?", item.id),
+            confirmLabel = UiText.get(R.string.waex_ui_delete_filter_9cb0dfa6, "Delete Filter"),
             destructive = true,
             onDismiss = { itemToDelete = null },
             onConfirm = {
@@ -371,10 +374,10 @@ private fun FilterEditBottomSheet(
     var showColorPicker by remember { mutableStateOf(false) }
 
     val behaviors = listOf(
-        FilterItem.BEHAVIOR_GONE to "Gone (Remove)",
-        FilterItem.BEHAVIOR_COLOR to "Change Color (Pro)",
-        FilterItem.BEHAVIOR_OPACITY to "Opacity (Pro)",
-        FilterItem.BEHAVIOR_RESIZE to "Resize (Pro)"
+        FilterItem.BEHAVIOR_GONE to UiText.get(R.string.waex_ui_gone_remove_aced6fb5, "Gone (Remove)"),
+        FilterItem.BEHAVIOR_COLOR to UiText.get(R.string.waex_ui_change_color_pro_0fbd0557, "Change Color (Pro)"),
+        FilterItem.BEHAVIOR_OPACITY to UiText.get(R.string.waex_ui_opacity_pro_aa6ab765, "Opacity (Pro)"),
+        FilterItem.BEHAVIOR_RESIZE to UiText.get(R.string.waex_ui_resize_pro_7dff96e9, "Resize (Pro)")
     )
 
     ModalBottomSheet(
@@ -403,7 +406,7 @@ private fun FilterEditBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = if (initialItem != null) "Edit Filter" else "Add Filter",
+                text = if (initialItem != null) UiText.get(R.string.waex_ui_edit_filter_47d55283, "Edit Filter") else UiText.get(R.string.waex_ui_add_filter_76de3dfc, "Add Filter"),
                 style = typography.headlineMd,
                 fontWeight = FontWeight.Bold,
                 color = colors.onSurface
@@ -415,8 +418,8 @@ private fun FilterEditBottomSheet(
                     idText = it
                     if (it.isNotBlank()) idError = null
                 },
-                label = { Text("Filter View ID") },
-                placeholder = { Text("e.g. conversation_row_date") },
+                label = { Text(UiText.get(R.string.waex_ui_filter_view_id_1867e726, "Filter View ID")) },
+                placeholder = { Text(UiText.get(R.string.waex_ui_e_g_conversation_row_date_c1b9b63b, "e.g. conversation_row_date")) },
                 isError = idError != null,
                 supportingText = idError?.let { { Text(it, color = Color.Red) } },
                 singleLine = true,
@@ -425,7 +428,7 @@ private fun FilterEditBottomSheet(
             )
 
             Text(
-                text = "Behavior",
+                text = UiText.get(R.string.waex_ui_behavior_edf8d3f1, "Behavior"),
                 style = typography.labelSm,
                 fontWeight = FontWeight.Bold,
                 color = colors.onSurfaceVariant
@@ -446,7 +449,7 @@ private fun FilterEditBottomSheet(
                             .fillMaxWidth()
                             .clickable {
                                 if (isProBehavior && !isPro) {
-                                    Toast.makeText(context, "This behavior requires Pro license.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, UiText.get(R.string.waex_ui_this_behavior_requires_pro_license_225df57d, "This behavior requires Pro license."), Toast.LENGTH_SHORT).show()
                                     onActivatePro()
                                 } else {
                                     selectedBehavior = behavior
@@ -463,7 +466,7 @@ private fun FilterEditBottomSheet(
                                 selected = isSelected,
                                 onClick = {
                                     if (isProBehavior && !isPro) {
-                                        Toast.makeText(context, "This behavior requires Pro license.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, UiText.get(R.string.waex_ui_this_behavior_requires_pro_license_225df57d, "This behavior requires Pro license."), Toast.LENGTH_SHORT).show()
                                         onActivatePro()
                                     } else {
                                         selectedBehavior = behavior
@@ -509,7 +512,7 @@ private fun FilterEditBottomSheet(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Choose Color",
+                                text = UiText.get(R.string.waex_ui_choose_color_f2cd02c5, "Choose Color"),
                                 style = typography.bodyMd,
                                 color = colors.onSurface
                             )
@@ -520,7 +523,7 @@ private fun FilterEditBottomSheet(
                     OutlinedTextField(
                         value = opacityText,
                         onValueChange = { opacityText = it },
-                        label = { Text("Opacity (0 - 100)") },
+                        label = { Text(UiText.get(R.string.waex_ui_opacity_0_100_e19bed46, "Opacity (0 - 100)")) },
                         suffix = { Text("%") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -530,7 +533,7 @@ private fun FilterEditBottomSheet(
                 FilterItem.BEHAVIOR_RESIZE -> {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Scale: ${String.format(Locale.US, "%.1fx", scaleValue)}",
+                            text = UiText.get(R.string.waex_ui_scale_1_s_c7fc4a67, "Scale: %1\$s", String.format(UiText.displayLocale(), "%.1fx", scaleValue)),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant
                         )
@@ -548,7 +551,7 @@ private fun FilterEditBottomSheet(
                             )
                         )
                         Text(
-                            text = "Note: Resizing view elements dynamically requires extra layout rendering. This may cause screens containing these elements to load with a minor delay.",
+                            text = UiText.get(R.string.waex_ui_note_resizing_view_elements_dynamicall_95d239ba, "Note: Resizing view elements dynamically requires extra layout rendering. This may cause screens containing these elements to load with a minor delay."),
                             style = typography.labelSm,
                             color = colors.error,
                             fontSize = 11.sp
@@ -565,14 +568,14 @@ private fun FilterEditBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(UiText.get(R.string.action_cancel, "Cancel"))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = {
                         val trimmedId = idText.trim()
                         if (trimmedId.isEmpty()) {
-                            idError = "View ID cannot be empty"
+                            idError = UiText.get(R.string.waex_ui_view_id_cannot_be_empty_c385b267, "View ID cannot be empty")
                             return@Button
                         }
 
@@ -597,7 +600,7 @@ private fun FilterEditBottomSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                     shape = radius.defaultShape
                 ) {
-                    Text("Save", color = colors.onPrimary, fontWeight = FontWeight.Bold)
+                    Text(UiText.get(R.string.action_save, "Save"), color = colors.onPrimary, fontWeight = FontWeight.Bold)
                 }
             }
         }

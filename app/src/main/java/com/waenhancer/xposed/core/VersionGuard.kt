@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.core
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -32,16 +35,22 @@ object VersionGuard {
     internal fun noticeMessage(version: String, decision: UniversalVersionValidator.Decision): String {
         val reason = when (decision) {
             UniversalVersionValidator.Decision.UNSUPPORTED ->
-                "Your WhatsApp version ($version) does not match the configured version rules."
+                UiText.get(R.string.waex_l10n_guard_unsupported,
+                    "Your WhatsApp version (%1\$s) does not match the configured version rules.", version)
             UniversalVersionValidator.Decision.RULES_UNAVAILABLE ->
-                "WAEX could not read its version rules from this WhatsApp process. " +
-                "Check that WhatsApp can access the WAEX package and its resources."
+                UiText.get(R.string.waex_l10n_guard_rules_unavailable,
+                    "WAEX could not read its version rules from this WhatsApp process. Check that WhatsApp can access the WAEX package and its resources.")
             UniversalVersionValidator.Decision.PREFERENCES_UNAVAILABLE ->
-                "WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp."
-            else -> "WAEX could not determine the installed WhatsApp version."
+                UiText.get(R.string.waex_l10n_guard_prefs_unavailable,
+                    "WAEX could not read the compatibility settings. Check the preference bridge and restart WhatsApp.")
+            else -> UiText.get(R.string.waex_l10n_guard_version_unknown,
+                "WAEX could not determine the installed WhatsApp version.")
         }
-        return reason + "\n\nWAEX features are paused for safety. This is not confirmation of functional compatibility." +
-            "\n\nOpen WAEX settings to review the problem. Do not enable a version bypass just to hide an access error."
+        return reason + "\n\n" +
+            UiText.get(R.string.waex_l10n_guard_paused,
+                "WAEX features are paused for safety. This is not confirmation of functional compatibility.") +
+            "\n\n" + UiText.get(R.string.waex_l10n_guard_review,
+                "Open WAEX settings to review the problem. Do not enable a version bypass just to hide an access error.")
     }
 
     @JvmStatic
@@ -112,9 +121,9 @@ object VersionGuard {
                 }
 
                 WaexBottomSheet(activity)
-                    .setTitle("WAEX Compatibility Notice")
+                    .setTitle(UiText.get(R.string.waex_ui_waex_compatibility_notice_a91003b3, "WAEX Compatibility Notice"))
                     .setMessage(noticeMessage(currentVersion, decision))
-                    .setPositiveButton("Open WAEX Settings") { dialog, _ ->
+                    .setPositiveButton(UiText.get(R.string.waex_ui_open_waex_settings_51efb194, "Open WAEX Settings")) { dialog, _ ->
                         try {
                             val pm = activity.packageManager
                             val intent = pm.getLaunchIntentForPackage("com.waenhancer") ?: Intent().apply {

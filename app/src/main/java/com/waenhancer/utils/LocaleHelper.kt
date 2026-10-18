@@ -16,7 +16,7 @@ object LocaleHelper {
         LanguageOption("system", "Follow System", "System Default"),
         LanguageOption("en", "English", "English"),
         LanguageOption("zh-CN", "Chinese (Simplified)", "简体中文"),
-        LanguageOption("es", "Spanish", "Español"),
+        LanguageOption("es-419", "Spanish (Latin America)", "Español (Latinoamérica)"),
         LanguageOption("ar", "Arabic", "العربية"),
         LanguageOption("pt", "Portuguese", "Português"),
         LanguageOption("in", "Indonesian", "Bahasa Indonesia"),
@@ -30,30 +30,28 @@ object LocaleHelper {
 
     fun getSelectedLanguageCode(context: Context): String {
         val prefs = PreferenceStores.publicStore(context)
-        return prefs.getString(PREF_APP_LANGUAGE, "system") ?: "system"
+        return DisplayLocalePolicy.canonicalCode(prefs.getString(PREF_APP_LANGUAGE, "system"))
     }
 
     fun getLanguageDisplayName(code: String): String {
-        val opt = SUPPORTED_LANGUAGES.find { it.code == code }
-        return opt?.nativeName ?: "Follow System"
+        val canonical = DisplayLocalePolicy.canonicalCode(code)
+        if (canonical == "system") return UiText.get(com.waenhancer.app.R.string.language_default, "System Default")
+        if (canonical == "es-419") return "Español (Latinoamérica)"
+        return SUPPORTED_LANGUAGES.find { it.code == canonical }?.nativeName ?: canonical
+    }
+
+    /** Localized language names, without changing the persisted BCP-47 values. */
+    fun getLanguageExplanation(code: String): String {
+        if (code == "system") return getLanguageDisplayName(code)
+        return DisplayLocalePolicy.resolve(code, java.util.Locale.ENGLISH)
+            .getDisplayName(UiText.displayLocale())
     }
 
     fun applyLanguage(context: Context, langCode: String) {
         val prefs = PreferenceStores.publicStore(context)
         prefs.edit().putString(PREF_APP_LANGUAGE, langCode).apply()
 
-        val locale = if (langCode == "system") {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Resources.getSystem().configuration.locales[0]
-            } else {
-                @Suppress("DEPRECATION")
-                Resources.getSystem().configuration.locale
-            }
-        } else if (langCode == "in") {
-            Locale("in", "ID")
-        } else {
-            Locale.forLanguageTag(langCode)
-        }
+        val locale = DisplayLocalePolicy.resolve(langCode, Resources.getSystem().configuration.locales[0])
         Locale.setDefault(locale)
     }
 
@@ -61,7 +59,7 @@ object LocaleHelper {
         val langCode = getSelectedLanguageCode(context)
         if (langCode == "system") return context
 
-        val locale = if (langCode == "in") Locale("in", "ID") else Locale.forLanguageTag(langCode)
+        val locale = DisplayLocalePolicy.resolve(langCode, Resources.getSystem().configuration.locales[0])
         Locale.setDefault(locale)
 
         val config = Configuration(context.resources.configuration)

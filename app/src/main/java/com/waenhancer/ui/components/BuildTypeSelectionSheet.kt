@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,14 +63,14 @@ fun BuildTypeSelectionSheet(
         ) {
             Column {
                 Text(
-                    text = "Select Build Type",
+                    text = UiText.get(R.string.waex_ui_select_build_type_7aca4b93, "Select Build Type"),
                     style = typography.headlineMd,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Available APK assets for ${release.tagName}",
+                    text = UiText.get(R.string.waex_ui_available_apk_assets_for_1_s_8419f6c4, "Available APK assets for %1\$s", release.tagName),
                     style = typography.bodyMd,
                     color = colors.onSurfaceVariant
                 )
@@ -146,7 +149,7 @@ fun BuildTypeSelectionSheet(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancel")
+                Text(UiText.get(R.string.action_cancel, "Cancel"))
             }
         }
     }

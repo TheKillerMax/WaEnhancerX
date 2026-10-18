@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.privacy;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -394,14 +397,14 @@ public class CallPrivacyHook extends BaseFeature {
         }
 
         if (!TextUtils.isEmpty(contactName) && !contactName.equals("Unknown") && !contactName.equals(rawJid)) {
-            sb.append("Contact: ").append(contactName).append("\n");
+            sb.append(UiText.get(R.string.waex_ui_contact_8fe6d397, "Contact: ")).append(contactName).append("\n");
         }
 
         if (!TextUtils.isEmpty(resolvedPhone)) {
             String formattedPhone = resolvedPhone.startsWith("+") ? resolvedPhone : "+" + resolvedPhone;
-            sb.append("Number: ").append(formattedPhone).append("\n");
+            sb.append(UiText.get(R.string.waex_ui_number_45bd4956, "Number: ")).append(formattedPhone).append("\n");
         } else if (contactName != null && contactName.startsWith("+")) {
-            sb.append("Number: ").append(contactName).append("\n");
+            sb.append(UiText.get(R.string.waex_ui_number_45bd4956, "Number: ")).append(contactName).append("\n");
         }
 
         String ip = (String) getObjectFieldSafe(wamCall, "callPeerIpStr");
@@ -421,16 +424,16 @@ public class CallPrivacyHook extends BaseFeature {
                         String timeZone = json.optString("timezone", "null");
 
                         if (!"null".equals(isp) && !TextUtils.isEmpty(isp)) {
-                            sb.append("ISP: ").append(isp).append("\n");
+                            sb.append(UiText.get(R.string.waex_ui_isp_3dc5d9b0, "ISP: ")).append(isp).append("\n");
                         }
                         if (!"null".equals(region) && !TextUtils.isEmpty(region)) {
-                            sb.append("Region: ").append(region).append("\n");
+                            sb.append(UiText.get(R.string.waex_ui_region_82dd7dd1, "Region: ")).append(region).append("\n");
                         }
                         if (!"null".equals(timeZone) && !TextUtils.isEmpty(timeZone)) {
-                            sb.append("Timezone: ").append(timeZone).append("\n");
+                            sb.append(UiText.get(R.string.waex_ui_timezone_60d86213, "Timezone: ")).append(timeZone).append("\n");
                         }
-                        sb.append("Country: ").append(country).append("\n");
-                        sb.append("City: ").append(city).append("\n");
+                        sb.append(UiText.get(R.string.waex_ui_country_bb1b735c, "Country: ")).append(country).append("\n");
+                        sb.append(UiText.get(R.string.waex_ui_city_9890558c, "City: ")).append(city).append("\n");
                         sb.append("IP: ").append(ip).append("\n");
                     } else {
                         sb.append("IP: ").append(ip).append("\n");
@@ -443,17 +446,17 @@ public class CallPrivacyHook extends BaseFeature {
 
         String platform = (String) getObjectFieldSafe(wamCall, "callPeerPlatform");
         if (!TextUtils.isEmpty(platform)) {
-            sb.append("Platform: ").append(platform).append("\n");
+            sb.append(UiText.get(R.string.waex_ui_platform_b458abe9, "Platform: ")).append(platform).append("\n");
         }
 
         String wppVersion = (String) getObjectFieldSafe(wamCall, "callPeerAppVersion");
         if (!TextUtils.isEmpty(wppVersion)) {
-            sb.append("WhatsApp Version: ").append(wppVersion).append("\n");
+            sb.append(UiText.get(R.string.waex_ui_whatsapp_version_a69b25df, "WhatsApp Version: ")).append(wppVersion).append("\n");
         }
 
         String callSummary = sb.toString().trim();
         if (!callSummary.isEmpty()) {
-            showNotification("Call Information", callSummary);
+            showNotification(UiText.get(R.string.waex_ui_call_information_1e683bf5, "Call Information"), callSummary);
         }
     }
 
@@ -463,14 +466,14 @@ public class CallPrivacyHook extends BaseFeature {
                 String contactName = ContactNameResolver.INSTANCE.resolveName(context, callerJid, null, null);
                 String resolvedPhone = ContactNameResolver.INSTANCE.resolveLidToPhone(context, callerJid);
 
-                String title = "Call Blocked";
+                String title = UiText.get(R.string.waex_ui_call_blocked_f8914b51, "Call Blocked");
                 String body;
                 if (!TextUtils.isEmpty(contactName) && !contactName.equals("Unknown") && !contactName.startsWith("+") && ContactNameResolver.INSTANCE.isValidDisplayName(contactName)) {
-                    body = "Call from " + contactName + " (" + reason + ")";
+                    body = UiText.get(R.string.waex_ui_call_from_e08ca331, "Call from ") + contactName + " (" + reason + ")";
                 } else if (!TextUtils.isEmpty(resolvedPhone) && !ContactNameResolver.INSTANCE.isLidJid(resolvedPhone)) {
-                    body = "Call from +" + resolvedPhone + " (" + reason + ")";
+                    body = UiText.get(R.string.waex_ui_call_from_861d44f2, "Call from +") + resolvedPhone + " (" + reason + ")";
                 } else {
-                    body = "Call from Unknown Caller (" + reason + ")";
+                    body = UiText.get(R.string.waex_ui_call_from_unknown_caller_5fc833e1, "Call from Unknown Caller (") + reason + ")";
                 }
 
                 showNotification(title, body);
@@ -479,11 +482,11 @@ public class CallPrivacyHook extends BaseFeature {
     }
 
     private String getFriendlyBlockType(String type) {
-        if ("no_internet".equals(type)) return "No Internet";
-        if ("busy".equals(type)) return "User Busy";
-        if ("declined".equals(type)) return "Call Declined";
-        if ("uncallable".equals(type)) return "Not Available";
-        if ("ended".equals(type)) return "Ended";
+        if ("no_internet".equals(type)) return UiText.get(R.string.waex_ui_no_internet_ff1eadfe, "No Internet");
+        if ("busy".equals(type)) return UiText.get(R.string.waex_ui_user_busy_0ee28857, "User Busy");
+        if ("declined".equals(type)) return UiText.get(R.string.waex_ui_call_declined_f695a2f2, "Call Declined");
+        if ("uncallable".equals(type)) return UiText.get(R.string.waex_ui_not_available_2ab64517, "Not Available");
+        if ("ended".equals(type)) return UiText.get(R.string.waex_ui_ended_7cdc804e, "Ended");
         return type;
     }
 
@@ -496,7 +499,7 @@ public class CallPrivacyHook extends BaseFeature {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                         channelId,
-                        "WhatsApp Call Information",
+                        UiText.get(R.string.waex_ui_whatsapp_call_information_d0f6cd71, "WhatsApp Call Information"),
                         NotificationManager.IMPORTANCE_HIGH
                 );
                 notificationManager.createNotificationChannel(channel);

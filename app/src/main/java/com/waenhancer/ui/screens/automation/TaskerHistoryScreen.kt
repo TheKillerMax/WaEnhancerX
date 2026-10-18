@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.automation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,22 +65,22 @@ fun TaskerHistoryScreen() {
                 id = "1",
                 eventType = "SENT",
                 contactName = "+1 555-0192",
-                details = "Auto-Reply: I am currently driving, will get back shortly.",
-                timestamp = "Today, 2:15 PM"
+                details = UiText.get(R.string.waex_ui_auto_reply_i_am_currently_driving_will_8c4dec21, "Auto-Reply: I am currently driving, will get back shortly."),
+                timestamp = UiText.get(R.string.waex_ui_today_2_15_pm_3746292d, "Today, 2:15 PM")
             ),
             TaskerHistoryItem(
                 id = "2",
                 eventType = "RECEIVED",
                 contactName = "Alex Thorne",
-                details = "Triggered Macro: 'Forward to Telegram Bot'",
-                timestamp = "Today, 1:40 PM"
+                details = UiText.get(R.string.waex_ui_triggered_macro_forward_to_telegram_bo_b1f50fd0, "Triggered Macro: 'Forward to Telegram Bot'"),
+                timestamp = UiText.get(R.string.waex_ui_today_1_40_pm_3985c17d, "Today, 1:40 PM")
             ),
             TaskerHistoryItem(
                 id = "3",
                 eventType = "SENT",
                 contactName = "+971 50-0001",
-                details = "Automated Morning Briefing Scheduled Dispatch",
-                timestamp = "Today, 9:00 AM"
+                details = UiText.get(R.string.waex_ui_automated_morning_briefing_scheduled_d_42884bb5, "Automated Morning Briefing Scheduled Dispatch"),
+                timestamp = UiText.get(R.string.waex_ui_today_9_00_am_6144f2eb, "Today, 9:00 AM")
             )
         )
     }
@@ -85,7 +88,7 @@ fun TaskerHistoryScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Tasker Execution History",
+                title = UiText.get(R.string.title_tasker_history, "Tasker Execution History"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -133,7 +136,7 @@ fun TaskerHistoryScreen() {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = if (isSent) "Action: Send Intent" else "Event: Message Received",
+                                    text = if (isSent) UiText.get(R.string.waex_ui_action_send_intent_b3deaa4a, "Action: Send Intent") else UiText.get(R.string.waex_ui_event_message_received_29191586, "Event: Message Received"),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.onSurface
@@ -148,7 +151,7 @@ fun TaskerHistoryScreen() {
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Target: ${item.contactName}",
+                                text = UiText.get(R.string.waex_ui_target_1_s_d0d8050b, "Target: %1\$s", item.contactName),
                                 style = typography.labelSm,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.primary,

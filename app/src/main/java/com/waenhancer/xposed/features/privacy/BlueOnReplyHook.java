@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.privacy;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -333,7 +336,7 @@ public class BlueOnReplyHook extends BaseFeature {
         }
         if (menu.findItem(MENU_SEND_BLUE_TICK) != null) return;
 
-        MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, "Send blue tick");
+        MenuItem item = menu.add(Menu.NONE, MENU_SEND_BLUE_TICK, Menu.NONE, UiText.get(R.string.waex_ui_send_blue_tick_a14924d4, "Send blue tick"));
         android.graphics.drawable.Drawable icon = MenuIconLoader.load(context, "ic_waex_mark_read");
         if (icon == null) {
             int iconId = context.getResources().getIdentifier(
@@ -350,8 +353,8 @@ public class BlueOnReplyHook extends BaseFeature {
             Context toastContext = conversation instanceof Context
                     ? (Context) conversation : context;
             Toast.makeText(toastContext,
-                    jid == null ? "Cannot verify chat recipient"
-                            : (sent > 0 ? "Blue tick sent" : "No hidden read receipt to send"),
+                    jid == null ? UiText.get(R.string.waex_l10n_recipient_unconfirmed, "Cannot verify chat recipient")
+                            : (sent > 0 ? UiText.get(R.string.waex_ui_blue_tick_sent_22828691, "Blue tick sent") : UiText.get(R.string.waex_ui_no_hidden_read_receipt_to_send_15d6cfc0, "No hidden read receipt to send")),
                     Toast.LENGTH_SHORT).show();
             return true;
         });

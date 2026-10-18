@@ -70,7 +70,12 @@ def block(s,m):
 def main():
  p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=ROOT);a=p.parse_args();j=a.root/'app/src/main/java/com/waenhancer';s=(j/'ui/components/UpdateDownloadSheet.kt').read_text()
  effect=block(s,'DisposableEffect(session)');cancel=block(s,'OutlinedButton(onClick = ')[len('OutlinedButton(onClick = '):]
- files=dict(FILES);files['Session.kt']=(j/'update/UpdateDownloadSession.kt').read_text();files['Checks.kt']=PROGRAM.replace('EFFECT',effect).replace('CANCEL',cancel)
+ import re
+ ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',effect+cancel)))
+ r_stub='object R {object string {'+ ''.join(f'const val {name} = {0x7f060100+i};' for i,name in enumerate(ids))+'}}\n'
+ ui_stub='object UiText {fun get(id:Int, fallback:String, vararg args:Any?):String = if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)}\n'
+ files=dict(FILES);files['Session.kt']=(j/'update/UpdateDownloadSession.kt').read_text()
+ files['Checks.kt']=PROGRAM.replace('EFFECT',effect).replace('CANCEL',cancel).replace('class Context\n',r_stub+ui_stub+'class Context\n')
  with tempfile.TemporaryDirectory(prefix='waex-session-') as d:
   out=Path(d)
   for n,v in files.items():(out/n).write_text(v)

@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -91,7 +94,7 @@ fun WaexSearchBar(
                 ) {
                     Icon(
                         imageVector = WaexIcons.Clear,
-                        contentDescription = "Clear search",
+                        contentDescription = UiText.get(R.string.waex_ui_clear_search_3b7ea517, "Clear search"),
                         tint = colors.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )

@@ -1,5 +1,8 @@
 package com.waenhancer.app
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -202,8 +205,8 @@ class PermissionsActivity : ComponentActivity() {
                 items.add(
                     PermissionItem(
                         id = "media_photos_video",
-                        title = "Photos & Media Storage",
-                        description = "Required to save status photos, split videos, and load custom wallpaper themes.",
+                        title = UiText.get(R.string.waex_ui_photos_media_storage_38774dc5, "Photos & Media Storage"),
+                        description = UiText.get(R.string.waex_ui_required_to_save_status_photos_split_v_63d9ba8a, "Required to save status photos, split videos, and load custom wallpaper themes."),
                         icon = WaexIcons.Image,
                         type = PermissionType.RUNTIME,
                         permissions = listOf(
@@ -217,8 +220,8 @@ class PermissionsActivity : ComponentActivity() {
                 items.add(
                     PermissionItem(
                         id = "storage_legacy",
-                        title = "Storage Access",
-                        description = "Required to save status updates, backup configurations, and export recordings.",
+                        title = UiText.get(R.string.waex_ui_storage_access_a334c4ca, "Storage Access"),
+                        description = UiText.get(R.string.waex_ui_required_to_save_status_updates_backup_14a75a0b, "Required to save status updates, backup configurations, and export recordings."),
                         icon = WaexIcons.Folder,
                         type = PermissionType.RUNTIME,
                         permissions = listOf(
@@ -234,8 +237,8 @@ class PermissionsActivity : ComponentActivity() {
                 items.add(
                     PermissionItem(
                         id = "manage_storage",
-                        title = "All Files Access",
-                        description = "Required for WhatsApp database backups, file spoofing, and restoring chat vaults.",
+                        title = UiText.get(R.string.waex_ui_all_files_access_c5936362, "All Files Access"),
+                        description = UiText.get(R.string.waex_ui_required_for_whatsapp_database_backups_961af6f4, "Required for WhatsApp database backups, file spoofing, and restoring chat vaults."),
                         icon = WaexIcons.Folder,
                         type = PermissionType.MANAGE_ALL_FILES
                     )
@@ -246,8 +249,8 @@ class PermissionsActivity : ComponentActivity() {
             items.add(
                 PermissionItem(
                     id = "contacts",
-                    title = "Contacts Access",
-                    description = "Required to resolve contact names and setup per-contact privacy rules.",
+                    title = UiText.get(R.string.waex_ui_contacts_access_af7abbb0, "Contacts Access"),
+                    description = UiText.get(R.string.waex_ui_required_to_resolve_contact_names_and_d8a90ce5, "Required to resolve contact names and setup per-contact privacy rules."),
                     icon = WaexIcons.Contacts,
                     type = PermissionType.RUNTIME,
                     permissions = listOf(Manifest.permission.READ_CONTACTS)
@@ -258,8 +261,8 @@ class PermissionsActivity : ComponentActivity() {
             items.add(
                 PermissionItem(
                     id = "audio_recording",
-                    title = "Microphone & Call Recording",
-                    description = "Required for automatic call recording and AI voice-to-text message transcription.",
+                    title = UiText.get(R.string.waex_ui_microphone_call_recording_db09aa48, "Microphone & Call Recording"),
+                    description = UiText.get(R.string.waex_ui_required_for_automatic_call_recording_109166ae, "Required for automatic call recording and AI voice-to-text message transcription."),
                     icon = WaexIcons.Mic,
                     type = PermissionType.RUNTIME,
                     permissions = listOf(Manifest.permission.RECORD_AUDIO)
@@ -271,8 +274,8 @@ class PermissionsActivity : ComponentActivity() {
                 items.add(
                     PermissionItem(
                         id = "notifications",
-                        title = "Post Notifications",
-                        description = "Required for download progress indicators, online toast alerts, and Tasker sync.",
+                        title = UiText.get(R.string.waex_ui_post_notifications_515765d2, "Post Notifications"),
+                        description = UiText.get(R.string.waex_ui_required_for_download_progress_indicat_70ce5a66, "Required for download progress indicators, online toast alerts, and Tasker sync."),
                         icon = WaexIcons.Notifications,
                         type = PermissionType.RUNTIME,
                         permissions = listOf(Manifest.permission.POST_NOTIFICATIONS)
@@ -284,8 +287,8 @@ class PermissionsActivity : ComponentActivity() {
             items.add(
                 PermissionItem(
                     id = "overlay",
-                    title = "Display Over Other Apps",
-                    description = "Required to display floating action bubbles, online toasts, and chat quick menus.",
+                    title = UiText.get(R.string.waex_ui_display_over_other_apps_9a1d9177, "Display Over Other Apps"),
+                    description = UiText.get(R.string.waex_ui_required_to_display_floating_action_bu_a9a30dce, "Required to display floating action bubbles, online toasts, and chat quick menus."),
                     icon = WaexIcons.Layers,
                     type = PermissionType.SYSTEM_ALERT_WINDOW
                 )
@@ -295,8 +298,8 @@ class PermissionsActivity : ComponentActivity() {
             items.add(
                 PermissionItem(
                     id = "battery",
-                    title = "Ignore Battery Optimizations",
-                    description = "Prevents system throttling for background Tasker automations and persistent stealth hooks.",
+                    title = UiText.get(R.string.waex_ui_ignore_battery_optimizations_58d12723, "Ignore Battery Optimizations"),
+                    description = UiText.get(R.string.waex_ui_prevents_system_throttling_for_backgro_663fb76c, "Prevents system throttling for background Tasker automations and persistent stealth hooks."),
                     icon = WaexIcons.Battery,
                     type = PermissionType.BATTERY_OPTIMIZATION
                 )
@@ -307,8 +310,8 @@ class PermissionsActivity : ComponentActivity() {
                 items.add(
                     PermissionItem(
                         id = "install_packages",
-                        title = "Install Unknown Apps",
-                        description = "Required for seamless in-app version update downloads and module installations.",
+                        title = UiText.get(R.string.waex_ui_install_unknown_apps_d293d7b0, "Install Unknown Apps"),
+                        description = UiText.get(R.string.waex_ui_required_for_seamless_in_app_version_u_d1c6c3a3, "Required for seamless in-app version update downloads and module installations."),
                         icon = WaexIcons.Install,
                         type = PermissionType.INSTALL_PACKAGES
                     )
@@ -504,7 +507,7 @@ fun PermissionsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Continue to WaEnhancerX",
+                                text = UiText.get(R.string.waex_ui_continue_to_waenhancerx_44fe727b, "Continue to WaEnhancerX"),
                                 style = typography.bodyLg,
                                 fontWeight = FontWeight.Bold
                             )
@@ -518,7 +521,7 @@ fun PermissionsScreen(
 
                     if (!allGranted) {
                         Text(
-                            text = "$grantedCount of $totalCount granted. Missing permissions will be requested when a feature needs them.",
+                            text = UiText.get(R.string.waex_ui_1_s_of_2_s_granted_missing_permissions_d52260f9, "%1\$s of %2\$s granted. Missing permissions will be requested when a feature needs them.", grantedCount, totalCount),
                             style = typography.labelSm,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -565,7 +568,7 @@ fun PermissionsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Optional Permissions",
+                        text = UiText.get(R.string.waex_ui_optional_permissions_766be476, "Optional Permissions"),
                         style = typography.displayLgMobile,
                         fontWeight = FontWeight.Bold,
                         color = colors.onBackground
@@ -575,7 +578,7 @@ fun PermissionsScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Grant everything now for convenience, or continue and allow permissions only when a feature needs them.",
+                        text = UiText.get(R.string.waex_ui_grant_everything_now_for_convenience_o_022cad3f, "Grant everything now for convenience, or continue and allow permissions only when a feature needs them."),
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant,
                         lineHeight = 20.sp
@@ -597,13 +600,13 @@ fun PermissionsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Setup Progress",
+                                    text = UiText.get(R.string.waex_ui_setup_progress_c4b08e4f, "Setup Progress"),
                                     style = typography.bodyMd,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.onSurface
                                 )
                                 Text(
-                                    text = "$grantedCount of $totalCount Granted",
+                                    text = UiText.get(R.string.waex_ui_1_s_of_2_s_granted_f824e2d7, "%1\$s of %2\$s Granted", grantedCount, totalCount),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.Bold,
                                     color = if (allGranted) Color(0xFF22C55E) else colors.primary

@@ -56,7 +56,7 @@ POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0<
 def harness(source, baseline=False):
     imports = '\n'.join(line for line in source.splitlines() if line.startswith('import ') and
                          (line.startswith('import android.') or line.startswith('import java.') or
-                          'PresenceStateStore' in line))
+                          'PresenceStateStore' in line or 'import com.waenhancer.app.R' in line or 'import com.waenhancer.utils.UiText' in line))
     names = ['bindRow', 'ensureOverlay', 'render', 'recordIdentityAlias']
     if not baseline:
         names += ['queueBindRow', 'queuePresenceRefresh', 'clearRow', 'stateForRow', 'layoutOverlay']
@@ -93,7 +93,16 @@ def execute(root, out, deps, baseline):
     (out/'PresenceRowRenderingTest.kt').write_text(BASELINE_TESTS if baseline else TESTS,encoding='utf-8')
     classes=out/'classes'; classes.mkdir(exist_ok=True)
     cp=os.pathsep.join(str(p) for p in deps.glob('*.jar'))
-    run(['javac','--release','17','-d',str(classes),str(root/STORE)],out/'javac.log')
+    java_sources=[root/STORE]
+    if 'UiText.' in source:
+        # Actual helper and policy, not an English UiText test replacement. Synthetic
+        # R IDs are only compile bindings here; localized resource selection is tested
+        # against a real AAPT2 table in verify_runtime_framework.py.
+        from localization_support import write_r
+        java_sources.append(write_r(root,out/'generated')[0])
+        java_sources += [root/'app/src/main/java/com/waenhancer/utils'/name
+                         for name in ('UiText.java','DisplayLocalePolicy.java')]
+    run(['javac','--release','17','-classpath',cp,'-d',str(classes),*map(str,java_sources)],out/'javac.log')
     run(['kotlinc',str(out/'RendererHarness.kt'),str(out/'PresenceRowRenderingTest.kt'),'-jvm-target','17',
          '-classpath',cp+os.pathsep+str(classes),'-include-runtime','-d',str(out/'tests.jar')],out/'kotlinc.log')
     opens=['java.base/java.lang','java.base/java.util','java.base/java.io','java.base/java.net',

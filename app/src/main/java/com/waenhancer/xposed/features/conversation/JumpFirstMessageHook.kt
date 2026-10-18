@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.conversation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -123,12 +126,12 @@ class JumpFirstMessageHook(
 
         if (menu.findItem(MENU_ITEM_ID) != null) return
 
-        val menuItem = menu.add(Menu.NONE, MENU_ITEM_ID, Menu.NONE, MENU_LABEL)
+        val menuItem = menu.add(Menu.NONE, MENU_ITEM_ID, Menu.NONE, UiText.get(R.string.feat_jump_to_first_message_title, MENU_LABEL))
         menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         menuItem.setOnMenuItemClickListener {
             val chatJid = extractChatJidFromActivity(activity)
             if (chatJid.isNullOrEmpty()) {
-                Toast.makeText(activity, "Unable to determine chat JID", Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, UiText.get(R.string.waex_ui_unable_to_determine_chat_jid_fb5fdb1b, "Unable to determine chat JID"), Toast.LENGTH_SHORT).show()
                 return@setOnMenuItemClickListener true
             }
 
@@ -136,7 +139,7 @@ class JumpFirstMessageHook(
                 val firstMsg = queryFirstMessage(activity, chatJid)
                 if (firstMsg == null) {
                     activity.runOnUiThread {
-                        Toast.makeText(activity, "No message history found", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(activity, UiText.get(R.string.waex_ui_no_message_history_found_d6380f22, "No message history found"), Toast.LENGTH_SHORT).show()
                     }
                     return@execute
                 }

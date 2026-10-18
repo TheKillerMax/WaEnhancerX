@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.media
 
+import com.waenhancer.utils.UiText
+
 import com.waenhancer.app.R
 import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
@@ -114,7 +116,8 @@ fun MediaStatusHubScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
     fun readMediaKey(key: String): Boolean {
         // The UI must reflect the settings consumed by hooks, not stale legacy aliases.
-        if (key == "call_recording" || key == "media_upload_quality") {
+        if (key == "call_recording" || key == "media_upload_quality"
+            || key == "downloadviewonce" || key == "download_view_once") {
             return MediaQuickSettingPolicy.isEnabled(key) { storedKey ->
                 preferenceManager.getBoolean(storedKey, false)
             }
@@ -151,7 +154,7 @@ fun MediaStatusHubScreen() {
             // handlers use settingsState, so never show a failed save as successful.
             mediaKeys.forEach { mediaKey -> settingsState[mediaKey] = readMediaKey(mediaKey) }
         } else {
-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
         }
     }
 

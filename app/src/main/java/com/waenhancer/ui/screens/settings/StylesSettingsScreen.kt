@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.utils.UiText
+
 import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
 
@@ -103,7 +105,7 @@ fun StylesSettingsScreen() {
             "custom_view_dpi", "seen_tick_customization", "floating_bottom_bar",
             "unlock_premium_customization", "custom_filters",
             "dotonline", "showonlinetext", "typing_online_toasts",
-            "channels_enhancements", "chat_filters", "hide_ui_tabs",
+            "metaai", "channels_enhancements", "chat_filters", "hide_ui_tabs",
             "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
             "contact_blocked_verify",
             "send_audio_as_voice_status", "disable_sensor_proximity"
@@ -159,7 +161,7 @@ fun StylesSettingsScreen() {
             settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
         } else {
             // Failed commits must not appear as successful changes in the UI.
-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -235,7 +237,7 @@ fun StylesSettingsScreen() {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    listOf("appearance" to "Appearance", "layout" to "Home & Feed").forEach { (tabId, label) ->
+                    listOf("appearance" to UiText.get(R.string.waex_ui_appearance_3907fa7f, "Appearance"), "layout" to UiText.get(R.string.waex_ui_home_feed_ea0a795f, "Home & Feed")).forEach { (tabId, label) ->
                         val isSelected = selectedTab == tabId
                         val textColor by animateColorAsState(
                             targetValue = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -368,7 +370,7 @@ fun StylesSettingsScreen() {
                                             ) {
                                                 Icon(
                                                     imageVector = WaexIcons.Settings,
-                                                    contentDescription = "Customize Floating Bottom Bar",
+                                                    contentDescription = UiText.get(R.string.waex_ui_customize_floating_bottom_bar_58ae0180, "Customize Floating Bottom Bar"),
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -383,7 +385,7 @@ fun StylesSettingsScreen() {
                                             ) {
                                                 Icon(
                                                     imageVector = WaexIcons.Settings,
-                                                    contentDescription = "Configure Filter Items",
+                                                    contentDescription = UiText.get(R.string.waex_ui_configure_filter_items_1e380999, "Configure Filter Items"),
                                                     tint = colors.primary,
                                                     modifier = Modifier.size(20.dp)
                                                 )
@@ -392,7 +394,7 @@ fun StylesSettingsScreen() {
                                         if (needsTypedEditor) {
                                             Icon(
                                                 imageVector = WaexIcons.ChevronRight,
-                                                contentDescription = "Configure $locTitle",
+                                                contentDescription = UiText.get(R.string.waex_ui_configure_1_s_a548a230, "Configure %1\$s", locTitle),
                                                 tint = colors.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -450,60 +452,60 @@ private fun TypedStyleEditorDialog(
             onSaved()
         } else {
             // Keep the editor and its input open so the user can retry.
-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
         }
     }
     when (key) {
         "custom_theme" -> TextValueEditorDialog(
-            title = "Custom Theme CSS",
-            description = "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving.",
+            title = UiText.get(R.string.feat_custom_theme_title, "Custom Theme CSS"),
+            description = UiText.get(R.string.waex_ui_style_whatsapp_views_using_ids_widget_eedbeb45, "Style WhatsApp views using IDs, widget types, scoped activities, and common CSS properties. Restart WhatsApp after saving."),
             initialValue = preferenceManager.getString("css_theme", "") ?: "",
             singleLine = false,
             placeholder = "#conversation_row_date {\n  color: #FFFFFF;\n  font-size: 12sp;\n}",
             validator = ::isValidCustomCss,
-            errorMessage = "Check that every selector has a matching { } block",
+            errorMessage = UiText.get(R.string.waex_ui_check_that_every_selector_has_a_matchi_c94dfb11, "Check that every selector has a matching { } block"),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicString("css_theme", it.trim())) }
         )
         "custom_view_dpi" -> TextValueEditorDialog(
-            title = "Default DPI",
-            description = "Enter 0 to use the device default, or a DPI value from 120 to 1000.",
+            title = UiText.get(R.string.waex_ui_default_dpi_9037cbe6, "Default DPI"),
+            description = UiText.get(R.string.waex_ui_enter_0_to_use_the_device_default_or_a_2e3826cd, "Enter 0 to use the device default, or a DPI value from 120 to 1000."),
             initialValue = preferenceManager.getString("change_dpi", "0") ?: "0",
             singleLine = true,
             placeholder = "0",
             validator = { value ->
                 value.toIntOrNull()?.let { it == 0 || it in 120..1000 } == true
             },
-            errorMessage = "Enter 0 or a number from 120 to 1000",
+            errorMessage = UiText.get(R.string.waex_ui_enter_0_or_a_number_from_120_to_1000_b5a85be0, "Enter 0 or a number from 120 to 1000"),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicString("change_dpi", it.trim())) }
         )
         "chat_filters" -> ChoiceValueEditorDialog(
-            title = "Chat filter display",
+            title = UiText.get(R.string.waex_ui_chat_filter_display_7d02ece7, "Chat filter display"),
             selectedValue = preferenceManager.getString("chatfilter", "2") ?: "2",
-            choices = listOf("0" to "Hide search", "1" to "Search icon", "2" to "Search bar"),
+            choices = listOf("0" to UiText.get(R.string.waex_ui_hide_search_14bd5cb7, "Hide search"), "1" to UiText.get(R.string.waex_ui_search_icon_edfdb08d, "Search icon"), "2" to UiText.get(R.string.waex_ui_search_bar_de54d68f, "Search bar")),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicString("chatfilter", it)) }
         )
         "quick_home_menu" -> ChoiceValueEditorDialog(
-            title = "Quick Action Home Menu",
+            title = UiText.get(R.string.feat_quick_home_menu_title, "Quick Action Home Menu"),
             selectedValue = preferenceManager.getString("waex_menu_style", "grouped") ?: "grouped",
             choices = listOf(
-                "grouped" to "Grouped under WAEX",
-                "separate" to "Separate menu items",
-                "icons" to "Toolbar icons"
+                "grouped" to UiText.get(R.string.waex_ui_grouped_under_waex_2485cb08, "Grouped under WAEX"),
+                "separate" to UiText.get(R.string.waex_ui_separate_menu_items_36c8f114, "Separate menu items"),
+                "icons" to UiText.get(R.string.waex_ui_toolbar_icons_12004bba, "Toolbar icons")
             ),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicString("waex_menu_style", it)) }
         )
         "hide_ui_tabs" -> MultiChoiceValueEditorDialog(
-            title = "Hide home tabs",
+            title = UiText.get(R.string.waex_ui_hide_home_tabs_98f3a2cc, "Hide home tabs"),
             selectedValues = preferenceManager.getStringSet("hidetabs", emptySet()) ?: emptySet(),
             choices = listOf(
-                "300" to "Updates",
-                "600" to "Communities",
-                "400" to "Calls",
-                "700" to "Tools"
+                "300" to UiText.get(R.string.waex_ui_updates_22e2bada, "Updates"),
+                "600" to UiText.get(R.string.waex_ui_communities_c864f329, "Communities"),
+                "400" to UiText.get(R.string.waex_ui_calls_b73a5e2c, "Calls"),
+                "700" to UiText.get(R.string.waex_ui_tools_ea93d6a2, "Tools")
             ),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicStringSet("hidetabs", it)) }
@@ -521,7 +523,7 @@ private fun TextValueEditorDialog(
     singleLine: Boolean,
     placeholder: String,
     validator: (String) -> Boolean = { true },
-    errorMessage: String = "Invalid value",
+    errorMessage: String = UiText.get(R.string.waex_ui_invalid_value_d3c7d623, "Invalid value"),
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
@@ -563,14 +565,14 @@ private fun TextValueEditorDialog(
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = radius.buttonShape
             ) {
-                Text("Save", fontWeight = FontWeight.Bold)
+                Text(UiText.get(R.string.action_save, "Save"), fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = radius.buttonShape
             ) {
-                Text("Cancel")
+                Text(UiText.get(R.string.action_cancel, "Cancel"))
             }
         }
     }
@@ -682,7 +684,7 @@ private fun ChoiceValueEditorDialog(
                     contentColor = colors.onPrimary
                 )
             ) {
-                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(text = UiText.get(R.string.action_apply, "Apply"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -694,7 +696,7 @@ private fun ChoiceValueEditorDialog(
                 shape = radius.fullShape
             ) {
                 Text(
-                    text = "Cancel",
+                    text = UiText.get(R.string.action_cancel, "Cancel"),
                     fontWeight = FontWeight.Medium,
                     color = colors.onSurfaceVariant,
                     fontSize = 14.sp
@@ -816,7 +818,7 @@ private fun MultiChoiceValueEditorDialog(
                     contentColor = colors.onPrimary
                 )
             ) {
-                Text(text = "Apply", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(text = UiText.get(R.string.action_apply, "Apply"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -828,7 +830,7 @@ private fun MultiChoiceValueEditorDialog(
                 shape = radius.fullShape
             ) {
                 Text(
-                    text = "Cancel",
+                    text = UiText.get(R.string.action_cancel, "Cancel"),
                     fontWeight = FontWeight.Medium,
                     color = colors.onSurfaceVariant,
                     fontSize = 14.sp
@@ -870,12 +872,12 @@ private fun typedStyleSummary(
     preferenceManager: WaexPreferenceManager,
     @Suppress("UNUSED_PARAMETER") revision: Int
 ): String = when (key) {
-    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) "Not configured" else "Configured"
-    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") "Device default" else "$it DPI" } ?: "Device default"
-    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> "Search hidden"; "1" -> "Search icon"; else -> "Search bar" }
-    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) "No tabs hidden" else "${it.size} hidden" } ?: "No tabs hidden"
-    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> "Separate items"; "icons" -> "Toolbar icons"; else -> "Grouped" }
-    else -> "Configure"
+    "custom_theme" -> if (preferenceManager.getString("css_theme", "").isNullOrBlank()) UiText.get(R.string.waex_ui_not_configured_dd1841d2, "Not configured") else UiText.get(R.string.waex_ui_configured_84aebc69, "Configured")
+    "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") UiText.get(R.string.waex_ui_device_default_aa46c373, "Device default") else "$it DPI" } ?: UiText.get(R.string.waex_ui_device_default_aa46c373, "Device default")
+    "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> UiText.get(R.string.waex_ui_search_hidden_7723b9b3, "Search hidden"); "1" -> UiText.get(R.string.waex_ui_search_icon_edfdb08d, "Search icon"); else -> UiText.get(R.string.waex_ui_search_bar_de54d68f, "Search bar") }
+    "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden") else UiText.get(R.string.waex_ui_1_s_hidden_416c73f0, "%1\$s hidden", it.size) } ?: UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden")
+    "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> UiText.get(R.string.waex_ui_separate_items_7f91460e, "Separate items"); "icons" -> UiText.get(R.string.waex_ui_toolbar_icons_12004bba, "Toolbar icons"); else -> UiText.get(R.string.waex_ui_grouped_89731456, "Grouped") }
+    else -> UiText.get(R.string.waex_ui_configure_6defafa2, "Configure")
 }
 
 private data class StyleGroup(

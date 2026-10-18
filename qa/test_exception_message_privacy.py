@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static fail-closed regression for exception messages in three privacy-sensitive hooks.
+"""Static fail-closed regression for exception messages in selected sensitive paths.
 
 This does not scan unrelated app logging; source-only, not Android instrumentation.
 """
@@ -10,6 +10,8 @@ root = Path(__file__).resolve().parents[1] / 'app/src/main/java/com/waenhancer'
 paths = {
     'privacy': 'xposed/features/privacy/CustomPrivacyHook.kt',
     'media': 'xposed/features/media/MediaPreviewHook.kt',
+    'view_once': 'xposed/features/media/DownloadViewOnceHook.java',
+    'proximity': 'xposed/features/media/ProximitySensorHook.java',
     'ipc': 'xposed/bridge/client/PreferenceBridgeClient.java',
 }
 src = {key:(root/path).read_text(encoding='utf-8') for key,path in paths.items()}
@@ -46,7 +48,7 @@ UNSAFE = re.compile(r'\b(?:t|e|ex|dbError|error)\s*\.\s*getMessage\s*\('
                     r'|\$message\b')
 for key,source in src.items():
     calls = list(hook_logs(source))
-    assert len(calls) >= 3, f'Logging removed unexpectedly in {key}'
+    assert len(calls) >= (2 if key == 'proximity' else 3), f'Logging removed unexpectedly in {key}'
     for i,expr in enumerate(calls):
         assert not UNSAFE.search(expr), f'{key} may leak exception details at call {i+1}'
 
@@ -64,4 +66,4 @@ assert 'Error: ${e.javaClass.simpleName}' in src['media']
 assert src['ipc'].count('t.getClass().getSimpleName()') >= 5
 assert 'error.getMessage()' not in src['ipc'], 'Persistent runtime health leaks exception text'
 assert 'String detail = error.getClass().getSimpleName();' in src['ipc']
-print('PASS: exception text redacted from selected custom-privacy, media and IPC logs/status')
+print('PASS: exception text redacted from selected custom-privacy, media, view-once, proximity and IPC logs/status')

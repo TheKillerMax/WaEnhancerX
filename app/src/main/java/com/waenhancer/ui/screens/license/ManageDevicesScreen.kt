@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.license
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -80,7 +83,7 @@ data class ConnectedDeviceItem(
     val id: Int = 0,
     val deviceId: String = "",
     val devicePubKey: String = "",
-    val deviceInfo: String = "Unknown Device",
+    val deviceInfo: String = UiText.get(R.string.waex_ui_unknown_device_88fc11e3, "Unknown Device"),
     val lastLinkLocation: String = "",
     val createdAt: String = "",
     val isCurrent: Boolean = false
@@ -266,7 +269,7 @@ fun ManageDevicesScreen() {
                         id = obj.optInt("id", 0),
                         deviceId = obj.optString("device_id", ""),
                         devicePubKey = obj.optString("device_pub_key", ""),
-                        deviceInfo = obj.optString("device_info", "Android Device"),
+                        deviceInfo = obj.optString("device_info", UiText.get(R.string.waex_ui_android_device_9ea4780b, "Android Device")),
                         lastLinkLocation = obj.optString("last_link_location", ""),
                         createdAt = obj.optString("created_at", ""),
                         isCurrent = obj.optBoolean("is_current", false)
@@ -299,9 +302,9 @@ fun ManageDevicesScreen() {
                 isLoading = false
                 isRefreshing = false
                 if (devicesList.isEmpty()) {
-                    errorMessage = msg ?: "Failed to fetch connected devices."
+                    errorMessage = msg ?: UiText.get(R.string.waex_ui_failed_to_fetch_connected_devices_127a4496, "Failed to fetch connected devices.")
                 } else {
-                    Toast.makeText(context, msg ?: "Could not refresh devices.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, msg ?: UiText.get(R.string.waex_ui_could_not_refresh_devices_8e10f690, "Could not refresh devices."), Toast.LENGTH_SHORT).show()
                 }
             }
         })
@@ -324,7 +327,7 @@ fun ManageDevicesScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Connected Devices",
+                title = UiText.get(R.string.waex_ui_connected_devices_16c0c720, "Connected Devices"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -355,7 +358,7 @@ fun ManageDevicesScreen() {
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
-                            text = errorMessage ?: "Failed to load devices",
+                            text = errorMessage ?: UiText.get(R.string.waex_ui_failed_to_load_devices_15cdbbab, "Failed to load devices"),
                             style = typography.bodyMd,
                             color = colors.onSurface,
                             textAlign = TextAlign.Center
@@ -368,7 +371,7 @@ fun ManageDevicesScreen() {
                                 contentColor = colors.onPrimary
                             )
                         ) {
-                            Text(text = "Retry")
+                            Text(text = UiText.get(R.string.waex_ui_retry_942087cc, "Retry"))
                         }
                     }
                 }
@@ -395,12 +398,12 @@ fun ManageDevicesScreen() {
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         Text(
-                                            text = "Active Device Slots",
+                                            text = UiText.get(R.string.waex_ui_active_device_slots_045c453d, "Active Device Slots"),
                                             style = typography.labelSm,
                                             color = colors.onSurfaceVariant
                                         )
                                         Text(
-                                            text = "$linkedCount of $deviceLimit devices in use",
+                                            text = UiText.get(R.string.waex_ui_1_s_of_2_s_devices_in_use_1ac51503, "%1\$s of %2\$s devices in use", linkedCount, deviceLimit),
                                             style = typography.titleMd,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.onSurface
@@ -415,7 +418,7 @@ fun ManageDevicesScreen() {
                                         )
                                     ) {
                                         Text(
-                                            text = if (linkedCount >= deviceLimit) "Limit Full" else "Available",
+                                            text = if (linkedCount >= deviceLimit) UiText.get(R.string.waex_ui_limit_full_67c23ba0, "Limit Full") else UiText.get(R.string.waex_ui_available_e6744473, "Available"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = if (linkedCount >= deviceLimit) Color(0xFFFF9800) else colors.primary,
@@ -429,7 +432,7 @@ fun ManageDevicesScreen() {
 
                         item {
                             Text(
-                                text = "LINKED DEVICES",
+                                text = UiText.get(R.string.waex_ui_linked_devices_34c09c50, "LINKED DEVICES"),
                                 style = typography.labelSm,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.onSurfaceVariant,
@@ -442,7 +445,7 @@ fun ManageDevicesScreen() {
                             item {
                                 WaexCard(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        text = "No linked devices found for this license.",
+                                        text = UiText.get(R.string.waex_ui_no_linked_devices_found_for_this_licen_c225645d, "No linked devices found for this license."),
                                         style = typography.bodyMd,
                                         color = colors.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = 12.dp)
@@ -464,8 +467,8 @@ fun ManageDevicesScreen() {
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             WaexInfoBanner(
-                                title = "Device Management",
-                                message = "You can unlink inactive devices here to free up slots for new installations. Unlinking your current device will deactivate Pro on this phone.",
+                                title = UiText.get(R.string.waex_ui_device_management_0be43a11, "Device Management"),
+                                message = UiText.get(R.string.waex_ui_you_can_unlink_inactive_devices_here_t_c1c5b92f, "You can unlink inactive devices here to free up slots for new installations. Unlinking your current device will deactivate Pro on this phone."),
                                 bannerType = BannerType.INFO
                             )
                             Spacer(modifier = Modifier.height(24.dp))
@@ -523,16 +526,16 @@ fun ManageDevicesScreen() {
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = if (isCurrent) "Unlink This Device?" else "Unlink Connected Device?",
+                            text = if (isCurrent) UiText.get(R.string.waex_ui_unlink_this_device_8d093d5b, "Unlink This Device?") else UiText.get(R.string.waex_ui_unlink_connected_device_1311613b, "Unlink Connected Device?"),
                             style = typography.titleMd,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
                         )
                         Text(
                             text = if (isCurrent)
-                                "Dissociating your current phone will revert WAEX to the Free tier and restart the app."
+                                UiText.get(R.string.waex_ui_dissociating_your_current_phone_will_r_cdfc4aef, "Dissociating your current phone will revert WAEX to the Free tier and restart the app.")
                             else
-                                "This will disconnect '${targetDevice.deviceInfo}' from your license key and free up a device slot.",
+                                UiText.get(R.string.waex_ui_this_will_disconnect_1_s_from_your_lic_83c7968b, "This will disconnect '%1\$s' from your license key and free up a device slot.", targetDevice.deviceInfo),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -556,7 +559,7 @@ fun ManageDevicesScreen() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Device Model",
+                                    text = UiText.get(R.string.waex_ui_device_model_e266c843, "Device Model"),
                                     style = typography.labelSm,
                                     color = colors.onSurfaceVariant
                                 )
@@ -575,7 +578,7 @@ fun ManageDevicesScreen() {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Location / IP",
+                                        text = UiText.get(R.string.waex_ui_location_ip_2730d766, "Location / IP"),
                                         style = typography.labelSm,
                                         color = colors.onSurfaceVariant
                                     )
@@ -597,7 +600,7 @@ fun ManageDevicesScreen() {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = unlinkError ?: "Unlink failed",
+                                text = unlinkError ?: UiText.get(R.string.waex_ui_unlink_failed_c7a96076, "Unlink failed"),
                                 style = typography.labelSm,
                                 color = Color(0xFFF44336),
                                 modifier = Modifier.padding(12.dp),
@@ -625,17 +628,17 @@ fun ManageDevicesScreen() {
                                             val wasCurrent = targetDevice.isCurrent
                                             deviceToUnlink = null
                                             if (wasCurrent) {
-                                                Toast.makeText(context, "Current device unlinked. Reverted to Free tier.", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, UiText.get(R.string.waex_ui_current_device_unlinked_reverted_to_fr_646d3450, "Current device unlinked. Reverted to Free tier."), Toast.LENGTH_LONG).show()
                                                 AppRestartHelper.restartWhatsAppAndModule(context)
                                             } else {
-                                                Toast.makeText(context, "Device unlinked successfully.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, UiText.get(R.string.waex_ui_device_unlinked_successfully_cb9d61d0, "Device unlinked successfully."), Toast.LENGTH_SHORT).show()
                                                 loadDevices(isPull = true)
                                             }
                                         }
 
                                         override fun onError(msg: String?) {
                                             isUnlinking = false
-                                            unlinkError = msg ?: "Unlink failed. Please try again."
+                                            unlinkError = msg ?: UiText.get(R.string.waex_ui_unlink_failed_please_try_again_9fd5d00b, "Unlink failed. Please try again.")
                                         }
                                     }
                                 )
@@ -658,12 +661,12 @@ fun ManageDevicesScreen() {
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "Unlinking Device…",
+                                    text = UiText.get(R.string.waex_ui_unlinking_device_725e69f6, "Unlinking Device…"),
                                     style = typography.bodyMd.copy(fontWeight = FontWeight.Bold)
                                 )
                             } else {
                                 Text(
-                                    text = if (isCurrent) "Confirm Unlink Current Device" else "Confirm Unlink Device",
+                                    text = if (isCurrent) UiText.get(R.string.waex_ui_confirm_unlink_current_device_078a2a44, "Confirm Unlink Current Device") else UiText.get(R.string.waex_ui_confirm_unlink_device_f6a5f66a, "Confirm Unlink Device"),
                                     style = typography.bodyMd.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
@@ -679,7 +682,7 @@ fun ManageDevicesScreen() {
                             enabled = !isUnlinking
                         ) {
                             Text(
-                                text = "Cancel",
+                                text = UiText.get(R.string.action_cancel, "Cancel"),
                                 style = typography.bodyMd.copy(fontWeight = FontWeight.SemiBold),
                                 color = colors.onSurface
                             )
@@ -758,7 +761,7 @@ private fun DeviceCardItem(
                             border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.3f))
                         ) {
                             Text(
-                                text = "This Device",
+                                text = UiText.get(R.string.waex_ui_this_device_7a0686d7, "This Device"),
                                 style = typography.labelSm,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.primary,
@@ -794,7 +797,7 @@ private fun DeviceCardItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Unlink",
+                        text = UiText.get(R.string.waex_ui_unlink_b90108da, "Unlink"),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF44336),

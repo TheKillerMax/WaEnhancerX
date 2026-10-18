@@ -1,5 +1,7 @@
 package com.waenhancer.ui.navigation
 
+import com.waenhancer.utils.UiText
+
 import com.waenhancer.licensing.LicenseManager
 import androidx.activity.compose.BackHandler
 
@@ -296,7 +298,7 @@ fun MainContainerScreen() {
                 (context as? Activity)?.finish()
             } else {
                 lastBackPressTime = currentTime
-                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, UiText.get(R.string.waex_ui_press_back_again_to_exit_c151b888, "Press back again to exit"), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -385,7 +387,7 @@ fun MainContainerScreen() {
                                 ) {
                                     Icon(
                                         imageVector = WaexIcons.Back,
-                                        contentDescription = "Back",
+                                        contentDescription = UiText.get(R.string.action_back, "Back"),
                                         tint = colors.onBackground,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -421,9 +423,9 @@ fun MainContainerScreen() {
                                     else -> colors.onSurfaceVariant
                                 }
                                 val chipLabel = when (licenseState) {
-                                    "pro" -> "Pro"
-                                    "trial" -> "Trial"
-                                    else -> "Free"
+                                    "pro" -> UiText.get(R.string.pro_feature_tag, "Pro")
+                                    "trial" -> UiText.get(R.string.waex_ui_trial_98a66e97, "Trial")
+                                    else -> UiText.get(R.string.waex_ui_free_f411a1fb, "Free")
                                 }
 
                                 Box(
@@ -453,7 +455,7 @@ fun MainContainerScreen() {
                             ) {
                                 Icon(
                                     imageVector = WaexIcons.Search,
-                                    contentDescription = "Search",
+                                    contentDescription = UiText.get(R.string.action_search, "Search"),
                                     tint = colors.onBackground,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -472,7 +474,7 @@ fun MainContainerScreen() {
                                 ) {
                                     Icon(
                                         imageVector = WaexIcons.MoreVert,
-                                        contentDescription = "More Options",
+                                        contentDescription = UiText.get(R.string.waex_ui_more_options_6285ce5d, "More Options"),
                                         tint = colors.onBackground,
                                         modifier = Modifier.size(20.dp)
                                     )

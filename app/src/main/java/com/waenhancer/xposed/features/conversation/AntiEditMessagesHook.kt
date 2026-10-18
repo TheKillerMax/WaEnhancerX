@@ -1,5 +1,9 @@
 package com.waenhancer.xposed.features.conversation
 
+
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -262,7 +266,10 @@ class AntiEditMessagesHook(
                                         val pos = p.args.getOrNull(0) as? Int ?: return
                                         val row = p.result as? ViewGroup ?: return
 
-                                        val item = try { adapter.getItem(pos) } catch (t: Throwable) { null } ?: return
+                                        // The hook is installed once per class, but every chat can
+                                        // have a different adapter instance. Bind this invocation.
+                                        val boundAdapter = p.thisObject as? ListAdapter ?: return
+                                        val item = try { boundAdapter.getItem(pos) } catch (t: Throwable) { null } ?: return
                                         val keyId = extractStableKeyId(item)
                                         var rowId = extractRowId(item)
                                         val msgText = extractMessageText(item)
@@ -271,6 +278,7 @@ class AntiEditMessagesHook(
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_TEXT)
+                                        XposedHelpers.removeAdditionalInstanceField(row, "waex_key_id")
 
                                         if (rowId > 0) {
                                             XposedHelpers.setAdditionalInstanceField(row, FIELD_ROW_ID, rowId)
@@ -395,7 +403,7 @@ class AntiEditMessagesHook(
         val allVersions = loadAllChronologicalVersions(context, rowId, keyId, currentText)
 
         val bottomSheet = WaexBottomSheet(currentActivity).asBottomSheet()
-        bottomSheet.setTitle("Edited Message History")
+        bottomSheet.setTitle(UiText.get(R.string.waex_ui_edited_message_history_492e60cb, "Edited Message History"))
 
         val density = currentActivity.resources.displayMetrics.density
         val dp = { v: Int -> (v * density).toInt() }
@@ -415,7 +423,7 @@ class AntiEditMessagesHook(
         }
 
         val switchLabel = TextView(currentActivity).apply {
-            text = "Show changes"
+            text = UiText.get(R.string.waex_ui_show_changes_b12a6ef8, "Show changes")
             textSize = 13f
             setTextColor(0xFF8696A0.toInt())
             setPadding(0, 0, dp(6), 0)
@@ -458,10 +466,10 @@ class AntiEditMessagesHook(
                 val timeStr = if (item.timestamp > 0) timeFormatter.get().format(Date(item.timestamp)) else ""
 
                 val title = when {
-                    isLatest -> "Version ${item.versionNumber} (Latest) • $timeStr"
-                    isFirst && totalVersions > 1 -> "Version 1 (Original) • $timeStr"
-                    totalVersions == 1 -> "Version 1 (Latest) • $timeStr"
-                    else -> "Version ${item.versionNumber} • $timeStr"
+                    isLatest -> UiText.get(R.string.waex_ui_version_1_s_latest_2_s_d802e8b0, "Version %1\$s (Latest) • %2\$s", item.versionNumber, timeStr)
+                    isFirst && totalVersions > 1 -> UiText.get(R.string.waex_ui_version_1_original_1_s_ac2f8fb2, "Version 1 (Original) • %1\$s", timeStr)
+                    totalVersions == 1 -> UiText.get(R.string.waex_ui_version_1_latest_1_s_7e28fc56, "Version 1 (Latest) • %1\$s", timeStr)
+                    else -> UiText.get(R.string.waex_ui_version_1_s_2_s_4d9f20e0, "Version %1\$s • %2\$s", item.versionNumber, timeStr)
                 }
                 val color = if (isLatest) 0xFF21C063.toInt() else 0xFF00A884.toInt()
 
@@ -474,7 +482,7 @@ class AntiEditMessagesHook(
             }
         } else {
             val emptyNotice = TextView(currentActivity).apply {
-                text = "Message was edited by sender."
+                text = UiText.get(R.string.waex_ui_message_was_edited_by_sender_9724779c, "Message was edited by sender.")
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setPadding(0, dp(16), 0, dp(16))
@@ -483,7 +491,7 @@ class AntiEditMessagesHook(
         }
 
         bottomSheet.setView(contentLayout)
-        bottomSheet.setPositiveButton("Close", null)
+        bottomSheet.setPositiveButton(UiText.get(R.string.waex_ui_close_7d9eb7ac, "Close"), null)
         bottomSheet.show()
     }
 

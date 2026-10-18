@@ -16,6 +16,13 @@ def main():
   identities[str(root_source.relative_to(a.root))]=hashlib.sha256(root_source.read_bytes()).hexdigest()
   for name in ['UpdateDownloader.kt','UpdateTransferPolicy.kt']:
    path=a.root/'app/src/main/java/com/waenhancer/update'/name;files[name]=path.read_text();identities[str(path.relative_to(a.root))]=hashlib.sha256(path.read_bytes()).hexdigest()
+  import re
+  ids=sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)',files['UpdateDownloader.kt'])))
+  files['AppR.kt']='package com.waenhancer.app\nobject R {object string {\n'+ '\n'.join(f'const val {name} = {0x7f060100+i}' for i,name in enumerate(ids))+'\n}}'
+  files['UiText.kt']='''package com.waenhancer.utils
+object UiText { @JvmStatic fun get(id:Int, fallback:String, vararg args:Any?):String =
+ if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args) }
+'''
   for n,v in files.items():(src/n).write_text(v)
   command=['kotlinc','-classpath',str(root_classes),'-nowarn','-language-version','2.0',*map(str,src.glob('*.kt')),'-include-runtime','-d',str(out/'test.jar')]
   c=subprocess.run(command,text=True,capture_output=True,timeout=90);(out/'compile.log').write_text(c.stdout+c.stderr)

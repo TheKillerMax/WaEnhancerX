@@ -34,5 +34,7 @@ for operation in ('getIdFromKey','getMediaFromId','findAccountDataDir'):
 for operation in ('setTitle(', 'setMessage(', 'setPositiveButton('):
  assert operation in dialog
 assert 'saveMediaFile' in status
-assert status.count('showToast(ctx, "Error saving status media: " + t.getMessage())')==1
+# Translation may wrap the static prefix; retain exactly one UI error path and
+# do not relax the separate log-privacy assertions above.
+assert len(re.findall(r'showToast\(ctx,\s*(?:UiText\.get\(R\.string\.[a-z0-9_]+,\s*)?"Error saving status media: "\)?\s*\+\s*t\.getMessage\(\)\)', status)) == 1
 print('PASS: 18 DB, native dialog, and status-save diagnostics redact private exception texts')
