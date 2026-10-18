@@ -10,8 +10,9 @@ import re
 import shutil
 import subprocess
 import sys
+from localization_support import stage_string_resources
 
-HELPERS = ('UiText.java', 'DisplayLocalePolicy.java')
+HELPERS = ('UiText.java', 'DisplayLocalePolicy.java', 'InternalLabels.java')
 QUALIFIERS = ('values', 'values-es', 'values-b+es+419')
 
 
@@ -25,13 +26,7 @@ def stage_localization(root, probe, identities):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)  # Missing dependencies are fatal, not skipped.
         identities[str(source.relative_to(root))] = hashlib.sha256(source.read_bytes()).hexdigest()
-    for qualifier in QUALIFIERS:
-        for filename in ('strings.xml', 'ui_strings.xml'):
-            source = root / 'app/src/main/res' / qualifier / filename
-            target = probe / 'src/main/res' / qualifier / filename
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
-            identities[str(source.relative_to(root))] = hashlib.sha256(source.read_bytes()).hexdigest()
+    stage_string_resources(root, probe / 'src/main/res', identities)
     return True
 
 

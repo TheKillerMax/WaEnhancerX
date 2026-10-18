@@ -1232,7 +1232,7 @@ private fun HmaDetailsBottomSheet(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = item.reason,
+                                    text = InternalLabels.hmaReason(item.reason),
                                     style = typography.labelSm,
                                     fontWeight = FontWeight.Medium,
                                     color = colors.error
@@ -1310,7 +1310,7 @@ private fun HmaDetailsBottomSheet(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = item.reason,
+                                    text = InternalLabels.hmaReason(item.reason),
                                     style = typography.labelSm,
                                     color = colors.onSurfaceVariant
                                 )

@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from localization_support import entries
+from localization_support import entries, stage_string_resources
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -64,12 +64,7 @@ def main():
     run([aapt2, 'compile', '--dir', ROOT/'app/src/main/res', '-o', out/'all-resources.zip'], 'compile-all.log')
     res=out/'res';res.mkdir()
     identities={}
-    for folder in ('values','values-es','values-b+es+419'):
-        (res/folder).mkdir()
-        for file in ('strings.xml','ui_strings.xml'):
-            source=ROOT/'app/src/main/res'/folder/file
-            shutil.copyfile(source,res/folder/file)
-            identities[f'{folder}/{file}']=hashlib.sha256(source.read_bytes()).hexdigest()
+    stage_string_resources(ROOT, res, identities)
     manifest=out/'AndroidManifest.xml'
     manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.waenhancer"><application /></manifest>\n')
     run([aapt2,'compile','--dir',res,'-o',out/'compiled.zip'],'compile-fixture.log')

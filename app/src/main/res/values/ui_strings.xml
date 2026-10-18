@@ -999,4 +999,11 @@
     <string name="waex_l10n_runtime_039">"Custom version allowance; compatibility unverified"</string>
     <string name="waex_l10n_runtime_040">"Version rules accepted; runtime unconfirmed"</string>
     <string name="waex_l10n_runtime_041">"Rules accepted; initialization reported"</string>
+    <string name="waex_ui_hma_reason_not_configured">Not configured in HMA scope</string>
+    <string name="waex_ui_hma_reason_visible">Active in HMA, module visible</string>
+    <string name="waex_ui_hma_reason_allowlist_invisible">Hidden via Whitelist mode (in invisible apps list)</string>
+    <string name="waex_ui_hma_reason_allowlist_missing">Hidden via Whitelist mode (module not included in visible apps)</string>
+    <string name="waex_ui_hma_reason_blocklist_extra">Hidden via Blacklist mode (in additional apps to hide)</string>
+    <string name="waex_ui_hma_reason_template">Hidden by blacklist template \"%1$s\"</string>
+    <string name="waex_ui_hma_reason_preset">Hidden by HMA \"xposed\" preset</string>
 </resources>

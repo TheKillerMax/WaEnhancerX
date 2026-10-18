@@ -3,6 +3,25 @@ import com.waenhancer.app.R;
 /** Presentation-only labels. Never pass message bodies, contact names or server content. */
 public final class InternalLabels {
     private InternalLabels() {}
+    /** Only locally generated HMA reasons; preserve template names and unknown payloads. */
+    public static String hmaReason(String value) {
+        if (value == null) return "";
+        final String prefix = "Hidden by blacklist template \"";
+        if (value.startsWith(prefix) && value.endsWith("\"") && value.length() > prefix.length()) {
+            String template = value.substring(prefix.length(), value.length() - 1);
+            return UiText.get(R.string.waex_ui_hma_reason_template,
+                    "Hidden by blacklist template \"%1$s\"", template);
+        }
+        switch (value) {
+            case "Not configured in HMA scope": return UiText.get(R.string.waex_ui_hma_reason_not_configured, "Not configured in HMA scope");
+            case "Active in HMA, module visible": return UiText.get(R.string.waex_ui_hma_reason_visible, "Active in HMA, module visible");
+            case "Hidden via Whitelist mode (in invisible apps list)": return UiText.get(R.string.waex_ui_hma_reason_allowlist_invisible, "Hidden via Whitelist mode (in invisible apps list)");
+            case "Hidden via Whitelist mode (module not included in visible apps)": return UiText.get(R.string.waex_ui_hma_reason_allowlist_missing, "Hidden via Whitelist mode (module not included in visible apps)");
+            case "Hidden via Blacklist mode (in additional apps to hide)": return UiText.get(R.string.waex_ui_hma_reason_blocklist_extra, "Hidden via Blacklist mode (in additional apps to hide)");
+            case "Hidden by HMA \"xposed\" preset": return UiText.get(R.string.waex_ui_hma_reason_preset, "Hidden by HMA \"xposed\" preset");
+            default: return value;
+        }
+    }
     public static String text(String value) {
         if (value == null) return "";
         final String obsoletePrefix = "Last report (not current): ";

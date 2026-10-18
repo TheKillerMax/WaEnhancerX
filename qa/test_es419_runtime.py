@@ -72,6 +72,20 @@ public class TestEs419Runtime {
  Context activity=new Context("not-an-application");activity.application=host;UiText.initialize(activity,p);ok(UiText.get(first,"original").equals(input.get(0)[2]),"uses application context");
  ok(InternalLabels.text("ACTIVE").equals("Activo"),"presentation status");ok(InternalLabels.text("not-a-label").equals("not-a-label"),"unknown metadata unchanged");
  ok(PreferenceLabels.text("disable_sensor_proximity").contains("proximidad"),"catalog restart title");
+ ok(InternalLabels.hmaReason("Not configured in HMA scope").equals("No está incluida en el ámbito de HMA"),"HMA not_configured");
+ ok(InternalLabels.hmaReason("Active in HMA, module visible").equals("Activa en HMA; el módulo es visible"),"HMA visible");
+ ok(InternalLabels.hmaReason("Hidden via Whitelist mode (in invisible apps list)").equals("Oculto por la lista de permitidos (incluido entre las aplicaciones no visibles)"),"HMA allowlist_invisible");
+ ok(InternalLabels.hmaReason("Hidden via Whitelist mode (module not included in visible apps)").equals("Oculto por la lista de permitidos (el módulo no está entre las aplicaciones visibles)"),"HMA allowlist_missing");
+ ok(InternalLabels.hmaReason("Hidden via Blacklist mode (in additional apps to hide)").equals("Oculto por la lista de bloqueados (incluido entre las aplicaciones adicionales que se ocultan)"),"HMA blocklist_extra");
+ ok(InternalLabels.hmaReason("Hidden by HMA \"xposed\" preset").equals("Oculto por el ajuste predefinido «xposed» de HMA"),"HMA preset");
+ String template="Mine %1$s \" 50%";
+ ok(InternalLabels.hmaReason("Hidden by blacklist template \""+template+"\"").equals("Oculto por la plantilla de bloqueo «"+template+"»"),"template stays literal");
+ ok(InternalLabels.hmaReason("unrecognized local reason").equals("unrecognized local reason"),"unknown reason unchanged");
+ ok(InternalLabels.hmaReason("Hidden by blacklist template \"unfinished").equals("Hidden by blacklist template \"unfinished"),"malformed template unchanged");
+ p.values.put("app_language","en");
+ ok(InternalLabels.hmaReason("Hidden by blacklist template \""+template+"\"").equals("Hidden by blacklist template \""+template+"\""),"default template preserved");
+ p.values.put("app_language","es-419");
+
  Locale.setDefault(previous);System.out.println("PASS: "+n+" production resource/format/locale checks; 10,000 cache-hit reads; explicit Android doubles, not Android runtime");
  }
 }

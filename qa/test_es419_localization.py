@@ -4,7 +4,8 @@ from pathlib import Path
 import re
 from collections import Counter
 from xml.etree import ElementTree as ET
-from localization_support import entries, android_text
+import tempfile
+from localization_support import entries, android_text, stage_string_resources
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT/'app/src/main/java'
@@ -65,8 +66,30 @@ schema=(SRC/'com/waenhancer/config/PreferenceSchema.java').read_text()
 assert 'UiText' not in schema
 catalog=(ROOT/'app/src/main/assets/preference_catalog.json').read_text()
 assert 'disable_sensor_proximity' in catalog
+dashboard=(SRC/'com/waenhancer/ui/screens/dashboard/MainDashboardScreen.kt').read_text()
+assert 'text = InternalLabels.hmaReason(item.reason)' in dashboard
+assert 'text = item.reason,' not in dashboard, 'HMA reason must be localized at its display boundary'
 # Negative controls: a missing slot, malformed token and bidi marker must be recognized.
 for wrong in ['Sin variable', '%2$s', '%1$d']:
     assert slots('Count: %1$s') != slots(wrong)
 assert re.search('[\u202a-\u202e\u2066-\u2069\ufffd]','a\u202eb')
 print(f'PASS: {checks} string keys in default/es/es-419, positional formats, paragraphs, plurals, routing and stable keys; 4 negative controls')
+
+# Dedicated and mixed values XML files must reach both the AAPT2 and framework
+# fixtures. Styles/colors remain outside these isolated string tables.
+with tempfile.TemporaryDirectory() as folder:
+    fixture=Path(folder)/'fixture';staged=Path(folder)/'staged';identities={}
+    for qualifier in ('values','values-es','values-b+es+419'):
+        source=fixture/'app/src/main/res'/qualifier;source.mkdir(parents=True)
+        (source/'extra.xml').write_text('<resources><string name="extra">Extra</string></resources>')
+        (source/'mixed.xml').write_text('<resources><color name="color">#000000</color>'
+            '<string name="mixed">A &amp; B</string><plurals name="items"><item quantity="one">%1$d item</item>'
+            '<item quantity="other">%1$d items</item></plurals></resources>')
+    stage_string_resources(fixture,staged,identities)
+    assert len(identities)==6
+    for qualifier in ('values','values-es','values-b+es+419'):
+        assert (staged/qualifier/'extra.xml').read_bytes()==(fixture/'app/src/main/res'/qualifier/'extra.xml').read_bytes()
+        mixed=ET.parse(staged/qualifier/'mixed.xml').getroot()
+        assert [item.tag for item in mixed]==['string','plurals']
+        assert mixed.find('string').text=='A & B'
+print('PASS: dedicated/mixed resource files staged with original string/plural content and source hashes')

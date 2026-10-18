@@ -161,8 +161,8 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  tests=failures=errors=skipped=0
  for p in results:
   t=ET.parse(p).getroot();tests+=int(t.get('tests',0));failures+=int(t.get('failures',0));errors+=int(t.get('errors',0));skipped+=int(t.get('skipped',0))
- assert tests==(9 if localized else 3) and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
- (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'locale_resource_tests':6 if localized else 0,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled public utilities and clock with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
+ assert tests==(10 if localized else 3) and failures==0 and errors==0 and skipped==0,(tests,failures,errors,skipped)
+ (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'locale_resource_tests':7 if localized else 0,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled public utilities and clock with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
  print(f'PASS: real Android/Compose API compilation; {tests} Android 14 JUnit methods, 22 published-APK contexts; localized tests={localized}; no full app/LSPosed')
 
 if __name__=='__main__':main()

@@ -102,6 +102,29 @@ class LocalizationResourcesTest {
         UiText.initialize(c, prefs("es-419"))
         assertEquals("missing", UiText.get(0, "missing"))
     }
+    @Test fun locallyGeneratedHmaReasonsAreLocalizedWithoutChangingTemplateNames() {
+        val c = module(); UiText.initialize(c, prefs("es-419"))
+        // AGP library R IDs and the independently linked resource-only APK are
+        // different namespaces of numeric bindings. Bind the actual helper's
+        // non-final library fields to that table for this fixture, then restore.
+        val names = listOf("not_configured", "visible", "allowlist_invisible",
+            "allowlist_missing", "blocklist_extra", "template", "preset")
+        val resourceClass = Class.forName("com.waenhancer.app.R\$string")
+        val fields = names.map { resourceClass.getField("waex_ui_hma_reason_" + it) }
+        val saved = fields.map { it.getInt(null) }
+        try {
+            fields.forEach { it.setInt(null, id(c, it.name)) }
+            assertEquals("No está incluida en el ámbito de HMA", InternalLabels.hmaReason("Not configured in HMA scope"))
+            assertEquals("Activa en HMA; el módulo es visible", InternalLabels.hmaReason("Active in HMA, module visible"))
+            assertEquals("Oculto por el ajuste predefinido «xposed» de HMA", InternalLabels.hmaReason("Hidden by HMA \"xposed\" preset"))
+            val name = "Mine %1\$s \" 50%"
+            assertEquals("Oculto por la plantilla de bloqueo «$name»", InternalLabels.hmaReason("Hidden by blacklist template \"$name\""))
+            assertEquals("unknown reason", InternalLabels.hmaReason("unknown reason"))
+            assertEquals("Hidden by blacklist template \"unfinished", InternalLabels.hmaReason("Hidden by blacklist template \"unfinished"))
+        } finally {
+            fields.forEachIndexed { index, field -> field.setInt(null, saved[index]) }
+        }
+    }
     @Test fun systemLanguageAndUnreadablePreferenceDoNotMutateSettings() {
         val c = module(); val p = prefs("system")
         UiText.initialize(c, p)

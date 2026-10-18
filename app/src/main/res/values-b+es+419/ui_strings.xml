@@ -999,4 +999,11 @@
     <string name="waex_l10n_runtime_039">"Permiso personalizado de versión; compatibilidad sin verificar"</string>
     <string name="waex_l10n_runtime_040">"Reglas de versión aceptadas; ejecución sin confirmar"</string>
     <string name="waex_l10n_runtime_041">"Reglas aceptadas; se informó que terminó la inicialización"</string>
+    <string name="waex_ui_hma_reason_not_configured">No está incluida en el ámbito de HMA</string>
+    <string name="waex_ui_hma_reason_visible">Activa en HMA; el módulo es visible</string>
+    <string name="waex_ui_hma_reason_allowlist_invisible">Oculto por la lista de permitidos (incluido entre las aplicaciones no visibles)</string>
+    <string name="waex_ui_hma_reason_allowlist_missing">Oculto por la lista de permitidos (el módulo no está entre las aplicaciones visibles)</string>
+    <string name="waex_ui_hma_reason_blocklist_extra">Oculto por la lista de bloqueados (incluido entre las aplicaciones adicionales que se ocultan)</string>
+    <string name="waex_ui_hma_reason_template">Oculto por la plantilla de bloqueo «%1$s»</string>
+    <string name="waex_ui_hma_reason_preset">Oculto por el ajuste predefinido «xposed» de HMA</string>
 </resources>
