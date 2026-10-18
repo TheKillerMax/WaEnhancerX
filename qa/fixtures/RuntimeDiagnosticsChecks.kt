@@ -30,7 +30,7 @@ fun main(args:Array<String>){
     fun module(rules:Array<String>, name:String?=null, namesArg:Map<String,Int> = names)=Context("com.waenhancer",Resources("com.waenhancer",namesArg,mapOf(R.array.universal_supported_versions to rules),name))
     val mod=module(rules);val prefs=Prefs()
     val host=Context("com.whatsapp",Resources("com.whatsapp",emptyMap(),emptyMap()),mod)
-    for(v in listOf("2.26.40.76","2.26.39.74","2.26.39.72"," v2.26.40.76 ")){
+    for(v in listOf("2.26.42.9","2.26.40.76","2.26.39.74","2.26.39.72"," v2.26.40.76 ")){
         ck("module admits $v",UniversalVersionValidator.evaluate(mod,v,prefs),D.BUILTIN_RULE)
         ck("host uses own module resources $v",UniversalVersionValidator.evaluate(host,v,prefs),D.BUILTIN_RULE)
         ck("Boolean API compatible $v",UniversalVersionValidator.isSupported(host,v,prefs),true)
@@ -68,7 +68,9 @@ fun main(args:Array<String>){
     for(list in listOf(emptyArray<String>(),arrayOf("bad"),arrayOf(""),arrayOf("2.26.40.xx",""),arrayOf("*.xx"))){
         ck("invalid builtin contents not usable",UniversalVersionValidator.evaluate(module(list),"2.26.40.76",prefs),D.RULES_UNAVAILABLE)
     }
-    for(v in listOf("2.26.35.90","2.26.42.9","9.99.1"))ck("true rejected version",UniversalVersionValidator.evaluate(mod,v,prefs),D.UNSUPPORTED)
+    // A future 2.26.x branch can become supported as arrays.xml changes. Keep the
+    // synthetic major-zero version outside that range and test 2.26.42 above.
+    for(v in listOf("2.26.35.90","0.0.0.0","9.99.1"))ck("true rejected version $v",UniversalVersionValidator.evaluate(mod,v,prefs),D.UNSUPPORTED)
     for(v in listOf(null,""," ","v"))ck("version unavailable",UniversalVersionValidator.evaluate(mod,v,prefs),D.VERSION_UNAVAILABLE)
     val custom=Prefs().apply{values["customize_supported_versions"]=true;values["custom_supported_versions"]=setOf("2.26.40.76")}
     ck("intentional custom permission preserved",UniversalVersionValidator.evaluate(hidden,"2.26.40.76",custom),D.CUSTOM_RULE)
