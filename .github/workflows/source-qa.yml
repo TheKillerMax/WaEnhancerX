@@ -140,10 +140,12 @@ jobs:
             test -f qa/test_forwarded_metadata_scope.py
           fi
 
-      - name: Run additional source-only QA suites when merged
+      - name: Run remaining required public-source QA suites
         shell: bash
         run: |
           set -euo pipefail
+          # These contracts are already present in main. A missing suite must fail
+          # this job instead of silently reducing regression coverage.
           for test_script in \
             qa/test_audit_apks.py \
             qa/test_dex_source_anchor_inventory.py \
@@ -190,14 +192,19 @@ jobs:
             qa/test_recorder_cleanup.py \
             qa/test_gallery_export.py \
             qa/test_contact_identity.py \
-            qa/test_forwarded_metadata_scope.py \
             qa/test_db_migrations.py; do
-            if [[ -f "$test_script" ]]; then
-              echo "::group::$test_script"
-              python3 "$test_script"
-              echo '::endgroup::'
-            fi
+            echo "::group::$test_script"
+            python3 "$test_script"
+            echo '::endgroup::'
           done
+          # The earlier forwarding implementation was reverted. Keep its suite
+          # conditional until it returns; the implementation guard above still
+          # requires the fixture when that source contract is present.
+          if [[ -f qa/test_forwarded_metadata_scope.py ]]; then
+            echo '::group::qa/test_forwarded_metadata_scope.py'
+            python3 qa/test_forwarded_metadata_scope.py
+            echo '::endgroup::'
+          fi
 
       - name: Scope of verification
         shell: bash
