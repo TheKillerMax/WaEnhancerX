@@ -21,34 +21,33 @@ object UniversalVersionValidator {
     }
 
     /**
-     * Only read a resource in the module namespace. A numeric R ID is not portable
-     * to the host Resources. null means unavailable; it is not a valid empty range.
+     * Reads universal supported version rules directly from the module resources (arrays.xml).
      */
     private fun readBuiltinRules(context: Context?): List<String>? {
         if (context == null) return null
         return try {
-            val moduleContext = if (context.packageName == MODULE_PACKAGE) context
-                else context.createPackageContext(MODULE_PACKAGE, Context.CONTEXT_IGNORE_SECURITY)
-            if (moduleContext.packageName != MODULE_PACKAGE) return null
+            val moduleContext = if (context.packageName == MODULE_PACKAGE) {
+                context
+            } else {
+                context.createPackageContext(
+                    MODULE_PACKAGE,
+                    Context.CONTEXT_IGNORE_SECURITY or Context.CONTEXT_INCLUDE_CODE
+                )
+            }
             val resources = moduleContext.resources
-            val namedId = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
-            // The static reference also keeps this array reachable in optimized builds.
-            val id = if (namedId != 0) namedId else R.array.universal_supported_versions
-            if (resources.getResourceName(id) != "$MODULE_PACKAGE:array/universal_supported_versions") return null
-            val rules = resources.getStringArray(id).map { it.trim() }
+            val resId = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
+                .takeIf { it != 0 } ?: R.array.universal_supported_versions
+            val rules = resources.getStringArray(resId).map { it.trim() }
             val syntax = Regex("[0-9]+(?:\\.[0-9]+)+(?:\\.(?:xx|\\*))?", RegexOption.IGNORE_CASE)
             rules.takeIf { it.isNotEmpty() && it.all(syntax::matches) }
-        } catch (_: RuntimeException) {
-            null
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
-        } catch (_: LinkageError) {
+        } catch (_: Throwable) {
             null
         }
     }
 
     @JvmStatic
     fun getBuiltinSupportedVersions(context: Context?): List<String> = readBuiltinRules(context).orEmpty()
+
 
     /** A rules decision, not a claim that native methods or every feature were tested. */
     @JvmStatic

@@ -9,6 +9,7 @@
 - Fixed Hide Forwarded
 - Fixed Filter Item by ID
 - Fixed chat screen ui lags
+- Fixed version compatibility bug
 
 [Improvements]
 - Improved Call recorder
