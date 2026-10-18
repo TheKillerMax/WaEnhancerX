@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="app/src/main/res/drawable/ic_app_logo.webp" alt="WaEnhancer X app logo" width="128" />
+
 # WaEnhancer X
 
 **UI customization, automation, and privacy engine for WhatsApp on Android**
