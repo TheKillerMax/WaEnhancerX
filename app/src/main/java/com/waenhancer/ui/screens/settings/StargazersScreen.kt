@@ -1091,10 +1091,11 @@ private fun String.nullSafe(): String = if (this == "null") "" else this
 private fun formatUpdatedAt(timestamp: String): String {
     if (timestamp.isBlank()) return ""
     return runCatching {
-        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
+        val cleanTimestamp = timestamp.replace(Regex("\\.\\d+Z$|Z$"), "")
         val formatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
-        formatter.format(parser.parse(timestamp) ?: Date())
+        formatter.format(parser.parse(cleanTimestamp) ?: Date())
     }.getOrDefault(timestamp)
 }
