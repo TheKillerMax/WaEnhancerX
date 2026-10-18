@@ -19,6 +19,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import com.waenhancer.config.DndPreferencePolicy;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
@@ -81,6 +82,10 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     @Override
     public void hook() throws Throwable {
         attachMenuHooks();
+    }
+
+    private boolean isDndEnabled() {
+        return DndPreferencePolicy.isEnabled(prefs::contains, key -> isEnabled(key, false));
     }
 
     // -------------------------------------------------------------------------
@@ -465,7 +470,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
 
         MenuItem dnd = menu.findItem(MENU_ID_DND);
         if (dnd != null) {
-            boolean active = isEnabled("dnd_mode", false);
+            boolean active = isDndEnabled();
             Drawable icon = MenuIconLoader.dndIcon(context, active);
             if (icon != null) dnd.setIcon(icon);
         }
@@ -505,7 +510,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
 
         if (isEnabled("show_dndmode", false)) {
-            boolean active = isEnabled("dnd_mode", false);
+            boolean active = isDndEnabled();
             MenuItem item = target.add(Menu.NONE, MENU_ID_DND, Menu.NONE,
                     active ? "DND: ON" : "DND: OFF");
             item.setShowAsAction(showAsAction);
@@ -645,7 +650,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
 
         if (id == MENU_ID_DND) {
-            boolean current = isEnabled("dnd_mode", false);
+            boolean current = isDndEnabled();
             prefs.edit().putBoolean("dnd_mode", !current).apply();
             if (activityObj instanceof Activity) {
                 ((Activity) activityObj).invalidateOptionsMenu();
@@ -685,7 +690,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } else if (itemId == MENU_ID_FREEZE_LS) {
             promptFreezeLastSeenSheet(activity);
         } else if (itemId == MENU_ID_DND) {
-            boolean current = isEnabled("dnd_mode", false);
+            boolean current = isDndEnabled();
             prefs.edit().putBoolean("dnd_mode", !current).apply();
             activity.invalidateOptionsMenu();
         } else if (itemId == MENU_ID_RESTART) {
