@@ -198,15 +198,17 @@ public class AntiRevokeHook extends BaseFeature {
             }
 
             statusToMessageMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context, classLoader, "wpp_status_to_message_mapper_v1",
+                    context, classLoader, "wpp_status_to_message_mapper_v2",
                     (bridge, loader) -> {
-                        MethodData data = bridge.findMethod(FindMethod.create()
+                        Set<Method> candidates = new LinkedHashSet<>();
+                        for (MethodData data : bridge.findMethod(FindMethod.create()
                                 .matcher(MethodMatcher.create().addUsingString(
-                                        "mapFStatusToFMessageForForwarding", StringMatchType.Contains)))
-                                .firstOrNull();
-                        return data != null ? data.getMethodInstance(loader) : null;
+                                        "mapFStatusToFMessageForForwarding", StringMatchType.Contains)))) {
+                            candidates.add(data.getMethodInstance(loader));
+                        }
+                        return StatusHookContract.selectStatusMapper(candidates, fMessageClass);
                     });
-            if (statusToMessageMethod != null && statusToMessageMethod.getParameterCount() > 0) {
+            if (StatusHookContract.isStatusMapper(statusToMessageMethod, fMessageClass)) {
                 statusToMessageMethod.setAccessible(true);
                 statusModelClass = statusToMessageMethod.getParameterTypes()[0];
                 XposedBridge.hookAllConstructors(statusToMessageMethod.getDeclaringClass(),
@@ -216,6 +218,8 @@ public class AntiRevokeHook extends BaseFeature {
                                 statusToMessageMapper = param.thisObject;
                             }
                         });
+            } else {
+                statusToMessageMethod = null;
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error initializing message key classes: " + t.getClass().getSimpleName());
@@ -303,62 +307,57 @@ public class AntiRevokeHook extends BaseFeature {
     private void hookStatusBytecodeRevocation() {
         try {
             statusKeyClass = DexSearchEngine.getInstance().findClassWithCache(
-                    context, classLoader, "wpp_status_key_class_v2",
+                    context, classLoader, "wpp_status_key_class_v3",
                     (bridge, loader) -> {
-                        ClassData data = bridge.findClass(FindClass.create()
+                        Class<?> selected = null;
+                        for (ClassData data : bridge.findClass(FindClass.create()
                                 .matcher(ClassMatcher.create()
                                         .addUsingString("Key(id=", StringMatchType.Contains)
-                                        .addUsingString("senderJid", StringMatchType.Contains)))
-                                .firstOrNull();
-                        return data != null ? data.getInstance(loader) : null;
+                                        .addUsingString("senderJid", StringMatchType.Contains)))) {
+                            Class<?> candidate = data.getInstance(loader);
+                            if (!StatusHookContract.supportsKeyClass(candidate)) continue;
+                            if (selected != null && selected != candidate) return null;
+                            selected = candidate;
+                        }
+                        return selected;
                     });
 
             Method revokeStatusMethod = DexSearchEngine.getInstance().findMethodWithCache(
-                    context, classLoader, "wpp_revoke_status_manager_v2",
+                    context, classLoader, "wpp_revoke_status_manager_v3",
                     (bridge, loader) -> {
                         if (statusKeyClass == null) return null;
 
-                        ClassData managerData = bridge.findClass(FindClass.create()
+                        Set<Method> candidates = new LinkedHashSet<>();
+                        for (ClassData managerData : bridge.findClass(FindClass.create()
                                 .matcher(ClassMatcher.create()
-                                        .addUsingString("RevokeStatusManager/failed", StringMatchType.Contains)))
-                                .firstOrNull();
-                        if (managerData == null) return null;
-
-                        Class<?> managerClass = managerData.getInstance(loader);
-                        Class<?> current = managerClass;
-                        while (current != null && current != Object.class) {
-                            for (Method method : current.getDeclaredMethods()) {
-                                Class<?>[] parameterTypes = method.getParameterTypes();
-                                if (parameterTypes.length > 0
-                                        && statusKeyClass.isAssignableFrom(parameterTypes[0])) {
-                                    return method;
+                                        .addUsingString("RevokeStatusManager/failed", StringMatchType.Contains)))) {
+                            Class<?> current = managerData.getInstance(loader);
+                            while (current != null && current != Object.class) {
+                                for (Method method : current.getDeclaredMethods()) {
+                                    candidates.add(method);
                                 }
+                                current = current.getSuperclass();
                             }
-                            current = current.getSuperclass();
                         }
-                        return null;
+                        return StatusHookContract.selectRevokeMethod(candidates, statusKeyClass);
                     });
 
-            if (revokeStatusMethod != null) {
+            final StatusHookContract contract =
+                    StatusHookContract.resolveRevoke(revokeStatusMethod, statusKeyClass);
+            if (contract != null) {
                 XposedBridge.hookMethod(revokeStatusMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!isAntiRevokeStatusEnabled()) return;
                         try {
-                            Object statusKey = findArgumentOfType(param.args, statusKeyClass);
-                            if (statusKey == null) return;
-
-                            Boolean fromMe = extractIsFromMe(statusKey);
-                            if (fromMe == null || fromMe) return;
-
-                            String keyId = extractKeyIdFromFMessage(statusKey);
-                            if (keyId == null || keyId.isEmpty()) return;
+                            StatusHookContract.Target target = contract.incomingTarget(param.args);
+                            if (target == null) return;
 
                             long now = System.currentTimeMillis();
-                            REVOKED_MESSAGES.put(keyId, now);
-                            DelMessageStore.getInstance(context).insertMessage(null, keyId, now);
-                            showDeletedMessageToast(extractSenderJid(statusKey));
-                            setHandledResult(param);
+                            REVOKED_MESSAGES.put(target.id, now);
+                            DelMessageStore.getInstance(context).insertMessage(null, target.id, now);
+                            param.setResult(contract.acknowledgement());
+                            showDeletedMessageToast(extractSenderJid(target.key));
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + " Error in status bytecode revoke hook: " + t.getClass().getSimpleName());
                         }
@@ -368,15 +367,6 @@ public class AntiRevokeHook extends BaseFeature {
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error hooking status bytecode revoke: " + t.getClass().getSimpleName());
         }
-    }
-
-    @Nullable
-    private Object findArgumentOfType(@Nullable Object[] args, @Nullable Class<?> expectedType) {
-        if (args == null || expectedType == null) return null;
-        for (Object arg : args) {
-            if (arg != null && expectedType.isInstance(arg)) return arg;
-        }
-        return null;
     }
 
     /** Completes an intercepted revoke with a value compatible with its runtime method. */
