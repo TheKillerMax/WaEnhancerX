@@ -20,13 +20,14 @@ import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.result.ClassData;
 
 import java.io.FileDescriptor;
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -34,19 +35,26 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
-/** Records the audio route of an active WhatsApp call into WAEX-owned storage. */
+/** Tries the selected platform audio sources while an identified WhatsApp call is active. */
 public final class CallRecordingHook extends BaseFeature {
     private static final String TAG = "[WAEX][CallRecording]";
     private static final String ENABLED = "call_recording_enabled";
     private static final Uri BRIDGE_URI = Uri.parse("content://" + HookProvider.AUTHORITY);
 
-    private final AtomicBoolean connected = new AtomicBoolean(false);
     private final AtomicBoolean recording = new AtomicBoolean(false);
-    private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread thread = new Thread(r, "WAEX-CallRecorder");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ScheduledThreadPoolExecutor worker = createWorker();
+    private final Object installationLock = new Object();
+    private boolean installed;
+    // Host callbacks never wait for MediaRecorder.prepare/start/stop or storage IPC.
+    private final Object sessionLock = new Object();
+    private Session session;
+    private boolean stopQueued;
+    private final SharedPreferences.OnSharedPreferenceChangeListener enabledListener = (preferences, key) -> {
+        if (key != null && !ENABLED.equals(key)) return;
+        synchronized (sessionLock) {
+            if (!isEnabled(ENABLED, false) && session != null) finishSession();
+        }
+    };
     private volatile ScheduledFuture<?> pendingStart;
     private volatile MediaRecorder recorder;
     private volatile ParcelFileDescriptor destination;
@@ -66,29 +74,100 @@ public final class CallRecordingHook extends BaseFeature {
 
     @Override
     public void hook() {
+        synchronized (installationLock) {
+            if (installed) return;
+            installHooks();
+            installed = true;
+        }
+    }
+
+    private void installHooks() {
         Class<?> callbackClass = resolveCallbackClass();
         if (callbackClass == null) {
-            XposedBridge.log(TAG + " VoiceServiceEventCallback not found");
-            return;
+            throw new IllegalStateException("VoiceServiceEventCallback not found");
         }
-
-        Set<?> connectionHooks = XposedBridge.hookAllMethods(callbackClass, "soundPortCreated",
-                new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) {
-                        if (!isEnabled(ENABLED, false)) return;
-                        connected.set(true);
-                        scheduleStart();
+        final CallRecordingEventContract contract;
+        try {
+            contract = CallRecordingEventContract.resolve(callbackClass);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            throw new IllegalStateException("Unsupported call recording event contract", failure);
+        }
+        AtomicBoolean ready = new AtomicBoolean(false);
+        List<XC_MethodHook.Unhook> registered = new ArrayList<>(3);
+        try {
+            registered.add(XposedBridge.hookMethod(contract.stateChanged, new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    if (!ready.get() || param.hasThrowable()) return;
+                    try {
+                        // The first argument is the OLD state; the new state belongs to CallInfo.
+                        applySnapshot(param.thisObject, contract.read(param.args[1]));
+                    } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+                        XposedBridge.log(TAG + " state callback failed: " + failure.getClass().getSimpleName());
                     }
-                });
-        Set<?> endHooks = XposedBridge.hookAllMethods(callbackClass, "fieldstatsReady",
-                new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        finishCall("fieldstatsReady");
-                    }
-                });
+                }
+            }));
+            registered.add(XposedBridge.hookMethod(contract.soundPortCreated,
+                    new XC_MethodHook() {
+                        @Override protected void afterHookedMethod(MethodHookParam param) {
+                            if (!ready.get() || param.hasThrowable()) return;
+                            try {
+                                applySnapshot(param.thisObject, contract.current(param.thisObject));
+                            } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+                                XposedBridge.log(TAG + " audio callback failed: " + failure.getClass().getSimpleName());
+                            }
+                        }
+                    }));
+            registered.add(XposedBridge.hookMethod(contract.callEnding, new XC_MethodHook() {
+                private final String snapshotKey = "waex.recording.callEnding.snapshot";
 
-        hookActivityEnd("com.whatsapp.voipcalling.VoipActivityV2");
-        hookActivityEnd("com.whatsapp.voipcalling.VoipActivity");
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                    if (!ready.get()) return;
+                    try {
+                        // The host still exposes the ending call here; it may be absent after return.
+                        param.setObjectExtra(snapshotKey, contract.current(param.thisObject));
+                    } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+                        XposedBridge.log(TAG + " ending snapshot failed: " + failure.getClass().getSimpleName());
+                    }
+                }
+
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    if (!ready.get() || param.hasThrowable()) return;
+                    Object value = param.getObjectExtra(snapshotKey);
+                    if (!(value instanceof CallRecordingEventContract.Snapshot)) return;
+                    CallRecordingEventContract.Snapshot ended = (CallRecordingEventContract.Snapshot) value;
+                    synchronized (sessionLock) {
+                        if (session != null && session.matches(param.thisObject, ended.callId)) finishSession();
+                    }
+                }
+            }));
+            prefs.registerOnSharedPreferenceChangeListener(enabledListener);
+            ready.set(true);
+        } catch (RuntimeException | LinkageError failure) {
+            // A failed attempt never becomes active, even if removing a callback fails.
+            for (int index = registered.size() - 1; index >= 0; index--) {
+                try {
+                    registered.get(index).unhook();
+                } catch (RuntimeException | LinkageError cleanupFailure) {
+                    XposedBridge.log(TAG + " unhook failed: " + cleanupFailure.getClass().getSimpleName());
+                }
+            }
+            try {
+                prefs.unregisterOnSharedPreferenceChangeListener(enabledListener);
+            } catch (RuntimeException | LinkageError cleanupFailure) {
+                XposedBridge.log(TAG + " listener cleanup failed: " + cleanupFailure.getClass().getSimpleName());
+            }
+            throw new IllegalStateException("Call recording hook installation failed", failure);
+        }
+    }
+
+    private static ScheduledThreadPoolExecutor createWorker() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, r -> {
+            Thread thread = new Thread(r, "WAEX-CallRecorder");
+            thread.setDaemon(true);
+            return thread;
+        });
+        executor.setRemoveOnCancelPolicy(true);
+        return executor;
     }
 
     private Class<?> resolveCallbackClass() {
@@ -110,31 +189,60 @@ public final class CallRecordingHook extends BaseFeature {
                 });
     }
 
-    private void hookActivityEnd(String className) {
-        Class<?> activity = XposedHelpers.findClassIfExists(className, classLoader);
-        if (activity == null) return;
-        XposedBridge.hookAllMethods(activity, "onDestroy", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) {
-                finishCall("activity destroyed");
+    private void applySnapshot(Object callback, CallRecordingEventContract.Snapshot snapshot) {
+        if (snapshot == null) return;
+        synchronized (sessionLock) {
+            if (snapshot.ended) {
+                if (session != null && session.matches(callback, snapshot.callId)) finishSession();
+                return;
             }
-        });
+            if (!snapshot.active) return;
+            if (!isEnabled(ENABLED, false)) {
+                if (session != null && session.matches(callback, snapshot.callId)) finishSession();
+                return;
+            }
+            if (session != null && !session.matches(callback, snapshot.callId)) finishSession();
+            boolean newSession = session == null;
+            if (newSession) session = new Session(callback, snapshot.callId);
+            if ((!newSession && recording.get()) || pendingStart != null) return;
+            Session expected = session;
+            pendingStart = worker.schedule(() -> {
+                synchronized (sessionLock) {
+                    if (session != expected) return;
+                    pendingStart = null;
+                }
+                if (!canRecord(expected)) return;
+                startRecorder(expected);
+                if (!canRecord(expected)) stopRecorder("call no longer active");
+            }, 2, TimeUnit.SECONDS);
+        }
     }
 
-    private synchronized void scheduleStart() {
-        if (pendingStart != null) pendingStart.cancel(false);
-        pendingStart = worker.schedule(() -> {
-            if (connected.get() && isEnabled(ENABLED, false)) startRecorder();
-        }, 2, TimeUnit.SECONDS);
-    }
-
-    private synchronized void finishCall(String reason) {
-        connected.set(false);
+    /** Caller holds sessionLock; stopping the recorder happens only on the worker. */
+    private void finishSession() {
+        session = null;
         if (pendingStart != null) pendingStart.cancel(false);
         pendingStart = null;
-        worker.execute(() -> stopRecorder(reason));
+        if (recording.get() && !stopQueued) {
+            stopQueued = true;
+            worker.execute(() -> {
+                try {
+                    stopRecorder("call ended");
+                } finally {
+                    synchronized (sessionLock) { stopQueued = false; }
+                }
+            });
+        }
     }
 
-    private synchronized void startRecorder() {
+    private boolean canRecord(Session expected) {
+        synchronized (sessionLock) {
+            return session == expected && expected.owner.get() != null && isEnabled(ENABLED, false);
+        }
+    }
+
+    private synchronized void startRecorder(Session expected) {
+        if (!canRecord(expected)) return;
         if (!recording.compareAndSet(false, true)) return;
         try {
             RecordingFormat format = RecordingFormat.from(prefs.getString("call_recording_format", "m4a"));
@@ -159,9 +267,12 @@ public final class CallRecordingHook extends BaseFeature {
                     MediaRecorder.AudioSource.MIC, MediaRecorder.AudioSource.VOICE_CALL};
             Throwable lastError = null;
             for (int source : sources) {
+                if (!canRecord(expected)) throw new RecordingCancelledException();
                 try {
-                    recorder = createRecorder(source, destination.getFileDescriptor(), format);
+                    recorder = createRecorder(source, destination.getFileDescriptor(), format, expected);
                     return;
+                } catch (RecordingCancelledException cancelled) {
+                    throw cancelled;
                 } catch (Throwable failure) {
                     lastError = failure;
                     releaseRecorder(false);
@@ -169,14 +280,16 @@ public final class CallRecordingHook extends BaseFeature {
             }
             throw new IllegalStateException("No supported audio source", lastError);
         } catch (Throwable failure) {
-            XposedBridge.log(TAG + " start failed: " + failure);
+            if (!(failure instanceof RecordingCancelledException)) {
+                XposedBridge.log(TAG + " start failed: " + failure.getClass().getSimpleName());
+            }
             recording.set(false);
             closeDestination(true);
         }
     }
 
     private MediaRecorder createRecorder(int source, FileDescriptor output,
-                                         RecordingFormat format) throws Exception {
+                                         RecordingFormat format, Session expected) throws Exception {
         MediaRecorder candidate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 ? new MediaRecorder(context) : new MediaRecorder();
         try {
@@ -187,6 +300,7 @@ public final class CallRecordingHook extends BaseFeature {
             candidate.setAudioEncodingBitRate(format.bitRate);
             candidate.setOutputFile(output);
             candidate.prepare();
+            if (!canRecord(expected)) throw new RecordingCancelledException();
             candidate.start();
             return candidate;
         } catch (Throwable error) {
@@ -268,4 +382,20 @@ public final class CallRecordingHook extends BaseFeature {
                     MediaRecorder.AudioEncoder.AAC, 44100, 96000);
         }
     }
+
+    private static final class Session {
+        final WeakReference<Object> owner;
+        final String callId;
+
+        Session(Object owner, String callId) {
+            this.owner = new WeakReference<>(owner);
+            this.callId = callId;
+        }
+
+        boolean matches(Object callback, String id) {
+            return owner.get() == callback && callId.equals(id);
+        }
+    }
+
+    private static final class RecordingCancelledException extends Exception {}
 }
