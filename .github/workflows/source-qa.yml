@@ -69,6 +69,7 @@ jobs:
             qa/test_provider_scope.py
             qa/test_preference_write_types.py
             qa/test_bridge_contract.py
+            qa/test_bridge_ordering.py
             qa/test_media_preference_sync.py
             qa/test_dex_negative_cache.py
             qa/test_restart_safety.py

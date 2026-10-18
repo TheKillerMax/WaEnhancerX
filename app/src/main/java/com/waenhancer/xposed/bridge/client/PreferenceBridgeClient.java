@@ -49,6 +49,23 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     private final AtomicBoolean refreshScheduled = new AtomicBoolean();
     @Nullable private final Future<?> initialSync;
     private volatile Map<String, Object> memoryCache = Collections.emptyMap();
+    // Guarded by this. Provider snapshots cannot erase writes accepted but not yet persisted.
+    private Map<String, Object> confirmedCache = Collections.emptyMap();
+    private final Map<Long, PendingEdit> pendingEdits = new LinkedHashMap<>();
+    private long nextEditId;
+    private long mutationGeneration;
+    private long latestSyncId;
+
+    private static final class PendingEdit {
+        final boolean clear;
+        final boolean optimistic;
+        final Map<String, Object> values;
+        PendingEdit(boolean clear, Map<String, Object> values, boolean optimistic) {
+            this.clear = clear;
+            this.values = new LinkedHashMap<>(values);
+            this.optimistic = optimistic;
+        }
+    }
     private volatile String lastSyncSource = "PENDING";
     @Nullable private volatile String lastSyncError;
 
@@ -90,6 +107,9 @@ public final class PreferenceBridgeClient implements SharedPreferences {
     }
 
     public void syncPreferences() {
+        final long generation;
+        final long syncId;
+        synchronized (this) { generation = mutationGeneration; syncId = ++latestSyncId; }
         Map<String, Object> loaded = null;
         String providerError = null;
         try {
@@ -105,19 +125,19 @@ public final class PreferenceBridgeClient implements SharedPreferences {
 
         // Disk read fallback if provider query was unavailable
         if (loaded != null) {
-            lastSyncSource = "PROVIDER";
-            lastSyncError = null;
-            publishSnapshot(loaded);
+            publishRemoteSnapshot(loaded, generation, syncId, "PROVIDER", null);
             return;
         }
         loaded = readDiskSnapshot(true);
         if (loaded != null) {
-            lastSyncSource = "DISK_FALLBACK";
-            lastSyncError = providerError;
-            publishSnapshot(loaded);
+            publishRemoteSnapshot(loaded, generation, syncId, "DISK_FALLBACK", providerError);
         } else {
-            lastSyncSource = "FAILED";
-            lastSyncError = providerError != null ? providerError : "No preference source was readable";
+            synchronized (this) {
+                if (generation == mutationGeneration && syncId == latestSyncId && pendingEdits.isEmpty()) {
+                    lastSyncSource = "FAILED";
+                    lastSyncError = providerError != null ? providerError : "No preference source was readable";
+                }
+            }
         }
     }
 
@@ -190,18 +210,96 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         return copy;
     }
 
-    private synchronized void publishSnapshot(Map<String, ?> candidate) {
-        Map<String, Object> next = Collections.unmodifiableMap(copyValues(candidate));
+    private void publishSnapshot(Map<String, ?> candidate) {
+        Set<String> modified;
+        synchronized (this) {
+            confirmedCache = copyValues(candidate);
+            modified = rebuildViewLocked();
+        }
+        dispatchChanges(modified);
+    }
+
+    private void publishRemoteSnapshot(Map<String, ?> candidate, long generation, long syncId,
+                                       String source, @Nullable String error) {
+        Set<String> modified;
+        synchronized (this) {
+            // Also reject reads started AFTER apply but BEFORE its queued IPC write.
+            if (generation != mutationGeneration || syncId != latestSyncId || !pendingEdits.isEmpty()) return;
+            confirmedCache = copyValues(candidate);
+            lastSyncSource = source;
+            lastSyncError = error;
+            modified = rebuildViewLocked();
+        }
+        dispatchChanges(modified);
+    }
+
+    private static Map<String, Object> applyEdits(Map<String, ?> base, PendingEdit edit) {
+        Map<String, Object> next = edit.clear ? new HashMap<>() : copyValues(base);
+        for (Map.Entry<String, Object> entry : edit.values.entrySet()) {
+            if (entry.getValue() == REMOVED) next.remove(entry.getKey());
+            else next.put(entry.getKey(), entry.getValue());
+        }
+        return next;
+    }
+
+    /** Replays accepted optimistic edits over confirmed state in submission order. */
+    private Set<String> rebuildViewLocked() {
+        Map<String, Object> view = copyValues(confirmedCache);
+        for (PendingEdit edit : pendingEdits.values()) {
+            if (edit.optimistic) view = applyEdits(view, edit);
+        }
+        Map<String, Object> next = Collections.unmodifiableMap(copyValues(view));
         Map<String, Object> previous = memoryCache;
         memoryCache = next;
         Set<String> modified = new HashSet<>(previous.keySet());
         modified.addAll(next.keySet());
         modified.removeIf(key -> Objects.equals(previous.get(key), next.get(key)));
+        return modified;
+    }
+
+    private void dispatchChanges(Set<String> modified) {
+        // Never invoke external listeners while holding the state/submission lock.
         if (!modified.isEmpty() && !changeListeners.isEmpty()) {
             mainHandler.post(() -> {
                 for (String key : modified) notifyListeners(key);
             });
         }
+    }
+
+    private Future<Boolean> enqueueEdit(boolean clear, Map<String, Object> values,
+                                        boolean optimistic) {
+        final Future<Boolean> result;
+        Set<String> modified;
+        synchronized (this) {
+            final long id = ++nextEditId;
+            final PendingEdit edit = new PendingEdit(clear, values, optimistic);
+            pendingEdits.put(id, edit);
+            mutationGeneration++;
+            try {
+                // Registration and enqueue are atomic, so concurrent callers share one order.
+                result = ioExecutor.submit(() -> {
+                    boolean success = persist(edit.clear, edit.values);
+                    Set<String> completedChanges;
+                    synchronized (PreferenceBridgeClient.this) {
+                        pendingEdits.remove(id);
+                        if (success) confirmedCache = applyEdits(confirmedCache, edit);
+                        mutationGeneration++;
+                        completedChanges = rebuildViewLocked();
+                    }
+                    dispatchChanges(completedChanges);
+                    // Reconcile failures and provider-side normalization after pending writes drain.
+                    requestRefresh();
+                    return success;
+                });
+            } catch (RuntimeException rejected) {
+                pendingEdits.remove(id);
+                mutationGeneration++;
+                throw rejected;
+            }
+            modified = rebuildViewLocked();
+        }
+        dispatchChanges(modified);
+        return result;
     }
 
     private void notifyListeners(@Nullable String key) {
@@ -354,13 +452,15 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         @Override
         public boolean commit() {
             Map<String, Object> changes = new LinkedHashMap<>(values);
-            if (!clear && changes.isEmpty()) return true;
+            final boolean clearSnapshot = clear;
+            if (!clearSnapshot && changes.isEmpty()) return true;
             try {
-                Future<Boolean> result = ioExecutor.submit(() -> persist(clear, changes));
-                boolean success = result.get();
-                if (success) publishLocalEdits(clear, changes);
-                else requestRefresh();
-                return success;
+                // Publish successful confirmed state inside the ordered worker, before returning.
+                return enqueueEdit(clearSnapshot, changes, false).get();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                requestRefresh();
+                return false;
             } catch (Throwable t) {
                 requestRefresh();
                 return false;
@@ -370,11 +470,9 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         @Override
         public void apply() {
             Map<String, Object> changes = new LinkedHashMap<>(values);
-            if (!clear && changes.isEmpty()) return;
-            publishLocalEdits(clear, changes);
-            ioExecutor.execute(() -> {
-                if (!persist(clear, changes)) requestRefresh();
-            });
+            final boolean clearSnapshot = clear;
+            if (!clearSnapshot && changes.isEmpty()) return;
+            enqueueEdit(clearSnapshot, changes, true);
         }
     }
 
@@ -411,12 +509,4 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         }
     }
 
-    private synchronized void publishLocalEdits(boolean clear, Map<String, Object> changes) {
-        Map<String, Object> next = clear ? new HashMap<>() : copyValues(memoryCache);
-        for (Map.Entry<String, Object> entry : changes.entrySet()) {
-            if (entry.getValue() == REMOVED) next.remove(entry.getKey());
-            else next.put(entry.getKey(), entry.getValue());
-        }
-        publishSnapshot(next);
-    }
 }
