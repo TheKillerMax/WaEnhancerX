@@ -138,7 +138,7 @@ jobs:
           if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
             test -f qa/test_contact_identity.py
           fi
-          if grep -q 'prefs.contains("hide_forwarded_tag")' app/src/main/java/com/waenhancer/xposed/features/privacy/HideForwardedTagHook.kt; then
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/privacy/HideForwardedTagHook.kt ]]; then
             test -f qa/test_forwarded_metadata_scope.py
           fi
 
