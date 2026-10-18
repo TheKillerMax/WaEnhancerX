@@ -108,7 +108,6 @@ import androidx.compose.ui.geometry.Size
 private const val PROJECT_URL = "https://github.com/WaEnhancerX/WaEnhancerX"
 private const val STARGAZERS_DATA_URL = "https://waex.mubashar.dev/api/stargazers"
 private const val GITHUB_PROFILE_API_URL = "https://waex.mubashar.dev/api/v1/github/users"
-private const val STARGAZERS_CACHE_TTL_MS = 5 * 60 * 60 * 1000L
 
 private data class GitHubStargazer(
     val login: String,
@@ -203,7 +202,7 @@ fun StargazersScreen() {
     LaunchedEffect(refreshKey) {
         isLoading = true
         errorMessage = null
-        val result = withContext(Dispatchers.IO) { loadStargazers(context, forceRefresh = refreshKey > 0) }
+        val result = withContext(Dispatchers.IO) { loadStargazers(context) }
         result.onSuccess { snapshot ->
             stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
@@ -843,20 +842,16 @@ private fun SupportersConfettiOverlay(progress: Float) {
     }
 }
 
-private fun loadStargazers(context: Context, forceRefresh: Boolean): Result<StargazersSnapshot> = runCatching {
+private fun loadStargazers(context: Context): Result<StargazersSnapshot> = runCatching {
     val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_API_CACHE)
     val cachedJson = prefs.getString("stargazers_json_v3", null)
     val cachedSnapshot = cachedJson?.let { runCatching { parseStargazers(it) }.getOrNull() }
-    val cacheIsFresh = System.currentTimeMillis() - prefs.getLong("stargazers_last_fetch_v3", 0) < STARGAZERS_CACHE_TTL_MS
-
-    if (!forceRefresh && cachedSnapshot != null && cacheIsFresh && cachedSnapshot.hasStarredAt()) {
-        return@runCatching cachedSnapshot
-    }
 
     try {
         val request = Request.Builder()
             .url(STARGAZERS_DATA_URL)
             .header("User-Agent", "WaEnhancerX-App")
+            .header("Cache-Control", "no-cache, no-store")
             .build()
         val json = OkHttpClient().newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("Stargazer data returned ${response.code}")
