@@ -621,6 +621,9 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
             WaexQuickActionsSheet.show(
                     activity,
                     prefs,
+                    /* onGhostToggle  */ () -> promptGhostModeSheet(activity),
+                    /* onFreezeToggle */ () -> promptFreezeLastSeenSheet(activity),
+                    /* onDndToggle    */ () -> promptDndModeSheet(activity),
                     /* onRestart   */ () -> forceRestartWhatsApp(activity),
                     /* onSettings  */ () -> {
                         try {
@@ -650,10 +653,8 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         }
 
         if (id == MENU_ID_DND) {
-            boolean current = isDndEnabled();
-            prefs.edit().putBoolean("dnd_mode", !current).apply();
             if (activityObj instanceof Activity) {
-                ((Activity) activityObj).invalidateOptionsMenu();
+                promptDndModeSheet((Activity) activityObj);
             }
             return true;
         }
@@ -690,9 +691,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } else if (itemId == MENU_ID_FREEZE_LS) {
             promptFreezeLastSeenSheet(activity);
         } else if (itemId == MENU_ID_DND) {
-            boolean current = isDndEnabled();
-            prefs.edit().putBoolean("dnd_mode", !current).apply();
-            activity.invalidateOptionsMenu();
+            promptDndModeSheet(activity);
         } else if (itemId == MENU_ID_RESTART) {
             forceRestartWhatsApp(activity);
         } else if (itemId == MENU_ID_SETTINGS) {
@@ -805,9 +804,9 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         if (!active) {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
-                    .setTitle("Freeze Last Seen?")
+                    .setTitle("Activate Freeze Last Seen?")
                     .setMessage("Locks your last seen timestamp so contacts won't see when you're active.\n\nRestart WhatsApp to apply changes?")
-                    .setPositiveButton("Freeze & Restart", (d, w) -> {
+                    .setPositiveButton("Activate & Restart", (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", true).apply();
                         Toast.makeText(activity, "Last Seen Frozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
@@ -819,9 +818,9 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         } else {
             new WaexBottomSheet(activity)
                     .asBottomSheet()
-                    .setTitle("Unfreeze Last Seen?")
+                    .setTitle("Deactivate Freeze Last Seen?")
                     .setMessage("WhatsApp will resume updating your last seen timestamp normally.\n\nRestart WhatsApp to apply changes?")
-                    .setPositiveButton("Unfreeze & Restart", (d, w) -> {
+                    .setPositiveButton("Deactivate & Restart", (d, w) -> {
                         prefs.edit().putBoolean("freeze_last_seen_active", false).apply();
                         Toast.makeText(activity, "Last Seen Unfrozen", Toast.LENGTH_SHORT).show();
                         activity.invalidateOptionsMenu();
@@ -831,6 +830,30 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                     .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                     .show();
         }
+    }
+
+    private void promptDndModeSheet(Activity activity) {
+        boolean active = isDndEnabled();
+        String title = active ? "Deactivate DND Mode?" : "Activate DND Mode?";
+        String message = active
+                ? "WhatsApp will resume normal incoming notifications.\n\nRestart WhatsApp to apply changes?"
+                : "DND Mode mutes all incoming WhatsApp notifications.\n\nRestart WhatsApp to apply changes?";
+        String action = active ? "Deactivate & Restart" : "Activate & Restart";
+        String toast = active ? "DND Mode Deactivated" : "DND Mode Activated";
+
+        new WaexBottomSheet(activity)
+                .asBottomSheet()
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(action, (d, w) -> {
+                    prefs.edit().putBoolean("dnd_mode", !active).apply();
+                    Toast.makeText(activity, toast, Toast.LENGTH_SHORT).show();
+                    activity.invalidateOptionsMenu();
+                    d.dismiss();
+                    forceRestartWhatsApp(activity);
+                })
+                .setNegativeButton("Cancel", (d, w) -> d.dismiss())
+                .show();
     }
 
     @NonNull

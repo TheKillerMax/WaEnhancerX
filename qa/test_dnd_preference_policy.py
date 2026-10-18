@@ -38,7 +38,13 @@ sheet = (src / "xposed/features/homescreen/WaexQuickActionsSheet.java").read_tex
 privacy = (src / "ui/screens/privacy/GlobalPrivacySettingsScreen.kt").read_text()
 for name, text in [("hook", hook), ("header", header), ("sheet", sheet), ("privacy", privacy)]:
     assert "DndPreferencePolicy.isEnabled(" in text, f"{name} bypasses tested DND policy"
-assert header.count("= isDndEnabled();") == 4, "toolbar, menu, and both toggle paths must agree"
+assert header.count("promptDndModeSheet(") == 4, "all DND menu paths must defer to confirmation"
 assert 'isEnabled(PREF_KEY, false) || isEnabled("dndmode", false)' not in hook
-assert 'putBoolean("dnd_mode", !current)' in header
-print("PASS: DND runtime and three control callers bind to the tested policy")
+assert header.count('putBoolean("dnd_mode", !active)') == 1
+assert 'putBoolean("dnd_mode"' not in sheet, "quick sheet must not mutate DND before confirmation"
+assert 'putBoolean("ghostmode_active"' not in sheet, "quick sheet must not mutate Ghost Mode before confirmation"
+assert 'putBoolean("freeze_last_seen_active"' not in sheet, "quick sheet must not mutate Freeze before confirmation"
+assert '"Activate DND Mode?"' in header and '"Deactivate DND Mode?"' in header
+assert '"Activate Freeze Last Seen?"' in header and '"Deactivate Freeze Last Seen?"' in header
+assert '"Activate Ghost Mode?"' in header and '"Deactivate Ghost Mode?"' in header
+print("PASS: DND callers defer mutation until the activate/deactivate restart confirmation")
