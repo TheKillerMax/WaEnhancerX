@@ -15,6 +15,7 @@
     <string name="stargazers_title">ہمارے حامی</string>
     <string name="stargazers_thank_you">WaEnhancerX کی حمایت کرنے کا شکریہ</string>
     <string name="stargazers_message">ہر ستارہ اس منصوبے کو دریافت کرنے میں زیادہ سے زیادہ لوگوں کی مدد کرتا ہے۔ یہ دیوار ہر اس شخص کے لیے ہے جس نے اپنی حمایت ظاہر کی ہے۔</string>
+    <string name="stargazers_last_updated">آخری بار اپ ڈیٹ کیا گیا: %1$s</string>
     <string name="support">حمایت</string>
     <string name="support_desc">اگر آپ کو کوئی مسئلہ درپیش ہے یا آپ کے پاس WaEnhancer X کے بارے میں سوالات ہیں، تو براہ کرم ٹیلیگرام پر جائیں۔</string>
     <string name="license">لائسنس</string>

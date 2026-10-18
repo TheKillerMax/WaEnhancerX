@@ -3,20 +3,19 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- DND Mode – bell-off filled (active) -->
+    <!-- Active airplane uses a filled silhouette: obvious even under host tinting. -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M5,16 L5,17 L19,17 L19,16 L17,14 L17,10 C17,7.239 14.761,5 12,5 C9.239,5 7,7.239 7,10 L7,14 Z" />
-    <path
-        android:fillColor="@android:color/white"
-        android:strokeColor="@android:color/white"
-        android:strokeWidth="1.5"
-        android:pathData="M9.5,21 C9.5,22.38 10.62,23.5 12,23.5 C13.38,23.5 14.5,22.38 14.5,21 Z" />
-    <!-- Slash -->
+        android:fillColor="#25D366"
+        android:strokeColor="#25D366"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M21,16 L13,12 L13,6.5 C13,5.67 12.33,5 11.5,5 C10.67,5 10,5.67 10,6.5 L10,12 L3,16 L3,18 L10,16 L10,20 L8,21.5 L8,23 L11.5,22 L15,23 L15,21.5 L13,20 L13,16 L21,18 Z" />
+    <!-- Small cutout line keeps the body readable at toolbar size. -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#222222"
-        android:strokeWidth="2.2"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.2"
         android:strokeLineCap="round"
-        android:pathData="M3,3 L21,21" />
+        android:pathData="M11.5,7 L11.5,19" />
 </vector>

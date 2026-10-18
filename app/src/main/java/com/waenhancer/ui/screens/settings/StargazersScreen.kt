@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -108,7 +110,6 @@ import androidx.compose.ui.geometry.Size
 private const val PROJECT_URL = "https://github.com/WaEnhancerX/WaEnhancerX"
 private const val STARGAZERS_DATA_URL = "https://waex.mubashar.dev/api/stargazers"
 private const val GITHUB_PROFILE_API_URL = "https://waex.mubashar.dev/api/v1/github/users"
-private const val STARGAZERS_CACHE_TTL_MS = 5 * 60 * 60 * 1000L
 
 private data class GitHubStargazer(
     val login: String,
@@ -150,7 +151,6 @@ fun StargazersScreen() {
 
     var stargazers by remember { mutableStateOf(emptyList<GitHubStargazer>()) }
     var lastUpdated by remember { mutableStateOf("") }
-    var updateIntervalHours by remember { mutableStateOf(5) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var refreshKey by remember { mutableStateOf(0) }
@@ -207,7 +207,6 @@ fun StargazersScreen() {
         result.onSuccess { snapshot ->
             stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
-            updateIntervalHours = snapshot.updateIntervalHours
         }.onFailure {
             errorMessage = "We couldn't load the supporters right now."
             stargazers = emptyList()
@@ -283,7 +282,9 @@ fun StargazersScreen() {
         },
         containerColor = colors.background
     ) { scaffoldPadding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = isLoading && refreshKey > 0,
+            onRefresh = { refreshKey++ },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding)
@@ -376,16 +377,15 @@ fun StargazersScreen() {
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary
                                 )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = buildString {
-                                        append("Updates every $updateIntervalHours hours")
-                                        if (lastUpdated.isNotEmpty()) append(" | Last updated $lastUpdated")
-                                    },
-                                    style = typography.bodyMd,
-                                    color = colors.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
+                                if (lastUpdated.isNotEmpty()) {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.stargazers_last_updated, lastUpdated),
+                                        style = typography.bodyMd,
+                                        color = colors.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
@@ -843,13 +843,13 @@ private fun SupportersConfettiOverlay(progress: Float) {
     }
 }
 
-private fun loadStargazers(context: Context, forceRefresh: Boolean): Result<StargazersSnapshot> = runCatching {
+private fun loadStargazers(context: Context, forceRefresh: Boolean = false): Result<StargazersSnapshot> = runCatching {
     val prefs = PreferenceStores.cacheStore(context, PreferenceStores.GITHUB_API_CACHE)
     val cachedJson = prefs.getString("stargazers_json_v3", null)
     val cachedSnapshot = cachedJson?.let { runCatching { parseStargazers(it) }.getOrNull() }
-    val cacheIsFresh = System.currentTimeMillis() - prefs.getLong("stargazers_last_fetch_v3", 0) < STARGAZERS_CACHE_TTL_MS
 
-    if (!forceRefresh && cachedSnapshot != null && cacheIsFresh && cachedSnapshot.hasStarredAt()) {
+    // If opened directly (not refreshed) and cache is available, return cached data
+    if (!forceRefresh && cachedSnapshot != null && cachedSnapshot.hasStarredAt()) {
         return@runCatching cachedSnapshot
     }
 
@@ -857,6 +857,7 @@ private fun loadStargazers(context: Context, forceRefresh: Boolean): Result<Star
         val request = Request.Builder()
             .url(STARGAZERS_DATA_URL)
             .header("User-Agent", "WaEnhancerX-App")
+            .header("Cache-Control", "no-cache, no-store")
             .build()
         val json = OkHttpClient().newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("Stargazer data returned ${response.code}")
@@ -1091,10 +1092,11 @@ private fun String.nullSafe(): String = if (this == "null") "" else this
 private fun formatUpdatedAt(timestamp: String): String {
     if (timestamp.isBlank()) return ""
     return runCatching {
-        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
+        val cleanTimestamp = timestamp.replace(Regex("\\.\\d+Z$|Z$"), "")
         val formatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
-        formatter.format(parser.parse(timestamp) ?: Date())
+        formatter.format(parser.parse(cleanTimestamp) ?: Date())
     }.getOrDefault(timestamp)
 }

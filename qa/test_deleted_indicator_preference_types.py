@@ -3,6 +3,7 @@
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,3 +39,4 @@ with tempfile.TemporaryDirectory(prefix='waex_deleted_indicator_') as output:
     subprocess.run(['java', '-cp', output,
                     'com.waenhancer.ui.screens.privacy.TestDeletedIndicatorPreferencePolicy'], check=True)
 print('PASS: Anti-Revoke indicator type-safe UI and compatible hook wiring')
+subprocess.run([sys.executable, str(ROOT / 'qa/test_deleted_indicator_bridge.py')], check=True)
