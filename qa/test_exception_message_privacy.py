@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static fail-closed regression for exception messages in three privacy-sensitive hooks.
+"""Static fail-closed regression for exception messages in selected sensitive paths.
 
 This does not scan unrelated app logging; source-only, not Android instrumentation.
 """
@@ -10,6 +10,7 @@ root = Path(__file__).resolve().parents[1] / 'app/src/main/java/com/waenhancer'
 paths = {
     'privacy': 'xposed/features/privacy/CustomPrivacyHook.kt',
     'media': 'xposed/features/media/MediaPreviewHook.kt',
+    'view_once': 'xposed/features/media/DownloadViewOnceHook.java',
     'ipc': 'xposed/bridge/client/PreferenceBridgeClient.java',
 }
 src = {key:(root/path).read_text(encoding='utf-8') for key,path in paths.items()}
@@ -64,4 +65,4 @@ assert 'Error: ${e.javaClass.simpleName}' in src['media']
 assert src['ipc'].count('t.getClass().getSimpleName()') >= 5
 assert 'error.getMessage()' not in src['ipc'], 'Persistent runtime health leaks exception text'
 assert 'String detail = error.getClass().getSimpleName();' in src['ipc']
-print('PASS: exception text redacted from selected custom-privacy, media and IPC logs/status')
+print('PASS: exception text redacted from selected custom-privacy, media, view-once and IPC logs/status')
