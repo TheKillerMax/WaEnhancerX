@@ -150,6 +150,7 @@ jobs:
           # this job instead of silently reducing regression coverage.
           for test_script in \
             qa/test_audit_apks.py \
+            qa/test_native_alignment.py \
             qa/test_dex_source_anchor_inventory.py \
             qa/test_dex_field_inventory.py \
             qa/test_feature_contract_inventory.py \
