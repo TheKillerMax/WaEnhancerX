@@ -77,6 +77,8 @@ jobs:
             qa/test_catalog_source.py
             qa/test_catalog_apk.py
             qa/test_catalog_resource_keep.py
+            qa/test_edit_history_identity.py
+            qa/test_edit_history_adapter_binding.py
           )
           for test_script in "${tests[@]}"; do
             echo "::group::$test_script"

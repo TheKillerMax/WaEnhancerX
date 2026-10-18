@@ -262,7 +262,10 @@ class AntiEditMessagesHook(
                                         val pos = p.args.getOrNull(0) as? Int ?: return
                                         val row = p.result as? ViewGroup ?: return
 
-                                        val item = try { adapter.getItem(pos) } catch (t: Throwable) { null } ?: return
+                                        // The hook is installed once per class, but every chat can
+                                        // have a different adapter instance. Bind this invocation.
+                                        val boundAdapter = p.thisObject as? ListAdapter ?: return
+                                        val item = try { boundAdapter.getItem(pos) } catch (t: Throwable) { null } ?: return
                                         val keyId = extractStableKeyId(item)
                                         var rowId = extractRowId(item)
                                         val msgText = extractMessageText(item)
@@ -271,6 +274,7 @@ class AntiEditMessagesHook(
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
                                         XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_TEXT)
+                                        XposedHelpers.removeAdditionalInstanceField(row, "waex_key_id")
 
                                         if (rowId > 0) {
                                             XposedHelpers.setAdditionalInstanceField(row, FIELD_ROW_ID, rowId)

@@ -152,8 +152,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             existing.add(MessageItem(rowId, validKeyId, newMessage.trim(), ts, nextVer))
         }
 
-        if (validKeyId.isNotEmpty()) messagesCache[validKeyId] = existing
-        else if (rowId > 0) messagesCache[rowId.toString()] = existing
+        cacheKey(rowId, validKeyId)?.let { messagesCache[it] = existing }
     }
 
     fun getCurrentMessageFromWhatsApp(rowId: Long, keyId: String?): String {
@@ -181,12 +180,9 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
     fun getMessages(rowId: Long, keyId: String?): List<MessageItem> {
         // A message key identifies exactly one message. Never combine it with a numeric ID
         // using OR: a stale/reflected numeric value can otherwise merge unrelated histories.
-        if (!keyId.isNullOrEmpty() && messagesCache.containsKey(keyId)) {
-            val cached = messagesCache[keyId]
-            if (!cached.isNullOrEmpty()) return synchronized(cached) { ArrayList(cached) }
-        }
-        if (keyId.isNullOrEmpty() && rowId > 0 && messagesCache.containsKey(rowId.toString())) {
-            val cached = messagesCache[rowId.toString()]
+        val cacheKey = cacheKey(rowId, keyId)
+        if (cacheKey != null) {
+            val cached = messagesCache[cacheKey]
             if (!cached.isNullOrEmpty()) return synchronized(cached) { ArrayList(cached) }
         }
 
@@ -230,15 +226,18 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                     }
                 }
             }
-            if (result.isNotEmpty()) {
-                if (!keyId.isNullOrEmpty()) messagesCache[keyId] = result
-                else if (rowId > 0) messagesCache[rowId.toString()] = result
-            }
+            if (result.isNotEmpty() && cacheKey != null) messagesCache[cacheKey] = result
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Query error: ${t.javaClass.simpleName}")
         }
 
         return result
+    }
+
+    private fun cacheKey(rowId: Long, keyId: String?): String? = when {
+        !keyId.isNullOrEmpty() -> "key:$keyId"
+        rowId > 0 -> "row:$rowId"
+        else -> null
     }
 
     private fun getOriginalMessageFromDb(rowId: Long, keyId: String): String {
@@ -248,21 +247,36 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 // The message key is stable across edit processing. Prefer it over reflected
                 // numeric fields, which can be timestamps or other obfuscated values.
+                var verifiedRowId = 0L
                 if (keyId.isNotBlank()) {
                     try {
                         db.query(
-                            "message", arrayOf("text_data"), "key_id=?", arrayOf(keyId),
+                            "message", arrayOf("_id", "text_data"), "key_id=?", arrayOf(keyId),
                             null, null, null
                         )?.use {
-                            if (it.moveToFirst()) {
-                                val text = it.getString(0)
-                                if (!text.isNullOrBlank()) return text
-                            }
+                            // key_id alone is not guaranteed globally unique across chats.
+                            // Do not choose an arbitrary first row when identity is ambiguous.
+                            if (it.count != 1 || !it.moveToFirst()) return ""
+                            verifiedRowId = it.getLong(0)
+                            val text = it.getString(1)
+                            if (!text.isNullOrBlank()) return text
                         }
-                    } catch (ignored: Throwable) {}
-                }
-
-                if (rowId > 0) {
+                    } catch (ignored: Throwable) {
+                        // Some schemas omit text_data. Resolve the key separately before FTS.
+                        try {
+                            db.query(
+                                "message", arrayOf("_id"), "key_id=?", arrayOf(keyId),
+                                null, null, null
+                            )?.use {
+                                if (it.count != 1 || !it.moveToFirst()) return ""
+                                verifiedRowId = it.getLong(0)
+                            }
+                        } catch (ignored: Throwable) { return "" }
+                    }
+                    // A missing key must never fall back to an unrelated reflected numeric ID.
+                    if (verifiedRowId <= 0) return ""
+                } else if (rowId > 0) {
+                    verifiedRowId = rowId
                     try {
                         db.query(
                             "message", arrayOf("text_data"), "_id=?", arrayOf(rowId.toString()),
@@ -277,13 +291,13 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
                 }
 
                 // FTS fallback for builds where message.text_data is unavailable.
-                if (rowId > 0) {
+                if (verifiedRowId > 0) {
                     try {
                         val cursor = db.query(
                             "message_ftsv2_content",
                             arrayOf("c0content"),
                             "docid=?",
-                            arrayOf(rowId.toString()),
+                            arrayOf(verifiedRowId.toString()),
                             null, null, null
                         )
                         cursor?.use {
