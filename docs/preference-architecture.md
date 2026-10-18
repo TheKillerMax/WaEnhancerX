@@ -1,110 +1,124 @@
-# WAEX Preference System Architecture
+# WAEX preference storage and bridge contracts
 
-This document defines the architectural guidelines and design specifications for the namespace-based preference management system in **Wa Enhancer X** (WAEX). This system completely replaces the flat and obfuscated legacy keys with a searchable, readable, type-safe, and migration-friendly registry.
+This page describes the public implementation checked at
+`f6ec7d4e6f47a246ebb413848d66358217fa9c08` on 18 October 2026. Earlier versions of
+this page proposed dotted keys, encrypted preferences and a different IPC model.
+Those proposals are not a description of the current stores or provider.
 
----
+## Keys, types and ownership
 
-## 🏷️ Naming Rules & Key Standards
+[PreferenceSchema.java](../app/src/main/java/com/waenhancer/config/PreferenceSchema.java)
+records each declared key's type, sensitivity and store. The types are `BOOLEAN`,
+`STRING`, `STRING_SET`, `INT`, `LONG` and `FLOAT`. Sensitivity separately determines
+whether a setting can be exported: `PUBLIC_SETTING` and `PRIVATE_SETTING` are
+exportable; `SECRET`, `CACHE` and `RUNTIME` are not.
 
-All preference keys must strictly follow a **two-level dot-notation namespace** representing the feature's category and specific setting name.
+The existing persisted identifiers include both current and legacy names.
+Examples such as `downloadviewonce`, `seentick`, `dnd_mode` and `dndmode` are actual
+storage keys. There is no completed migration to `<category>.<keyName>`. A label
+change must not silently rename a stored key or change its declared type.
 
-### Syntax
-```text
-<category>.<keyName>
-```
+`PreferenceSchema.Entry` does not contain a default-value or general min/max
+validation field. Callers provide defaults and feature-specific policies enforce
+any additional ranges or alias precedence. When two generations of a key exist,
+check the actual consumer and backup rules instead of assuming they can be
+combined with Boolean OR.
 
-*   **`<category>`**: A lowercase string representing one of the 7 core feature namespaces.
-*   **`<keyName>`**: A lowerCamelCase string representing the specific setting. It must be descriptive and self-documenting.
+## Local storage
 
-### Naming Conventions
-1.  **Toggle Settings**: Prefix with `enable`, `hide`, `show`, `block`, or `force` (e.g. `privacy.enableAntiRevoke`, `system.hideRecommendedChannels`).
-2.  **Configurations**: Suffix with the configuration purpose (e.g. `media.maxUploadResolution`, `ai.groqApiKey`).
-3.  **Complex Arrays/Lists**: Suffix with `List` or `Json` (e.g. `privacy.blockedCallContactsList`).
-4.  **No Abbreviations**: Use `voiceMessage` instead of `vm`, `duration` instead of `dur`.
+[PreferenceStores.java](../app/src/main/java/com/waenhancer/config/PreferenceStores.java)
+opens both `waex_prefs` and `private_config` with Android `MODE_PRIVATE`.
+`PUBLIC` identifies settings intended for hook transport; it does not mean that
+the store is opened using `MODE_WORLD_READABLE`. Older comments that call the
+public file world-readable must be interpreted alongside the actual open mode,
+the framework integration and provider path.
 
----
+The manager uses
+[WaexPreferenceManager.java](../app/src/main/java/com/waenhancer/core/preferences/WaexPreferenceManager.java)
+to select the store, read values and notify the preferences URI after writes.
+Some writers return a success value; older void setters do not expose commit
+failure. Code consuming those APIs must respect their actual failure contract.
 
-## 🗂️ Categories
+These configuration stores use `SharedPreferences`; they are not implemented
+with DataStore or Keystore-backed `EncryptedSharedPreferences` in the public
+code. A private file and an Android app sandbox do not promise confidentiality
+against a privileged process. Separate cache files are also declared by
+`PreferenceStores`.
 
-All preference keys are partitioned into the following 7 core namespaces:
+## Cross-process communication
 
-| Namespace | Category | Purpose | Example Key |
-|---|---|---|---|
-| `privacy` | Privacy | Identity and stealth settings. | `privacy.freezeLastSeen` |
-| `media` | Media | Media upload, download, and quality controls. | `media.enableCallRecording` |
-| `messaging` | Messaging | Chat behavior overrides and UI shortcuts. | `messaging.unlimitedPinnedChats` |
-| `automation` | Automation | Automated messaging and status posting. | `automation.messageBomber` |
-| `ai` | AI | Artificial Intelligence transcription and analysis. | `ai.audioTranscription` |
-| `system` | System | UI themes, custom DPI, and compatibility modes. | `system.compatibilityMode` |
-| `premium` | Premium | Licensing validation and Pro feature locks. | `premium.licenseKey` |
-
----
-
-## 💾 Storage Strategy & IPC Security
-
-WAEX operates in a dual-process Android environment: the target application process (WhatsApp) and the host control process (WAEX Manager App). To support this safely, preferences must be stored and accessed securely.
+The provider authority is `com.waenhancer.hookprovider`, and clients observe
+`content://com.waenhancer.hookprovider/preferences` for changes.
 
 ```mermaid
-graph TD
-    subgraph "WAEX Host Process (:app)"
-        UI[Jetpack Compose UI] --> VM[ViewModels]
-        VM --> DS[Encrypted Preferences Store]
-        DS --> DB[(Local Key-Value Storage)]
-        DS --> Provider[WAEX Content Provider]
-    end
-    subgraph "Target Process (:whatsapp)"
-        Hook[Xposed Hooks Layer] --> Client[WAEX Provider Client]
-    end
-    Client -.->|"Secure IPC (Binder/URI Permission)"| Provider
+flowchart TD
+    UI[Manager settings] --> Manager[WaexPreferenceManager]
+    Manager --> Store[SharedPreferences stores]
+    Hooks[Target hooks] --> Client[PreferenceBridgeClient]
+    Client -->|ContentResolver.call| Provider[HookProvider]
+    Provider -->|Validate caller and operation| Store
+    Manager -.->|notifyChange| Client
+    Provider -.->|notifyChange after commit| Client
 ```
 
-### 1. Local Storage
-*   **Encrypted Preferences**: Sensitive preferences (such as licensing details `premium.licenseKey` or API tokens `ai.groqApiKey`) must be stored using Android's Keystore-backed **EncryptedSharedPreferences** to prevent extraction from rooted devices.
-*   **Standard Preferences**: Non-sensitive UI preferences are persisted in a sandboxed XML file via the modern **Jetpack DataStore** API, offering transactional, thread-safe asynchronous disk writes.
+[HookProvider.java](../app/src/main/java/com/waenhancer/xposed/bridge/HookProvider.java)
+is exported in [AndroidManifest.xml](../app/src/main/AndroidManifest.xml).
+Its `call` entry checks the Binder caller before clearing the calling identity.
+[CallerScopePolicy.java](../app/src/main/java/com/waenhancer/xposed/bridge/CallerScopePolicy.java)
+accepts the module UID or a UID associated with a declared target package.
+Package-specific reports additionally check ownership of the reported package.
+This is UID/package authorization; the provider does not declare a
+`signatureOrSystem` permission or authenticate the WhatsApp certificate. The
+separate signature permission for restart broadcasts is a different boundary.
 
-### 2. Secure Inter-Process Communication (IPC)
-*   **Content Provider Channel**: Settings are served from the WAEX Host Process to the target process hook layer using a custom Android `ContentProvider` backed by signature-level permissions (`signatureOrSystem`).
-*   **Dynamic Binder Validation**: When the target hook client queries preferences, the `ContentProvider` validates the client’s UID and signature matches the target WhatsApp process before returning the cursor payload.
+For generic preference mutations, the provider validates the complete operation
+batch before applying it. It rejects private schema keys and protected derived
+state, checks the types of known public keys and applies entitlement checks to
+specified enabled premium Booleans. Generic full-store clearing is restricted
+to the module UID. The batch limit is 128 operations. See
+[PreferenceWriteTypePolicy.java](../app/src/main/java/com/waenhancer/xposed/bridge/PreferenceWriteTypePolicy.java)
+and [ProviderDerivedKeyPolicy.java](../app/src/main/java/com/waenhancer/xposed/bridge/ProviderDerivedKeyPolicy.java).
+Unknown keys are not all rejected by the schema, so registering a key and testing
+its complete path remains necessary.
 
----
+[PreferenceBridgeClient.java](../app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java)
+implements `SharedPreferences` in the target process using a cached provider
+snapshot, a serialized executor for writes and a framework disk fallback. Its
+getters have explicit coercion/default behavior that can differ from Android's
+strict type-mismatch exceptions. `apply()` exposes an optimistic local change;
+`commit()` waits for its persistence result. Test refresh/write ordering and
+listener behavior explicitly. Successful source compilation alone cannot prove
+ordering across Binder calls or disk failure behavior.
 
-## 🛡️ Validation Rules & Type Safety
+## Backups and compatibility
 
-To ensure stability across target application updates, every preference key is validated against strict constraints upon both read and write cycles.
+[SettingsBackupCodec.kt](../app/src/main/java/com/waenhancer/core/preferences/SettingsBackupCodec.kt)
+encodes a versioned binary `.waex` container and reads supported legacy JSON
+forms. It bounds input size, validates typed records and uses an explicit legacy
+alias map. The binary container version is not a claim that all preferences have
+been migrated to a new naming scheme.
 
-### 1. Schema Definition Contracts
-Every key must register a schema contract defining:
--   **Type Constraint**: Standard types (`Boolean`, `Integer`, `Float`, `String`, `StringList`).
--   **Default Value**: A fallback value guaranteed to be returned if the key is missing or corrupted.
--   **Value Range Constraints**:
-    *   *Numeric*: Minimum and maximum bounds (e.g. `media.maxFps` is constrained to `[30, 120]`).
-    *   *Strings*: Allowed enum matches or Regex patterns (e.g. `system.themeStyle` is matched against `["default", "obsidian", "lite"]`).
+Export uses schema sensitivity to omit secrets and operational state. Import
+filters prohibited keys and normalizes supported values, including specified
+legacy color representations. Preserve canonical settings when accepting an old
+alias; do not infer alias intent solely from similar names. A settings backup is
+separate from the databases that hold preserved messages or edit history.
 
-### 2. Fallback Recovery Flow
-If a configuration read fails due to deserialization issues (e.g., a String containing non-integer values when reading an integer key):
-1.  Catch the Exception inside `RunCatchingUtil`.
-2.  Emit an error telemetry log to local diagnostics.
-3.  Write the defined Default Value back to storage.
-4.  Return the Default Value to the hook layer to prevent app crashes.
+## Regression checks and limits
 
----
+The public workflow includes checks for caller scope, write types, derived keys,
+bridge behavior, backup aliases, binary/JSON round trips and feature/schema
+coverage. Relevant entry points include:
 
-## 🔄 Future Migration Strategy
+- [test_provider_scope.py](../qa/test_provider_scope.py)
+- [test_preference_write_types.py](../qa/test_preference_write_types.py)
+- [test_provider_derived_keys.py](../qa/test_provider_derived_keys.py)
+- [test_bridge_contract.py](../qa/test_bridge_contract.py)
+- [test_backup_alias_policy.py](../qa/test_backup_alias_policy.py)
+- [test_settings_backup_binary_roundtrip.py](../qa/test_settings_backup_binary_roundtrip.py)
+- [test_settings_backup_json.py](../qa/test_settings_backup_json.py)
 
-A schema versioning and transformation pipeline is required to prevent settings loss when introducing new features or upgrading schemas.
-
-### 1. Schema Versioning
-*   Persistent storage maintains a metadata key `system.preferenceSchemaVersion` (Integer).
-*   Any modification to key names, types, or namespaces must increment this schema version.
-
-### 2. Transformation Pipeline (Upgrade/Downgrade Adapters)
-When the WAEX Host App boots, the Preference Engine checks `system.preferenceSchemaVersion`. If it is less than the current engine version, a series of sequential **Migration Adapters** is run:
-
-```text
-Database Load -> Identify Version X -> Run Migration(X -> X+1) -> Run Migration(X+1 -> X+2) -> Write Final Version
-```
-
-*   **Upgrade Schema Mapping**: An adapter defines a key mapping dictionary. For example, upgrading from version 1 to 2:
-    *   Map legacy key `antirevoke` to `privacy.enableAntiRevoke` (converting the string `"0"`/`"1"` to `Boolean`).
-    *   Map legacy key `downloadviewonce` to `media.enableDownloadViewOnce` (`Boolean`).
-*   **Downgrade Strategy**: If a user downgrades the WAEX APK version, settings unrecognized by the older schema are ignored but preserved in storage, preventing data destruction.
+Read each suite's declared scope. Local doubles, real Android framework fixtures,
+a signed APK and a device running an injected host establish different things.
+Do not repair a read mismatch by silently clearing preferences or overwriting the
+user's settings with defaults.

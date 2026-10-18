@@ -6,7 +6,7 @@
 
 A modern, clean-room Xposed/LSPosed module that injects interface styling, anti-deletion protection, view-once media tools, and deep customization directly into the official WhatsApp client. No repackaged APKs. No modified binaries.
 
-[![Android Platform](https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=flat&logo=android&logoColor=white)](https://developer.android.com)
+[![Android Platform](https://img.shields.io/badge/Platform-Android%20API%2024%2B-3DDC84?style=flat&logo=android&logoColor=white)](https://developer.android.com)
 [![Framework](https://img.shields.io/badge/Framework-LSPosed%20%7C%20Zygisk-orange?style=flat)](https://github.com/JingMatrix/LSPosed)
 [![WaEnhancerX Downloads](https://img.shields.io/github/downloads/WaEnhancerX/WaEnhancerX/total.svg?label=GitHub%20Downloads&color=blue)](https://github.com/WaEnhancerX/WaEnhancerX/releases)
 [![LSPosed Repo Downloads](https://img.shields.io/github/downloads/xposed-Modules-Repo/com.waenhancer/total.svg?label=LSPosed%20Repo%20Downloads&color=purple)](https://github.com/xposed-Modules-Repo/com.waenhancer/releases)
@@ -55,18 +55,21 @@ Most WhatsApp modifications require replacing your official application with sus
 - **Zero Client Tampering:** Works directly on top of the unmodified, genuine WhatsApp client from Google Play.
 - **Deep System-Level Integration:** Injects settings natively into WhatsApp's internal preferences screen with full search engine support.
 - **Dynamic CSS Theme Engine:** Style message bubbles, action bars, backgrounds, and UI layouts without decompiling or patching XML assets.
-- **Privacy Without Compromise:** Keeps your anti-delete logs, view-once media captures, and conversation preferences entirely offline and local to your device.
+- **Local History and Exports:** Stores preserved-message history and media exports on the device. Network-dependent features and update checks have their own settings and behavior.
 
 ---
 
 ## About V2 Architecture
 
-WaEnhancerX V2 is an independent, clean-room rewrite engineered from the ground up:
+The public manager and hooks use Kotlin/Java, Jetpack Compose, Hilt and Android
+framework APIs. Features are grouped into packages inside `:app`, with a required
+private `:licensing` module. The [architecture guide](docs/ARCHITECTURE.md)
+maps the implemented components and their responsibilities.
 
-- **Clean-Room Implementation:** Not a fork of V1 or any third-party module; zero code, logic, or resource reuse from GPL-licensed projects.
-- **Modern Android Stack:** Built with Kotlin, Jetpack Compose, Coroutines/StateFlow, Hilt Dependency Injection, and Material You (Monet) dynamic theming.
-- **Multi-OS Runtime Compatibility:** Rock-solid hooking engine verified across Android 8.0 through Android 12, 13, 14, 15, and future releases.
-- **Permissive Open-Source Licensing:** Cleanly published under the Apache License 2.0.
+The APK declares `minSdk 24` and `targetSdk 36`. These build settings do not imply
+that every feature has been verified on every Android version or future host
+release. Compatibility depends on the target APK, loaded hook framework and
+individual hook behavior.
 
 ---
 
@@ -79,7 +82,7 @@ WaEnhancerX V2 is an independent, clean-room rewrite engineered from the ground 
 
 ### 🛡️ Privacy & Security
 - **Anti-Delete Protection:** Prevent incoming messages from disappearing when sender deletes them.
-- **View-Once Freedom:** Open, view, and save view-once photos/videos without restrictions.
+- **View-Once Tools:** Controls for viewing and exporting view-once media on compatible host builds.
 - **Self-Delete History:** Maintain local archives of messages you delete for yourself.
 - **Receipt Control:** Granular control over blue ticks and delivered receipts.
 
@@ -98,7 +101,7 @@ WaEnhancerX V2 is an independent, clean-room rewrite engineered from the ground 
 - **Native Settings Injection:** Integrated right inside WhatsApp’s official settings hierarchy.
 - **Built-in Search:** Instantly locate any tweak via native search bar indexing.
 - **Safe Restart Policy:** Graceful, reliable WhatsApp process restart directly from the dashboard.
-- **Tasker Automation (Upcoming):** Control features and privacy profiles via Android broadcast intents.
+- **Tasker Integration:** Open a selected WhatsApp chat through the supported, user-confirmed automation flow.
 
 </td>
 </tr>
@@ -109,87 +112,108 @@ WaEnhancerX V2 is an independent, clean-room rewrite engineered from the ground 
 
 ## Compatibility & Supported Clients
 
-WaEnhancerX incorporates a dedicated **Multi-Client Compatibility Layer** and strict **Version Gate** to prevent crashes caused by unexpected host obfuscation changes.
+WAEX targets exact package names and evaluates configured version-name rules
+before initializing its feature registry.
 
-| Target Package | Client Name | Supported Versions | Status |
-| :--- | :--- | :--- | :--- |
-| `com.whatsapp` | WhatsApp Messenger | Stable releases (Google Play) | Full Support |
-| `com.whatsapp.w4b` | WhatsApp Business | Supported versions | Active Support |
+| Target package | Client | Scope of the declaration |
+|---|---|---|
+| `com.whatsapp` | WhatsApp Messenger | Declared target; version rules and feature-specific acceptance still apply. |
+| `com.whatsapp.w4b` | WhatsApp Business | Declared target; version rules and feature-specific acceptance still apply. |
+| Other explicitly listed packages | Alternative clients | Exact allowlist membership only; no authenticity or compatibility guarantee. |
 
-
-*For in-depth versioning and client compatibility policies, consult the [Client Compatibility Guide](docs/client-compatibility.md).*
+See the [Client Compatibility Guide](docs/client-compatibility.md) for the actual
+allowlist, built-in/custom rules, explicit bypass and unavailable-input states.
+A matching rule or a green source test does not prove that every feature works.
 
 ---
 
 ## Requirements
 
-Before installing WaEnhancerX, ensure your setup meets the following prerequisites:
+1. A rooted Android device with a working Xposed-compatible framework such as
+   LSPosed, configured for that device.
+2. An installed target client listed in the module's scope and admitted by its
+   configured version rules.
+3. An Android version allowed by the APK's declared minimum SDK (currently API 24),
+   plus framework and target-client compatibility. This is not a device test matrix.
 
-1. **Root Access:** A rooted Android device running **Magisk** (v24+) or **KernelSU** / **APatch**.
-2. **Xposed Environment:** A functional **LSPosed** installation running on Zygisk (*EdXposed is deprecated and not supported*).
-3. **Target Application:** Official WhatsApp or WhatsApp Business installed from Google Play.
-4. **Android Version:** Android 8.0 (API Level 26) through Android 15+.
+The [manifest](app/src/main/AndroidManifest.xml) declares the Xposed metadata and
+[arrays.xml](app/src/main/res/values/arrays.xml) declares the recommended scope.
 
 ---
 
 ## Installation Guide
 
-Follow these steps to set up WaEnhancerX:
+1. **Download:** Select the desired Debug or Release APK from
+   [GitHub Releases](https://github.com/WaEnhancerX/WaEnhancerX/releases) and read
+   that release's notes.
+2. **Install:** Install the APK on the Android device.
+3. **Activate:** Enable WaEnhancerX in the loaded framework's manager.
+4. **Set scope:** Enable **WaEnhancerX** (`com.waenhancer`) and the installed
+   target, such as `com.whatsapp` or `com.whatsapp.w4b`. System Framework (`android`)
+   is not part of the declared scope in this source tree.
+5. **Restart and inspect:** Restart the selected processes as required by the
+   framework, open the WAEX manager, and inspect its compatibility and injection
+   diagnostics. Then check the configured entry point in the target app.
 
-```text
-[1. Download APK] ──> [2. Install on Device] ──> [3. Enable in LSPosed] ──> [4. Set Scope] ──> [5. Soft Reboot]
-```
-
-1. **Download:** Grab the latest `WaEnhancerX-v2.x.x.apk` from [GitHub Releases](https://github.com/WaEnhancerX/WaEnhancerX/releases).
-2. **Install:** Install the downloaded APK onto your Android device.
-3. **Activate Module:** Open the **LSPosed Manager** application and toggle on **WaEnhancerX**.
-4. **Configure Scope:** Check both **System Framework** and **WhatsApp** (`com.whatsapp` / `com.whatsapp.w4b`) in the module's target scope.
-5. **Restart:** Reboot your device or perform a soft reboot / system restart.
-6. **Enjoy:** Open WhatsApp and navigate to the main **Settings** page — WaEnhancerX options will appear integrated natively.
+The current build configuration enables code minification and resource shrinking
+for Release. Debug uses a different optimization configuration; it is still an APK
+archive. A feature working in Debug must also be checked in optimized Release
+before a release-specific issue is considered resolved.
 
 ---
 
 ## Building from Source
 
-To compile WaEnhancerX yourself:
+The repository currently declares SDK 36, JDK/toolchain 17, Android Gradle Plugin
+9.0.1 and a Gradle distribution of 9.1.0 in the wrapper properties. Use an Android Studio version compatible with that
+AGP release. The Kotlin catalog entry is 2.0.20; the resolved Gradle plugin/compiler
+version also depends on AGP and should be recorded when validating a full build.
 
-### Prerequisites
-- **Android Studio:** Ladybug (2024.2.1) or newer
-- **JDK:** Java 17 or higher
-- **Android SDK:** API 34+ (compileSdk 36)
+**A public clone alone cannot produce the configured APK.** Both Debug and Release
+require the private `:licensing` module and the original configured signing key;
+the build verifies its certificate during configuration. The current revision
+declares a licensing URL in `.gitmodules` but contains no gitlink or pinned
+licensing commit, so recursive submodule initialization alone cannot supply it.
+Builders with access must obtain it separately:
 
-### Build Commands
 ```bash
-# Clone the repository
 git clone https://github.com/WaEnhancerX/WaEnhancerX.git
 cd WaEnhancerX
-
-# Build debug APK
-./gradlew assembleDebug
-
-# Output APK location:
-# app/build/outputs/apk/debug/app-debug.apk
+git clone https://github.com/mubashardev/waex-licensing.git licensing
 ```
+
+Before building, select a compatible licensing revision supplied by the
+maintainers and record both commit SHAs. Configure the Android SDK and authorized
+signing properties as described in [CONTRIBUTING.md](CONTRIBUTING.md), then run:
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+The configured output is
+`app/build/outputs/apk/debug/WaEnhancerX-v<VERSION_NAME>_debug.apk`; Release uses
+`app/build/outputs/apk/release/WaEnhancerX-v<VERSION_NAME>_release.apk`.
+`VERSION_NAME` comes from [gradle.properties](gradle.properties).
+
+Public-source checks can run without the private module or signing key. See
+[Development Setup and Tests](CONTRIBUTING.md#development-setup) for prerequisites,
+commands and the distinction between source QA, local unit tests and device tests.
 
 ---
 
 ## Architecture & Design Principles
 
-WaEnhancerX follows strict architectural layering to prevent dependency leaks and decouple hooks from business features:
+The manager uses `WaexPreferenceManager` and `PreferenceSchema`; injected features
+read settings through `PreferenceBridgeClient` and `HookProvider`. `MainHook`
+selects declared targets and invokes `VersionGuard` before `FeatureRegistry`
+initializes the feature implementations.
 
-```
-[ UI / Jetpack Compose ]  ──>  [ Feature Layer ]  ──>  [ API Contracts ]
-                                                            │
-                                                            ▼
-[ Host Client Hook Adapters ]  <──  [ Core Compatibility Provider & Version Gate ]
-```
+- [Current architecture and source map](docs/ARCHITECTURE.md)
+- [Client targeting and version-rule decisions](docs/client-compatibility.md)
+- [Preference stores, backups and provider authorization](docs/preference-architecture.md)
 
-- **Clean Separation:** UI, hooks, core engine, and API contracts communicate via strict unidirectional abstractions.
-- **Isolated Hook Guards:** Return-type checks and class relocation guards safeguard against host app updates.
-- **Read more in our documentation:**
-  - [Architecture Specification](docs/ARCHITECTURE.md)
-  - [Client Compatibility & Version Policy](docs/client-compatibility.md)
-  - [Plugin & Preference Design](docs/preference-architecture.md)
+These documents describe the public code. They distinguish implemented behavior
+from historical design proposals and from checks requiring a full APK or device.
 
 ---
 
