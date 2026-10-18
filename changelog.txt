@@ -11,6 +11,7 @@
 - Fixed Filter Item by ID
 - Fixed chat screen ui lags
 - Fixed version compatibility bug
+- Fixed Delete for me messages not saving + improvements
 
 [Improvements]
 - Improved Call recorder
