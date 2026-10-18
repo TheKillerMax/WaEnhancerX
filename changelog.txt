@@ -20,6 +20,7 @@
 [New Languages]
 - Chinese
 - Turkish
+- Slovenian
 
 [Community contribution]
-- Thanks to @TheKillerMax & @wilsonmilson for valuable contributions in this update.
+- Thanks to @TheKillerMax, @wilsonmilson, @damjang for valuable contributions in this update.
