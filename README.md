@@ -253,6 +253,13 @@ Thanks go to these wonderful people ([emoji key](https://allcontributors.org/doc
       </a><br />
       <a href="https://github.com/WaEnhancerX/WaEnhancerX/pull/49" title="Translation">🌍</a>
     </td>
+    <td align="center" valign="top" width="180">
+      <a href="https://github.com/damjang">
+        <img src="https://avatars.githubusercontent.com/u/1283609?v=4" width="100px" alt="damjang" /><br />
+        <sub><b>damjang</b></sub>
+      </a><br />
+      <a href="https://github.com/WaEnhancerX/WaEnhancerX/pull/58" title="Translation">🌍</a>
+    </td>
   </tr>
 </table>
 
