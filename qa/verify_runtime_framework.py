@@ -68,7 +68,7 @@ class RuntimeResourcesTest {
   assertEquals(D.PREFERENCES_UNAVAILABLE,UniversalVersionValidator.evaluate(resourceContext("release","es-CL"),"2.26.40.76",p))
  }
  @Test fun numericFallbackCannotUseTheFixtureResourceTable(){
-  val application=RuntimeEnvironment.getApplication<Application>()
+  val application=RuntimeEnvironment.getApplication()
   val resourceName=application.resources.getResourceName(com.waenhancer.app.R.array.universal_supported_versions)
   assertNotEquals("com.waenhancer:array/universal_supported_versions",resourceName)
   val misleading=object:ContextWrapper(application){
