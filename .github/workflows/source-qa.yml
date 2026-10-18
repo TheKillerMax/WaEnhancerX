@@ -107,6 +107,11 @@ jobs:
           if [[ -f app/src/main/res/raw/waex_dynamic_menu_icons_keep.xml ]]; then
             test -f qa/test_dynamic_menu_resources.py
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/privacy/StatusHookContract.java ]]; then
+            test -f qa/test_status_hook_contract.py
+            test -f qa/java/TestStatusHookContract.java
+            test -f qa/fixtures/StatusHookBindingChecks.java
+          fi
 
       - name: Require stability tests when their implementations are present
         shell: bash
@@ -177,6 +182,7 @@ jobs:
             qa/test_proximity_ui_wiring.py \
             qa/test_notification_memory.py \
             qa/test_preserved_own_revoke.py \
+            qa/test_status_hook_contract.py \
             qa/test_startup_reconciliation.py \
             qa/test_tasker_policy.py \
             qa/test_separate_groups_policy.py \
