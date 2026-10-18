@@ -27,6 +27,7 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import androidx.core.widget.NestedScrollView;
+import com.waenhancer.config.DndPreferencePolicy;
 import de.robv.android.xposed.XposedBridge;
 
 /**
@@ -226,7 +227,8 @@ final class WaexQuickActionsSheet {
                 }
 
                 if (prefs.getBoolean("show_dndmode", false)) {
-                    boolean dndOn = gActive || prefs.getBoolean("dnd_mode", false);
+                    boolean dndOn = gActive || DndPreferencePolicy.isEnabled(
+                            prefs::contains, key -> prefs.getBoolean(key, false));
                     addSwitchRow(dependentContainer, activity, dialog,
                             "DND Mode",
                             gActive ? "Managed by Ghost Mode" : "Mute all incoming notifications",

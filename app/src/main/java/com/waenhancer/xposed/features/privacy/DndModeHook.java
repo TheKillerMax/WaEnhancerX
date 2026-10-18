@@ -3,6 +3,7 @@ package com.waenhancer.xposed.features.privacy;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
+import com.waenhancer.config.DndPreferencePolicy;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import de.robv.android.xposed.XC_MethodHook;
@@ -35,7 +36,7 @@ public class DndModeHook extends BaseFeature {
     }
 
     private boolean isDndActive() {
-        return isEnabled(PREF_KEY, false) || isEnabled("dndmode", false);
+        return DndPreferencePolicy.isEnabled(prefs::contains, key -> isEnabled(key, false));
     }
 
     @Override

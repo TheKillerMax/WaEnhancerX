@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import com.waenhancer.config.FeatureCatalog
+import com.waenhancer.config.DndPreferencePolicy
 import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
@@ -194,6 +195,10 @@ fun GlobalPrivacySettingsScreen(
                 }
                 put(key, boolVal)
             }
+            put("dnd_mode", DndPreferencePolicy.isEnabled(
+                { key -> preferenceManager.getAll().containsKey(key) },
+                { key -> preferenceManager.getBoolean(key, false) }
+            ))
         }
     }
 
