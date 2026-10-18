@@ -148,7 +148,8 @@ public class StatusDownloadHook extends BaseFeature {
             } else if (statusContactFragClass != null) {
                 // Fallback Strategy 3: Hook fragment menu methods directly
                 for (Method m : statusContactFragClass.getDeclaredMethods()) {
-                    if (m.getParameterCount() >= 1 && Menu.class.isAssignableFrom(m.getParameterTypes()[0])) {
+                    Class<?>[] methodParameters = m.getParameterTypes();
+                    if (methodParameters.length >= 1 && Menu.class.isAssignableFrom(methodParameters[0])) {
                         XposedBridge.hookMethod(m, new XC_MethodHook() {
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) {
@@ -533,7 +534,7 @@ public class StatusDownloadHook extends BaseFeature {
         // Check 0-arg methods returning File
         try {
             for (Method m : clazz.getDeclaredMethods()) {
-                if (m.getParameterCount() == 0 && m.getReturnType() == File.class) {
+                if (m.getParameterTypes().length == 0 && m.getReturnType() == File.class) {
                     m.setAccessible(true);
                     try {
                         File f = (File) m.invoke(obj);

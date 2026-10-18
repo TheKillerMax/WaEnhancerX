@@ -2,6 +2,8 @@ package com.waenhancer.xposed.core.devkit;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.os.Build;
 import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,9 +53,12 @@ public final class DexCacheManager {
         return sInstance;
     }
 
+    @SuppressWarnings("deprecation") // versionCode is the platform API before Android 9.
     private void validateCacheVersion() {
         try {
-            long hostVersionCode = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).getLongVersionCode();
+            PackageInfo host = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0);
+            long hostVersionCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? host.getLongVersionCode() : host.versionCode;
             long cachedHostVersion = mPrefs.getLong("host_version_code", -1);
 
             if (cachedHostVersion != hostVersionCode) {

@@ -251,7 +251,7 @@ public class AntiRevokeHook extends BaseFeature {
                                 ).firstOrNull();
                                 if (data != null) {
                                     Method m = data.getMethodInstance(loader);
-                                    if (m.getParameterCount() >= 1) return m;
+                                    if (m.getParameterTypes().length >= 1) return m;
                                 }
                             } catch (Throwable ignored) {}
                         }
@@ -980,11 +980,12 @@ public class AntiRevokeHook extends BaseFeature {
                                     for (MethodData invoke : invokes) {
                                         try {
                                             Method m = invoke.getMethodInstance(loader);
-                                            if (targetFragmentClass != null
-                                                    && Modifier.isStatic(m.getModifiers())
-                                                    && m.getDeclaringClass() == targetFragmentClass
-                                                    && m.getParameterCount() > 1) {
-                                                for (Class<?> pType : m.getParameterTypes()) {
+                                            if (targetFragmentClass == null
+                                                    || !Modifier.isStatic(m.getModifiers())
+                                                    || m.getDeclaringClass() != targetFragmentClass) continue;
+                                            Class<?>[] methodParameters = m.getParameterTypes();
+                                            if (methodParameters.length > 1) {
+                                                for (Class<?> pType : methodParameters) {
                                                     if (pType == targetFragmentClass) {
                                                         return m;
                                                     }
@@ -1094,7 +1095,8 @@ public class AntiRevokeHook extends BaseFeature {
             if (intArgCount >= 2) break;
             if (Modifier.isStatic(m.getModifiers())) continue;
             if (excludeMethod != null && m.equals(excludeMethod)) continue;
-            if (m.getParameterCount() == 1 && m.getParameterTypes()[0] == int.class) {
+            Class<?>[] methodParameters = m.getParameterTypes();
+            if (methodParameters.length == 1 && methodParameters[0] == int.class) {
                 try {
                     XposedBridge.hookMethod(m, buildStatusPageHookWithArg());
                     intArgCount++;

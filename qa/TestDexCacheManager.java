@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.SystemClock;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -64,8 +65,14 @@ public final class TestDexCacheManager {
     }
 
     public static void main(String[] args) throws Exception {
+        int api = args.length == 0 ? 28 : Integer.parseInt(args[0]);
+        Build.VERSION.SDK_INT = api;
+        // API 28 must preserve the upper bits; older PackageInfo exposes only int versionCode.
+        long initialVersion = api >= 28 ? (1L << 32) + 1234L : 1234L;
+        long updatedVersion = api >= 28 ? (2L << 32) + 1234L : 2345L;
         TestContext context = new TestContext();
-        context.manager.info.code = 1234L;
+        context.manager.info.code = initialVersion;
+        context.manager.info.versionCode = (int) initialVersion;
         SystemClock.now = 5_000L;
         DexCacheManager cache = newManager(context);
         ClassLoader loader = TestDexCacheManager.class.getClassLoader();
@@ -150,10 +157,11 @@ public final class TestDexCacheManager {
 
         // Reinstantiation with new host version invalidates positive descriptors.
         long versionOld = context.preferences.getLong("host_version_code", -1L);
-        check(versionOld == 1234L, "first host version persisted");
-        context.manager.info.code = 2345L;
+        check(versionOld == initialVersion, "first host version persisted on API " + api);
+        context.manager.info.code = updatedVersion;
+        context.manager.info.versionCode = (int) updatedVersion;
         cache = newManager(context);
-        check(context.preferences.getLong("host_version_code", -1L)==2345L, "host update recorded");
+        check(context.preferences.getLong("host_version_code", -1L)==updatedVersion, "host update recorded");
         check(context.preferences.getString("method-key", null)==null, "old host descriptor removed");
         AtomicInteger reread = new AtomicInteger();
         check(cache.getMethod(loader, "method-key", () -> {reread.incrementAndGet(); return length;}) == length,
@@ -169,6 +177,10 @@ public final class TestDexCacheManager {
         check(restarted.getMethod(loader, "no-disk-negative", () -> {fresh.incrementAndGet(); return length;}) == length,
                 "new process retries previous missing key");
         check(fresh.get()==2, "fresh manager invokes resolver");
-        System.out.println("PASS: " + checks + " production DexCacheManager integration checks");
+        context.preferences.values.put("same-version-descriptor", "retained");
+        newManager(context);
+        check("retained".equals(context.preferences.getString("same-version-descriptor", null)),
+                "unchanged host version preserves descriptors");
+        System.out.println("PASS: " + checks + " production DexCacheManager integration checks; API " + api + " double");
     }
 }

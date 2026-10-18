@@ -278,7 +278,7 @@ class PreserveDeleteForMeHook(
                             )
                         )
                     ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterCount > 0
+                        it.name != "run" || it.parameterTypes.size > 0
                     } ?: bridge.findMethod(
                         FindMethod.create().matcher(
                             MethodMatcher.create().addUsingString(
@@ -287,7 +287,7 @@ class PreserveDeleteForMeHook(
                             )
                         )
                     ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterCount > 0
+                        it.name != "run" || it.parameterTypes.size > 0
                     }
                 }
             )

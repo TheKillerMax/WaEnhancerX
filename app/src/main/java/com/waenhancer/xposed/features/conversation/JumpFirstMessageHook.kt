@@ -91,7 +91,8 @@ class JumpFirstMessageHook(
     private fun hookConversationMenuMethods(conversationClass: Class<*>) {
         var hooked = false
         for (m in conversationClass.declaredMethods) {
-            if (m.parameterCount == 1 && m.parameterTypes[0] == Menu::class.java) {
+            val parameterTypes = m.parameterTypes
+            if (parameterTypes.size == 1 && parameterTypes[0] == Menu::class.java) {
                 try {
                     XposedBridge.hookMethod(m, object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {

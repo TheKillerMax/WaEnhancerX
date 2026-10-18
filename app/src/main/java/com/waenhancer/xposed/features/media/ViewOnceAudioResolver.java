@@ -15,6 +15,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -56,7 +57,7 @@ final class ViewOnceAudioResolver {
                 managers.add(call.getMethodInstance(loader));
             }
             if (call.getDeclaredClassName().equals(manager.getReturnType().getName())
-                    && call.getParamTypeNames().equals(List.of(String.class.getName()))
+                    && call.getParamTypeNames().equals(Collections.singletonList(String.class.getName()))
                     && call.getReturnTypeName().equals(fragment.getName())) {
                 Method lookup = call.getMethodInstance(loader);
                 if (instance(lookup)) lookups.add(lookup);

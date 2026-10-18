@@ -197,7 +197,7 @@ public class IGStatusHook extends BaseFeature {
 
                         Method dataMethod = null;
                         for (Method m : obj.getClass().getDeclaredMethods()) {
-                            if (m.getParameterCount() == 0 && m.getReturnType() != void.class) {
+                            if (m.getParameterTypes().length == 0 && m.getReturnType() != void.class) {
                                 dataMethod = m;
                                 break;
                             }
@@ -341,7 +341,7 @@ public class IGStatusHook extends BaseFeature {
         if (conversationsFragClass != null) {
             for (Class<?> c = conversationsFragClass; c != null && c != Object.class; c = c.getSuperclass()) {
                 for (Method m : c.getDeclaredMethods()) {
-                    if (m.getParameterCount() == 0 && m.getReturnType() == int.class) {
+                    if (m.getParameterTypes().length == 0 && m.getReturnType() == int.class) {
                         try {
                             m.setAccessible(true);
                             return m;
@@ -369,9 +369,10 @@ public class IGStatusHook extends BaseFeature {
         if (conversationsFragClass == null) return null;
         for (Class<?> c = conversationsFragClass; c != null && c != Object.class; c = c.getSuperclass()) {
             for (Method m : c.getDeclaredMethods()) {
-                if (m.getParameterCount() == 3 && m.getReturnType() == View.class
-                        && m.getParameterTypes()[0] == LayoutInflater.class
-                        && m.getParameterTypes()[1] == ViewGroup.class) {
+                Class<?>[] methodParameters = m.getParameterTypes();
+                if (methodParameters.length == 3 && m.getReturnType() == View.class
+                        && methodParameters[0] == LayoutInflater.class
+                        && methodParameters[1] == ViewGroup.class) {
                     m.setAccessible(true);
                     return m;
                 }

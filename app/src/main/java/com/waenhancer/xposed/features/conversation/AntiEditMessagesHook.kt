@@ -633,10 +633,11 @@ class AntiEditMessagesHook(
         if (resolver != null) {
             try {
                 resolver.isAccessible = true
+                val resolverParameters = resolver.parameterTypes
                 val originalKey = when {
-                    Modifier.isStatic(resolver.modifiers) && resolver.parameterCount == 1 ->
+                    Modifier.isStatic(resolver.modifiers) && resolverParameters.size == 1 ->
                         resolver.invoke(null, messageObj)
-                    !Modifier.isStatic(resolver.modifiers) && resolver.parameterCount == 0 &&
+                    !Modifier.isStatic(resolver.modifiers) && resolverParameters.size == 0 &&
                         resolver.declaringClass.isInstance(messageObj) -> resolver.invoke(messageObj)
                     else -> null
                 }
@@ -771,7 +772,7 @@ class AntiEditMessagesHook(
             }
 
             for (m in messageObj.javaClass.methods) {
-                if (m.returnType == String::class.java && m.parameterCount == 0 &&
+                if (m.returnType == String::class.java && m.parameterTypes.size == 0 &&
                     m.name != "toString" && m.name != "hashCode" && m.name != "name"
                 ) {
                     val str = m.invoke(messageObj) as? String

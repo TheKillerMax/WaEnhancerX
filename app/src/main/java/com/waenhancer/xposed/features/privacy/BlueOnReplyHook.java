@@ -108,8 +108,9 @@ public class BlueOnReplyHook extends BaseFeature {
             Class<?> baseJobClass = XposedHelpers.findClassIfExists(
                     "org.whispersystems.jobqueue.Job", classLoader);
             for (Method method : declaringManagerClass.getDeclaredMethods()) {
-                if (method.getParameterCount() != 1) continue;
-                Class<?> parameter = method.getParameterTypes()[0];
+                Class<?>[] methodParameters = method.getParameterTypes();
+                if (methodParameters.length != 1) continue;
+                Class<?> parameter = methodParameters[0];
                 boolean exactJobMethod = baseJobClass != null && parameter == baseJobClass;
                 boolean compatibleJobMethod = baseJobClass == null
                         && parameter.isAssignableFrom(sendReadClass);

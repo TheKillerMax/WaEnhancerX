@@ -23,8 +23,9 @@ public final class HookReturnTypeGuard {
     }
 
     public static boolean firstParameterIsInteger(Method method) {
-        return method != null && method.getParameterCount() > 0
-                && (method.getParameterTypes()[0] == int.class
-                        || method.getParameterTypes()[0] == Integer.class);
+        if (method == null) return false;
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        return parameterTypes.length > 0
+                && (parameterTypes[0] == int.class || parameterTypes[0] == Integer.class);
     }
 }
