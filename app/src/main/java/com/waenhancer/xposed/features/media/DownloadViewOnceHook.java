@@ -1,6 +1,5 @@
 package com.waenhancer.xposed.features.media;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
@@ -17,284 +16,137 @@ import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
 
 import java.io.File;
-import java.lang.reflect.Field;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
-import org.luckypray.dexkit.query.FindClass;
-import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.enums.StringMatchType;
-import org.luckypray.dexkit.query.matchers.ClassMatcher;
-import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
-import org.luckypray.dexkit.result.MethodDataList;
 
-/**
- * Download View Once Media:
- * Adds a download action button to the ViewOnceViewerActivity and MediaViewFragment toolbars
- * allowing saving View Once photos and videos directly to the device Gallery.
- *
- * Implements multiple robust discovery and extraction strategies from WaEnhancer.
- */
+/** Adds an explicit photo/video export action to the verified current media page. */
 public class DownloadViewOnceHook extends BaseFeature {
-
     private static final String TAG = "[WAEX][DownloadViewOnce]";
     private static final int MENU_ID_DOWNLOAD = 0x7EAD0003;
+    private static final AtomicReference<Object> EXPORTING = new AtomicReference<>();
 
-    public DownloadViewOnceHook(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
+    // Created on the first export. One accepted operation at a time; the bounded
+    // hand-off slot also covers a new click just as the previous worker returns.
+    private static final class ExportWorker {
+        static final ThreadPoolExecutor INSTANCE = create();
+        private static ThreadPoolExecutor create() {
+            ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS,
+                    new ArrayBlockingQueue<>(1), work -> {
+                        Thread thread = new Thread(work, "WAEX-view-once-export");
+                        thread.setDaemon(true);
+                        return thread;
+                    }, new ThreadPoolExecutor.AbortPolicy());
+            executor.allowCoreThreadTimeOut(true);
+            return executor;
+        }
+    }
+
+    public DownloadViewOnceHook(@NonNull Context context, @NonNull ClassLoader classLoader,
+                                @NonNull SharedPreferences prefs) {
         super(context, classLoader, prefs);
     }
 
-    @Override
-    public void hook() throws Throwable {
-        hookViewOnceViewerActivity();
-        hookMediaViewMenu();
-    }
-
-    /**
-     * Hook ViewOnceViewerActivity: intercepts onCreateOptionsMenu to inject Download button.
-     */
-    private void hookViewOnceViewerActivity() {
+    @Override public void hook() {
         try {
-            Class<?> viewOnceClass = resolveViewOnceViewerActivityClass();
-            if (viewOnceClass == null) {
-                XposedBridge.log(TAG + " ViewOnceViewerActivity class not found");
-                return;
-            }
-
-            XposedHelpers.findAndHookMethod(viewOnceClass, "onCreateOptionsMenu", Menu.class, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) {
-                    if (!isEnabled("downloadviewonce", false)) return;
-
-                    Menu menu = (Menu) param.args[0];
+            DexSearchEngine engine = DexSearchEngine.getInstance();
+            engine.initialize(context);
+            if (engine.getBridge() == null) return;
+            Context application = context.getApplicationContext();
+            if (application == null) return;
+            ViewOnceMediaResolver.Contract contract = ViewOnceMediaResolver.discover(engine.getBridge(), classLoader);
+            XC_MethodHook callback = new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    Menu menu = null;
+                    for (Object argument : param.args) if (argument instanceof Menu) menu = (Menu) argument;
                     if (menu == null) return;
-
-                    if (menu.findItem(MENU_ID_DOWNLOAD) != null) return;
-
-                    Activity activity = (Activity) param.thisObject;
-                    MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
-                    item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-
-                    Drawable icon = MenuIconLoader.load(activity, "ic_waex_download");
-                    if (icon != null) {
-                        item.setIcon(icon);
+                    try {
+                        if (param.hasThrowable() || !enabled()) {
+                            menu.removeItem(MENU_ID_DOWNLOAD);
+                            return;
+                        }
+                        bindMenu(menu, param.thisObject, application, contract);
+                    } catch (RuntimeException | LinkageError failure) {
+                        XposedBridge.log(TAG + " Menu update failed: " + failure.getClass().getSimpleName());
                     }
-
-                    item.setOnMenuItemClickListener(menuItem -> {
-                        CompletableFuture.runAsync(() -> {
-                            try {
-                                File mediaFile = extractMediaFileFromActivity(activity);
-                                if (mediaFile == null || !mediaFile.exists()) {
-                                    showToast(activity, "Media not cached or available yet");
-                                    return;
-                                }
-                                saveMediaFile(activity, mediaFile);
-                            } catch (Throwable t) {
-                                XposedBridge.log(TAG + " Error saving view once from Activity: " + t.getClass().getSimpleName());
-                                showToast(activity, "Failed to save: " + t.getMessage());
-                            }
-                        });
-                        return true;
-                    });
                 }
-            });
-
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error hooking ViewOnceViewerActivity: " + t.getClass().getSimpleName());
+            };
+            hookMenuPair(contract.createMenu, contract.prepareMenu, callback);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            XposedBridge.log(TAG + " Unsupported media viewer: " + failure.getClass().getSimpleName());
         }
     }
 
-    /**
-     * Hook MediaView menu methods using WaEnhancer's ic_viewonce number matcher.
-     */
-    private void hookMediaViewMenu() {
+    private void hookMenuPair(Method create, Method prepare, XC_MethodHook callback) {
+        XC_MethodHook.Unhook first = XposedBridge.hookMethod(create, callback);
+        boolean complete = false;
         try {
-            DexSearchEngine.getInstance().initialize(context);
-            var bridge = DexSearchEngine.getInstance().getBridge();
-            if (bridge == null) return;
-
-            Method menuMethod = null;
-            int icViewOnceId = context.getResources().getIdentifier("ic_viewonce", "drawable", context.getPackageName());
-            if (icViewOnceId > 0) {
-                MethodDataList mdList = bridge.findMethod(FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .usingNumbers(icViewOnceId)
-                        ));
-                for (MethodData md : mdList) {
-                    if (md.getParamCount() >= 2 && md.getParamTypeNames().contains(Menu.class.getName())) {
-                        menuMethod = md.getMethodInstance(classLoader);
-                        break;
-                    }
+            XposedBridge.hookMethod(prepare, callback);
+            complete = true;
+        } finally {
+            if (!complete) {
+                try { first.unhook(); }
+                catch (RuntimeException | LinkageError failure) {
+                    XposedBridge.log(TAG + " Menu rollback failed: " + failure.getClass().getSimpleName());
                 }
             }
+        }
+    }
 
-            if (menuMethod == null) {
-                Class<?> mediaViewFragmentClass = XposedHelpers.findClassIfExists("com.whatsapp.mediaview.MediaViewFragment", classLoader);
-                if (mediaViewFragmentClass != null) {
-                    for (Method m : mediaViewFragmentClass.getMethods()) {
-                        if (m.getParameterCount() >= 2 && m.getParameterTypes()[0] == Menu.class) {
-                            menuMethod = m;
-                            break;
-                        }
-                    }
-                }
+    private boolean enabled() {
+        try { return isEnabled("downloadviewonce", false); }
+        catch (RuntimeException ignored) { return false; }
+    }
+
+    private void bindMenu(Menu menu, Object viewer, Context application, ViewOnceMediaResolver.Contract contract) {
+        if (!contract.viewerClass.isInstance(viewer)) return;
+        MenuItem item = menu.findItem(MENU_ID_DOWNLOAD);
+        if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
+        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        Drawable icon = MenuIconLoader.load(application, "ic_waex_download");
+        if (icon != null) item.setIcon(icon);
+        // A listener never holds the fragment, Activity, menu or a prior message.
+        WeakReference<Object> target = new WeakReference<>(viewer);
+        item.setOnMenuItemClickListener(clicked -> {
+            if (!enabled()) return true;
+            Object ticket = new Object();
+            if (!EXPORTING.compareAndSet(null, ticket)) {
+                showToast(application, "A media export is already in progress");
+                return true;
             }
-
-            if (menuMethod != null) {
-                XposedBridge.hookMethod(menuMethod, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        if (!isEnabled("downloadviewonce", false)) return;
-
-                        Menu menu = null;
-                        Object fmessageObj = null;
-
-                        for (Object arg : param.args) {
-                            if (arg instanceof Menu) menu = (Menu) arg;
-                            else if (arg != null && isFMessageObject(arg)) fmessageObj = arg;
-                        }
-
-                        if (menu == null || menu.findItem(MENU_ID_DOWNLOAD) != null) return;
-
-                        final Object targetMessage = fmessageObj;
-                        MenuItem item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
-                        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-
-                        Drawable icon = MenuIconLoader.load(context, "ic_waex_download");
-                        if (icon != null) {
-                            item.setIcon(icon);
-                        }
-
-                        item.setOnMenuItemClickListener(menuItem -> {
-                            CompletableFuture.runAsync(() -> {
-                                try {
-                                    if (targetMessage != null) {
-                                        File mediaFile = extractFileFromFMessage(targetMessage);
-                                        if (mediaFile != null && mediaFile.exists()) {
-                                            saveMediaFile(context, mediaFile);
-                                            return;
-                                        }
-                                    }
-                                    showToast(context, "Media not available yet");
-                                } catch (Throwable t) {
-                                    XposedBridge.log(TAG + " Error saving media: " + t.getClass().getSimpleName());
-                                    showToast(context, "Failed to save: " + t.getMessage());
-                                }
-                            });
-                            return true;
-                        });
+            boolean queued = false;
+            try {
+                File selected = contract.fileAtCurrentPage(target.get());
+                if (selected == null) {
+                    showToast(application, "Media not cached or available yet");
+                    return true;
+                }
+                ExportWorker.INSTANCE.execute(() -> {
+                    try {
+                        // A submission can fail after a queue offer if worker creation
+                        // fails. The abandoned ticket cannot execute on a later retry.
+                        if (EXPORTING.get() == ticket && enabled()) saveMediaFile(application, selected);
+                    } finally {
+                        EXPORTING.compareAndSet(ticket, null);
                     }
                 });
+                queued = true;
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+                XposedBridge.log(TAG + " Media selection failed: " + failure.getClass().getSimpleName());
+                showToast(application, "Unable to save this media file");
+            } finally {
+                if (!queued) EXPORTING.compareAndSet(ticket, null);
             }
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + " Error finding media viewer menu method: " + t.getClass().getSimpleName());
-        }
+            return true;
+        });
     }
 
-    private Class<?> resolveViewOnceViewerActivityClass() {
-        try {
-            Class<?> cls = DexSearchEngine.getInstance().findClassWithCache(
-                    context, classLoader, "wpp_view_once_viewer_activity",
-                    (bridge, loader) -> {
-                        ClassData cd = bridge.findClass(FindClass.create()
-                                .matcher(ClassMatcher.create()
-                                        .className(".ViewOnceViewerActivity", StringMatchType.EndsWith))
-                        ).firstOrNull();
-                        if (cd == null) {
-                            cd = bridge.findClass(FindClass.create()
-                                    .matcher(ClassMatcher.create()
-                                            .className("ViewOnceViewerActivity", StringMatchType.Contains))
-                            ).firstOrNull();
-                        }
-                        return cd != null ? cd.getInstance(loader) : null;
-                    }
-            );
-            if (cls != null) return cls;
-        } catch (Throwable ignored) {}
-
-        String[] fallbacks = {
-                "com.whatsapp.viewonce.ui.messaging.ViewOnceViewerActivity",
-                "com.whatsapp.messaging.ViewOnceViewerActivity"
-        };
-        for (String name : fallbacks) {
-            Class<?> c = XposedHelpers.findClassIfExists(name, classLoader);
-            if (c != null) return c;
-        }
-        return null;
-    }
-
-    /**
-     * Extracts the media File from ViewOnceViewerActivity instance via deep field reflection.
-     */
-    private File extractMediaFileFromActivity(Activity activity) {
-        if (activity == null) return null;
-        Class<?> current = activity.getClass();
-        while (current != null && current != Object.class) {
-            for (Field field : current.getDeclaredFields()) {
-                field.setAccessible(true);
-                try {
-                    Object val = field.get(activity);
-                    if (val == null) continue;
-
-                    if (val instanceof File) {
-                        File f = (File) val;
-                        if (f.exists() && f.length() > 0) return f;
-                    }
-
-                    File f = extractFileFromFMessage(val);
-                    if (f != null && f.exists()) return f;
-
-                } catch (Throwable ignored) {}
-            }
-            current = current.getSuperclass();
-        }
-        return null;
-    }
-
-    /**
-     * Extracts the media File from an FMessage / MediaData / MediaState object.
-     */
-    private File extractFileFromFMessage(Object obj) {
-        if (obj == null) return null;
-        Class<?> current = obj.getClass();
-        while (current != null && current != Object.class) {
-            for (Field field : current.getDeclaredFields()) {
-                field.setAccessible(true);
-                try {
-                    Object val = field.get(obj);
-                    if (val instanceof File) {
-                        File f = (File) val;
-                        if (f.exists() && f.length() > 0) return f;
-                    } else if (val != null && !field.getType().isPrimitive() && !field.getType().getName().startsWith("java.lang.")) {
-                        for (Field inner : val.getClass().getDeclaredFields()) {
-                            inner.setAccessible(true);
-                            if (inner.getType() == File.class) {
-                                File f = (File) inner.get(val);
-                                if (f != null && f.exists() && f.length() > 0) return f;
-                            }
-                        }
-                    }
-                } catch (Throwable ignored) {}
-            }
-            current = current.getSuperclass();
-        }
-        return null;
-    }
-
-    private boolean isFMessageObject(Object obj) {
-        if (obj == null) return false;
-        String name = obj.getClass().getName();
-        return name.contains("FMessage") || name.contains("fmessage") || name.startsWith("X.");
-    }
-
-    /**
-     * Saves the media File into the device Gallery (Pictures/WAEX or Movies/WAEX).
-     */
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
             GalleryMediaExporter.export(ctx, srcFile);
@@ -305,17 +157,12 @@ public class DownloadViewOnceHook extends BaseFeature {
         }
     }
 
-    private void showToast(Context ctx, String msg) {
+    private void showToast(Context context, String message) {
         new Handler(Looper.getMainLooper()).post(() -> {
-            try {
-                Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
-            } catch (Throwable ignored) {}
+            try { Toast.makeText(context, message, Toast.LENGTH_SHORT).show(); }
+            catch (RuntimeException ignored) { }
         });
     }
 
-    @NonNull
-    @Override
-    public String getName() {
-        return "Download View Once";
-    }
+    @NonNull @Override public String getName() { return "Download View Once"; }
 }
