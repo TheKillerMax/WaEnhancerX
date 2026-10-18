@@ -47,6 +47,24 @@ public final class TestMediaQuickSettingPolicy {
         flags.put("video_maxfps", false);
         check(!enabled("media_upload_quality", flags), "second flag disabled");
 
+        // Privacy and Media render download_view_once; the hook reads downloadviewonce.
+        flags.put("download_view_once", true);
+        check(!enabled("download_view_once", flags), "display-only alias cannot claim active downloader");
+        flags.put("downloadviewonce", true);
+        flags.put("download_view_once", false);
+        check(enabled("download_view_once", flags), "catalogue entry reads actual enabled hook key");
+        flags.put("downloadviewonce", false);
+        flags.put("download_view_once", true);
+        check(!enabled("download_view_once", flags), "explicit hook-off wins stale display alias");
+        for (String entry : new String[]{"downloadviewonce", "download_view_once"}) {
+            for (boolean state : new boolean[]{true, false, true}) {
+                flags.putAll(MediaQuickSettingPolicy.changesFor(entry, state));
+                Map<String, Boolean> reopened = new LinkedHashMap<>(flags);
+                check(enabled("download_view_once", reopened) == state, "recreated Privacy/Media state");
+                check(enabled("downloadviewonce", reopened) == state, "runtime downloader state");
+            }
+        }
+
         expectWrites("call_recording", true, "call_recording_enabled", "call_recording");
         expectWrites("call_recording", false, "call_recording_enabled", "call_recording");
         expectWrites("media_upload_quality", true, "imagequality", "video_maxfps", "media_upload_quality");
