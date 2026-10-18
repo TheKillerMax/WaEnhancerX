@@ -81,6 +81,7 @@ jobs:
             qa/test_catalog_resource_keep.py
             qa/test_edit_history_identity.py
             qa/test_edit_history_adapter_binding.py
+            qa/test_edit_history_diff_budget.py
           )
           for test_script in "${tests[@]}"; do
             echo "::group::$test_script"
@@ -114,6 +115,10 @@ jobs:
           if grep -q 'updateAndGetTransition(' "$store"; then
             test -f qa/test_presence_invalidation.py
             test -f qa/test_presence_state_invalidation.py
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java ]]; then
+            test -f qa/test_receipt_observation.py
+            test -f qa/fixtures/receipt_observation/ReceiptObservationFixture.java.in
           fi
           if grep -q 'putPublicString("seentick", nextPlacement)' "$ui"; then
             test -f qa/test_manual_seen_tick_persistence.py
@@ -159,6 +164,12 @@ jobs:
           if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
             test -f qa/test_contact_identity.py
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/views/StatusRowWorkQueue.java ]]; then
+            test -f qa/test_ig_status_loading.py
+            test -f qa/fixtures/ig_status_android_doubles.py
+            test -f qa/java/TestIGStatusLoading.java
+            test -f qa/java/TestStatusRowWorkQueue.java
+          fi
           if [[ -f app/src/main/java/com/waenhancer/xposed/features/privacy/HideForwardedTagHook.kt ]]; then
             test -f qa/test_forwarded_metadata_scope.py
           fi
@@ -193,6 +204,7 @@ jobs:
             qa/test_manual_seen_tick_persistence.py \
             qa/test_receipt_job_execution_contract.py \
             qa/test_played_receipt_dispatch_contract.py \
+            qa/test_receipt_observation.py \
             qa/test_presence_event_contract.py \
             qa/test_presence_state_replay.py \
             qa/test_presence_invalidation.py \
@@ -218,6 +230,7 @@ jobs:
             qa/test_recorder_cleanup.py \
             qa/test_gallery_export.py \
             qa/test_contact_identity.py \
+            qa/test_ig_status_loading.py \
             qa/test_db_migrations.py; do
             echo "::group::$test_script"
             python3 "$test_script"

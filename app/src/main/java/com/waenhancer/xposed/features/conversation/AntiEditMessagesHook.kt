@@ -77,6 +77,7 @@ class AntiEditMessagesHook(
         private const val FIELD_ROW_ID = "waex_row_id"
         private const val FIELD_MSG_ID = "waex_msg_id"
         private const val FIELD_MSG_TEXT = "waex_msg_text"
+        private const val FIELD_BINDING_TOKEN = "waex_edit_binding_token"
         private val hookedAdapterClasses = ConcurrentHashMap.newKeySet<Class<*>>()
         private val timeFormatter = object : ThreadLocal<DateFormat>() {
             override fun initialValue(): DateFormat = DateFormat.getTimeInstance(DateFormat.SHORT)
@@ -262,23 +263,29 @@ class AntiEditMessagesHook(
                                 getViewMethod,
                                 object : XC_MethodHook() {
                                     override fun afterHookedMethod(p: MethodHookParam) {
+                                        val row = p.result as? ViewGroup ?: return
+
+                                        // Always invalidate recycled identity, including rows that
+                                        // the current adapter cannot resolve. No database work
+                                        // belongs in this scroll-time callback.
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
+                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_TEXT)
+                                        XposedHelpers.removeAdditionalInstanceField(row, "waex_key_id")
+                                        XposedHelpers.setAdditionalInstanceField(row, FIELD_BINDING_TOKEN, Any())
                                         if (!isFeatureEnabled()) return
                                         val pos = p.args.getOrNull(0) as? Int ?: return
-                                        val row = p.result as? ViewGroup ?: return
 
                                         // The hook is installed once per class, but every chat can
                                         // have a different adapter instance. Bind this invocation.
                                         val boundAdapter = p.thisObject as? ListAdapter ?: return
                                         val item = try { boundAdapter.getItem(pos) } catch (t: Throwable) { null } ?: return
                                         val keyId = extractStableKeyId(item)
-                                        var rowId = extractRowId(item)
+                                        // Keyed history reads already resolve by key. Resolving a
+                                        // database row here would query SQLite for every bubble,
+                                        // even when it has no history label.
+                                        val rowId = if (keyId.isNullOrEmpty()) extractRowId(item) else 0L
                                         val msgText = extractMessageText(item)
-                                        rowId = resolveCanonicalRowId(rowId, keyId)
-
-                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_ROW_ID)
-                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_ID)
-                                        XposedHelpers.removeAdditionalInstanceField(row, FIELD_MSG_TEXT)
-                                        XposedHelpers.removeAdditionalInstanceField(row, "waex_key_id")
 
                                         if (rowId > 0) {
                                             XposedHelpers.setAdditionalInstanceField(row, FIELD_ROW_ID, rowId)
@@ -337,11 +344,12 @@ class AntiEditMessagesHook(
                             }
                             bindEditLabel(view, row, rowId, keyId, text)
                         } else if (view is ViewGroup) {
+                            val rowId = XposedHelpers.getAdditionalInstanceField(view, FIELD_ROW_ID) as? Long ?: 0L
+                            val keyId = XposedHelpers.getAdditionalInstanceField(view, FIELD_MSG_ID) as? String
+                            if (rowId <= 0 && keyId.isNullOrEmpty()) return
                             val editLabel = findChildByResourceName(view, "edit_label")
                                 ?: findChildByResourceName(view, "edited_label")
                             if (editLabel != null) {
-                                val rowId = XposedHelpers.getAdditionalInstanceField(view, FIELD_ROW_ID) as? Long ?: 0L
-                                val keyId = XposedHelpers.getAdditionalInstanceField(view, FIELD_MSG_ID) as? String
                                 val text = XposedHelpers.getAdditionalInstanceField(view, FIELD_MSG_TEXT) as? String
                                 bindEditLabel(editLabel, view, rowId, keyId, text)
                             }
@@ -355,6 +363,10 @@ class AntiEditMessagesHook(
     }
 
     private fun bindEditLabel(labelView: View, parentRow: View?, boundRowId: Long, boundKeyId: String?, boundText: String?) {
+        if (boundRowId <= 0 && boundKeyId.isNullOrEmpty()) return
+        val bindingToken = parentRow?.let {
+            XposedHelpers.getAdditionalInstanceField(it, FIELD_BINDING_TOKEN)
+        }
         if (labelView is TextView) {
             val originalText = labelView.text.toString()
             if (!originalText.contains("📝")) {
@@ -379,6 +391,11 @@ class AntiEditMessagesHook(
 
         labelView.isClickable = true
         labelView.setOnClickListener { clickedView ->
+            if (!isFeatureEnabled()) return@setOnClickListener
+            // An unsupported/failed bind still changes the token. An older
+            // label listener must not open history for its recycled predecessor.
+            if (parentRow != null && XposedHelpers.getAdditionalInstanceField(
+                    parentRow, FIELD_BINDING_TOKEN) !== bindingToken) return@setOnClickListener
             val row = parentRow ?: findParentMessageRow(clickedView)
             val rowId = (XposedHelpers.getAdditionalInstanceField(clickedView, FIELD_ROW_ID) as? Long)
                 ?: (row?.let { XposedHelpers.getAdditionalInstanceField(it, FIELD_ROW_ID) as? Long })
@@ -572,23 +589,20 @@ class AntiEditMessagesHook(
 
     // ─── Text Diff Highlighting Logic ──────────────────────────────────────────
 
-    private enum class DiffType { UNCHANGED, ADDED, REMOVED }
-    private data class DiffChunk(val type: DiffType, val text: String)
-
     private fun buildDiffSpannable(oldStr: String, newStr: String): CharSequence {
-        val chunks = computeDiff(oldStr, newStr)
+        val chunks = EditHistoryDiff.compute(oldStr, newStr)
         val ssb = SpannableStringBuilder()
         for (c in chunks) {
             val start = ssb.length
             ssb.append(c.text)
             val end = ssb.length
             when (c.type) {
-                DiffType.UNCHANGED -> {}
-                DiffType.ADDED -> {
+                EditHistoryDiff.Type.UNCHANGED -> {}
+                EditHistoryDiff.Type.ADDED -> {
                     ssb.setSpan(ForegroundColorSpan(0xFF21C063.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     ssb.setSpan(BackgroundColorSpan(0x3321C063.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
-                DiffType.REMOVED -> {
+                EditHistoryDiff.Type.REMOVED -> {
                     ssb.setSpan(ForegroundColorSpan(0xFFEF4444.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     ssb.setSpan(BackgroundColorSpan(0x33EF4444.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     ssb.setSpan(StrikethroughSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -596,100 +610,6 @@ class AntiEditMessagesHook(
             }
         }
         return ssb
-    }
-
-    private fun computeDiff(oldStr: String, newStr: String): List<DiffChunk> {
-        val oldChars = oldStr.toCharArray()
-        val newChars = newStr.toCharArray()
-        val n = oldChars.size
-        val m = newChars.size
-
-        if (n > 300 || m > 300) {
-            return computeWordDiff(oldStr, newStr)
-        }
-
-        val dp = Array(n + 1) { IntArray(m + 1) }
-        for (i in 0 until n) {
-            for (j in 0 until m) {
-                if (oldChars[i] == newChars[j]) {
-                    dp[i + 1][j + 1] = dp[i][j] + 1
-                } else {
-                    dp[i + 1][j + 1] = maxOf(dp[i + 1][j], dp[i][j + 1])
-                }
-            }
-        }
-
-        var i = n
-        var j = m
-        val resultReversed = mutableListOf<DiffChunk>()
-        while (i > 0 || j > 0) {
-            if (i > 0 && j > 0 && oldChars[i - 1] == newChars[j - 1]) {
-                resultReversed.add(DiffChunk(DiffType.UNCHANGED, oldChars[i - 1].toString()))
-                i--
-                j--
-            } else if (j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-                resultReversed.add(DiffChunk(DiffType.ADDED, newChars[j - 1].toString()))
-                j--
-            } else if (i > 0 && (j == 0 || dp[i][j - 1] < dp[i - 1][j])) {
-                resultReversed.add(DiffChunk(DiffType.REMOVED, oldChars[i - 1].toString()))
-                i--
-            }
-        }
-        val reversed = resultReversed.reversed()
-        val merged = mutableListOf<DiffChunk>()
-        for (chunk in reversed) {
-            if (merged.isNotEmpty() && merged.last().type == chunk.type) {
-                val last = merged.removeAt(merged.size - 1)
-                merged.add(DiffChunk(last.type, last.text + chunk.text))
-            } else {
-                merged.add(chunk)
-            }
-        }
-        return merged
-    }
-
-    private fun computeWordDiff(oldStr: String, newStr: String): List<DiffChunk> {
-        val oldWords = oldStr.split(Regex("(?<=\\s)|(?=\\s)"))
-        val newWords = newStr.split(Regex("(?<=\\s)|(?=\\s)"))
-        val n = oldWords.size
-        val m = newWords.size
-        val dp = Array(n + 1) { IntArray(m + 1) }
-        for (i in 0 until n) {
-            for (j in 0 until m) {
-                if (oldWords[i] == newWords[j]) {
-                    dp[i + 1][j + 1] = dp[i][j] + 1
-                } else {
-                    dp[i + 1][j + 1] = maxOf(dp[i + 1][j], dp[i][j + 1])
-                }
-            }
-        }
-        var i = n
-        var j = m
-        val resultReversed = mutableListOf<DiffChunk>()
-        while (i > 0 || j > 0) {
-            if (i > 0 && j > 0 && oldWords[i - 1] == newWords[j - 1]) {
-                resultReversed.add(DiffChunk(DiffType.UNCHANGED, oldWords[i - 1]))
-                i--
-                j--
-            } else if (j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-                resultReversed.add(DiffChunk(DiffType.ADDED, newWords[j - 1]))
-                j--
-            } else if (i > 0 && (j == 0 || dp[i][j - 1] < dp[i - 1][j])) {
-                resultReversed.add(DiffChunk(DiffType.REMOVED, oldWords[i - 1]))
-                i--
-            }
-        }
-        val reversed = resultReversed.reversed()
-        val merged = mutableListOf<DiffChunk>()
-        for (chunk in reversed) {
-            if (merged.isNotEmpty() && merged.last().type == chunk.type) {
-                val last = merged.removeAt(merged.size - 1)
-                merged.add(DiffChunk(last.type, last.text + chunk.text))
-            } else {
-                merged.add(chunk)
-            }
-        }
-        return merged
     }
 
     private fun createWdsSwitch(ctx: Context): CompoundButton {

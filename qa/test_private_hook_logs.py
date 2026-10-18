@@ -15,7 +15,9 @@ FILES = {
     "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 29,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 10,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 6,
-    "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 2,
+    # Record, commit, DB-open/read and cursor-query failures each log a fixed
+    # context plus the exception type; message text and identities stay private.
+    "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 4,
     "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt": 4,
 }
 
@@ -98,6 +100,8 @@ unsafe_samples = [
     '"$TAG setup failed: ${t}"',
     'TAG + " setup failed: " + ex',
     'TAG + " setup failed: " + ex.toString()',
+    '"$TAG Commit DB error: ${t.message}"',
+    '"$TAG Query DB error: ${t}"',
 ]
 for sample in unsafe_samples:
     assert exposure(sample), f"Detector missed unsafe fixture: {sample}"

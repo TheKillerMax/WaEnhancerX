@@ -13,7 +13,8 @@ root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", type=Path,
                     default=root / "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt")
-parser.add_argument("--scenario", choices=["all", "cache", "lookup"], default="all")
+parser.add_argument("--scenario", choices=["all", "cache", "lookup", "persistence", "query_failure", "aliases", "host_lock", "cache_budget",
+                                         "scope_legacy", "scope_writer", "scope_cache", "scope_unknown"], default="all")
 args = parser.parse_args()
 stubs = {
     "Context.java": """package android.content;
@@ -33,15 +34,20 @@ public class Cursor implements AutoCloseable {
     private final String[] columns;
     private final List<? extends Map<String, Object>> rows;
     private int position = -1;
+    public static boolean failClose = false;
+    public static int failAtRow = -1;
     public Cursor(String[] columns, List<? extends Map<String, Object>> rows) { this.columns = columns; this.rows = rows; }
     public int getCount() { return rows.size(); }
     public boolean moveToFirst() { position = 0; return !rows.isEmpty(); }
-    public boolean moveToNext() { return ++position < rows.size(); }
+    public boolean moveToNext() {
+        if (++position == failAtRow) throw new IllegalStateException("read failed");
+        return position < rows.size();
+    }
     public int getColumnIndex(String name) { return Arrays.asList(columns).indexOf(name); }
     public String getString(int index) { return (String) rows.get(position).get(columns[index]); }
     public long getLong(int index) { Object n = rows.get(position).get(columns[index]); return n instanceof Number ? ((Number)n).longValue() : 0L; }
     public int getInt(int index) { return (int)getLong(index); }
-    public void close() {}
+    public void close() { if (failClose) throw new IllegalStateException("cursor close failed"); }
 }
 """,
     "Database.kt": """package android.database.sqlite
@@ -60,9 +66,43 @@ class SQLiteDatabase : AutoCloseable {
         const val OPEN_READONLY = 1
         var host = SQLiteDatabase()
         fun openDatabase(path: String, factory: Any?, flags: Int): SQLiteDatabase {
+            if (SQLiteOpenHelper.nextDatabase.inTransaction()) host.accessDuringPrivateTransaction++
             host.openCount++
             return host
         }
+    }
+    var accessDuringPrivateTransaction = 0
+    var beforeBegin: (() -> Unit)? = null
+    fun inTransaction() = transactionSnapshot != null
+    var insertCalls = 0
+    var failInsertAt = -1
+    var throwInsertAt = -1
+    var beginCalls = 0
+    var endCalls = 0
+    var failBegin = false
+    var failEnd = false
+    var rejectHistoryQueries = false
+    var nullHistoryCursor = false
+    private var transactionSnapshot: Map<String, List<Map<String, Any?>>>? = null
+    private var successful = false
+    fun beginTransaction() {
+        beginCalls++
+        if (failBegin) throw IllegalStateException("begin failed")
+        check(transactionSnapshot == null)
+        beforeBegin?.let { beforeBegin = null; it() }
+        transactionSnapshot = tables.mapValues { (_, rows) -> rows.map { it.toMap() } }
+        successful = false
+    }
+    fun setTransactionSuccessful() { check(transactionSnapshot != null); successful = true }
+    fun endTransaction() {
+        endCalls++
+        val before = checkNotNull(transactionSnapshot)
+        transactionSnapshot = null
+        if (!successful || failEnd) {
+            tables.clear()
+            before.forEach { (name, rows) -> tables[name] = rows.map { it.toMutableMap() }.toMutableList() }
+        }
+        if (failEnd) throw IllegalStateException("commit failed")
     }
     var openCount = 0
     var closeCount = 0
@@ -74,6 +114,9 @@ class SQLiteDatabase : AutoCloseable {
     fun execSQL(sql: String) {}
     fun rawQuery(sql: String, args: Array<String>?): Cursor = Cursor(arrayOf("name"), emptyList())
     fun insert(table: String, nullColumnHack: String?, values: ContentValues): Long {
+        insertCalls++
+        if (insertCalls == throwInsertAt) throw IllegalStateException("insert failed")
+        if (insertCalls == failInsertAt) return -1L
         val entries = values.entries.toMutableMap()
         val id = rows(table).size.toLong() + 1
         entries["_id"] = id
@@ -82,7 +125,10 @@ class SQLiteDatabase : AutoCloseable {
     }
     fun query(table: String, columns: Array<String>, selection: String, args: Array<String>,
               groupBy: String?, having: String?, orderBy: String?): Cursor? {
+        if (this === host && SQLiteOpenHelper.nextDatabase.inTransaction()) accessDuringPrivateTransaction++
         queries.add("$table/$selection/${args.joinToString()}")
+        if (table == "message_history" && rejectHistoryQueries) throw IllegalStateException("history read failed")
+        if (table == "message_history" && nullHistoryCursor) return null
         if (table == "message" && noTextColumn && "text_data" in columns)
             throw IllegalStateException("no such column: text_data")
         if (table == "message" && rejectKeyQueries && selection == "key_id=?")
