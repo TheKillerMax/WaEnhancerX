@@ -151,7 +151,6 @@ fun StargazersScreen() {
 
     var stargazers by remember { mutableStateOf(emptyList<GitHubStargazer>()) }
     var lastUpdated by remember { mutableStateOf("") }
-    var updateIntervalHours by remember { mutableStateOf(5) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var refreshKey by remember { mutableStateOf(0) }
@@ -208,7 +207,6 @@ fun StargazersScreen() {
         result.onSuccess { snapshot ->
             stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
-            updateIntervalHours = snapshot.updateIntervalHours
         }.onFailure {
             errorMessage = "We couldn't load the supporters right now."
             stargazers = emptyList()
@@ -379,16 +377,15 @@ fun StargazersScreen() {
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary
                                 )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = buildString {
-                                        append("Updates every $updateIntervalHours hours")
-                                        if (lastUpdated.isNotEmpty()) append(" | Last updated $lastUpdated")
-                                    },
-                                    style = typography.bodyMd,
-                                    color = colors.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
+                                if (lastUpdated.isNotEmpty()) {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.stargazers_last_updated, lastUpdated),
+                                        style = typography.bodyMd,
+                                        color = colors.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }

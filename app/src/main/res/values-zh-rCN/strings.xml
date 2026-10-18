@@ -15,6 +15,7 @@
     <string name="stargazers_title">支持者</string>
     <string name="stargazers_thank_you">感谢你支持 WaEnhancerX</string>
     <string name="stargazers_message">每一颗星标都能帮助更多人发现这个项目。这里展示所有给予支持的人。</string>
+    <string name="stargazers_last_updated">最后更新：%1$s</string>
     <string name="support">支持</string>
     <string name="support_desc">如果使用 WaEnhancer X 时遇到问题或有疑问，请访问 Telegram。</string>
     <string name="license">许可证</string>
