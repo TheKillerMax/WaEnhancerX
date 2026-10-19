@@ -3,6 +3,7 @@ package com.waenhancer.xposed.features.media
 
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
+import android.R as AndroidR
 
 import android.annotation.SuppressLint
 import android.app.Dialog
@@ -72,7 +73,6 @@ import java.util.concurrent.Executors
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import android.R
 import android.graphics.Path
 
 /**
@@ -464,7 +464,7 @@ class MediaPreviewHook(
 
                     val finalUrl = url
                     mainHandler.post {
-                        val dialog = Dialog(context, R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+                        val dialog = Dialog(context, AndroidR.style.Theme_Black_NoTitleBar_Fullscreen).apply {
                             requestWindowFeature(Window.FEATURE_NO_TITLE)
                             setCancelable(true)
                             window?.let { w ->
@@ -558,7 +558,7 @@ class MediaPreviewHook(
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             setColorFilter(Color.WHITE)
-            setImageResource(R.drawable.ic_menu_close_clear_cancel)
+            setImageResource(AndroidR.drawable.ic_menu_close_clear_cancel)
             setOnClickListener {
                 if (dialog.isShowing) dialog.dismiss()
             }
@@ -627,7 +627,7 @@ class MediaPreviewHook(
         }
         card.addView(title)
 
-        val progressBar = ProgressBar(context, null, R.attr.progressBarStyleHorizontal).apply {
+        val progressBar = ProgressBar(context, null, AndroidR.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
             progress = 0
@@ -954,7 +954,7 @@ class MediaPreviewHook(
             setBackgroundColor(Color.TRANSPARENT)
             setColorFilter(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageResource(R.drawable.ic_media_pause)
+            setImageResource(AndroidR.drawable.ic_media_pause)
             tag = "playing"
         }
         buttonsContainer.addView(playPauseBtn)
@@ -1035,14 +1035,14 @@ class MediaPreviewHook(
             setColorFilter(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
             val isMuted = prefs.getBoolean("video_preview_muted", false)
-            setImageResource(if (isMuted) R.drawable.ic_lock_silent_mode else R.drawable.ic_lock_silent_mode_off)
+            setImageResource(if (isMuted) AndroidR.drawable.ic_lock_silent_mode else AndroidR.drawable.ic_lock_silent_mode_off)
             tag = if (isMuted) "muted" else "unmuted"
         }
 
         muteBtn.setOnClickListener {
             val currentMuted = "muted" == muteBtn.tag
             val newMuted = !currentMuted
-            muteBtn.setImageResource(if (newMuted) R.drawable.ic_lock_silent_mode else R.drawable.ic_lock_silent_mode_off)
+            muteBtn.setImageResource(if (newMuted) AndroidR.drawable.ic_lock_silent_mode else AndroidR.drawable.ic_lock_silent_mode_off)
             muteBtn.tag = if (newMuted) "muted" else "unmuted"
             prefs.edit().putBoolean("video_preview_muted", newMuted).apply()
             currentMediaPlayer?.let { mp ->
@@ -1057,11 +1057,11 @@ class MediaPreviewHook(
         playPauseBtn.setOnClickListener {
             if (videoView.isPlaying) {
                 videoView.pause()
-                playPauseBtn.setImageResource(R.drawable.ic_media_play)
+                playPauseBtn.setImageResource(AndroidR.drawable.ic_media_play)
                 playPauseBtn.tag = "paused"
             } else {
                 videoView.start()
-                playPauseBtn.setImageResource(R.drawable.ic_media_pause)
+                playPauseBtn.setImageResource(AndroidR.drawable.ic_media_pause)
                 playPauseBtn.tag = "playing"
             }
         }
@@ -1099,7 +1099,7 @@ class MediaPreviewHook(
     private fun updatePlayPauseButton(controls: LinearLayout, isPlaying: Boolean) {
         val buttonsContainer = controls.getChildAt(1) as LinearLayout
         val playPauseBtn = buttonsContainer.getChildAt(0) as ImageButton
-        playPauseBtn.setImageResource(if (isPlaying) R.drawable.ic_media_pause else R.drawable.ic_media_play)
+        playPauseBtn.setImageResource(if (isPlaying) AndroidR.drawable.ic_media_pause else AndroidR.drawable.ic_media_play)
         playPauseBtn.tag = if (isPlaying) "playing" else "paused"
     }
 
@@ -1448,7 +1448,7 @@ class MediaPreviewHook(
     }
 
     private fun showBitmap(context: Context, sourceBitmap: Bitmap) {
-        val dialog = Dialog(context, R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+        val dialog = Dialog(context, AndroidR.style.Theme_Black_NoTitleBar_Fullscreen).apply {
             requestWindowFeature(Window.FEATURE_NO_TITLE)
             setCancelable(true)
             setCanceledOnTouchOutside(false)

@@ -3,6 +3,7 @@ package com.waenhancer.xposed.features.privacy
 
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
+import android.R as AndroidR
 
 import android.app.Activity
 import android.content.Context
@@ -39,7 +40,6 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import org.json.JSONObject
-import android.R
 import android.content.res.Configuration
 import com.waenhancer.utils.ContactNameResolver
 
@@ -202,7 +202,7 @@ class CustomPrivacyHook(
             }
 
             if (targetContainer == null) {
-                val root = activity.findViewById<ViewGroup>(R.id.content)
+                val root = activity.findViewById<ViewGroup>(AndroidR.id.content)
                 targetContainer = findFirstSuitableContainer(root)
             }
 
@@ -269,7 +269,7 @@ class CustomPrivacyHook(
                 marginEnd = dp(activity, 16)
             }
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setImageResource(R.drawable.ic_lock_lock)
+            setImageResource(AndroidR.drawable.ic_lock_lock)
             setColorFilter(if (isDark) 0xFF8696A0.toInt() else 0xFF667781.toInt())
         }
         itemLayout.addView(iconView)
@@ -462,7 +462,7 @@ class CustomPrivacyHook(
                 val switchComp = clazz.getConstructor(Context::class.java).newInstance(context) as CompoundButton
                 val greenColor = 0xFF25D366.toInt()
                 val grayColor = 0xFF74787A.toInt()
-                val states = arrayOf(intArrayOf(R.attr.state_checked), intArrayOf())
+                val states = arrayOf(intArrayOf(AndroidR.attr.state_checked), intArrayOf())
                 val trackColors = intArrayOf(0x6625D366.toInt(), 0x3374787A.toInt())
                 val thumbColors = intArrayOf(greenColor, grayColor)
                 XposedHelpers.callMethod(switchComp, "setTrackTintList", ColorStateList(states, trackColors))
@@ -472,7 +472,7 @@ class CustomPrivacyHook(
                 Switch(context).apply {
                     val greenColor = 0xFF25D366.toInt()
                     val grayColor = 0xFF74787A.toInt()
-                    val states = arrayOf(intArrayOf(R.attr.state_checked), intArrayOf())
+                    val states = arrayOf(intArrayOf(AndroidR.attr.state_checked), intArrayOf())
                     val trackColors = intArrayOf(0x6625D366.toInt(), 0x3374787A.toInt())
                     val thumbColors = intArrayOf(greenColor, grayColor)
                     trackTintList = ColorStateList(states, trackColors)

@@ -3,6 +3,7 @@ package com.waenhancer.xposed.features.conversation
 
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
+import android.R as AndroidR
 
 import android.app.Activity
 import android.content.ClipData
@@ -51,7 +52,6 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
-import android.R
 import android.content.ContentValues
 import android.graphics.drawable.GradientDrawable
 
@@ -491,7 +491,7 @@ class AntiEditMessagesHook(
                 val color = if (isLatest) 0xFF21C063.toInt() else 0xFF00A884.toInt()
 
                 val cardView = createHistoryCard(currentActivity, title, item.textData, color, dp)
-                val bodyTextView = cardView.findViewById<TextView>(R.id.text1)
+                val bodyTextView = cardView.findViewById<TextView>(AndroidR.id.text1)
                 if (bodyTextView != null) {
                     cardTextViews.add(bodyTextView to item)
                 }
@@ -576,7 +576,7 @@ class AntiEditMessagesHook(
         itemBox.addView(headerView)
 
         val bodyView = TextView(activity).apply {
-            id = R.id.text1
+            id = AndroidR.id.text1
             text = body
             textSize = 15f
             setTextIsSelectable(true)

@@ -1,6 +1,7 @@
 package com.waenhancer.ui.screens.dashboard
 
 import com.waenhancer.utils.UiText
+import com.waenhancer.utils.InternalLabels
 
 import android.content.Context
 import android.content.Intent
