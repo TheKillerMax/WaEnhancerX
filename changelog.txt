@@ -18,9 +18,9 @@
 - Improved System Diagnosis
 
 [New Languages]
-- Chinese
+- Chinese [Thanks to @wilsonmilson]
 - Turkish
-- Slovenian
+- Slovenian [Thanks to @damjang]
 
 [Community contribution]
-- Thanks to @TheKillerMax, @wilsonmilson, @damjang for valuable contributions in this update.
+- Thanks to @TheKillerMax for valuable contributions in this update.
