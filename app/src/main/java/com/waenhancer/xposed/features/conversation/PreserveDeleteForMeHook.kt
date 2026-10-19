@@ -15,7 +15,6 @@ import org.luckypray.dexkit.query.enums.StringMatchType
 import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.io.File
 import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 
 /**
  * Feature: Preserve "Delete For Me" Messages.
@@ -37,8 +36,6 @@ class PreserveDeleteForMeHook(
         private const val TAG = "[WAEX:PreserveDeleteForMe]"
         private const val PREF_KEY = "preserve_delete_for_me"
         private const val PROVIDER_URI = "content://com.waenhancer.hookprovider"
-        private const val SCOPE_ENTERED = "waex_preserve_delete_scope_entered"
-        private const val SCOPE_PREVIOUS = "waex_preserve_delete_scope_previous"
 
         private val deleteForMeScope = ThreadLocal<Boolean>()
 
@@ -62,25 +59,16 @@ class PreserveDeleteForMeHook(
                     object : XC_MethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (!isEnabled(PREF_KEY, false)) return
-                            if (isDedicatedDeleteAction(deleteMethod)) {
-                                // This local-delete action enqueues work. Capture the selected
-                                // collection before that request; the thread scope is synchronous.
-                                val selected = param.args.getOrNull(0) as? Collection<*> ?: return
-                                if (!captureSelectedMessages(selected)) return
-                            } else if (deleteMethod.name == "run") {
+                            if (deleteMethod.name == "run") {
                                 // Multiplexed Runnables are shared by unrelated WhatsApp features.
                                 // Only enter the delete scope after resolving real message keys.
                                 if (!captureRunnableMessages(param.thisObject)) return
                             }
-                            param.setObjectExtra(SCOPE_PREVIOUS, deleteForMeScope.get() == true)
-                            param.setObjectExtra(SCOPE_ENTERED, true)
                             deleteForMeScope.set(true)
                         }
 
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            if (param.getObjectExtra(SCOPE_ENTERED) != true) return
-                            if (param.getObjectExtra(SCOPE_PREVIOUS) == true) deleteForMeScope.set(true)
-                            else deleteForMeScope.remove()
+                            deleteForMeScope.remove()
                         }
                     }
                 )
@@ -109,7 +97,6 @@ class PreserveDeleteForMeHook(
                         val whereArgs = param.args.getOrNull(2) as? Array<*>
 
                         val db = param.thisObject as? SQLiteDatabase ?: return
-                        if (!isTargetMessageStore(db)) return
 
                         try {
                             val sqlArgs = whereArgs?.map { it?.toString() ?: "" }?.toTypedArray() ?: emptyArray()
@@ -120,9 +107,7 @@ class PreserveDeleteForMeHook(
                                     do {
                                         val keyId = cursor.getString(1)
                                         val chatRowId = cursor.getLong(2)
-                                        val direction = cursor.getInt(3)
-                                        if (direction !in 0..1) continue
-                                        val fromMe = direction == 1
+                                        val fromMe = cursor.getInt(3) == 1
                                         val msgType = cursor.getInt(4)
                                         val textData = cursor.getString(5) ?: ""
                                         val msgTs = cursor.getLong(6)
@@ -130,8 +115,8 @@ class PreserveDeleteForMeHook(
 
                                         if (!keyId.isNullOrEmpty() && msgType != 15) {
                                             val now = System.currentTimeMillis()
-                                            val chatJid = resolveChatJid(db, chatRowId) ?: continue
-                                            val isGroup = com.waenhancer.utils.ContactIdentityPolicy.isGroup(chatJid)
+                                            val chatJid = resolveChatJid(db, chatRowId)
+                                            val isGroup = chatJid.contains("@g.us")
                                             val chatDisplayName = resolveChatDisplayName(context, db, chatRowId, chatJid)
                                             val senderDisplayName = if (isGroup)
                                                 resolveSenderDisplayName(context, db, senderJidRowId, chatDisplayName)
@@ -162,24 +147,18 @@ class PreserveDeleteForMeHook(
         }
     }
 
-    private fun isTargetMessageStore(db: SQLiteDatabase): Boolean = try {
-        File(db.path).canonicalFile == context.getDatabasePath("msgstore.db").canonicalFile
-    } catch (_: Exception) {
-        false
-    }
-
-    private fun resolveChatJid(db: SQLiteDatabase, chatRowId: Long): String? {
-        if (chatRowId <= 0) return null
+    private fun resolveChatJid(db: SQLiteDatabase, chatRowId: Long): String {
+        if (chatRowId <= 0) return "Unknown"
         try {
             val sql = "SELECT raw_string FROM jid WHERE _id = (SELECT jid_row_id FROM chat WHERE _id = ?)"
             db.rawQuery(sql, arrayOf(chatRowId.toString())).use { cursor ->
                 if (cursor != null && cursor.moveToFirst()) {
                     val raw = cursor.getString(0)
-                    return com.waenhancer.utils.ContactIdentityPolicy.canonicalJid(raw)
+                    if (!raw.isNullOrEmpty()) return raw
                 }
             }
         } catch (ignored: Throwable) {}
-        return null
+        return "chat_$chatRowId"
     }
 
     private fun resolveSenderDisplayName(
@@ -191,13 +170,15 @@ class PreserveDeleteForMeHook(
         if (senderJidRowId <= 0) return fallback
         try {
             var rawJid = ""
-            msgstoreDb.rawQuery("SELECT raw_string FROM jid WHERE _id = ?", arrayOf(senderJidRowId.toString())).use { cursor ->
+            var userPart = ""
+            msgstoreDb.rawQuery("SELECT raw_string, user FROM jid WHERE _id = ?", arrayOf(senderJidRowId.toString())).use { cursor ->
                 if (cursor != null && cursor.moveToFirst()) {
                     rawJid = cursor.getString(0) ?: ""
+                    userPart = cursor.getString(1) ?: ""
                 }
             }
             if (rawJid.isNotBlank()) {
-                val resolved = resolveUserDisplayName(ctx, rawJid)
+                val resolved = resolveUserDisplayName(ctx, msgstoreDb, rawJid, userPart)
                 if (resolved.isNotBlank()) return resolved
             }
         } catch (ignored: Throwable) {}
@@ -220,16 +201,92 @@ class PreserveDeleteForMeHook(
             }
         } catch (ignored: Throwable) {}
 
-        return resolveUserDisplayName(ctx, rawJid)
+        val userPart = rawJid.substringBefore("@")
+        return resolveUserDisplayName(ctx, msgstoreDb, rawJid, userPart)
     }
 
     private fun resolveUserDisplayName(
         ctx: Context,
-        rawJid: String
+        msgstoreDb: SQLiteDatabase,
+        rawJid: String,
+        userPart: String
     ): String {
-        // Reuse the exact namespace-aware resolver. A numeric LID is not a phone number,
-        // and suffix/substring matches can attach an unrelated person's name to a capture.
-        return com.waenhancer.utils.ContactNameResolver.resolveName(ctx, rawJid, null, null)
+        var resolvedPhoneJid: String? = null
+        var resolvedPhoneUser: String? = null
+        val cleanJid = if (rawJid.contains("@")) rawJid else "$rawJid@lid"
+
+        // 1. Check jid_map in msgstore.db (LID -> Phone JID)
+        try {
+            val resolvePhoneSql = """
+                SELECT j2.raw_string, j2.user 
+                FROM jid_map jm
+                JOIN jid j1 ON jm.lid_row_id = j1._id
+                JOIN jid j2 ON jm.jid_row_id = j2._id
+                WHERE j1.raw_string = ? OR j1.user = ?
+            """.trimIndent()
+            msgstoreDb.rawQuery(resolvePhoneSql, arrayOf(cleanJid, userPart)).use { cursor ->
+                if (cursor != null && cursor.moveToFirst()) {
+                    resolvedPhoneJid = cursor.getString(0)
+                    resolvedPhoneUser = cursor.getString(1)
+                }
+            }
+        } catch (ignored: Throwable) {}
+
+        // 2. Query wa.db (wa_contacts table)
+        try {
+            val waDbFile = File(ctx.filesDir.parentFile, "databases/wa.db")
+            if (waDbFile.exists()) {
+                SQLiteDatabase.openDatabase(waDbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { waDb ->
+                    val querySql = "SELECT display_name, wa_name, sort_name, number FROM wa_contacts WHERE jid = ? OR jid = ? OR number = ? OR number = ? OR number LIKE ?"
+                    val params = arrayOf(
+                        rawJid,
+                        resolvedPhoneJid ?: "",
+                        userPart,
+                        resolvedPhoneUser ?: "",
+                        "%${resolvedPhoneUser ?: userPart}%"
+                    )
+                    waDb.rawQuery(querySql, params).use { cursor ->
+                        if (cursor != null && cursor.moveToFirst()) {
+                            val displayName = cursor.getString(0)
+                            val waName = cursor.getString(1)
+                            val sortName = cursor.getString(2)
+                            val number = cursor.getString(3)
+
+                            if (!displayName.isNullOrBlank() && !displayName.all { it.isDigit() }) return displayName
+                            if (!waName.isNullOrBlank() && !waName.all { it.isDigit() }) return waName
+                            if (!sortName.isNullOrBlank() && !sortName.all { it.isDigit() }) return sortName
+                            if (!displayName.isNullOrBlank()) return displayName
+                            if (!number.isNullOrBlank()) return "+$number"
+                        }
+                    }
+                }
+            }
+        } catch (ignored: Throwable) {}
+
+        // 3. Check verified business names in wa.db
+        try {
+            val waDbFile = File(ctx.filesDir.parentFile, "databases/wa.db")
+            if (waDbFile.exists()) {
+                SQLiteDatabase.openDatabase(waDbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { waDb ->
+                    waDb.rawQuery("SELECT verified_name FROM wa_vnames WHERE jid = ? OR jid = ?", arrayOf(rawJid, resolvedPhoneJid ?: "")).use { cursor ->
+                        if (cursor != null && cursor.moveToFirst()) {
+                            val vname = cursor.getString(0)
+                            if (!vname.isNullOrBlank()) return vname
+                        }
+                    }
+                }
+            }
+        } catch (ignored: Throwable) {}
+
+        if (!resolvedPhoneUser.isNullOrBlank()) {
+            return "+$resolvedPhoneUser"
+        }
+
+        return if (userPart.all { it.isDigit() } && userPart.length in 10..15) {
+            "+$userPart"
+        } else {
+            userPart
+        }
     }
 
     private fun dispatchToManagerApp(
@@ -263,12 +320,11 @@ class PreserveDeleteForMeHook(
     }
 
     private fun resolveDeleteForMeMethod(): Method? {
-        resolveDedicatedDeleteAction()?.let { return it }
         return try {
             DexSearchEngine.getInstance().findMethodWithCache(
                 context,
                 classLoader,
-                "wpp_delete_for_me_legacy_method_v8",
+                "wpp_delete_for_me_method_v7",
                 { bridge, loader ->
                     resolveCurrentDeleteForMeRunnable(bridge, loader) ?: bridge.findMethod(
                         FindMethod.create().matcher(
@@ -278,7 +334,7 @@ class PreserveDeleteForMeHook(
                             )
                         )
                     ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterTypes.size > 0
+                        it.name != "run" || it.parameterCount > 0
                     } ?: bridge.findMethod(
                         FindMethod.create().matcher(
                             MethodMatcher.create().addUsingString(
@@ -287,7 +343,7 @@ class PreserveDeleteForMeHook(
                             )
                         )
                     ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterTypes.size > 0
+                        it.name != "run" || it.parameterCount > 0
                     }
                 }
             )
@@ -295,35 +351,6 @@ class PreserveDeleteForMeHook(
             XposedBridge.log("$TAG Exception while searching DeleteForMe method: ${t.javaClass.simpleName}")
             null
         }
-    }
-
-    private fun isDedicatedDeleteAction(method: Method): Boolean =
-        !Modifier.isStatic(method.modifiers) && method.returnType == Void.TYPE &&
-            method.parameterTypes.contentEquals(arrayOf(
-                Collection::class.java, Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType
-            ))
-
-    private fun resolveDedicatedDeleteAction(): Method? = try {
-        DexSearchEngine.getInstance().findMethodWithCache(
-            context, classLoader, "wpp_delete_for_me_collection_action_v8",
-            { bridge, loader ->
-                bridge.findMethod(FindMethod.create().matcher(
-                    MethodMatcher.create()
-                        .addUsingString("UserActionsMessageDeletion/userActionDeleteMessages ", StringMatchType.Equals)
-                        .addUsingString("UserActionsMessageDeletion/userActionDeleteMessages messagesToDeleteIncludingAssociatedMessages=", StringMatchType.Equals)
-                )).filter {
-                    it.returnTypeName == "void" &&
-                        it.paramTypeNames == listOf("java.util.Collection", "boolean", "boolean")
-                }.mapNotNull {
-                    try { it.getMethodInstance(loader).takeIf(::isDedicatedDeleteAction) }
-                    catch (_: ReflectiveOperationException) { null }
-                    catch (_: LinkageError) { null }
-                }.singleOrNull()
-            }
-        )?.takeIf(::isDedicatedDeleteAction) // Recheck even when returned by the reflection cache.
-    } catch (t: Throwable) {
-        XposedBridge.log("$TAG Exception while searching local delete action: ${t.javaClass.simpleName}")
-        null
     }
 
     /**
@@ -391,10 +418,8 @@ class PreserveDeleteForMeHook(
     private fun captureRunnableMessages(instance: Any?): Boolean {
         if (instance == null) return false
         try {
-            val messageSets = generateSequence(instance.javaClass as Class<*>?) { it.superclass }
-                .takeWhile { it != Any::class.java }
-                .flatMap { it.declaredFields.asSequence() }
-                .filterNot { it.type.isPrimitive || Modifier.isStatic(it.modifiers) }
+            val messageSets = instance.javaClass.declaredFields.asSequence()
+                .filterNot { it.type.isPrimitive }
                 .mapNotNull { field ->
                     field.isAccessible = true
                     field.get(instance) as? Set<*>
@@ -402,17 +427,7 @@ class PreserveDeleteForMeHook(
                 .toList()
             if (messageSets.isEmpty()) return false
 
-            return captureSelectedMessages(messageSets.flatMap { it })
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG Error reading selected message collection: ${t.javaClass.simpleName}")
-            return false
-        }
-    }
-
-    private fun captureSelectedMessages(messages: Collection<*>): Boolean {
-        try {
-            val keys = messages.asSequence()
-                .mapNotNull(PreservedMessageSelection::read).distinct().toList()
+            val keys = messageSets.flatten().mapNotNull(::extractMessageKey).distinctBy { it.id }
             if (keys.isEmpty()) {
                 XposedBridge.log("$TAG Warning: selected message keys were not resolved")
                 return false
@@ -428,18 +443,15 @@ class PreserveDeleteForMeHook(
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 keys.forEach { key ->
                     db.rawQuery(
-                        PreservedMessageSelection.QUERY,
-                        key.queryArgs()
+                        "SELECT _id, key_id, chat_row_id, from_me, message_type, text_data, " +
+                            "timestamp, sender_jid_row_id FROM message WHERE key_id = ? LIMIT 1",
+                        arrayOf(key.id)
                     ).use { cursor ->
                         if (!cursor.moveToFirst() || cursor.getInt(4) == 15) return@use
-                        // Two physical rows for the same full key are ambiguous. Do not pick one.
-                        if (cursor.moveToNext()) return@use
-                        if (!cursor.moveToFirst()) return@use
                         val chatRowId = cursor.getLong(2)
                         val fromMe = cursor.getInt(3) == 1
-                        val chatJid = cursor.getString(8) ?: return@use
-                        if (cursor.getString(1) != key.id || chatJid != key.chatJid || fromMe != key.fromMe) return@use
-                        val isGroup = com.waenhancer.utils.ContactIdentityPolicy.isGroup(chatJid)
+                        val chatJid = resolveChatJid(db, chatRowId).ifBlank { key.chatJid }
+                        val isGroup = chatJid.contains("@g.us")
                         val chatName = resolveChatDisplayName(context, db, chatRowId, chatJid)
                         val senderName = if (isGroup) {
                             resolveSenderDisplayName(context, db, cursor.getLong(7), chatName)
@@ -462,8 +474,7 @@ class PreserveDeleteForMeHook(
                     }
                 }
             }
-            // The existing provider response is not a persisted-write acknowledgement.
-            XposedBridge.log("$TAG Prepared $captured Delete for me capture request(s)")
+            XposedBridge.log("$TAG Copied $captured Delete for me message(s) to vault")
             return captured > 0
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error copying selected messages: ${t.javaClass.simpleName}")
@@ -471,4 +482,49 @@ class PreserveDeleteForMeHook(
         }
     }
 
+    private data class SelectedMessageKey(
+        val id: String,
+        val chatJid: String
+    )
+
+    private fun extractMessageKey(message: Any?): SelectedMessageKey? {
+        if (message == null) return null
+        return try {
+            val methodKey = message.javaClass.methods.firstOrNull {
+                it.name == "Atl" && it.parameterCount == 0
+            }?.invoke(message)
+            val key = methodKey ?: allInstanceFields(message.javaClass)
+                .filterNot { it.type.isPrimitive || it.type == String::class.java }
+                .mapNotNull { field ->
+                    field.isAccessible = true
+                    field.get(message)
+                }
+                .firstOrNull(::looksLikeMessageKey)
+                ?: return null
+            val fields = key.javaClass.declaredFields.onEach { it.isAccessible = true }
+            val id = fields.singleOrNull { it.type == String::class.java }
+                ?.get(key) as? String ?: return null
+            val jid = fields.firstOrNull {
+                !it.type.isPrimitive && it.type != String::class.java
+            }?.get(key)?.toString().orEmpty()
+            SelectedMessageKey(id, jid)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun allInstanceFields(type: Class<*>): Sequence<java.lang.reflect.Field> = sequence {
+        var current: Class<*>? = type
+        while (current != null && current != Any::class.java) {
+            yieldAll(current.declaredFields.asSequence())
+            current = current.superclass
+        }
+    }
+
+    private fun looksLikeMessageKey(candidate: Any): Boolean {
+        val fields = candidate.javaClass.declaredFields
+        return fields.count { it.type == String::class.java } == 1 &&
+            fields.count { it.type == Boolean::class.javaPrimitiveType } == 1 &&
+            fields.any { !it.type.isPrimitive && it.type != String::class.java }
+    }
 }

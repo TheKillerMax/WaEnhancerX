@@ -117,7 +117,8 @@ private data class GitHubStargazer(
     val login: String,
     val avatarUrl: String,
     val profileUrl: String,
-    val starredAt: String
+    val starredAt: String,
+    val badge: String? = null
 )
 
 private data class StargazerProfile(
@@ -542,6 +543,26 @@ fun StargazersScreen() {
                                         )
                                     }
                                 }
+                            } else if ("pro".equals(stargazer.badge, ignoreCase = true)) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = colors.surfaceContainerHighest,
+                                    border = BorderStroke(1.dp, colors.outlineVariant),
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 8.dp, end = 8.dp)
+                                        .size(24.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "PRO",
+                                            style = typography.labelSm,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 8.sp,
+                                            color = colors.primary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -585,7 +606,8 @@ fun StargazersScreen() {
                                 fontWeight = FontWeight.Bold,
                                 color = colors.onSurface
                             )
-                            if (stargazer.login.equals(BuildConfig.DEV_GH.trim(), ignoreCase = true)) {
+                            val isStargazerDev = stargazer.login.equals(BuildConfig.DEV_GH.trim(), ignoreCase = true)
+                            if (isStargazerDev) {
                                 val sheetDevTooltipState = rememberTooltipState()
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -620,6 +642,45 @@ fun StargazersScreen() {
                                                 fontFamily = FontFamily.Monospace,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 9.sp,
+                                                color = colors.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if ("pro".equals(stargazer.badge, ignoreCase = true)) {
+                                val sheetProTooltipState = rememberTooltipState()
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                                    tooltip = {
+                                        PlainTooltip(
+                                            containerColor = colors.surfaceContainerHighest,
+                                            contentColor = colors.onSurface
+                                        ) {
+                                            Text(
+                                                text = "Pro Supporter",
+                                                style = typography.labelSm,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    },
+                                    state = sheetProTooltipState
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = colors.surfaceContainerHighest,
+                                        border = BorderStroke(1.dp, colors.outlineVariant),
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clickable {
+                                                scope.launch { sheetProTooltipState.show() }
+                                            }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = "PRO",
+                                                style = typography.labelSm,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 8.sp,
                                                 color = colors.primary
                                             )
                                         }
@@ -909,13 +970,17 @@ private fun sortStargazers(context: Context, rawList: List<GitHubStargazer>): Li
         result.add(userStargazer)
     }
 
-    for (item in rawList) {
+    val remaining = rawList.filter { item ->
         val isDev = devStargazer != null && item.login.equals(devStargazer.login, ignoreCase = true)
         val isUser = userStargazer != null && item.login.equals(userStargazer.login, ignoreCase = true)
-        if (!isDev && !isUser) {
-            result.add(item)
-        }
+        !isDev && !isUser
     }
+
+    val proUsers = remaining.filter { "pro".equals(it.badge, ignoreCase = true) }
+    val regularUsers = remaining.filter { !"pro".equals(it.badge, ignoreCase = true) }
+
+    result.addAll(proUsers)
+    result.addAll(regularUsers)
 
     return result
 }
@@ -938,13 +1003,17 @@ private fun parseStargazers(json: String): StargazersSnapshot {
         for (index in 0 until array.length()) {
             val item = array.getJSONObject(index)
             val login = item.optString("login")
+            val badge = if (item.has("badge") && !item.isNull("badge")) {
+                item.optString("badge").takeIf { it.isNotBlank() }
+            } else null
             if (login.isNotBlank()) {
                 add(
                     GitHubStargazer(
                         login = login,
                         avatarUrl = item.optString("avatar_url"),
                         profileUrl = item.optString("html_url", "https://github.com/$login"),
-                        starredAt = item.optString("starred_at")
+                        starredAt = item.optString("starred_at"),
+                        badge = badge
                     )
                 )
             }
