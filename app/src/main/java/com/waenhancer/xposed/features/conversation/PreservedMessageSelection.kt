@@ -35,7 +35,7 @@ internal data class PreservedMessageSelection(
                 }
                 // Older hosts expose the same typed key through this accessor.
                 for (method in message.javaClass.methods) {
-                    if (method.name != "Atl" || method.parameterCount != 0 ||
+                    if (method.name != "Atl" || method.parameterTypes.size != 0 ||
                         Modifier.isStatic(method.modifiers) || !isKeyType(method.returnType)) continue
                     readKey(method.invoke(message))?.let(candidates::add)
                 }

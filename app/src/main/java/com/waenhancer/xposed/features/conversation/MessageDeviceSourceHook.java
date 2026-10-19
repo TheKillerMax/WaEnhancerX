@@ -464,11 +464,13 @@ public class MessageDeviceSourceHook extends BaseFeature {
         try {
             Method internalSetText = null;
             for (Method m : TextView.class.getDeclaredMethods()) {
-                if (m.getName().equals("setText") && m.getParameterCount() == 4
-                        && m.getParameterTypes()[0] == CharSequence.class
-                        && m.getParameterTypes()[1] == TextView.BufferType.class
-                        && m.getParameterTypes()[2] == boolean.class
-                        && m.getParameterTypes()[3] == int.class) {
+                if (!m.getName().equals("setText")) continue;
+                Class<?>[] methodParameters = m.getParameterTypes();
+                if (methodParameters.length == 4
+                        && methodParameters[0] == CharSequence.class
+                        && methodParameters[1] == TextView.BufferType.class
+                        && methodParameters[2] == boolean.class
+                        && methodParameters[3] == int.class) {
                     internalSetText = m;
                     break;
                 }

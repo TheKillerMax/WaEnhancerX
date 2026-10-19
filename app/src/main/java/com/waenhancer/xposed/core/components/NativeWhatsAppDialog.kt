@@ -166,7 +166,8 @@ class NativeWhatsAppDialog(private val context: Context) {
                         try {
                             val fragmentClass = loader.loadClass("com.whatsapp.calling.fragment.CallConfirmationFragment")
                             val bundleMethod = fragmentClass.declaredMethods.firstOrNull { m ->
-                                m.parameterCount == 1 && m.parameterTypes[0] == Bundle::class.java
+                                val parameterTypes = m.parameterTypes
+                                parameterTypes.size == 1 && parameterTypes[0] == Bundle::class.java
                             }
                             if (bundleMethod != null) {
                                 val methodData = bridge.getMethodData(bundleMethod)
@@ -196,12 +197,14 @@ class NativeWhatsAppDialog(private val context: Context) {
                 if (sBuilderMethod != null) {
                     val dialogClass = sBuilderMethod!!.returnType
                     sSetMessageMethod = dialogClass.declaredMethods.firstOrNull { m ->
-                        m.parameterCount == 1 && m.parameterTypes[0] == CharSequence::class.java
+                        val parameterTypes = m.parameterTypes
+                        parameterTypes.size == 1 && parameterTypes[0] == CharSequence::class.java
                     }
                     val buttonMethods = dialogClass.declaredMethods.filter { m ->
-                        m.parameterCount == 2 &&
-                                m.parameterTypes[0] == DialogInterface.OnClickListener::class.java &&
-                                m.parameterTypes[1] == CharSequence::class.java
+                        val parameterTypes = m.parameterTypes
+                        parameterTypes.size == 2 &&
+                                parameterTypes[0] == DialogInterface.OnClickListener::class.java &&
+                                parameterTypes[1] == CharSequence::class.java
                     }
                     if (buttonMethods.isNotEmpty()) {
                         sNegativeButtonMethod = buttonMethods.firstOrNull()

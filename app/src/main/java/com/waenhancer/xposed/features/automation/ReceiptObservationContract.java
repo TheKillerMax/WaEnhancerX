@@ -42,7 +42,7 @@ final class ReceiptObservationContract {
                 Field chat = oneField(fields, jidType, true);
                 if (!immutable(id) || !immutable(own) || !immutable(chat)) return null;
                 Method raw = jidType.getMethod("getRawString");
-                if (raw.getReturnType() != String.class || raw.getParameterCount() != 0
+                if (raw.getReturnType() != String.class || raw.getParameterTypes().length != 0
                         || Modifier.isStatic(raw.getModifiers()) || Modifier.isNative(raw.getModifiers())) return null;
                 return new Keys(type, jidType, accessible(id), accessible(own), accessible(chat), raw);
             } catch (ReflectiveOperationException | RuntimeException | LinkageError unavailable) {
@@ -163,8 +163,10 @@ final class ReceiptObservationContract {
         static Statuses create(Method handler, Class<?> userJidType, Class<?> statusKeyType,
                                Keys keys, Field selfProvider, Method selfPredicate) {
             if (handler == null || keys == null || statusKeyType == null || selfPredicate == null
-                    || selfProvider == null || handler.getParameterCount() != 4) return null;
-            Class<?> statusType = handler.getParameterTypes()[1];
+                    || selfProvider == null) return null;
+            Class<?>[] handlerParameters = handler.getParameterTypes();
+            if (handlerParameters.length != 4) return null;
+            Class<?> statusType = handlerParameters[1];
             if (!concreteInstance(handler, void.class, userJidType, statusType, int.class, long.class)
                     || statusType.isPrimitive() || selfProvider.getDeclaringClass() != handler.getDeclaringClass()
                     || Modifier.isStatic(selfProvider.getModifiers())) return null;

@@ -87,8 +87,9 @@ class HideForwardedTagHook(
                 for (invoke in invokes) {
                     try {
                         val method = invoke.getMethodInstance(classLoader)
-                        if (method.parameterCount == 1 &&
-                            (method.parameterTypes[0] == Int::class.javaPrimitiveType || method.parameterTypes[0] == Long::class.javaPrimitiveType) &&
+                        val parameterTypes = method.parameterTypes
+                        if (parameterTypes.size == 1 &&
+                            (parameterTypes[0] == Int::class.javaPrimitiveType || parameterTypes[0] == Long::class.javaPrimitiveType) &&
                             method.declaringClass == fMessageClass &&
                             method.returnType == Void.TYPE
                         ) {

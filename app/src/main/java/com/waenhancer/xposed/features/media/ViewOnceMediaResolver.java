@@ -170,7 +170,7 @@ final class ViewOnceMediaResolver {
 
         List<Method> files = new ArrayList<>();
         for (Method method : metadata.calls(menuClick)) {
-            if (instanceMethod(method) && method.getParameterCount() == 0
+            if (instanceMethod(method) && method.getParameterTypes().length == 0
                     && method.getReturnType() == File.class) files.add(method);
         }
         Method fileGetter = unique(files);

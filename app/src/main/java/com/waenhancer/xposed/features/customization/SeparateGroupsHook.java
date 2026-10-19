@@ -98,7 +98,8 @@ public final class SeparateGroupsHook extends BaseFeature {
                     .addUsingString("No HomeFragment mapping for community tab id:", StringMatchType.Contains)));
             for (var candidate : result) {
                 Method method = candidate.getMethodInstance(loader);
-                if (method.getParameterCount() > 0 && method.getParameterTypes()[0] == int.class) return method;
+                Class<?>[] methodParameters = method.getParameterTypes();
+                if (methodParameters.length > 0 && methodParameters[0] == int.class) return method;
             }
             return null;
         });
@@ -132,7 +133,7 @@ public final class SeparateGroupsHook extends BaseFeature {
         if (getTab == null) throw new IllegalStateException("Home tab factory not found");
         Constructor<?> emptyConstructor = null;
         for (Constructor<?> constructor : conversations.getDeclaredConstructors()) {
-            if (constructor.getParameterCount() == 0) {
+            if (constructor.getParameterTypes().length == 0) {
                 constructor.setAccessible(true);
                 emptyConstructor = constructor;
                 break;
@@ -159,7 +160,7 @@ public final class SeparateGroupsHook extends BaseFeature {
         });
 
         for (Method method : conversations.getDeclaredMethods()) {
-            if (method.getParameterCount() != 0 || !List.class.isAssignableFrom(method.getReturnType())) continue;
+            if (method.getParameterTypes().length != 0 || !List.class.isAssignableFrom(method.getReturnType())) continue;
             method.setAccessible(true);
             XposedBridge.hookMethod(method, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
@@ -217,7 +218,8 @@ public final class SeparateGroupsHook extends BaseFeature {
     private void hookTabName(Method getTab) {
         try {
             for (Method method : getTab.getDeclaringClass().getDeclaredMethods()) {
-                if (method.getParameterCount() != 1 || method.getParameterTypes()[0] != int.class
+                Class<?>[] methodParameters = method.getParameterTypes();
+                if (methodParameters.length != 1 || methodParameters[0] != int.class
                         || !CharSequence.class.isAssignableFrom(method.getReturnType())) continue;
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {

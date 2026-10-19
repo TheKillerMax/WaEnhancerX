@@ -86,8 +86,8 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         Method countMethod = null;
         if (contactStatusThumbnailClazz != null) {
             for (Method m : contactStatusThumbnailClazz.getDeclaredMethods()) {
-                if (m.getParameterCount() == 3) {
-                    Class<?>[] pTypes = m.getParameterTypes();
+                Class<?>[] pTypes = m.getParameterTypes();
+                if (pTypes.length == 3) {
                     if (pTypes[0] == int.class && pTypes[1] == int.class && pTypes[2] == int.class) {
                         m.setAccessible(true);
                         countMethod = m;

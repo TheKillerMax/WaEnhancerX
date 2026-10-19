@@ -69,8 +69,9 @@ public class AntiViewOnceHook extends BaseFeature {
                                 for (ClassData cd : implementors) {
                                     Class<?> cls = cd.getInstance(classLoader);
                                     for (Method m2 : cls.getDeclaredMethods()) {
-                                        if (m2.getParameterCount() == 1
-                                                && m2.getParameterTypes()[0] == int.class
+                                        Class<?>[] methodParameters = m2.getParameterTypes();
+                                        if (methodParameters.length == 1
+                                                && methodParameters[0] == int.class
                                                 && m2.getReturnType() == void.class) {
                                             targets.add(m2);
                                         }
