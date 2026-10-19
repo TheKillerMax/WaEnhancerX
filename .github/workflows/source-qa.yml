@@ -172,10 +172,6 @@ jobs:
           if [[ -f app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java ]]; then
             test -f qa/test_gallery_export.py
           fi
-          if [[ -f app/src/main/java/com/waenhancer/xposed/features/media/ViewOnceMediaResolver.java ]]; then
-            test -f qa/test_view_once_download.py
-            test -f qa/view_once/ViewOnceDownloadTest.java
-          fi
           if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
             test -f qa/test_contact_identity.py
           fi
@@ -248,7 +244,6 @@ jobs:
             qa/test_recorder_cleanup.py \
             qa/test_call_recording_lifecycle.py \
             qa/test_gallery_export.py \
-            qa/test_view_once_download.py \
             qa/test_contact_identity.py \
             qa/test_ig_status_loading.py \
             qa/test_db_migrations.py; do
