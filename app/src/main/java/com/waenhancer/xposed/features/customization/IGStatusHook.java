@@ -25,11 +25,13 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -41,7 +43,7 @@ public class IGStatusHook extends BaseFeature {
     private static final String TAG = "[WAEX][IGStatus]";
 
     public static final CopyOnWriteArrayList<Object> items = new CopyOnWriteArrayList<>();
-    private static final List<IGStatusView> statusContainers = new ArrayList<>();
+    private static final List<WeakReference<IGStatusView>> statusContainers = new ArrayList<>();
 
     public IGStatusHook(@NonNull Context context,
                         @NonNull ClassLoader classLoader,
@@ -150,19 +152,12 @@ public class IGStatusHook extends BaseFeature {
                         }
 
                         synchronized (statusContainers) {
-                            IGStatusView existing = null;
-                            for (IGStatusView sc : statusContainers) {
-                                if (sc.fragmentId == id) {
-                                    existing = sc;
-                                    break;
-                                }
-                            }
-                            if (existing != null) {
-                                statusContainer.setAdapter(existing.getAdapter());
-                                statusContainers.remove(existing);
+                            for (Iterator<WeakReference<IGStatusView>> it = statusContainers.iterator(); it.hasNext();) {
+                                IGStatusView previous = it.next().get();
+                                if (previous == null || previous.fragmentId == id) it.remove();
                             }
                             statusContainer.fragmentId = id;
-                            statusContainers.add(statusContainer);
+                            statusContainers.add(new WeakReference<>(statusContainer));
                         }
 
                         // Attach initial adapter
@@ -229,8 +224,10 @@ public class IGStatusHook extends BaseFeature {
                         if (list1 != null) newList.addAll(list1);
                         if (list2 != null) newList.addAll(list2);
 
-                        items.clear();
-                        items.addAll(newList);
+                        synchronized (items) {
+                            items.clear();
+                            items.addAll(newList);
+                        }
                         updateAllContainers();
                     } catch (Throwable t) {
                         XposedBridge.log(TAG + " onUpdateStatusChanged hook error: " + t.getMessage());
@@ -258,8 +255,10 @@ public class IGStatusHook extends BaseFeature {
                                 newList.add(null);
                                 newList.addAll(lists.get(0));
                                 newList.addAll(lists.get(1));
-                                items.clear();
-                                items.addAll(newList);
+                                synchronized (items) {
+                                    items.clear();
+                                    items.addAll(newList);
+                                }
                                 updateAllContainers();
                             }
                         } catch (Throwable t) {
@@ -271,18 +270,22 @@ public class IGStatusHook extends BaseFeature {
         }
     }
 
+    public static Object[] snapshotItems() {
+        synchronized (items) { return items.toArray(); }
+    }
+
     private static void ensureMyStatusHeader() {
-        if (items.isEmpty() || items.get(0) != null) {
-            items.add(0, null);
+        synchronized (items) {
+            if (items.isEmpty() || items.get(0) != null) items.add(0, null);
         }
     }
 
     private static void updateAllContainers() {
         synchronized (statusContainers) {
-            for (IGStatusView view : statusContainers) {
-                if (view != null) {
-                    view.updateList();
-                }
+            for (Iterator<WeakReference<IGStatusView>> it = statusContainers.iterator(); it.hasNext();) {
+                IGStatusView view = it.next().get();
+                if (view == null) it.remove();
+                else view.updateList();
             }
         }
     }
