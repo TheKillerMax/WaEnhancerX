@@ -136,6 +136,12 @@ jobs:
             test -f qa/test_revoke_sqlite_contract.py
             test -f qa/fixtures/RevokeSqliteBindingChecks.java
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/conversation/PreservedMessageSelection.kt ]]; then
+            test -f qa/test_preserved_message_capture.py
+            test -f qa/fixtures/PreservedMessagesChecks.kt
+            test -f qa/fixtures/PreservedSelectorChecks.kt
+            test -f qa/fixtures/preserved_messages_android_doubles.py
+          fi
 
       - name: Require stability tests when their implementations are present
         shell: bash
@@ -216,6 +222,7 @@ jobs:
             qa/test_proximity_ui_wiring.py \
             qa/test_notification_memory.py \
             qa/test_preserved_own_revoke.py \
+            qa/test_preserved_message_capture.py \
             qa/test_status_hook_contract.py \
             qa/test_revoke_sqlite_contract.py \
             qa/test_startup_reconciliation.py \
