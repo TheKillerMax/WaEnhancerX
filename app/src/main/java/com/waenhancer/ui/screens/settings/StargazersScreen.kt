@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.utils.UiText
+
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -194,7 +196,7 @@ fun StargazersScreen() {
     fun openProjectForStar() {
         Toast.makeText(
             context,
-            "Tap Star on GitHub and your profile will appear after the list updates.",
+            UiText.get(R.string.waex_ui_tap_star_on_github_and_your_profile_wi_89e8efe3, "Tap Star on GitHub and your profile will appear after the list updates."),
             Toast.LENGTH_SHORT
         ).show()
         openUrl(PROJECT_URL)
@@ -208,7 +210,7 @@ fun StargazersScreen() {
             stargazers = sortStargazers(context, snapshot.stargazers)
             lastUpdated = formatUpdatedAt(snapshot.updatedAt)
         }.onFailure {
-            errorMessage = "We couldn't load the supporters right now."
+            errorMessage = UiText.get(R.string.waex_ui_we_couldn_t_load_the_supporters_right_f4aba896, "We couldn't load the supporters right now.")
             stargazers = emptyList()
         }
         isLoading = false
@@ -221,7 +223,7 @@ fun StargazersScreen() {
         isLoadingProfile = true
         loadStargazerProfile(context, stargazer.login)
             .onSuccess { selectedProfile = it }
-            .onFailure { profileError = "Could not load this GitHub profile." }
+            .onFailure { profileError = UiText.get(R.string.waex_ui_could_not_load_this_github_profile_eb4f568a, "Could not load this GitHub profile.") }
         isLoadingProfile = false
     }
 
@@ -239,7 +241,7 @@ fun StargazersScreen() {
                     ) {
                         Icon(
                             imageVector = if (isSearchVisible) WaexIcons.Clear else WaexIcons.Search,
-                            contentDescription = if (isSearchVisible) "Close search" else "Search supporters",
+                            contentDescription = if (isSearchVisible) UiText.get(R.string.waex_ui_close_search_55656b5e, "Close search") else UiText.get(R.string.waex_ui_search_supporters_d4975694, "Search supporters"),
                             tint = colors.onSurface
                         )
                     }
@@ -259,7 +261,7 @@ fun StargazersScreen() {
                         ) {
                             AsyncAvatarImage(
                                 url = currentUserProfile?.avatarUrl.orEmpty(),
-                                contentDescription = "Open your GitHub profile",
+                                contentDescription = UiText.get(R.string.waex_ui_open_your_github_profile_9303415f, "Open your GitHub profile"),
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
@@ -273,7 +275,7 @@ fun StargazersScreen() {
                                 style = typography.headlineMd,
                                 modifier = Modifier
                                     .padding(bottom = 2.dp)
-                                    .semantics { contentDescription = "Join the supporters list" }
+                                    .semantics { contentDescription = UiText.get(R.string.waex_ui_join_the_supporters_list_b169de4a, "Join the supporters list") }
                             )
                         }
                     }
@@ -307,14 +309,14 @@ fun StargazersScreen() {
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search GitHub usernames") },
+                        placeholder = { Text(UiText.get(R.string.waex_ui_search_github_usernames_968bd7a0, "Search GitHub usernames")) },
                         leadingIcon = {
                             Icon(WaexIcons.Search, contentDescription = null)
                         },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(WaexIcons.Clear, contentDescription = "Clear search")
+                                    Icon(WaexIcons.Clear, contentDescription = UiText.get(R.string.waex_ui_clear_search_3b7ea517, "Clear search"))
                                 }
                             }
                         },
@@ -372,7 +374,7 @@ fun StargazersScreen() {
                             if (stargazers.isNotEmpty()) {
                                 Spacer(Modifier.height(14.dp))
                                 Text(
-                                    text = "${stargazers.size} supporters and counting",
+                                    text = UiText.get(R.string.waex_ui_1_s_supporters_and_counting_0c9807fc, "%1\$s supporters and counting", stargazers.size),
                                     style = typography.bodyLg,
                                     fontWeight = FontWeight.Bold,
                                     color = colors.primary
@@ -417,7 +419,7 @@ fun StargazersScreen() {
                         Button(onClick = { refreshKey++ }) {
                             Icon(WaexIcons.Refresh, contentDescription = null)
                             Spacer(Modifier.size(8.dp))
-                            Text("Try again")
+                            Text(UiText.get(R.string.waex_ui_try_again_d8b8392e, "Try again"))
                         }
                     }
                 }
@@ -430,7 +432,7 @@ fun StargazersScreen() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Be the first supporter featured here by starring WaEnhancerX on GitHub.",
+                            text = UiText.get(R.string.waex_ui_be_the_first_supporter_featured_here_b_c40e50c7, "Be the first supporter featured here by starring WaEnhancerX on GitHub."),
                             style = typography.bodyLg,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -439,7 +441,7 @@ fun StargazersScreen() {
                         Button(onClick = { showSupportSheet = true }) {
                             Icon(WaexIcons.Premium, contentDescription = null)
                             Spacer(Modifier.size(8.dp))
-                            Text("Open GitHub")
+                            Text(UiText.get(R.string.waex_ui_open_github_0d2cda15, "Open GitHub"))
                         }
                     }
                 }
@@ -459,14 +461,14 @@ fun StargazersScreen() {
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "Couldn’t find you or your friend here?",
+                            text = UiText.get(R.string.waex_ui_couldn_t_find_you_or_your_friend_here_68192ff2, "Couldn’t find you or your friend here?"),
                             style = typography.bodyLg,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.onSurface
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Join our supporters and get your GitHub profile featured in this list.",
+                            text = UiText.get(R.string.waex_ui_join_our_supporters_and_get_your_githu_3a43f85e, "Join our supporters and get your GitHub profile featured in this list."),
                             style = typography.bodyMd,
                             color = colors.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -475,7 +477,7 @@ fun StargazersScreen() {
                         Button(onClick = { showSupportSheet = true }) {
                             Text("🫵")
                             Spacer(Modifier.width(8.dp))
-                            Text("Become a supporter", fontWeight = FontWeight.Bold)
+                            Text(UiText.get(R.string.waex_ui_become_a_supporter_868a6b05, "Become a supporter"), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -503,7 +505,7 @@ fun StargazersScreen() {
                             ) {
                                 AsyncAvatarImage(
                                     url = stargazer.avatarUrl,
-                                    contentDescription = "${stargazer.login}'s avatar",
+                                    contentDescription = UiText.get(R.string.waex_ui_1_s_s_avatar_21ab3ff2, "%1\$s's avatar", stargazer.login),
                                     modifier = Modifier
                                         .size(56.dp)
                                         .clip(CircleShape)
@@ -593,7 +595,7 @@ fun StargazersScreen() {
                                             contentColor = colors.onSurface
                                         ) {
                                             Text(
-                                                text = "Developer",
+                                                text = UiText.get(R.string.waex_ui_developer_3fb7b394, "Developer"),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Medium
                                             )
@@ -638,7 +640,7 @@ fun StargazersScreen() {
                 if (isCurrentUserStargazer) {
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        text = "Thank you for being a Pro subscriber and a WaEnhancerX stargazer!",
+                        text = UiText.get(R.string.waex_ui_thank_you_for_being_a_pro_subscriber_a_65080d96, "Thank you for being a Pro subscriber and a WaEnhancerX stargazer!"),
                         style = typography.bodyLg,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.primary
@@ -646,7 +648,7 @@ fun StargazersScreen() {
                 } else if (stargazer.starredAt.isNotBlank()) {
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        text = "Supporting since ${formatUpdatedAt(stargazer.starredAt).ifEmpty { "date unavailable" }}",
+                        text = UiText.get(R.string.waex_ui_supporting_since_1_s_2957c30c, "Supporting since %1\$s", formatUpdatedAt(stargazer.starredAt).ifEmpty { UiText.get(R.string.waex_ui_date_unavailable_616fdd79, "date unavailable") }),
                         style = typography.bodyMd,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.primary
@@ -671,7 +673,7 @@ fun StargazersScreen() {
                             }
                             val prefix = if (profile.location.isNotEmpty()) " | " else ""
                             Text(
-                                text = "$prefix${profile.followers} followers | ${profile.publicRepos} repositories",
+                                text = UiText.get(R.string.waex_ui_1_s_2_s_followers_3_s_repositories_3525e760, "%1\$s%2\$s followers | %3\$s repositories", prefix, profile.followers, profile.publicRepos),
                                 style = typography.labelSm,
                                 color = colors.onSurfaceVariant
                             )
@@ -705,7 +707,7 @@ fun StargazersScreen() {
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("View GitHub Profile", fontWeight = FontWeight.SemiBold)
+                    Text(UiText.get(R.string.waex_ui_view_github_profile_1a49fe64, "View GitHub Profile"), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -740,7 +742,7 @@ fun StargazersScreen() {
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Want to see yourself here?",
+                    text = UiText.get(R.string.waex_ui_want_to_see_yourself_here_b2789bdc, "Want to see yourself here?"),
                     style = typography.headlineMd,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface,
@@ -748,7 +750,7 @@ fun StargazersScreen() {
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "Star WaEnhancerX on GitHub and your profile can join this supporters list. It’s free, takes only a moment, and helps more people discover the project. New stars may take a little while to appear.",
+                    text = UiText.get(R.string.waex_ui_star_waenhancerx_on_github_and_your_pr_9240b818, "Star WaEnhancerX on GitHub and your profile can join this supporters list. It’s free, takes only a moment, and helps more people discover the project. New stars may take a little while to appear."),
                     style = typography.bodyMd,
                     color = colors.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -770,7 +772,7 @@ fun StargazersScreen() {
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Add me to the list", fontWeight = FontWeight.Bold)
+                    Text(UiText.get(R.string.waex_ui_add_me_to_the_list_6c6e9342, "Add me to the list"), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1096,7 +1098,7 @@ private fun formatUpdatedAt(timestamp: String): String {
             timeZone = TimeZone.getTimeZone("UTC")
         }
         val cleanTimestamp = timestamp.replace(Regex("\\.\\d+Z$|Z$"), "")
-        val formatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
+        val formatter = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, UiText.displayLocale())
         formatter.format(parser.parse(cleanTimestamp) ?: Date())
     }.getOrDefault(timestamp)
 }

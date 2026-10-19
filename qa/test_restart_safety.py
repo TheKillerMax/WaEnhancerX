@@ -172,6 +172,9 @@ with tempfile.TemporaryDirectory(prefix='waex_restart_integration_') as output:
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(code)
         stub_sources.append(file)
+    # Explicit English display adapter; actual resource routing has its own runtime test.
+    from localization_support import write_display_adapter
+    stub_sources.extend(write_display_adapter(ROOT, base))
     compiled = [*stub_sources, SRC/'RestartTargetPolicy.java',
                 SRC/'AppRestartHelper.java', QA/'TestAppRestartHelper.java']
     subprocess.run(['javac','--release','17','-d',output,*map(str,compiled)],check=True)

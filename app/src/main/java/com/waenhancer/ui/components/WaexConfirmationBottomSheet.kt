@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,7 +86,7 @@ fun WaexConfirmationBottomSheet(
                 shape = radius.buttonShape,
                 border = BorderStroke(1.dp, colors.outlineVariant)
             ) {
-                Text("Cancel", color = colors.onSurface)
+                Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
             }
         }
     }

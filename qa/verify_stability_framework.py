@@ -6,6 +6,7 @@ code from another PR. Xposed, private Pro behavior and design theme are fixtures
 from pathlib import Path
 import argparse, hashlib, json, shutil, subprocess, tomllib
 import xml.etree.ElementTree as ET
+from framework_localization import stage_localization
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,7 +28,7 @@ def main():
  id("org.jetbrains.kotlin.plugin.compose") version "KOTLIN"
 }
 android {
- namespace="com.waenhancer.fixture"
+ namespace="com.waenhancer.app"
  compileSdk=36
  defaultConfig {minSdk=24}
  buildFeatures {compose=true}
@@ -94,6 +95,7 @@ public class XC_MethodHook {public static class MethodHookParam {public Object t
         write('src/main/java/de/robv/android/xposed/XposedHelpers.java','''package de.robv.android.xposed;
 public class XposedHelpers {public static void findAndHookMethod(Object... args){throw new AssertionError("No actual hooks in this fixture");} public static Object callMethod(Object o,String n,Object... a){throw new AssertionError("Unexpected reflective hook");}public static Object getAdditionalInstanceField(Object o,String n){return null;}public static void setAdditionalInstanceField(Object o,String n,Object v){}}
 ''')
+    localized = stage_localization(root, probe, identity)
     (e/'source-sha256.json').write_text(json.dumps(identity,indent=2));(e/'build.gradle.kts').write_text(build)
     cmd=['bash',str(root/'gradlew'),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
     with (e/'framework-build.log').open('w') as log:

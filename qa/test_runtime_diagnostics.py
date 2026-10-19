@@ -33,7 +33,18 @@ def main():
         model = det[det.index('data class InjectedHookItem('):det.index('object WhatsAppPackageDetector')]
         put('Model.kt', 'package com.waenhancer.utils\n' + model)
         # Full production guard is compiled too; the visual builder is an explicit double.
-        put('VersionGuard.kt', (JAVA/'xposed/core/VersionGuard.kt').read_text())
+        guard_source = (JAVA/'xposed/core/VersionGuard.kt').read_text()
+        put('VersionGuard.kt', guard_source)
+        # Compile the real guard against explicit presentation-only adapters.
+        # Runtime policy decisions and English fallbacks remain executable.
+        import re
+        guard_ids = sorted(set(re.findall(r'R\.string\.([A-Za-z_][A-Za-z_0-9]*)', guard_source)))
+        put('UiText.kt', '''package com.waenhancer.utils
+object UiText {
+ @JvmStatic fun get(id:Int, fallback:String, vararg args:Any?):String =
+   if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)
+}
+''')
         put('Resources.kt', '''package android.content.res
 class Resources(val owner:String,val names:Map<String,Int>,val arrays:Map<Int,Array<String>>,val overrideName:String?=null) {
  class NotFoundException:RuntimeException()
@@ -93,9 +104,7 @@ object XposedBridge{val logs=mutableListOf<String>();fun log(s:String){logs.add(
         put('Clock.kt', '''package android.os
 object SystemClock{var time=1000L;fun elapsedRealtime()=time}
 ''')
-        put('R.kt', '''package com.waenhancer.app
-object R{object array{const val universal_supported_versions=0x7f030000}}
-''')
+        put('R.kt', 'package com.waenhancer.app\nobject R { object array { const val universal_supported_versions = 0x7f030000 }; object string {\n' + '\n'.join('const val '+name+' = '+str(0x7f050100+i) for i,name in enumerate(guard_ids)) + '\n} }\n')
         put('Root.kt', '''package com.waenhancer.xposed.utils
 object AppRestartHelper {var output:String?=null;var lastCommand="";var fail=false;var calls=0;var advance=0L
  fun runRootCommand(command:String):String?{calls++;lastCommand=command;android.os.SystemClock.time+=advance;if(fail)throw SecurityException("secret diagnostic");return output}}

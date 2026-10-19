@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.Intent
 import android.net.Uri
 import android.widget.TextView
@@ -80,9 +83,9 @@ fun NoticeBottomSheet(
     }
 
     val severityLabel = when (notice.severityRank) {
-        3 -> "URGENT"
-        2 -> "IMPORTANT"
-        else -> "ANNOUNCEMENT"
+        3 -> UiText.get(R.string.waex_ui_urgent_ee603f0d, "URGENT")
+        2 -> UiText.get(R.string.waex_ui_important_ed99f4e1, "IMPORTANT")
+        else -> UiText.get(R.string.waex_ui_announcement_35236c01, "ANNOUNCEMENT")
     }
 
     ModalBottomSheet(
@@ -165,7 +168,7 @@ fun NoticeBottomSheet(
                     ) {
                         Icon(
                             imageVector = WaexIcons.Clear,
-                            contentDescription = "Dismiss",
+                            contentDescription = UiText.get(R.string.waex_ui_dismiss_48845bff, "Dismiss"),
                             tint = colors.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
@@ -262,7 +265,7 @@ fun NoticeBottomSheet(
                 }
 
                 if (!hasPrimary && !hasSecondary && notice.dismissible) {
-                    val dismissLabel = dismissAction?.label?.takeIf { it.isNotBlank() } ?: "Dismiss"
+                    val dismissLabel = dismissAction?.label?.takeIf { it.isNotBlank() } ?: UiText.get(R.string.waex_ui_dismiss_48845bff, "Dismiss")
                     OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier

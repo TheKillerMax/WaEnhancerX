@@ -31,6 +31,8 @@ def main():
                 shutil.copy2(ROOT/SOURCE/file,root/SOURCE/file)
             shutil.copytree(ROOT/'qa/view_once',root/'qa/view_once')
             shutil.copy2(ROOT/'qa/test_view_once_download.py',root/'qa/test_view_once_download.py')
+            shutil.copy2(ROOT/'qa/localization_support.py',root/'qa/localization_support.py')
+            shutil.copytree(ROOT/'app/src/main/res/values',root/'app/src/main/res/values')
             path=root/SOURCE/source;text=path.read_text();assert old in text,'Inert mutation: '+name
             path.write_text(text.replace(old,new))
             try:

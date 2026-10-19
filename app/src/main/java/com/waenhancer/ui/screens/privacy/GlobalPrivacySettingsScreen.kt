@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.privacy
 
+import com.waenhancer.utils.UiText
+
 import android.graphics.Color as AndroidColor
 import android.widget.Toast
 import com.waenhancer.ui.components.WaexProChip
@@ -618,7 +620,7 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "BUTTON PLACEMENT",
+                                            text = UiText.get(R.string.waex_ui_button_placement_15d950e9, "BUTTON PLACEMENT"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.primary
@@ -631,7 +633,7 @@ fun GlobalPrivacySettingsScreen(
                                                 .padding(4.dp),
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            listOf("1" to "Top icon", "2" to "Menu option").forEach { (value, label) ->
+                                            listOf("1" to UiText.get(R.string.waex_ui_top_icon_d8a8beb7, "Top icon"), "2" to UiText.get(R.string.waex_ui_menu_option_e2b665ae, "Menu option")).forEach { (value, label) ->
                                                 val selected = seenTickPlacement == value
                                                 Box(
                                                     modifier = Modifier
@@ -671,7 +673,7 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "OPEN ARCHIVED CHATS",
+                                            text = UiText.get(R.string.waex_ui_open_archived_chats_4757b69a, "OPEN ARCHIVED CHATS"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.primary
@@ -682,7 +684,7 @@ fun GlobalPrivacySettingsScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Show in 3-dots / WAEX menu",
+                                                text = UiText.get(R.string.waex_ui_show_in_3_dots_waex_menu_022a93a6, "Show in 3-dots / WAEX menu"),
                                                 style = typography.bodySm,
                                                 color = colors.onSurface,
                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -705,7 +707,7 @@ fun GlobalPrivacySettingsScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Long-press WhatsApp title",
+                                                text = UiText.get(R.string.waex_ui_long_press_whatsapp_title_eee432ef, "Long-press WhatsApp title"),
                                                 style = typography.bodySm,
                                                 color = colors.onSurface,
                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -728,7 +730,7 @@ fun GlobalPrivacySettingsScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Tap WhatsApp title 3 times",
+                                                text = UiText.get(R.string.waex_ui_tap_whatsapp_title_3_times_84515b9e, "Tap WhatsApp title 3 times"),
                                                 style = typography.bodySm,
                                                 color = colors.onSurface,
                                                 modifier = Modifier.weight(1f).padding(end = 8.dp)
@@ -762,13 +764,13 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "OPEN LOCKED CHATS",
+                                            text = UiText.get(R.string.waex_ui_open_locked_chats_b10ca180, "OPEN LOCKED CHATS"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.primary
                                         )
                                         listOf(
-                                            Triple("Show in 3-dots / WAEX menu", lockedOpenViaMenu) { checked: Boolean ->
+                                            Triple(UiText.get(R.string.waex_ui_show_in_3_dots_waex_menu_022a93a6, "Show in 3-dots / WAEX menu"), lockedOpenViaMenu) { checked: Boolean ->
                                                 lockedOpenViaMenu = checked
                                                 preferenceManager.putBoolean("locked_open_via_menu", checked)
                                                 if (checked) {
@@ -776,7 +778,7 @@ fun GlobalPrivacySettingsScreen(
                                                     preferenceManager.putBoolean("archive_open_via_menu", false)
                                                 }
                                             },
-                                            Triple("Long-press WhatsApp title", lockedOpenViaTitleLongPress) { checked: Boolean ->
+                                            Triple(UiText.get(R.string.waex_ui_long_press_whatsapp_title_eee432ef, "Long-press WhatsApp title"), lockedOpenViaTitleLongPress) { checked: Boolean ->
                                                 lockedOpenViaTitleLongPress = checked
                                                 preferenceManager.putBoolean("locked_open_via_title_long_press", checked)
                                                 if (checked) {
@@ -784,7 +786,7 @@ fun GlobalPrivacySettingsScreen(
                                                     preferenceManager.putBoolean("archive_open_via_title_long_press", false)
                                                 }
                                             },
-                                            Triple("Tap WhatsApp title 3 times", lockedOpenViaTitleTripleTap) { checked: Boolean ->
+                                            Triple(UiText.get(R.string.waex_ui_tap_whatsapp_title_3_times_84515b9e, "Tap WhatsApp title 3 times"), lockedOpenViaTitleTripleTap) { checked: Boolean ->
                                                 lockedOpenViaTitleTripleTap = checked
                                                 preferenceManager.putBoolean("locked_open_via_title_triple_tap", checked)
                                                 if (checked) {
@@ -836,7 +838,7 @@ fun GlobalPrivacySettingsScreen(
                                         // Section 1: Indicator Style with Segmented Control
                                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Text(
-                                                text = "INDICATOR STYLE",
+                                                text = UiText.get(R.string.waex_ui_indicator_style_7b2d18a3, "INDICATOR STYLE"),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Bold,
                                                 color = colors.primary
@@ -849,7 +851,7 @@ fun GlobalPrivacySettingsScreen(
                                                     .padding(4.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
-                                                listOf("2" to "Deleted Icon 🚫", "1" to "Text \"Deleted\"").forEach { (valKey, title) ->
+                                                listOf("2" to UiText.get(R.string.waex_ui_deleted_icon_a9a44dc0, "Deleted Icon 🚫"), "1" to UiText.get(R.string.waex_ui_text_deleted_0eb7a071, "Text \"Deleted\"")).forEach { (valKey, title) ->
                                                     val isSelected = currentIndicator == valKey
                                                     Box(
                                                         modifier = Modifier
@@ -887,13 +889,13 @@ fun GlobalPrivacySettingsScreen(
                                         ) {
                                             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                                 Text(
-                                                    text = "Color Deleted Text & Indicator",
+                                                    text = UiText.get(R.string.waex_ui_color_deleted_text_indicator_ae75ad33, "Color Deleted Text & Indicator"),
                                                     style = typography.bodyMd,
                                                     color = colors.onSurface,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                                 Text(
-                                                    text = "Apply custom color to deleted message/status and time",
+                                                    text = UiText.get(R.string.waex_ui_apply_custom_color_to_deleted_message_11bb3603, "Apply custom color to deleted message/status and time"),
                                                     style = typography.labelSm,
                                                     color = colors.onSurfaceVariant
                                                 )
@@ -937,7 +939,7 @@ fun GlobalPrivacySettingsScreen(
                                                             .border(1.5.dp, colors.outline, CircleShape)
                                                     )
                                                     Text(
-                                                        text = "Indicator & Text Color",
+                                                        text = UiText.get(R.string.waex_ui_indicator_text_color_55dfa1d7, "Indicator & Text Color"),
                                                         style = typography.bodyMd,
                                                         color = colors.onSurface,
                                                         fontWeight = FontWeight.Medium
@@ -971,13 +973,13 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "WAENHANCERX SETTINGS PLACEMENT",
+                                            text = UiText.get(R.string.waex_ui_waenhancerx_settings_placement_8c28acc2, "WAENHANCERX SETTINGS PLACEMENT"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.primary
                                         )
                                         Text(
-                                            text = "Choose where to show the WAEX settings entry point",
+                                            text = UiText.get(R.string.waex_ui_choose_where_to_show_the_waex_settings_44afa3ae, "Choose where to show the WAEX settings entry point"),
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 11.sp
@@ -991,8 +993,8 @@ fun GlobalPrivacySettingsScreen(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             listOf(
-                                                "home_menu" to "Home Menu",
-                                                "wa_settings" to "WhatsApp Settings"
+                                                "home_menu" to UiText.get(R.string.waex_ui_home_menu_792a1d5a, "Home Menu"),
+                                                "wa_settings" to UiText.get(R.string.waex_ui_whatsapp_settings_37faf372, "WhatsApp Settings")
                                             ).forEach { (value, label) ->
                                                 val isSelected = waexSettingsPlacement == value
                                                 Box(
@@ -1036,13 +1038,13 @@ fun GlobalPrivacySettingsScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "MENU DISPLAY OPTIONS",
+                                            text = UiText.get(R.string.waex_ui_menu_display_options_c808869d, "MENU DISPLAY OPTIONS"),
                                             style = typography.labelSm,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.primary
                                         )
                                         Text(
-                                            text = "How WAEX items appear in WhatsApp's home menu",
+                                            text = UiText.get(R.string.waex_ui_how_waex_items_appear_in_whatsapp_s_ho_3f618d0d, "How WAEX items appear in WhatsApp's home menu"),
                                             style = typography.bodyMd,
                                             color = colors.onSurfaceVariant,
                                             fontSize = 11.sp
@@ -1056,9 +1058,9 @@ fun GlobalPrivacySettingsScreen(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             listOf(
-                                                "grouped"  to "Grouped",
-                                                "separate" to "Separate",
-                                                "icons"    to "Icons"
+                                                "grouped"  to UiText.get(R.string.waex_ui_grouped_89731456, "Grouped"),
+                                                "separate" to UiText.get(R.string.waex_ui_separate_726c1269, "Separate"),
+                                                "icons"    to UiText.get(R.string.waex_ui_icons_eae96e02, "Icons")
                                             ).forEach { (value, label) ->
                                                 val isSelected = waexMenuStyle == value
                                                 Box(
@@ -1110,13 +1112,13 @@ fun GlobalPrivacySettingsScreen(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "CUSTOM REACTION EMOJI",
+                                                text = UiText.get(R.string.waex_ui_custom_reaction_emoji_e6b8a58e, "CUSTOM REACTION EMOJI"),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Bold,
                                                 color = colors.primary
                                             )
                                             Text(
-                                                text = "Tap to change default reaction emoji ($currentEmoji)",
+                                                text = UiText.get(R.string.waex_ui_tap_to_change_default_reaction_emoji_1_341eb819, "Tap to change default reaction emoji (%1\$s)", currentEmoji),
                                                 style = typography.bodyMd,
                                                 color = colors.onSurfaceVariant,
                                                 fontSize = 11.sp

@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.homescreen;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
@@ -221,8 +224,8 @@ final class WaexQuickActionsSheet {
                 if (prefs.getBoolean("freezelastseen", false)) {
                     boolean freezeOn = gActive || prefs.getBoolean("freeze_last_seen_active", false);
                     addSwitchRow(dependentContainer, activity, dialog,
-                            "Freeze Last Seen",
-                            gActive ? "Managed by Ghost Mode" : "Lock your last seen timestamp",
+                            UiText.get(R.string.feat_freezelastseen_title, "Freeze Last Seen"),
+                            gActive ? UiText.get(R.string.waex_ui_managed_by_ghost_mode_43c1f096, "Managed by Ghost Mode") : UiText.get(R.string.waex_ui_lock_your_last_seen_timestamp_3ffb4b47, "Lock your last seen timestamp"),
                             freezeOn,
                             gActive,
                             finalPrimaryText, finalSecondaryText,
@@ -236,8 +239,8 @@ final class WaexQuickActionsSheet {
                     boolean dndOn = gActive || DndPreferencePolicy.isEnabled(
                             prefs::contains, key -> prefs.getBoolean(key, false));
                     addSwitchRow(dependentContainer, activity, dialog,
-                            "DND Mode",
-                            gActive ? "Managed by Ghost Mode" : "Mute all incoming notifications",
+                            UiText.get(R.string.waex_ui_dnd_mode_09024263, "DND Mode"),
+                            gActive ? UiText.get(R.string.waex_ui_managed_by_ghost_mode_43c1f096, "Managed by Ghost Mode") : UiText.get(R.string.waex_ui_mute_all_incoming_notifications_543d04fe, "Mute all incoming notifications"),
                             dndOn,
                             gActive,
                             finalPrimaryText, finalSecondaryText,
@@ -251,8 +254,8 @@ final class WaexQuickActionsSheet {
             if (prefs.getBoolean("ghostmode", false)) {
                 boolean ghostActive = prefs.getBoolean("ghostmode_active", false);
                 addSwitchRow(content, activity, dialog,
-                        "Ghost Mode",
-                        "Hide online status, typing & read receipts",
+                        UiText.get(R.string.waex_ui_ghost_mode_48b2b30e, "Ghost Mode"),
+                        UiText.get(R.string.waex_ui_hide_online_status_typing_read_receipt_d3490518, "Hide online status, typing & read receipts"),
                         ghostActive,
                         false,
                         finalPrimaryText, finalSecondaryText,
@@ -277,8 +280,8 @@ final class WaexQuickActionsSheet {
 
             if (prefs.getBoolean("restartbutton", false)) {
                 addTileRow(content, activity,
-                        "Restart WhatsApp",
-                        "Force close and relaunch WhatsApp",
+                        UiText.get(R.string.waex_ui_restart_whatsapp_e68a0fd3, "Restart WhatsApp"),
+                        UiText.get(R.string.waex_ui_force_close_and_relaunch_whatsapp_780fd6fd, "Force close and relaunch WhatsApp"),
                         finalPrimaryText, finalSecondaryText,
                         () -> {
                             dialog.dismiss();
@@ -288,8 +291,8 @@ final class WaexQuickActionsSheet {
 
             if (prefs.getBoolean("open_wae", false)) {
                 addTileRow(content, activity,
-                        "WA Enhancer Settings",
-                        "Open WAEX settings and preferences",
+                        UiText.get(R.string.waex_ui_wa_enhancer_settings_ff30ce0c, "WA Enhancer Settings"),
+                        UiText.get(R.string.waex_ui_open_waex_settings_and_preferences_8ec5880a, "Open WAEX settings and preferences"),
                         finalPrimaryText, finalSecondaryText,
                         () -> {
                             dialog.dismiss();

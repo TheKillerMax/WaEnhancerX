@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.media;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
@@ -141,7 +144,8 @@ public class DownloadViewOnceHook extends BaseFeature {
 
     private void bindAction(Menu menu, Object viewer, Context application, MediaSelection selection, boolean audio) {
         MenuItem item = menu.findItem(MENU_ID_DOWNLOAD);
-        if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
+        if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE,
+                UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
         Drawable icon = MenuIconLoader.load(application, "ic_waex_download");
         if (icon != null) item.setIcon(icon);
@@ -151,14 +155,16 @@ public class DownloadViewOnceHook extends BaseFeature {
             if (!enabled()) return true;
             Object ticket = new Object();
             if (!EXPORTING.compareAndSet(null, ticket)) {
-                showToast(application, "A media export is already in progress");
+                showToast(application, UiText.get(R.string.waex_ui_media_export_in_progress_v36,
+                        "A media export is already in progress"));
                 return true;
             }
             boolean queued = false;
             try {
                 File selected = selection.select(target.get());
                 if (selected == null) {
-                    showToast(application, "Media not cached or available yet");
+                    showToast(application, UiText.get(R.string.waex_ui_media_not_cached_or_available_yet_45e16ba0,
+                            "Media not cached or available yet"));
                     return true;
                 }
                 ExportWorker.INSTANCE.execute(() -> {
@@ -176,7 +182,8 @@ public class DownloadViewOnceHook extends BaseFeature {
                 queued = true;
             } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 XposedBridge.log(TAG + " Media selection failed: " + failure.getClass().getSimpleName());
-                showToast(application, "Unable to save this media file");
+                showToast(application, UiText.get(R.string.waex_ui_media_save_failed_v30,
+                        "Unable to save this media file"));
             } finally {
                 if (!queued) EXPORTING.compareAndSet(ticket, null);
             }
@@ -187,20 +194,22 @@ public class DownloadViewOnceHook extends BaseFeature {
     private void saveAudioFile(Context ctx, File srcFile) {
         try {
             GalleryMediaExporter.exportAudio(ctx, srcFile);
-            showToast(ctx, "Audio saved (WAEX)");
+            showToast(ctx, UiText.get(R.string.waex_ui_audio_saved_v36, "Audio saved (WAEX)"));
         } catch (Exception failure) {
             XposedBridge.log(TAG + " Audio export failed: " + failure.getClass().getSimpleName());
-            showToast(ctx, "Unable to save this audio file");
+            showToast(ctx, UiText.get(R.string.waex_ui_audio_save_failed_v36,
+                    "Unable to save this audio file"));
         }
     }
 
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
             GalleryMediaExporter.export(ctx, srcFile);
-            showToast(ctx, "Media saved (WAEX)");
+            showToast(ctx, UiText.get(R.string.waex_ui_media_saved_v30, "Media saved (WAEX)"));
         } catch (Exception failure) {
             XposedBridge.log(TAG + " Export failed: " + failure.getClass().getSimpleName());
-            showToast(ctx, "Unable to save this media file");
+            showToast(ctx, UiText.get(R.string.waex_ui_media_save_failed_v30,
+                    "Unable to save this media file"));
         }
     }
 

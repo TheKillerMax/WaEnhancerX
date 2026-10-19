@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.updates
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -74,9 +77,9 @@ object WhatsAppUpdateSheet {
                 val customChangelogView = buildNativeChangelogView(activity, availableBody)
 
                 WaexBottomSheet(activity)
-                    .setTitle("$availableName Available")
+                    .setTitle(UiText.get(R.string.waex_ui_1_s_available_24c71695, "%1\$s Available", availableName))
                     .setView(customChangelogView)
-                    .setPositiveButton("Update Now") { dialog, _ ->
+                    .setPositiveButton(UiText.get(R.string.waex_ui_update_now_f96f4d46, "Update Now")) { dialog, _ ->
                         try {
                             val intent = Intent().apply {
                                 setClassName("com.waenhancer", "com.waenhancer.app.MainActivity")
@@ -89,7 +92,7 @@ object WhatsAppUpdateSheet {
                         }
                         dialog.dismiss()
                     }
-                    .setNegativeButton("Ignore") { dialog, _ ->
+                    .setNegativeButton(UiText.get(R.string.waex_ui_ignore_fce77c34, "Ignore")) { dialog, _ ->
                         publicPrefs.edit()
                             .putString("ignored_version", availableVersion)
                             .putLong("ignored_timestamp", System.currentTimeMillis())
@@ -145,7 +148,7 @@ object WhatsAppUpdateSheet {
         val sections = ChangelogParser.parse(rawBody)
         if (sections.isEmpty()) {
             val emptyTv = TextView(context).apply {
-                text = "General stability improvements and bug fixes."
+                text = UiText.get(R.string.waex_ui_general_stability_improvements_and_bug_d6cabb44, "General stability improvements and bug fixes.")
                 textSize = 14f
                 setTextColor(textSecondary)
                 setPadding(dp(4), dp(8), dp(4), dp(8))

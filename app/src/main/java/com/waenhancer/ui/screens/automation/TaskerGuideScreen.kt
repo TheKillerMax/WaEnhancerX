@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.automation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -56,13 +59,13 @@ fun TaskerGuideScreen() {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(context, "Copied $label to clipboard", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, UiText.get(R.string.waex_ui_copied_1_s_to_clipboard_99b46814, "Copied %1\$s to clipboard", label), Toast.LENGTH_SHORT).show()
     }
 
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Tasker Integration Guide",
+                title = UiText.get(R.string.title_tasker_guide, "Tasker Integration Guide"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -95,7 +98,7 @@ fun TaskerGuideScreen() {
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Automate WhatsApp workflows using Intent broadcasts in Tasker, MacroDroid, and Automate.",
+                        text = UiText.get(R.string.waex_ui_automate_whatsapp_workflows_using_inte_9ba38948, "Automate WhatsApp workflows using Intent broadcasts in Tasker, MacroDroid, and Automate."),
                         style = typography.bodyMd,
                         color = colors.onSurface,
                         fontSize = 13.sp,
@@ -113,7 +116,7 @@ fun TaskerGuideScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "EVENT: INCOMING MESSAGE",
+                        text = UiText.get(R.string.waex_ui_event_incoming_message_3d2cc9a6, "EVENT: INCOMING MESSAGE"),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.primary,
@@ -121,7 +124,7 @@ fun TaskerGuideScreen() {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Trigger automation whenever a new message is received in WhatsApp.",
+                        text = UiText.get(R.string.waex_ui_trigger_automation_whenever_a_new_mess_f5c90c18, "Trigger automation whenever a new message is received in WhatsApp."),
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant
                     )
@@ -135,11 +138,11 @@ fun TaskerGuideScreen() {
                             .clip(radius.defaultShape)
                             .background(colors.surface)
                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable { copyToClipboard("Action", "com.waenhancer.MESSAGE_RECEIVED") }
+                            .clickable { copyToClipboard(UiText.get(R.string.waex_ui_action_64cff131, "Action"), "com.waenhancer.MESSAGE_RECEIVED") }
                             .padding(14.dp)
                     ) {
                         Column {
-                            Text(text = "Action Intent:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                            Text(text = UiText.get(R.string.waex_ui_action_intent_5c8cbed1, "Action Intent:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
                             Text(
                                 text = "com.waenhancer.MESSAGE_RECEIVED",
                                 style = typography.bodyMd,
@@ -148,9 +151,9 @@ fun TaskerGuideScreen() {
                                 color = colors.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Available Extras:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                            Text(text = UiText.get(R.string.waex_ui_available_extras_1d71d8a2, "Available Extras:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
                             Text(
-                                text = "%name (Sender Name)\n%number (Sender JID / Phone)\n%message (Text Content)",
+                                text = UiText.get(R.string.waex_ui_name_sender_name_number_sender_jid_pho_ee23ebc4, "%name (Sender Name)\n%number (Sender JID / Phone)\n%message (Text Content)"),
                                 style = typography.bodyMd,
                                 fontFamily = FontFamily.Monospace,
                                 color = colors.onSurface,
@@ -171,7 +174,7 @@ fun TaskerGuideScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "ACTION: SEND MESSAGE AUTOMATICALLY",
+                        text = UiText.get(R.string.waex_ui_action_send_message_automatically_5e143aa0, "ACTION: SEND MESSAGE AUTOMATICALLY"),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.primary,
@@ -179,7 +182,7 @@ fun TaskerGuideScreen() {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Broadcast intent to send a message without opening the WhatsApp interface.",
+                        text = UiText.get(R.string.waex_ui_broadcast_intent_to_send_a_message_wit_d171b9bd, "Broadcast intent to send a message without opening the WhatsApp interface."),
                         style = typography.bodyMd,
                         color = colors.onSurfaceVariant
                     )
@@ -192,11 +195,11 @@ fun TaskerGuideScreen() {
                             .clip(radius.defaultShape)
                             .background(colors.surface)
                             .border(1.dp, colors.outlineVariant, radius.defaultShape)
-                            .clickable { copyToClipboard("Action", "com.waenhancer.MESSAGE_SENT") }
+                            .clickable { copyToClipboard(UiText.get(R.string.waex_ui_action_64cff131, "Action"), "com.waenhancer.MESSAGE_SENT") }
                             .padding(14.dp)
                     ) {
                         Column {
-                            Text(text = "Action Intent:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                            Text(text = UiText.get(R.string.waex_ui_action_intent_5c8cbed1, "Action Intent:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
                             Text(
                                 text = "com.waenhancer.MESSAGE_SENT",
                                 style = typography.bodyMd,
@@ -205,9 +208,9 @@ fun TaskerGuideScreen() {
                                 color = colors.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Required Extras:", style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
+                            Text(text = UiText.get(R.string.waex_ui_required_extras_54e6a19f, "Required Extras:"), style = typography.labelSm, color = colors.onSurfaceVariant, fontSize = 11.sp)
                             Text(
-                                text = "Extra: number:1234567890\nExtra: message:Your automated reply here",
+                                text = UiText.get(R.string.waex_ui_extra_number_1234567890_extra_message_ad458a9f, "Extra: number:1234567890\nExtra: message:Your automated reply here"),
                                 style = typography.bodyMd,
                                 fontFamily = FontFamily.Monospace,
                                 color = colors.onSurface,

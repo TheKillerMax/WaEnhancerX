@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.media
 
+import com.waenhancer.utils.UiText
+
 import com.waenhancer.app.R
 import androidx.compose.ui.res.stringResource
 import com.waenhancer.ui.components.WaexProChip
@@ -152,7 +154,7 @@ fun MediaStatusHubScreen() {
             // handlers use settingsState, so never show a failed save as successful.
             mediaKeys.forEach { mediaKey -> settingsState[mediaKey] = readMediaKey(mediaKey) }
         } else {
-            Toast.makeText(context, "Unable to save setting", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, UiText.get(R.string.waex_ui_unable_to_save_setting_d9dcb19d, "Unable to save setting"), Toast.LENGTH_SHORT).show()
         }
     }
 

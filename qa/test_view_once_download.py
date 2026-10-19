@@ -8,6 +8,7 @@ DexKit native discovery, LSPosed, host database execution or MediaStore acceptan
 """
 from pathlib import Path
 import argparse, hashlib, subprocess, tempfile
+from localization_support import write_display_adapter
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'app/src/main/java/com/waenhancer/xposed/features/media'
@@ -135,6 +136,9 @@ def main():
     a=p.parse_args()
     with tempfile.TemporaryDirectory(prefix='waex-view-once-') as temporary:
         d=Path(temporary);write(d,STUBS)
+        # Presentation-only English adapter; the real UiText/resource routing
+        # runs separately in test_es419_runtime.py. Keep all hook logic intact.
+        write_display_adapter(ROOT, d)
         hook=a.baseline_hook or SOURCE/'DownloadViewOnceHook.java'
         helpers=[SOURCE/'ViewOnceMediaResolver.java']
         if (SOURCE/'ViewOnceAudioResolver.java').exists():helpers.append(SOURCE/'ViewOnceAudioResolver.java')

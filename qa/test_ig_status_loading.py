@@ -17,6 +17,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 from android_presence_row_test import extract
 from fixtures.ig_status_android_doubles import STUBS
+from localization_support import write_display_adapter
 
 ROOT = Path(__file__).resolve().parents[1]
 VIEWS = Path('app/src/main/java/com/waenhancer/xposed/views')
@@ -51,15 +52,9 @@ def execute(source_root, out, baseline=False):
     hook = out / 'com/waenhancer/xposed/features/customization/IGStatusHook.java'
     hook.parent.mkdir(parents=True, exist_ok=True)
     hook.write_text(hook_harness((source_root / HOOK).read_text()), encoding='utf-8')
-    # Localized integrations use the existing UiText bridge. These IDs stand in for
-    # generated R only; resource ownership/localization have their own QA gates.
-    resource_names = sorted(set(re.findall(r'R\.string\.(\w+)',
-                                         (source_root / VIEWS / 'IGStatusAdapter.java').read_text())))
-    resource_file = out / 'com/waenhancer/app/R.java'
-    resource_file.parent.mkdir(parents=True, exist_ok=True)
-    resource_file.write_text('package com.waenhancer.app;public class R{public static class string{'
-                             + ''.join('public static final int ' + name + '=' + str(index + 1) + ';'
-                                       for index, name in enumerate(resource_names)) + '}}')
+    # Presentation-only English adapter with IDs from the actual resources.
+    # Real UiText/locale ownership is exercised by test_es419_runtime.py.
+    write_display_adapter(ROOT, out)
     classes = out / 'classes'
     classes.mkdir()
     cmd = ['javac', '--release', '17', '-d', str(classes)]

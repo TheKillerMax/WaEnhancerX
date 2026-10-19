@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.utils.UiText
+
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -182,7 +184,7 @@ fun ModuleSettingsScreen() {
                             if (selected) {
                                 Icon(
                                     imageVector = WaexIcons.Check,
-                                    contentDescription = "Selected",
+                                    contentDescription = UiText.get(R.string.waex_ui_selected_57fd7a0c, "Selected"),
                                     tint = colors.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -251,14 +253,14 @@ fun ModuleSettingsScreen() {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = lang.nativeName,
+                                    text = LocaleHelper.getLanguageDisplayName(lang.code),
                                     style = WaexTheme.typography.bodyMd,
                                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                                     color = if (selected) colors.primary else colors.onSurface
                                 )
-                                if (lang.englishName != lang.nativeName) {
+                                if (LocaleHelper.getLanguageExplanation(lang.code) != LocaleHelper.getLanguageDisplayName(lang.code)) {
                                     Text(
-                                        text = lang.englishName,
+                                        text = LocaleHelper.getLanguageExplanation(lang.code),
                                         style = WaexTheme.typography.labelSm,
                                         color = colors.onSurfaceVariant
                                     )

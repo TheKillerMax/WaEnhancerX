@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.core;
 
+import com.waenhancer.app.R;
+import com.waenhancer.utils.UiText;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.SharedPreferences;
@@ -92,13 +95,13 @@ public final class RestartPromptController {
         try {
             Dialog dialog = new WaexBottomSheet(activity)
                     .asBottomSheet()
-                    .setTitle("Restart required")
+                    .setTitle(UiText.get(R.string.waex_ui_restart_required_b4687115, "Restart required"))
                     .setMessage(message)
-                    .setPositiveButton("Restart WhatsApp", (d, which) -> {
+                    .setPositiveButton(UiText.get(R.string.waex_ui_restart_whatsapp_e68a0fd3, "Restart WhatsApp"), (d, which) -> {
                         if (d != null) d.dismiss();
                         WhatsAppProcessRestarter.restart(activity);
                     })
-                    .setNegativeButton("Later", null)
+                    .setNegativeButton(UiText.get(R.string.waex_ui_later_73b6e48a, "Later"), null)
                     .show();
             if (dialog == null) {
                 SHOWING.set(false);
@@ -113,20 +116,20 @@ public final class RestartPromptController {
 
     static String buildMessage(Set<String> changes) {
         if (changes == null || changes.isEmpty()) {
-            return "Your WA Enhancer preferences changed. Restart WhatsApp to apply them.";
+            return UiText.get(R.string.waex_ui_your_wa_enhancer_preferences_changed_r_eaa93890, "Your WA Enhancer preferences changed. Restart WhatsApp to apply them.");
         }
         List<String> sorted = new ArrayList<>();
         for (String change : changes) {
             // Resolve catalog titles first and generate a readable label for subordinate or
             // legacy preference keys. Catalog-only features must not leak raw keys to the UI.
-            sorted.add(PreferenceRestartTracker.displayName(change));
+            sorted.add(com.waenhancer.utils.PreferenceLabels.text(change));
         }
         sorted.sort(String.CASE_INSENSITIVE_ORDER);
-        StringBuilder message = new StringBuilder("Restart WhatsApp to apply:\n\n");
+        StringBuilder message = new StringBuilder(UiText.get(R.string.waex_ui_restart_whatsapp_to_apply_f249101e, "Restart WhatsApp to apply:\n\n"));
         int shown = Math.min(sorted.size(), 8);
         for (int i = 0; i < shown; i++) message.append("• ").append(sorted.get(i)).append('\n');
         if (sorted.size() > shown) {
-            message.append("• ").append(sorted.size() - shown).append(" more\n");
+            message.append("• ").append(sorted.size() - shown).append(UiText.get(R.string.waex_ui_more_d2740bc9, " more\n"));
         }
         return message.toString().trim();
     }

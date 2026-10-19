@@ -1,5 +1,8 @@
 package com.waenhancer.ui.components
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,14 +86,14 @@ fun WaexEmojiPickerDialog(
         ) {
                 // Header
                 Text(
-                    text = "Custom Reaction Emoji",
+                    text = UiText.get(R.string.feat_doubletap2like_emoji_title, "Custom Reaction Emoji"),
                     style = typography.titleMd,
                     color = colors.onSurface,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = "Select or type the default emoji sent when double-tapping a message.",
+                    text = UiText.get(R.string.waex_ui_select_or_type_the_default_emoji_sent_1489519d, "Select or type the default emoji sent when double-tapping a message."),
                     style = typography.bodySm,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -98,7 +101,7 @@ fun WaexEmojiPickerDialog(
 
                 // Quick Presets
                 Text(
-                    text = "Popular Reactions",
+                    text = UiText.get(R.string.waex_ui_popular_reactions_c2b82def, "Popular Reactions"),
                     style = typography.labelSm,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -135,7 +138,7 @@ fun WaexEmojiPickerDialog(
 
                 // Custom Input Field
                 Text(
-                    text = "Or enter custom emoji",
+                    text = UiText.get(R.string.waex_ui_or_enter_custom_emoji_8442012c, "Or enter custom emoji"),
                     style = typography.labelSm,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp)
@@ -158,7 +161,7 @@ fun WaexEmojiPickerDialog(
                         unfocusedTextColor = colors.onSurface
                     ),
                     placeholder = {
-                        Text("e.g. 👍", color = colors.onSurfaceVariant)
+                        Text(UiText.get(R.string.waex_ui_e_g_007cd8a1, "e.g. 👍"), color = colors.onSurfaceVariant)
                     }
                 )
 
@@ -175,7 +178,7 @@ fun WaexEmojiPickerDialog(
                     shape = radius.buttonShape,
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Text("Save", color = colors.onPrimary, fontWeight = FontWeight.Bold)
+                    Text(UiText.get(R.string.action_save, "Save"), color = colors.onPrimary, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
@@ -183,7 +186,7 @@ fun WaexEmojiPickerDialog(
                     shape = radius.buttonShape,
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Text("Cancel", color = colors.onSurface)
+                    Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
                 }
         }
     }

@@ -1,5 +1,8 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -72,7 +75,7 @@ fun UpdateSettingsScreen() {
     Scaffold(
         topBar = {
             WaexTopBar(
-                title = "Update Settings",
+                title = UiText.get(R.string.update_settings_title, "Update Settings"),
                 onBackClick = { navController.popBack() }
             )
         },
@@ -95,7 +98,7 @@ fun UpdateSettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "AUTOMATED CHECKS",
+                        text = UiText.get(R.string.waex_ui_automated_checks_adf7684a, "AUTOMATED CHECKS"),
                         style = typography.labelSm,
                         fontWeight = FontWeight.Bold,
                         color = colors.primary,
@@ -109,13 +112,13 @@ fun UpdateSettingsScreen() {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Auto-Check for Updates",
+                                text = UiText.get(R.string.waex_ui_auto_check_for_updates_7598a244, "Auto-Check for Updates"),
                                 style = typography.bodyLg,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.onSurface
                             )
                             Text(
-                                text = "Periodically check the WaEnhancerX release service",
+                                text = UiText.get(R.string.waex_ui_periodically_check_the_waenhancerx_rel_0026b98e, "Periodically check the WaEnhancerX release service"),
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 12.sp
@@ -133,8 +136,8 @@ fun UpdateSettingsScreen() {
                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
 
                     UpdateSwitchRow(
-                        title = "Check when module opens",
-                        description = "Run an eligible update check when WaEnhancerX opens",
+                        title = UiText.get(R.string.waex_ui_check_when_module_opens_147ecac4, "Check when module opens"),
+                        description = UiText.get(R.string.waex_ui_run_an_eligible_update_check_when_waen_57552a51, "Run an eligible update check when WaEnhancerX opens"),
                         checked = checkModuleOpen,
                         onCheckedChange = {
                             checkModuleOpen = it
@@ -145,8 +148,8 @@ fun UpdateSettingsScreen() {
                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
 
                     UpdateSwitchRow(
-                        title = "Check when WhatsApp opens",
-                        description = "Ask the module to check when WhatsApp starts",
+                        title = UiText.get(R.string.waex_ui_check_when_whatsapp_opens_112f6dcc, "Check when WhatsApp opens"),
+                        description = UiText.get(R.string.waex_ui_ask_the_module_to_check_when_whatsapp_eef51246, "Ask the module to check when WhatsApp starts"),
                         checked = checkWhatsAppOpen,
                         onCheckedChange = {
                             checkWhatsAppOpen = it
@@ -165,10 +168,10 @@ fun UpdateSettingsScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Check frequency", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                            Text(UiText.get(R.string.waex_ui_check_frequency_12e9b9ef, "Check frequency"), style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
                             Text(frequencyLabel(updateFrequency), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
                         }
-                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
+                        Text(UiText.get(R.string.waex_ui_change_c0bf75bd, "Change"), color = colors.primary, fontWeight = FontWeight.Bold)
                     }
 
                     HorizontalDivider(thickness = 1.dp, color = colors.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 14.dp))
@@ -182,10 +185,10 @@ fun UpdateSettingsScreen() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("After ignoring an update", style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
+                            Text(UiText.get(R.string.waex_ui_after_ignoring_an_update_0072f0fc, "After ignoring an update"), style = typography.bodyLg, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
                             Text(ignoredLabel(ignoredBehavior), style = typography.bodyMd, color = colors.onSurfaceVariant, fontSize = 12.sp)
                         }
-                        Text("Change", color = colors.primary, fontWeight = FontWeight.Bold)
+                        Text(UiText.get(R.string.waex_ui_change_c0bf75bd, "Change"), color = colors.primary, fontWeight = FontWeight.Bold)
                     }
 
                     HorizontalDivider(
@@ -200,13 +203,13 @@ fun UpdateSettingsScreen() {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Allow Version Downgrades",
+                                text = UiText.get(R.string.waex_ui_allow_version_downgrades_cb84c618, "Allow Version Downgrades"),
                                 style = typography.bodyLg,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.onSurface
                             )
                             Text(
-                                text = "Install older builds over newer versions (Root needed)",
+                                text = UiText.get(R.string.waex_ui_install_older_builds_over_newer_versio_0fccde02, "Install older builds over newer versions (Root needed)"),
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 12.sp
@@ -223,7 +226,7 @@ fun UpdateSettingsScreen() {
                                     if (granted) {
                                         allowDowngrades = true
                                         prefManager.putBoolean("downgrades_enabled", true)
-                                    } else Toast.makeText(context, "Root access is required to enable version downgrades", Toast.LENGTH_LONG).show()
+                                    } else Toast.makeText(context, UiText.get(R.string.waex_ui_root_access_is_required_to_enable_vers_650bb903, "Root access is required to enable version downgrades"), Toast.LENGTH_LONG).show()
                                 }
                             }
                         )
@@ -241,13 +244,13 @@ fun UpdateSettingsScreen() {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Silent Root Install",
+                                text = UiText.get(R.string.waex_ui_silent_root_install_6fff1c8e, "Silent Root Install"),
                                 style = typography.bodyLg,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.onSurface
                             )
                             Text(
-                                text = "Automatically install downloaded APK via root shell",
+                                text = UiText.get(R.string.waex_ui_automatically_install_downloaded_apk_v_c1ae30db, "Automatically install downloaded APK via root shell"),
                                 style = typography.bodyMd,
                                 color = colors.onSurfaceVariant,
                                 fontSize = 12.sp
@@ -264,7 +267,7 @@ fun UpdateSettingsScreen() {
                                     if (granted) {
                                         rootAutoInstall = true
                                         prefManager.putBoolean("root_auto_install", true)
-                                    } else Toast.makeText(context, "Root access is required to enable silent installation", Toast.LENGTH_LONG).show()
+                                    } else Toast.makeText(context, UiText.get(R.string.waex_ui_root_access_is_required_to_enable_sile_8a319a7a, "Root access is required to enable silent installation"), Toast.LENGTH_LONG).show()
                                 }
                             }
                         )
@@ -296,15 +299,15 @@ private fun UpdateSwitchRow(
 }
 
 private fun frequencyLabel(value: String) = when (value) {
-    "every_open" -> "Every eligible app open"
-    "six_hours" -> "At most every 6 hours"
-    "weekly" -> "At most once a week"
-    else -> "At most once a day"
+    "every_open" -> UiText.get(R.string.waex_ui_every_eligible_app_open_dadc9b2a, "Every eligible app open")
+    "six_hours" -> UiText.get(R.string.waex_ui_at_most_every_6_hours_6e9a44b5, "At most every 6 hours")
+    "weekly" -> UiText.get(R.string.waex_ui_at_most_once_a_week_8226a663, "At most once a week")
+    else -> UiText.get(R.string.waex_ui_at_most_once_a_day_9198c451, "At most once a day")
 }
 
 private fun ignoredLabel(value: String) = when (value) {
-    "next_check" -> "Show it again on the next check"
-    "after_day" -> "Remind me again after one day"
-    "after_week" -> "Remind me again after one week"
-    else -> "Wait until a newer release is available"
+    "next_check" -> UiText.get(R.string.waex_ui_show_it_again_on_the_next_check_40bbb328, "Show it again on the next check")
+    "after_day" -> UiText.get(R.string.waex_ui_remind_me_again_after_one_day_6522d8db, "Remind me again after one day")
+    "after_week" -> UiText.get(R.string.waex_ui_remind_me_again_after_one_week_31ebcd1e, "Remind me again after one week")
+    else -> UiText.get(R.string.waex_ui_wait_until_a_newer_release_is_availabl_9e7d1559, "Wait until a newer release is available")
 }

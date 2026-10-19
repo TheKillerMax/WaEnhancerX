@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.customization
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
@@ -298,10 +301,10 @@ class OnlinePresenceIndicatorsHook(
         overlay.findViewById<TextView>(ID_TEXT)?.let { text ->
             when {
                 state == null || !state.known -> { text.text = ""; text.visibility = View.GONE }
-                state.online -> { text.text = "online"; text.visibility = View.VISIBLE }
+                state.online -> { text.text = UiText.get(R.string.waex_ui_online_f6fc84c9, "online"); text.visibility = View.VISIBLE }
                 else -> {
                     val time = DateFormat.getTimeFormat(row.context).format(state.changedAtMillis)
-                    text.text = "last seen $time"
+                    text.text = UiText.get(R.string.waex_ui_last_seen_1_s_752c705a, "last seen %1\$s", time)
                     text.visibility = View.VISIBLE
                 }
             }

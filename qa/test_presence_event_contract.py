@@ -58,6 +58,8 @@ import java.lang.reflect.*;import java.util.*;import java.util.concurrent.Execut
 import com.waenhancer.xposed.features.automation.PresenceEventPolicy;
 import com.waenhancer.xposed.features.automation.PresenceStateStore;
 public class TestPresenceEventContract {
+ static class R {static class string {static final int waex_ui_is_online_e0992fa5=1;}}
+ static class UiText {static String get(int id, String fallback){return fallback;}}
  static int checks;
  static void check(boolean value,String label){checks++;if(!value)throw new AssertionError(label);System.out.println("PASS: "+label);}
  static String TAG="test";Object context=new Object();ClassLoader classLoader=getClass().getClassLoader();

@@ -41,8 +41,9 @@ def main():
                 shutil.copy2(ROOT / SOURCE / file, root / SOURCE / file)
             shutil.copytree(ROOT / 'qa/view_once', root / 'qa/view_once')
             for file in ('test_view_once_download.py','test_view_once_audio.py',
-                         'test_gallery_export.py','view_once_audio_fixtures.py'):
+                         'test_gallery_export.py','view_once_audio_fixtures.py','localization_support.py'):
                 shutil.copy2(ROOT / 'qa' / file, root / 'qa' / file)
+            shutil.copytree(ROOT / 'app/src/main/res/values', root / 'app/src/main/res/values')
             path = root / SOURCE / source
             text = path.read_text()
             assert old in text, 'Inert mutation: ' + name

@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.conversation
 
+import com.waenhancer.app.R
+import com.waenhancer.utils.UiText
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -72,9 +75,9 @@ class CopyStatusTextHook(
     private fun copyToClipboard(context: Context, text: String) {
         try {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            val clip = ClipData.newPlainText("Status Text", text)
+            val clip = ClipData.newPlainText(UiText.get(R.string.waex_ui_status_text_b35d0184, "Status Text"), text)
             clipboard?.setPrimaryClip(clip)
-            Toast.makeText(context, "Copied status text to clipboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, UiText.get(R.string.waex_ui_copied_status_text_to_clipboard_b81c6089, "Copied status text to clipboard"), Toast.LENGTH_SHORT).show()
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Failed to copy to clipboard: ${t.message}")
         }

@@ -103,7 +103,6 @@ import java.util.*;public class BitmapFactory {
     'androidx/annotation/Nullable.java': '''package androidx.annotation;public @interface Nullable{}''',
     'androidx/core/content/ContextCompat.java': '''package androidx.core.content;public class ContextCompat{}''',
     'com/waenhancer/xposed/core/components/WaexBottomSheet.java': '''package com.waenhancer.xposed.core.components;public class WaexBottomSheet{}''',
-    'com/waenhancer/utils/UiText.java': '''package com.waenhancer.utils;public class UiText{public static String get(int id,String fallback){return fallback;}}''',
     'com/waenhancer/xposed/features/homescreen/MenuIconLoader.java': '''package com.waenhancer.xposed.features.homescreen;public class MenuIconLoader{public static android.graphics.drawable.Drawable load(android.content.Context c,String n){return null;}}''',
     'com/waenhancer/xposed/utils/ActivityTracker.java': '''package com.waenhancer.xposed.utils;public class ActivityTracker{public static android.app.Activity getCurrentActivity(){return null;}}''',
     'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;public class XposedBridge{public static void log(String s){}}''',
