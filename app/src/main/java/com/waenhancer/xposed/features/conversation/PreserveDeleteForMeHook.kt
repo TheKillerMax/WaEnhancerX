@@ -316,7 +316,9 @@ class PreserveDeleteForMeHook(
                 null,
                 bundle
             )
-        } catch (ignored: Throwable) {}
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG dispatchToManagerApp failed: ${t.javaClass.simpleName}")
+        }
     }
 
     private fun resolveDeleteForMeMethod(): Method? {

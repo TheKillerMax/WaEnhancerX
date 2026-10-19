@@ -18,7 +18,7 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
 ) {
     companion object {
         private const val DATABASE_NAME = "waex_preserved_messages.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
         const val TABLE_NAME = "preserved_messages"
 
         const val COL_ID = "_id"
@@ -86,6 +86,10 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
         }
     }
 
+    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // Prevent SQLiteException when downgrading from v3 to v2
+    }
+
     fun insertPreservedMessage(
         jid: String,
         chatName: String?,
@@ -130,7 +134,9 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
                 }
                 db.update(TABLE_NAME, updateCv, "$COL_JID = ?", arrayOf(jid))
             }
-        } catch (ignored: Throwable) {}
+        } catch (t: Throwable) {
+            android.util.Log.e("WAEX:PreservedStore", "insertPreservedMessage failed: ${t.javaClass.simpleName}: ${t.message}", t)
+        }
     }
 
     fun getAllPreservedMessages(): List<StoredMessage> {
