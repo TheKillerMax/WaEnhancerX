@@ -13,8 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = {
     "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 11,
     "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 29,
-    # Dedicated-action lookup and collection reflection add two type-only diagnostics.
-    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 12,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 10,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 6,
     # Record, commit, DB-open/read and cursor-query failures each log a fixed
     # context plus the exception type; message text and identities stay private.
