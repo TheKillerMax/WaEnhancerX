@@ -183,7 +183,14 @@ fun WaexTheme(
     ) {
         MaterialTheme(
             colorScheme = m3ColorScheme,
-            typography = MaterialTypography
+            typography = MaterialTypography,
+            shapes = androidx.compose.material3.Shapes(
+                extraSmall = radius.smShape,
+                small = radius.defaultShape,
+                medium = radius.mdShape,
+                large = radius.cardShape,
+                extraLarge = radius.bottomSheetShape
+            )
         ) {
             content()
         }

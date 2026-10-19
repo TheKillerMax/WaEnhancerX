@@ -576,15 +576,15 @@ fun MainDashboardScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(radius.defaultShape)
+                                .clip(radius.buttonShape)
                                 .background(colors.surfaceDim)
-                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .border(1.dp, colors.outlineVariant, radius.buttonShape)
                                 .clickable(onClick = startBackup)
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(text = stringResource(R.string.backup_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
                             }
@@ -593,15 +593,15 @@ fun MainDashboardScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(radius.defaultShape)
+                                .clip(radius.buttonShape)
                                 .background(colors.surfaceDim)
-                                .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                                .border(1.dp, colors.outlineVariant, radius.buttonShape)
                                 .clickable(onClick = startRestore)
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(15.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(text = stringResource(R.string.restore_btn), style = typography.bodyMd, fontWeight = FontWeight.Medium, color = colors.onSurface)
                             }
@@ -612,11 +612,11 @@ fun MainDashboardScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(radius.defaultShape)
+                            .clip(radius.buttonShape)
                             .background(colors.surfaceDim)
-                            .border(1.dp, colors.outlineVariant, radius.defaultShape)
+                            .border(1.dp, colors.outlineVariant, radius.buttonShape)
                             .clickable { showResetSettingsDialog = true }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -958,24 +958,21 @@ private fun TargetCompatibilityBottomSheet(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        // Badge
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = itemColor.copy(alpha = 0.12f),
-                                            border = BorderStroke(0.5.dp, itemColor.copy(alpha = 0.35f))
-                                        ) {
-                                            Text(
-                                                text = if (isAppReady) {
-                                                    stringResource(R.string.diag_target_sheet_injected_badge)
-                                                } else {
-                                                    stringResource(R.string.diag_target_sheet_unconfirmed_badge)
-                                                },
-                                                style = typography.labelSm,
-                                                color = itemColor,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 10.sp,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
-                                            )
+                                        if (isAppReady) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = itemColor.copy(alpha = 0.12f),
+                                                border = BorderStroke(0.5.dp, itemColor.copy(alpha = 0.35f))
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.diag_target_sheet_injected_badge),
+                                                    style = typography.labelSm,
+                                                    color = itemColor,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 10.sp,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                                )
+                                            }
                                         }
                                     }
 
@@ -1045,14 +1042,14 @@ private fun TargetCompatibilityBottomSheet(
 
             Button(
                 onClick = onDismiss,
-                shape = radius.smShape,
+                shape = radius.buttonShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(42.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1339,14 +1336,14 @@ private fun HmaDetailsBottomSheet(
 
             Button(
                 onClick = onDismiss,
-                shape = radius.mdShape,
+                shape = radius.buttonShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(42.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1527,8 +1524,8 @@ private fun DashboardDiagnosticsCard(
                 onClick = onViewDetails,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = radius.defaultShape,
+                    .height(42.dp),
+                shape = radius.buttonShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary

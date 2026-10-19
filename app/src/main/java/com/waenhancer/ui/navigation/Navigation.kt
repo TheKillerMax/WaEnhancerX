@@ -597,21 +597,21 @@ fun MainContainerScreen() {
                         .fillMaxWidth()
                         .background(Color.Transparent)
                         .navigationBarsPadding()
-                        .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 8.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 6.dp)
                 ) {
                     Surface(
                         shape = CircleShape,
                         color = colors.surface,
                         border = BorderStroke(1.dp, colors.outlineVariant),
-                        shadowElevation = 8.dp,
+                        shadowElevation = 6.dp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(64.dp)
+                            .height(54.dp)
                     ) {
                         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                             val totalWidth = maxWidth
                             val columnWidth = totalWidth / 5
-                            val pillWidth = 40.dp
+                            val pillWidth = 36.dp
 
                             val activeIndex = when (currentScreen) {
                                 Screen.MainDashboard -> 0
@@ -635,9 +635,9 @@ fun MainContainerScreen() {
                             // Sliding highlighter pill
                             Box(
                                 modifier = Modifier
-                                    .padding(top = 12.dp)
+                                    .padding(top = 8.dp)
                                     .offset(x = animatedOffset)
-                                    .size(width = pillWidth, height = 24.dp)
+                                    .size(width = pillWidth, height = 20.dp)
                                     .clip(CircleShape)
                                     .background(colors.primaryContainer)
                             )
