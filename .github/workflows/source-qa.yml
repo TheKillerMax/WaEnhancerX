@@ -365,3 +365,35 @@ jobs:
           path: ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
+
+  ig-status-view-framework:
+    name: IG status / native row and hook lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require Kotlin and Maven for complete hook compilation
+        run: |
+          set -euo pipefail
+          kotlinc -version
+          mvn -version
+          test -f qa/fixtures/IGStatusViewLifecycleTest.java
+      - name: Exercise 96 native row and hook lifecycle cases
+        run: python3 qa/android_ig_status_view_test.py --out "$RUNNER_TEMP/waex-ig-status"
+      - name: Preserve source identities and Android lifecycle results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ig-status-view-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-ig-status/*.json
+            ${{ runner.temp }}/waex-ig-status/*.log
+          retention-days: 14
+          if-no-files-found: error
