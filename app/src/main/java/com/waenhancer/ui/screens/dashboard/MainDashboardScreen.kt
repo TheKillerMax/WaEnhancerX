@@ -806,20 +806,20 @@ private fun TargetCompatibilityBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = stringResource(R.string.diag_target_sheet_title),
-                    style = typography.titleLg,
+                    style = typography.titleMd,
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = stringResource(R.string.diag_target_sheet_desc),
                     style = typography.bodySm,
@@ -835,21 +835,21 @@ private fun TargetCompatibilityBottomSheet(
             }
 
             Surface(
-                shape = radius.mdShape,
-                color = bannerColor.copy(alpha = 0.10f),
-                border = BorderStroke(1.dp, bannerColor.copy(alpha = 0.35f)),
+                shape = radius.smShape,
+                color = bannerColor.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, bannerColor.copy(alpha = 0.3f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = bannerColor.copy(alpha = 0.2f),
-                        modifier = Modifier.size(32.dp)
+                        color = bannerColor.copy(alpha = 0.18f),
+                        modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -860,19 +860,18 @@ private fun TargetCompatibilityBottomSheet(
                                 },
                                 contentDescription = null,
                                 tint = bannerColor,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = com.waenhancer.utils.InternalLabels.text(targetSummary.text),
-                            style = typography.bodyMd,
+                            style = typography.labelLg,
                             fontWeight = FontWeight.Bold,
                             color = colors.onSurface
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = when {
                                 isYellow -> stringResource(R.string.diag_target_sheet_partial_warning)
@@ -880,7 +879,8 @@ private fun TargetCompatibilityBottomSheet(
                                 else -> stringResource(R.string.diag_target_sheet_all_ok)
                             },
                             style = typography.bodySm,
-                            color = colors.onSurfaceVariant
+                            color = colors.onSurfaceVariant,
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -894,7 +894,7 @@ private fun TargetCompatibilityBottomSheet(
                 color = colors.onSurfaceVariant
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 installedTargets.forEach { app ->
                     val appIcon = remember(app.packageName) {
                         WhatsAppPackageDetector.getAppIcon(context, app.packageName)
@@ -905,13 +905,13 @@ private fun TargetCompatibilityBottomSheet(
                     Surface(
                         shape = radius.smShape,
                         color = colors.surfaceDim,
-                        border = BorderStroke(1.dp, if (!isAppReady) itemColor.copy(alpha = 0.4f) else colors.outlineVariant),
+                        border = BorderStroke(1.dp, if (!isAppReady) itemColor.copy(alpha = 0.35f) else colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp)
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -920,7 +920,7 @@ private fun TargetCompatibilityBottomSheet(
                                 // App Icon
                                 Box(
                                     modifier = Modifier
-                                        .size(38.dp)
+                                        .size(32.dp)
                                         .clip(CircleShape)
                                         .background(colors.surface),
                                     contentAlignment = Alignment.Center
@@ -930,7 +930,7 @@ private fun TargetCompatibilityBottomSheet(
                                             bitmap = appIcon,
                                             contentDescription = app.appName,
                                             modifier = Modifier
-                                                .size(28.dp)
+                                                .size(24.dp)
                                                 .clip(CircleShape)
                                         )
                                     } else {
@@ -938,12 +938,12 @@ private fun TargetCompatibilityBottomSheet(
                                             imageVector = WaexIcons.Security,
                                             contentDescription = app.appName,
                                             tint = itemColor,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(
@@ -952,7 +952,7 @@ private fun TargetCompatibilityBottomSheet(
                                     ) {
                                         Text(
                                             text = app.appName,
-                                            style = typography.bodyMd,
+                                            style = typography.labelLg,
                                             fontWeight = FontWeight.Bold,
                                             color = colors.onSurface,
                                             maxLines = 1,
@@ -960,9 +960,9 @@ private fun TargetCompatibilityBottomSheet(
                                         )
                                         // Badge
                                         Surface(
-                                            shape = radius.smShape,
-                                            color = itemColor.copy(alpha = 0.15f),
-                                            border = BorderStroke(0.5.dp, itemColor.copy(alpha = 0.4f))
+                                            shape = CircleShape,
+                                            color = itemColor.copy(alpha = 0.12f),
+                                            border = BorderStroke(0.5.dp, itemColor.copy(alpha = 0.35f))
                                         ) {
                                             Text(
                                                 text = if (isAppReady) {
@@ -972,45 +972,47 @@ private fun TargetCompatibilityBottomSheet(
                                                 },
                                                 style = typography.labelSm,
                                                 color = itemColor,
-                                                fontWeight = FontWeight.Bold,
+                                                fontWeight = FontWeight.SemiBold,
                                                 fontSize = 10.sp,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
                                             )
                                         }
                                     }
 
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(1.dp))
                                     Text(
-                                        text = "${app.packageName} • ${app.versionName}",
+                                        text = "${app.packageName} • v${app.versionName}",
                                         style = typography.labelSm,
-                                        color = colors.onSurfaceVariant.copy(alpha = 0.85f),
+                                        color = colors.onSurfaceVariant.copy(alpha = 0.8f),
                                         fontSize = 11.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
 
+                                Spacer(modifier = Modifier.width(6.dp))
+
                                 // Status Icon Indicator
                                 Surface(
                                     shape = CircleShape,
-                                    color = itemColor.copy(alpha = 0.15f),
-                                    modifier = Modifier.size(26.dp)
+                                    color = itemColor.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(22.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = if (isAppReady) WaexIcons.Check else WaexIcons.Help,
                                             contentDescription = null,
                                             tint = itemColor,
-                                            modifier = Modifier.size(15.dp)
+                                            modifier = Modifier.size(13.dp)
                                         )
                                     }
                                 }
                             }
 
                             // Sub-details: Injection details, Hooks count, and why unconfirmed
-                            Spacer(modifier = Modifier.height(8.dp))
-                            HorizontalDivider(thickness = 0.5.dp, color = colors.outlineVariant.copy(alpha = 0.5f))
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            HorizontalDivider(thickness = 0.5.dp, color = colors.outlineVariant.copy(alpha = 0.35f))
+                            Spacer(modifier = Modifier.height(6.dp))
 
                             val detailStatusText = when {
                                 isAppReady && app.injectedHooks.isNotEmpty() -> {
@@ -1030,29 +1032,31 @@ private fun TargetCompatibilityBottomSheet(
                                 text = detailStatusText,
                                 style = typography.bodySm,
                                 color = if (isAppReady) colors.onSurfaceVariant else itemColor,
-                                fontSize = 12.sp
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Button(
                 onClick = onDismiss,
-                shape = radius.mdShape,
+                shape = radius.smShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(44.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
-                    style = typography.bodyMd,
+                    style = typography.labelLg,
                     fontWeight = FontWeight.Bold
                 )
             }
