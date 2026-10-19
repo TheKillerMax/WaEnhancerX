@@ -170,6 +170,7 @@ jobs:
             qa/test_settings_backup_json.py \
             qa/test_feature_preference_schema_coverage.py \
             qa/test_catalog_schema_alias_contract.py \
+            qa/test_slovenian_locale.py \
             qa/test_style_boolean_alias_wiring.py \
             qa/test_style_non_boolean_guard.py \
             qa/test_private_hook_logs.py \
@@ -186,6 +187,7 @@ jobs:
             qa/test_presence_invalidation.py \
             qa/test_presence_state_invalidation.py \
             qa/test_archived_chats_entry.py \
+            qa/test_deleted_indicator_bridge.py \
             qa/test_deleted_indicator_preference_types.py \
             qa/test_proximity_event_isolation.py \
             qa/test_proximity_ui_wiring.py \
