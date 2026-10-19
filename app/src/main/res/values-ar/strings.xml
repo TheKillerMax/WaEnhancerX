@@ -366,4 +366,5 @@
     <string name="diag_target_sheet_unconfirmed_badge">غير مؤكد أثناء التشغيل</string>
     <string name="diag_target_sheet_injected_badge">تم الحقن</string>
     <string name="diag_target_sheet_section_targets">الأهداف المثبتة</string>
+    <string name="waex_l10n_builtin_match">"مدعوم"</string>
 </resources>

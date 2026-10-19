@@ -949,7 +949,7 @@
     <string name="waex_l10n_switch_debug">"Cambiar a Debug"</string>
     <string name="waex_l10n_reinstall_apk">"Reinstalar APK"</string>
     <string name="waex_l10n_no_rejected_versions">"No hay ninguna versión rechazada para agregar. Revisa el estado de las reglas de cada aplicación; esto no comprueba que sus funciones sean compatibles."</string>
-    <string name="waex_l10n_builtin_match">"Coincide con las reglas incluidas"</string>
+    <string name="waex_l10n_builtin_match">"Compatible"</string>
     <string name="waex_l10n_custom_unverified">"Permiso personalizado (sin verificar)"</string>
     <string name="waex_l10n_bypass_unverified">"Omisión de comprobación activa (sin verificar)"</string>
     <string name="waex_l10n_rejected_rules">"Versión rechazada por las reglas"</string>

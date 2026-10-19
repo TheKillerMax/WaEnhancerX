@@ -369,4 +369,5 @@
     <string name="title_call_configurations">Nastavitve klicev</string>
     <string name="title_call_recordings">Posnetki</string>
     <string name="view_once_setting_save_failed">Nastavitve ni bilo mogoče shraniti</string>
+    <string name="waex_l10n_builtin_match">"Podprto"</string>
 </resources>

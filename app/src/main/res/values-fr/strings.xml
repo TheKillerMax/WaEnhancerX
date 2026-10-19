@@ -366,4 +366,5 @@
     <string name="diag_target_sheet_unconfirmed_badge">Exécution non confirmée</string>
     <string name="diag_target_sheet_injected_badge">Injecté</string>
     <string name="diag_target_sheet_section_targets">Cibles installées</string>
+    <string name="waex_l10n_builtin_match">"Pris en charge"</string>
 </resources>

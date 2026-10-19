@@ -366,4 +366,5 @@
     <string name="diag_target_sheet_unconfirmed_badge">Çalışma Zamanı Doğrulanmadı</string>
     <string name="diag_target_sheet_injected_badge">Enjekte Edildi</string>
     <string name="diag_target_sheet_section_targets">Yüklü Hedefler</string>
+    <string name="waex_l10n_builtin_match">"Destekleniyor"</string>
 </resources>

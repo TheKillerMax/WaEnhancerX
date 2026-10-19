@@ -949,7 +949,7 @@
     <string name="waex_l10n_switch_debug">"Switch to Debug"</string>
     <string name="waex_l10n_reinstall_apk">"Reinstall APK"</string>
     <string name="waex_l10n_no_rejected_versions">"No rejected version is available to add. Check each target's rules status; this is not a feature compatibility test."</string>
-    <string name="waex_l10n_builtin_match">"Matches built-in rules"</string>
+    <string name="waex_l10n_builtin_match">"Supported"</string>
     <string name="waex_l10n_custom_unverified">"Custom allowance (unverified)"</string>
     <string name="waex_l10n_bypass_unverified">"Bypass active (unverified)"</string>
     <string name="waex_l10n_rejected_rules">"Version rejected by rules"</string>

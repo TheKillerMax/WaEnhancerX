@@ -2,6 +2,7 @@
 - Added support upto version 2.26.42.xx
 - Added support for switching between debug and release
 - Added HMA detection in diagnosis
+- Added interface size options in module settings to update the controls size
 
 [Fixes]
 - Fixed missing texts or resources from category titles or descriptions

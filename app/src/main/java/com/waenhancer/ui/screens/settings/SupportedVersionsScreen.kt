@@ -551,7 +551,7 @@ private fun AppVersionStatusCard(
                     Text(
                         text = when {
                             !isInstalled -> UiText.get(R.string.waex_ui_unavailable_ca184496, "Unavailable")
-                            decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> UiText.get(R.string.waex_l10n_builtin_match, "Matches built-in rules")
+                            decision == UniversalVersionValidator.Decision.BUILTIN_RULE -> UiText.get(R.string.waex_l10n_builtin_match, "Supported")
                             decision == UniversalVersionValidator.Decision.CUSTOM_RULE -> UiText.get(R.string.waex_l10n_custom_unverified, "Custom allowance (unverified)")
                             decision == UniversalVersionValidator.Decision.EXPLICIT_BYPASS -> UiText.get(R.string.waex_l10n_bypass_unverified, "Bypass active (unverified)")
                             decision == UniversalVersionValidator.Decision.UNSUPPORTED -> UiText.get(R.string.waex_l10n_rejected_rules, "Version rejected by rules")

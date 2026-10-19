@@ -366,4 +366,5 @@
     <string name="diag_target_sheet_unconfirmed_badge">Tempo de execução não confirmado</string>
     <string name="diag_target_sheet_injected_badge">Injetado</string>
     <string name="diag_target_sheet_section_targets">Alvos instalados</string>
+    <string name="waex_l10n_builtin_match">"Suportado"</string>
 </resources>
