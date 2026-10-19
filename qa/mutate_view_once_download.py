@@ -26,7 +26,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix='waex-vo-mutant-') as temporary:
             root=Path(temporary)
             (root/SOURCE).mkdir(parents=True)
-            for file in ('DownloadViewOnceHook.java','ViewOnceMediaResolver.java'):
+            for file in ('DownloadViewOnceHook.java','ViewOnceMediaResolver.java','ViewOnceAudioResolver.java'):
+                if not (ROOT/SOURCE/file).exists():continue
                 shutil.copy2(ROOT/SOURCE/file,root/SOURCE/file)
             shutil.copytree(ROOT/'qa/view_once',root/'qa/view_once')
             shutil.copy2(ROOT/'qa/test_view_once_download.py',root/'qa/test_view_once_download.py')

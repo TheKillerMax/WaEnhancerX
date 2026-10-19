@@ -19,7 +19,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-/** Exports an already resolved local photo/video, without modifying or transcoding it.
+/** Exports an already resolved local photo/video or explicitly selected Opus audio.
+ * Bytes are never modified or transcoded.
  * Host message/file selection is intentionally outside this storage contract. */
 public final class GalleryMediaExporter {
     private GalleryMediaExporter() {}
@@ -33,10 +34,24 @@ public final class GalleryMediaExporter {
         Format(String extension, String mime, boolean video) {
             this.extension = extension; this.mime = mime; this.video = video;
         }
+        boolean audio() { return mime.equals("audio/ogg"); }
+        String directory() {
+            return audio() ? Environment.DIRECTORY_MUSIC
+                    : video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES;
+        }
     }
 
     /** Returns only after the file is closed and (on API 29+) the row is published. */
     public static void export(Context context, File source) throws IOException {
+        export(context, source, false);
+    }
+
+    /** Audio is an explicit separate route; a photo/video must not be relabelled as voice. */
+    public static void exportAudio(Context context, File source) throws IOException {
+        export(context, source, true);
+    }
+
+    private static void export(Context context, File source, boolean audioOnly) throws IOException {
         if (source == null || !source.isFile() || !source.canRead()) {
             throw new IOException("Media source is not a readable regular file");
         }
@@ -45,6 +60,7 @@ public final class GalleryMediaExporter {
         // Keep one descriptor for inspection and copying; do not reopen a replaced path.
         try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(source), BUFFER_BYTES)) {
             Format format = inspect(in);
+            if (format.audio() != audioOnly) throw new IOException("Unsupported media type for this viewer");
             String name = "WAEX_VO_" + UUID.randomUUID() + format.extension;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 exportScoped(context.getContentResolver(), in, expected, name, format);
@@ -55,7 +71,7 @@ public final class GalleryMediaExporter {
     }
 
     static Format inspect(BufferedInputStream in) throws IOException {
-        byte[] header = new byte[32];
+        byte[] header = new byte[64];
         in.mark(header.length);
         int size = 0;
         while (size < header.length) {
@@ -65,6 +81,15 @@ public final class GalleryMediaExporter {
             size += count;
         }
         in.reset();
+        // RFC 7845: the Opus identification packet is alone on the first BOS page.
+        // Support the version-1 mono/stereo mapping-family-0 form used for voice;
+        // do not treat a generic Ogg container as proof of an audio codec.
+        if (size >= 47 && text(header, 0, 4).equals("OggS") && header[4] == 0 && header[5] == 2
+                && zero(header, 6, 8) && zero(header, 18, 4)
+                && header[26] == 1 && header[27] == 19 && text(header, 28, 8).equals("OpusHead")
+                && header[36] == 1 && (header[37] == 1 || header[37] == 2) && header[46] == 0) {
+            return new Format(".opus", "audio/ogg", false);
+        }
         if (size >= 3 && (header[0] & 255) == 255 && (header[1] & 255) == 216
                 && (header[2] & 255) == 255) return new Format(".jpg", "image/jpeg", false);
         if (size >= 8 && (header[0] & 255) == 137 && text(header, 1, 3).equals("PNG")
@@ -92,15 +117,21 @@ public final class GalleryMediaExporter {
         return new String(bytes, offset, length, StandardCharsets.US_ASCII);
     }
 
+    private static boolean zero(byte[] bytes, int offset, int length) {
+        for (int i = offset; i < offset + length; i++) if (bytes[i] != 0) return false;
+        return true;
+    }
+
     private static void exportScoped(ContentResolver resolver, InputStream in, long expected,
                                       String name, Format format) throws IOException {
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
         values.put(MediaStore.MediaColumns.MIME_TYPE, format.mime);
         values.put(MediaStore.MediaColumns.RELATIVE_PATH,
-                (format.video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES) + "/WAEX");
+                format.directory() + "/WAEX");
         values.put(MediaStore.MediaColumns.IS_PENDING, 1);
-        Uri collection = format.video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        Uri collection = format.audio() ? MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                : format.video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
                 : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         Uri row = resolver.insert(collection, values);
         if (row == null) throw new IOException("MediaStore did not create a destination");
@@ -126,7 +157,7 @@ public final class GalleryMediaExporter {
     private static void exportLegacy(Context context, InputStream in, long expected,
                                      String name, Format format) throws IOException {
         File folder = new File(Environment.getExternalStoragePublicDirectory(
-                format.video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES), "WAEX");
+                format.directory()), "WAEX");
         if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Cannot create export directory");
         File temporary = File.createTempFile(".waex-", ".part", folder);
         File destination = new File(folder, name);

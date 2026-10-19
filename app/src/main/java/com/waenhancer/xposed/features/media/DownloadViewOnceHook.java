@@ -78,6 +78,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                 }
             };
             hookMenuPair(contract.createMenu, contract.prepareMenu, callback);
+            hookAudioViewer(engine, application, contract);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
             XposedBridge.log(TAG + " Unsupported media viewer: " + failure.getClass().getSimpleName());
         }
@@ -99,6 +100,33 @@ public class DownloadViewOnceHook extends BaseFeature {
         }
     }
 
+    private void hookAudioViewer(DexSearchEngine engine, Context application, ViewOnceMediaResolver.Contract media) {
+        try {
+            ViewOnceAudioResolver audio = ViewOnceAudioResolver.discover(engine.getBridge(), classLoader, media);
+            XC_MethodHook callback = new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    if (!(param.args[0] instanceof Menu)) return;
+                    Menu menu = (Menu) param.args[0];
+                    try {
+                        if (param.hasThrowable() || !Boolean.TRUE.equals(param.getResult())
+                                || !enabled() || !audio.hasAudio(param.thisObject)) {
+                            menu.removeItem(MENU_ID_DOWNLOAD);
+                            return;
+                        }
+                        bindAction(menu, param.thisObject, application, audio::fileAtActivity, true);
+                    } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+                        menu.removeItem(MENU_ID_DOWNLOAD);
+                        XposedBridge.log(TAG + " Audio menu update failed: " + failure.getClass().getSimpleName());
+                    }
+                }
+            };
+            hookMenuPair(audio.createMenu, audio.prepareMenu, callback);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            // An optional audio contract cannot prevent the independent photo/video hooks.
+            XposedBridge.log(TAG + " Unsupported audio viewer: " + failure.getClass().getSimpleName());
+        }
+    }
+
     private boolean enabled() {
         try { return isEnabled("downloadviewonce", false); }
         catch (RuntimeException ignored) { return false; }
@@ -106,6 +134,12 @@ public class DownloadViewOnceHook extends BaseFeature {
 
     private void bindMenu(Menu menu, Object viewer, Context application, ViewOnceMediaResolver.Contract contract) {
         if (!contract.viewerClass.isInstance(viewer)) return;
+        bindAction(menu, viewer, application, contract::fileAtCurrentPage, false);
+    }
+
+    private interface MediaSelection { File select(Object viewer) throws ReflectiveOperationException; }
+
+    private void bindAction(Menu menu, Object viewer, Context application, MediaSelection selection, boolean audio) {
         MenuItem item = menu.findItem(MENU_ID_DOWNLOAD);
         if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
@@ -122,7 +156,7 @@ public class DownloadViewOnceHook extends BaseFeature {
             }
             boolean queued = false;
             try {
-                File selected = contract.fileAtCurrentPage(target.get());
+                File selected = selection.select(target.get());
                 if (selected == null) {
                     showToast(application, "Media not cached or available yet");
                     return true;
@@ -131,7 +165,10 @@ public class DownloadViewOnceHook extends BaseFeature {
                     try {
                         // A submission can fail after a queue offer if worker creation
                         // fails. The abandoned ticket cannot execute on a later retry.
-                        if (EXPORTING.get() == ticket && enabled()) saveMediaFile(application, selected);
+                        if (EXPORTING.get() == ticket && enabled()) {
+                            if (audio) saveAudioFile(application, selected);
+                            else saveMediaFile(application, selected);
+                        }
                     } finally {
                         EXPORTING.compareAndSet(ticket, null);
                     }
@@ -145,6 +182,16 @@ public class DownloadViewOnceHook extends BaseFeature {
             }
             return true;
         });
+    }
+
+    private void saveAudioFile(Context ctx, File srcFile) {
+        try {
+            GalleryMediaExporter.exportAudio(ctx, srcFile);
+            showToast(ctx, "Audio saved (WAEX)");
+        } catch (Exception failure) {
+            XposedBridge.log(TAG + " Audio export failed: " + failure.getClass().getSimpleName());
+            showToast(ctx, "Unable to save this audio file");
+        }
     }
 
     private void saveMediaFile(Context ctx, File srcFile) {
