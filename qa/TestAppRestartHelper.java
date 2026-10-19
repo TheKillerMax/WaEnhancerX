@@ -23,6 +23,8 @@ public final class TestAppRestartHelper {
 
     private static final class FakeContext extends Context {
         final PackageManager pm = new PackageManager();
+        final android.content.pm.ApplicationInfo app = new android.content.pm.ApplicationInfo();
+        @Override public android.content.pm.ApplicationInfo getApplicationInfo() { return app; }
         volatile Intent broadcast;
         volatile Intent launch;
         volatile int broadcasts;
@@ -100,7 +102,7 @@ public final class TestAppRestartHelper {
         ok("com.whatsapp".equals(broadcastFallback.launch.getPackage()), "wrong fallback launch package");
         ok((broadcastFallback.launch.getFlags() & (Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)) ==
                 (Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK), "missing Activity flags");
-        ok(RootCommandRunner.commands.size() == oldRoot + 1, "no-root branch launched monkey");
+        ok(RootCommandRunner.commands.size() == oldRoot + 1, "no-root branch launched activity launch");
         awaitIdle();
 
         RootCommandRunner.mode = "root";
@@ -111,10 +113,10 @@ public final class TestAppRestartHelper {
         AppRestartHelper.restartPackage(root, "com.whatsapp.w4b", "WhatsApp Business");
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (Toast.MESSAGES.size() <= status0 + 1 && System.nanoTime() < deadline) Thread.sleep(5L);
-        ok(RootCommandRunner.commands.size()==2, "root should run force-stop then monkey");
-        ok(RootCommandRunner.commands.get(0).equals("am force-stop 'com.whatsapp.w4b'"), "root stop quoting");
+        ok(RootCommandRunner.commands.size()==2, "root should run force-stop then activity launch");
+        ok(RootCommandRunner.commands.get(0).equals("am force-stop --user 0 'com.whatsapp.w4b'"), "root stop quoting");
         ok(RootCommandRunner.commands.get(1).equals(
-                "monkey -p 'com.whatsapp.w4b' -c android.intent.category.LAUNCHER 1"), "root monkey quoting");
+                "am start -W --user 0 -n 'com.whatsapp.w4b/com.whatsapp.w4b.Launcher' -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10008000"), "root activity launch quoting");
         ok(root.broadcasts == 0 && root.launches == 0, "do not kill newly launched root process");
         awaitIdle();
         ok(AppRestartHelper.hasRootAccess(), "root ID helper");
@@ -128,9 +130,9 @@ public final class TestAppRestartHelper {
         AppRestartHelper.restartPackage(clone, "com.gbwhatsapp", "GBWhatsApp");
         ok(clone.awaited.await(2, TimeUnit.SECONDS), "stopped clone should be relaunched");
         ok(clone.broadcasts == 0, "broadcast after successful force-stop would kill relaunch");
-        ok(clone.launches == 1, "failed monkey should fall back to normal launcher");
+        ok(clone.launches == 1, "failed activity launch should fall back to normal launcher");
         ok("com.gbwhatsapp".equals(clone.launch.getPackage()), "clone package mutated");
-        ok(RootCommandRunner.commands.size() == 2, "expected stop and attempted monkey");
+        ok(RootCommandRunner.commands.size() == 2, "expected stop and attempted activity launch");
         awaitIdle();
 
         RootCommandRunner.mode = "denied";
