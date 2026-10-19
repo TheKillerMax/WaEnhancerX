@@ -4,11 +4,28 @@ import android.content.Context;
 import android.widget.FrameLayout;
 import android.widget.ListAdapter;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class IGStatusView extends FrameLayout {
 
     public HorizontalListView mStatusListView;
     public ListAdapter mStatusAdapter;
     public int fragmentId = 0;
+
+    private final AtomicBoolean updateScheduled = new AtomicBoolean();
+    private final Runnable updateListRunnable = () -> {
+        // A refresh consumes the current adapter state, so requests received before
+        // this UI turn can share it. Requests during the refresh get their own turn.
+        updateScheduled.set(false);
+        if (mStatusAdapter instanceof android.widget.BaseAdapter) {
+            ((android.widget.BaseAdapter) mStatusAdapter).notifyDataSetChanged();
+        }
+        if (mStatusListView != null) {
+            mStatusListView.refreshData();
+        }
+        requestLayout();
+        invalidate();
+    };
 
     public IGStatusView(Context context) {
         super(context);
@@ -39,26 +56,15 @@ public class IGStatusView extends FrameLayout {
     }
 
     @Override
-    public void setTranslationY(float translationY) {
-        if (getHeight() > 0) {
-            int visibility = (translationY > (float) getHeight()) ? GONE : VISIBLE;
-            if (visibility == VISIBLE) {
-                super.setTranslationY(translationY);
-            }
-            setVisibility(visibility);
-        }
+    protected void onDetachedFromWindow() {
+        removeCallbacks(updateListRunnable);
+        updateScheduled.set(false);
+        super.onDetachedFromWindow();
     }
 
     public void updateList() {
-        post(() -> {
-            if (mStatusAdapter instanceof android.widget.BaseAdapter) {
-                ((android.widget.BaseAdapter) mStatusAdapter).notifyDataSetChanged();
-            }
-            if (mStatusListView != null) {
-                mStatusListView.refreshData();
-            }
-            requestLayout();
-            invalidate();
-        });
+        if (updateScheduled.compareAndSet(false, true) && !post(updateListRunnable)) {
+            updateScheduled.set(false);
+        }
     }
 }

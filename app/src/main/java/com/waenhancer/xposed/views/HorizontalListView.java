@@ -32,6 +32,15 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
     private OnItemClickListener mOnItemClicked;
     private OnItemLongClickListener mOnItemLongClicked;
     private boolean mDataChanged = false;
+    private boolean mRefreshFrameScheduled;
+    private final Runnable mRefreshOnAnimation = () -> {
+        synchronized (HorizontalListView.this) {
+            mRefreshFrameScheduled = false;
+        }
+        forceLayout();
+        requestLayout();
+        invalidate();
+    };
 
     private final DataSetObserver mDataObserver = new DataSetObserver() {
         @Override
@@ -210,6 +219,8 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
     public void refreshData() {
         synchronized (this) {
             mDataChanged = true;
+            if (mRefreshFrameScheduled) return;
+            mRefreshFrameScheduled = true;
         }
         forceLayout();
         requestLayout();
@@ -218,11 +229,16 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
         if (parent instanceof View) {
             ((View) parent).requestLayout();
         }
-        postOnAnimation(() -> {
-            forceLayout();
-            requestLayout();
-            invalidate();
-        });
+        postOnAnimation(mRefreshOnAnimation);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        removeCallbacks(mRefreshOnAnimation);
+        synchronized (this) {
+            mRefreshFrameScheduled = false;
+        }
+        super.onDetachedFromWindow();
     }
 
     @Override
@@ -235,10 +251,27 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
             params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
         }
         addViewInLayout(child, viewPosition, params, true);
+        measureItem(child);
+    }
+
+    private void measureItem(View child) {
         child.measure(
                 MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.AT_MOST)
         );
+    }
+
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        if (height > 0 && height != oldHeight) {
+            // AdapterView does not remeasure existing rows for us. A row bound
+            // while the IG header was collapsed may still have measured height 0.
+            // Keep the current bindings; asking the adapter again repeats its IO.
+            for (int index = 0; index < getChildCount(); index++) {
+                measureItem(getChildAt(index));
+            }
+        }
     }
 
     private void fillList(int dx) {
