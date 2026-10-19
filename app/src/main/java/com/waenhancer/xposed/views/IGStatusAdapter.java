@@ -103,11 +103,11 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         }
 
         // Apply left-side whitespace on My Status (position == 0) while keeping the scroller full-width
-        int leftPad = (position == 0) ? dipToPx(12) : 0;
+        int leftPad = (position == 0) ? dipToPx(10) : 0;
         convertView.setPadding(leftPad, 0, 0, 0);
 
         ViewGroup.LayoutParams lp = convertView.getLayoutParams();
-        int baseWidth = dipToPx(82);
+        int baseWidth = dipToPx(74);
         int targetWidth = (position == 0) ? (baseWidth + leftPad) : baseWidth;
         if (lp != null && lp.width != targetWidth) {
             lp.width = targetWidth;
@@ -243,7 +243,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         Context ctx = getContext();
 
         RelativeLayout root = new RelativeLayout(ctx);
-        root.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(82), ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(74), ViewGroup.LayoutParams.WRAP_CONTENT));
 
         FrameLayout frame = new FrameLayout(ctx);
         frame.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -254,7 +254,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         column.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         RelativeLayout avatarBox = new RelativeLayout(ctx);
-        avatarBox.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(62), dipToPx(62)));
+        avatarBox.setLayoutParams(new RelativeLayout.LayoutParams(dipToPx(54), dipToPx(54)));
 
         ImageView photoView = new ImageView(ctx);
         RelativeLayout.LayoutParams photoParams = new RelativeLayout.LayoutParams(
@@ -264,7 +264,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         holder.photoView = photoView;
 
         RelativeLayout addBadge = new RelativeLayout(ctx);
-        RelativeLayout.LayoutParams badgeParams = new RelativeLayout.LayoutParams(dipToPx(20), dipToPx(20));
+        RelativeLayout.LayoutParams badgeParams = new RelativeLayout.LayoutParams(dipToPx(18), dipToPx(18));
         badgeParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         badgeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
         addBadge.setLayoutParams(badgeParams);
@@ -275,7 +275,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         addBadge.setBackground(badgeBg);
 
         ImageView addIcon = new ImageView(ctx);
-        int iconSize = dipToPx(12);
+        int iconSize = dipToPx(10);
         RelativeLayout.LayoutParams iconParams = new RelativeLayout.LayoutParams(iconSize, iconSize);
         iconParams.addRule(RelativeLayout.CENTER_IN_PARENT);
         addIcon.setLayoutParams(iconParams);
@@ -296,7 +296,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         nameView.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        nameParams.topMargin = dipToPx(4);
+        nameParams.topMargin = dipToPx(3);
         nameView.setLayoutParams(nameParams);
         nameView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);

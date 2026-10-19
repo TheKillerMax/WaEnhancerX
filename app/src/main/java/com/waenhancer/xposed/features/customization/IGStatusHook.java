@@ -115,7 +115,7 @@ public class IGStatusHook extends BaseFeature {
                         if (activity == null) return;
 
                         IGStatusView statusContainer = new IGStatusView(activity);
-                        int heightPx = (int) (88f * activity.getResources().getDisplayMetrics().density + 0.5f);
+                        int heightPx = (int) (78f * activity.getResources().getDisplayMetrics().density + 0.5f);
 
                         if (listChild instanceof ListView) {
                             ListView listView = (ListView) listChild;
@@ -136,6 +136,18 @@ public class IGStatusHook extends BaseFeature {
                                 layoutParams.topMargin = paddingTop;
                                 statusContainer.setLayoutParams(layoutParams);
                                 parentGroup.addView(statusContainer, 0);
+
+                                final View scrollingView = listChild;
+                                final int fullHeight = heightPx;
+                                scrollingView.getViewTreeObserver().addOnScrollChangedListener(() -> {
+                                    int offset = verticalScrollOffset(scrollingView);
+                                    int visibleHeight = Math.max(0, fullHeight - Math.min(fullHeight, offset));
+                                    ViewGroup.LayoutParams params = statusContainer.getLayoutParams();
+                                    if (params.height == visibleHeight) return;
+                                    params.height = visibleHeight;
+                                    statusContainer.setLayoutParams(params);
+                                    statusContainer.setTranslationY(visibleHeight - fullHeight);
+                                });
                             }
                         }
 
@@ -194,7 +206,7 @@ public class IGStatusHook extends BaseFeature {
             Field invokeField = resolveInvokeField(onUpdateStatusChanged);
             XposedBridge.hookMethod(onUpdateStatusChanged, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void afterHookedMethod(MethodHookParam param) {
                     try {
                         if (invokeField == null || param.args == null || param.args.length == 0) return;
                         Object obj = invokeField.get(param.args[0]);
@@ -284,6 +296,16 @@ public class IGStatusHook extends BaseFeature {
                     view.updateList();
                 }
             }
+        }
+    }
+
+    private static int verticalScrollOffset(View view) {
+        try {
+            Method method = view.getClass().getMethod("computeVerticalScrollOffset");
+            Object value = method.invoke(view);
+            return value instanceof Integer ? Math.max(0, (Integer) value) : 0;
+        } catch (Throwable ignored) {
+            return view.canScrollVertically(-1) ? view.getHeight() : 0;
         }
     }
 

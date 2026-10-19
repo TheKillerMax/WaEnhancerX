@@ -1014,4 +1014,5 @@
     <string name="waex_ui_hma_reason_template">Oculto por la plantilla de bloqueo «%1$s»</string>
     <string name="waex_ui_hma_reason_preset">Oculto por el ajuste predefinido «xposed» de HMA</string>
     <string name="waex_ui_deleted_a_status">" eliminó un estado"</string>
+    <string name="waex_ui_restarting_whatsapp_short">Reiniciando WhatsApp…</string>
 </resources>

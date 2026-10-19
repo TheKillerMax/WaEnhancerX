@@ -66,6 +66,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
     private static final int MENU_ID_LOCKED        = 0x7EAE0008;
     private static final AtomicLong LAST_ARCHIVE_OPEN_MS = new AtomicLong(-1L);
     private static final AtomicBoolean TITLE_LONG_PRESS_HOOKED = new AtomicBoolean(false);
+    private static final AtomicBoolean RESTART_SCHEDULED = new AtomicBoolean(false);
     private final Set<View> archiveTitleViews = Collections.synchronizedSet(
             Collections.newSetFromMap(new WeakHashMap<>()));
     private long lastArchiveTitleTapMs = -1L;
@@ -762,7 +763,13 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
      */
     private void forceRestartWhatsApp(Activity activity) {
         if (activity == null) return;
-        com.waenhancer.xposed.utils.WhatsAppProcessRestarter.restart(activity);
+        if (!RESTART_SCHEDULED.compareAndSet(false, true)) return;
+        Toast.makeText(activity,
+                UiText.get(R.string.waex_ui_restarting_whatsapp_short, "Restarting WhatsApp…"),
+                Toast.LENGTH_SHORT).show();
+        activity.getWindow().getDecorView().postDelayed(
+                () -> com.waenhancer.xposed.utils.WhatsAppProcessRestarter.restart(activity),
+                350L);
     }
 
     // -------------------------------------------------------------------------
