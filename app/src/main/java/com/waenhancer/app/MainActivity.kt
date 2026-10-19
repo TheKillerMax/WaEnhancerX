@@ -22,6 +22,9 @@ import com.waenhancer.core.preferences.WaexPreferenceManager
 import com.waenhancer.licensing.LicenseManager
 import com.waenhancer.ui.designsystem.LocalThemeMode
 import com.waenhancer.ui.designsystem.LocalThemeModeUpdater
+import com.waenhancer.ui.designsystem.InterfaceSize
+import com.waenhancer.ui.designsystem.LocalInterfaceSize
+import com.waenhancer.ui.designsystem.LocalInterfaceSizeUpdater
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.ui.navigation.LocalWaexPreferenceManager
@@ -100,6 +103,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val initialTheme = remember { preferenceManager.getString("app_theme_mode", "System") }
             var themeMode by remember { mutableStateOf(initialTheme) }
+            val initialInterfaceSize = remember {
+                InterfaceSize.fromStorage(preferenceManager.getString("app_interface_size", "Compact"))
+            }
+            var interfaceSize by remember { mutableStateOf(initialInterfaceSize) }
             val isDark = when (themeMode) {
                 "Dark" -> true
                 "Light" -> false
@@ -110,9 +117,18 @@ class MainActivity : ComponentActivity() {
                 LocalThemeModeUpdater provides {
                     themeMode = it
                     preferenceManager.putString("app_theme_mode", it)
+                },
+                LocalInterfaceSize provides interfaceSize,
+                LocalInterfaceSizeUpdater provides {
+                    interfaceSize = it
+                    preferenceManager.putString("app_interface_size", it.storageValue)
                 }
             ) {
-                WaexTheme(darkTheme = isDark, useMonet = themeMode == "Monet") {
+                WaexTheme(
+                    darkTheme = isDark,
+                    useMonet = themeMode == "Monet",
+                    interfaceSize = interfaceSize
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background

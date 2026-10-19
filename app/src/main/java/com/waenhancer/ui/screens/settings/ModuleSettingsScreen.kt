@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,6 +48,9 @@ import com.waenhancer.app.R
 import com.waenhancer.ui.components.WaexTopBar
 import com.waenhancer.ui.designsystem.LocalThemeMode
 import com.waenhancer.ui.designsystem.LocalThemeModeUpdater
+import com.waenhancer.ui.designsystem.InterfaceSize
+import com.waenhancer.ui.designsystem.LocalInterfaceSize
+import com.waenhancer.ui.designsystem.LocalInterfaceSizeUpdater
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
 import com.waenhancer.ui.navigation.LocalWaexNavController
@@ -55,6 +59,7 @@ import com.waenhancer.utils.LocaleHelper
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +68,8 @@ fun ModuleSettingsScreen() {
     val context = LocalContext.current
     val themeMode = LocalThemeMode.current
     val updateThemeMode = LocalThemeModeUpdater.current
+    val interfaceSize = LocalInterfaceSize.current
+    val updateInterfaceSize = LocalInterfaceSizeUpdater.current
     val colors = WaexTheme.colors
     val spacing = WaexTheme.spacing
     var showThemeSheet by remember { mutableStateOf(false) }
@@ -95,6 +102,10 @@ fun ModuleSettingsScreen() {
                 value = themeMode,
                 icon = themeIcon(themeMode),
                 onClick = { showThemeSheet = true }
+            )
+            InterfaceSizePreference(
+                selectedSize = interfaceSize,
+                onSizeSelected = updateInterfaceSize
             )
             ModuleSettingsTile(
                 title = stringResource(R.string.app_language_title),
@@ -283,6 +294,96 @@ fun ModuleSettingsScreen() {
 }
 
 @Composable
+private fun InterfaceSizePreference(
+    selectedSize: InterfaceSize,
+    onSizeSelected: (InterfaceSize) -> Unit
+) {
+    val colors = WaexTheme.colors
+    val typography = WaexTheme.typography
+    val sizes = InterfaceSize.entries
+    var sliderPosition by remember(selectedSize) { mutableStateOf(selectedSize.ordinal.toFloat()) }
+
+    Surface(
+        shape = WaexTheme.radius.cardShape,
+        color = colors.surfaceContainerLow,
+        border = BorderStroke(1.dp, colors.outlineVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(colors.primary.copy(alpha = 0.14f), WaexTheme.radius.mdShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = WaexIcons.AutoMode,
+                        contentDescription = null,
+                        tint = colors.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.interface_size_title),
+                        style = typography.bodyMd,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.onSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.interface_size_desc),
+                        style = typography.bodySm,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = interfaceSizeLabel(selectedSize),
+                    style = typography.labelSm,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.primary,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+            }
+
+            Slider(
+                value = sliderPosition,
+                onValueChange = { sliderPosition = it },
+                onValueChangeFinished = {
+                    val newSize = sizes[sliderPosition.roundToInt().coerceIn(sizes.indices)]
+                    sliderPosition = newSize.ordinal.toFloat()
+                    if (newSize != selectedSize) onSizeSelected(newSize)
+                },
+                valueRange = 0f..(sizes.lastIndex.toFloat()),
+                steps = sizes.size - 2,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                sizes.forEach { size ->
+                    Text(
+                        text = interfaceSizeLabel(size),
+                        style = typography.labelSm,
+                        color = if (size == selectedSize) colors.primary else colors.onSurfaceVariant,
+                        fontWeight = if (size == selectedSize) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f),
+                        textAlign = when (size) {
+                            InterfaceSize.COMPACT -> androidx.compose.ui.text.style.TextAlign.Start
+                            InterfaceSize.LARGE -> androidx.compose.ui.text.style.TextAlign.End
+                            else -> androidx.compose.ui.text.style.TextAlign.Center
+                        },
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ModuleSettingsTile(
     title: String,
     description: String,
@@ -363,4 +464,12 @@ private fun themeLabel(mode: String) = when (mode) {
     "Dark" -> stringResource(R.string.theme_dark)
     "Monet" -> stringResource(R.string.theme_monet)
     else -> mode
+}
+
+@Composable
+private fun interfaceSizeLabel(size: InterfaceSize) = when (size) {
+    InterfaceSize.COMPACT -> stringResource(R.string.interface_size_compact)
+    InterfaceSize.STANDARD -> stringResource(R.string.interface_size_standard)
+    InterfaceSize.COMFORTABLE -> stringResource(R.string.interface_size_comfortable)
+    InterfaceSize.LARGE -> stringResource(R.string.interface_size_large)
 }

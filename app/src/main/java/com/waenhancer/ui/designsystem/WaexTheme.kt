@@ -16,6 +16,8 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import android.app.Activity
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
@@ -23,6 +25,21 @@ import androidx.core.view.WindowCompat
 
 val LocalThemeMode = staticCompositionLocalOf { "System" }
 val LocalThemeModeUpdater = staticCompositionLocalOf<(String) -> Unit> { {} }
+
+enum class InterfaceSize(val storageValue: String, val scale: Float) {
+    COMPACT("Compact", 1f),
+    STANDARD("Standard", 1.08f),
+    COMFORTABLE("Comfortable", 1.16f),
+    LARGE("Large", 1.25f);
+
+    companion object {
+        fun fromStorage(value: String?): InterfaceSize =
+            entries.firstOrNull { it.storageValue.equals(value, ignoreCase = true) } ?: COMPACT
+    }
+}
+
+val LocalInterfaceSize = staticCompositionLocalOf { InterfaceSize.COMPACT }
+val LocalInterfaceSizeUpdater = staticCompositionLocalOf<(InterfaceSize) -> Unit> { {} }
 
 @Composable
 fun animateWaexColors(targetColors: WaexColors): WaexColors {
@@ -87,9 +104,11 @@ private fun monetWaexColors(scheme: ColorScheme, isDark: Boolean) = WaexColors(
 fun WaexTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     useMonet: Boolean = false,
+    interfaceSize: InterfaceSize = InterfaceSize.COMPACT,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val systemDensity = LocalDensity.current
     // Monet is opt-in. Android <= 11 and OEM palette failures preserve the existing theme.
     val systemPalette = if (useMonet && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         runCatching {
@@ -179,7 +198,11 @@ fun WaexTheme(
         LocalWaexTypography provides typography,
         LocalWaexSpacing provides spacing,
         LocalWaexRadius provides radius,
-        LocalWaexElevation provides elevation
+        LocalWaexElevation provides elevation,
+        LocalDensity provides Density(
+            density = systemDensity.density * interfaceSize.scale,
+            fontScale = systemDensity.fontScale
+        )
     ) {
         MaterialTheme(
             colorScheme = m3ColorScheme,

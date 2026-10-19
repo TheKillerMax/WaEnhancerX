@@ -662,10 +662,14 @@ fun MainDashboardScreen(
                 onDismiss = { showResetSettingsDialog = false },
                 onConfirm = {
                     val savedTheme = preferenceManager.getString("app_theme_mode", "System")
+                    val savedInterfaceSize = preferenceManager.getString("app_interface_size", "Compact")
                     val publicStore = PreferenceStores.publicStore(context)
                     publicStore.edit().clear().commit()
                     if (savedTheme != null) {
                         preferenceManager.putString("app_theme_mode", savedTheme)
+                    }
+                    if (savedInterfaceSize != null) {
+                        preferenceManager.putString("app_interface_size", savedInterfaceSize)
                     }
                     preferenceManager.remove("dummy_notify")
                     refreshTrigger++

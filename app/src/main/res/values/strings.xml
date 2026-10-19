@@ -35,6 +35,12 @@
     <string name="app_theme_title">App Theme</string>
     <string name="app_theme_desc">Choose how WAEX looks</string>
     <string name="choose_app_theme">Choose app theme</string>
+    <string name="interface_size_title">Interface size</string>
+    <string name="interface_size_desc">Adjust text, controls, spacing, and navigation throughout the app</string>
+    <string name="interface_size_compact">Compact</string>
+    <string name="interface_size_standard">Standard</string>
+    <string name="interface_size_comfortable">Comfortable</string>
+    <string name="interface_size_large">Large</string>
     <string name="theme_follow_system">Follow system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>

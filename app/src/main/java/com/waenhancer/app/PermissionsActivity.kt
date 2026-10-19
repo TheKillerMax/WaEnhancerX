@@ -81,6 +81,7 @@ import com.waenhancer.core.preferences.WaexPreferenceManager
 import com.waenhancer.ui.components.StitchSwitch
 import com.waenhancer.ui.designsystem.WaexIcons
 import com.waenhancer.ui.designsystem.WaexTheme
+import com.waenhancer.ui.designsystem.InterfaceSize
 import com.waenhancer.update.UpdateDownloader
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -159,12 +160,19 @@ class PermissionsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeMode = preferenceManager.getString("app_theme_mode", "System")
+            val interfaceSize = InterfaceSize.fromStorage(
+                preferenceManager.getString("app_interface_size", "Compact")
+            )
             val isDark = when (themeMode) {
                 "Dark" -> true
                 "Light" -> false
                 else -> isSystemInDarkTheme()
             }
-            WaexTheme(darkTheme = isDark, useMonet = themeMode == "Monet") {
+            WaexTheme(
+                darkTheme = isDark,
+                useMonet = themeMode == "Monet",
+                interfaceSize = interfaceSize
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
