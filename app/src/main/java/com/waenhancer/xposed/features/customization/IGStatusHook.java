@@ -7,7 +7,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
@@ -115,7 +114,7 @@ public class IGStatusHook extends BaseFeature {
                         if (activity == null) return;
 
                         IGStatusView statusContainer = new IGStatusView(activity);
-                        int heightPx = (int) (78f * activity.getResources().getDisplayMetrics().density + 0.5f);
+                        int heightPx = (int) (84f * activity.getResources().getDisplayMetrics().density + 0.5f);
 
                         if (listChild instanceof ListView) {
                             ListView listView = (ListView) listChild;
@@ -125,24 +124,9 @@ public class IGStatusHook extends BaseFeature {
                             statusContainer.setLayoutParams(layoutParams);
                             listView.addHeaderView(statusContainer);
                         } else {
-                            ViewGroup parentGroup = (ViewGroup) listChild.getParent();
-                            if (parentGroup != null) {
-                                int paddingTop = listChild.getPaddingTop();
-                                statusContainer.setBackground(listChild.getBackground());
-                                listChild.setPadding(0, 0, 0, 0);
-
-                                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT, heightPx);
-                                layoutParams.topMargin = paddingTop;
-                                statusContainer.setLayoutParams(layoutParams);
-                                parentGroup.addView(statusContainer, 0);
-
-                                // Keep the row's geometry stable. Deriving its height from the
-                                // scrolling child's offset creates a feedback loop: resizing this
-                                // sibling relays out the list, which changes the reported offset
-                                // and immediately resizes the row again. At the top/overscroll
-                                // boundary that presents as rapid flickering.
-                            }
+                            statusContainer.setLayoutParams(new ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT, heightPx));
+                            attachRecyclerHeaderWhenReady(fragment, listChild, statusContainer, 0);
                         }
 
                         int id = 0;
@@ -291,6 +275,60 @@ public class IGStatusHook extends BaseFeature {
                 }
             }
         }
+    }
+
+    private static void attachRecyclerHeaderWhenReady(
+            Object fragment, View scrollingView, IGStatusView header, int attempt) {
+        scrollingView.post(() -> {
+            if (!header.isAttachedToWindow() && tryAttachRecyclerHeader(fragment, scrollingView, header)) {
+                return;
+            }
+            if (!header.isAttachedToWindow() && attempt < 30) {
+                scrollingView.postDelayed(() -> attachRecyclerHeaderWhenReady(
+                        fragment, scrollingView, header, attempt + 1), 100L);
+            }
+        });
+    }
+
+    /** Adds the stories row through WhatsApp's HeaderFooterRecyclerViewAdapter controller. */
+    private static boolean tryAttachRecyclerHeader(Object fragment, View scrollingView, View header) {
+        for (Class<?> type = fragment.getClass(); type != null && type != Object.class;
+             type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                try {
+                    field.setAccessible(true);
+                    Object controller = field.get(fragment);
+                    if (controller == null || !ownsScrollingView(controller, scrollingView)) continue;
+
+                    for (Method method : controller.getClass().getDeclaredMethods()) {
+                        Class<?>[] parameters = method.getParameterTypes();
+                        if (parameters.length == 2
+                                && View.class.isAssignableFrom(parameters[0])
+                                && parameters[1] == Integer.class
+                                && method.getReturnType() == void.class) {
+                            method.setAccessible(true);
+                            method.invoke(controller, header, null);
+                            return true;
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+        }
+        return false;
+    }
+
+    private static boolean ownsScrollingView(Object controller, View scrollingView) {
+        for (Class<?> type = controller.getClass(); type != null && type != Object.class;
+             type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                if (!field.getType().getName().contains("RecyclerView")) continue;
+                try {
+                    field.setAccessible(true);
+                    if (field.get(controller) == scrollingView) return true;
+                } catch (Throwable ignored) {}
+            }
+        }
+        return false;
     }
 
     private Class<?> resolveConversationsFragmentClass(DexSearchEngine engine) {

@@ -69,7 +69,10 @@ public class HorizontalListView extends HorizontalScrollView {
 
         content = new LinearLayout(context);
         content.setOrientation(LinearLayout.HORIZONTAL);
-        content.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        content.setGravity(android.view.Gravity.TOP);
+        int topPadding = Math.round(6f * context.getResources().getDisplayMetrics().density);
+        content.setPadding(0, topPadding, 0, 0);
+        content.setClipToPadding(false);
         addView(content, new LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT));
     }
@@ -150,6 +153,11 @@ public class HorizontalListView extends HorizontalScrollView {
                 float dy = Math.abs(event.getY() - downY);
                 if (dx > touchSlop && dx > dy) {
                     requestParentIntercept(false);
+                } else if (dy > touchSlop && dy > dx) {
+                    // Once the gesture is clearly vertical, return it to
+                    // WhatsApp's chat list so dragging on the stories area
+                    // scrolls the main homepage normally.
+                    requestParentIntercept(true);
                 }
                 break;
             case MotionEvent.ACTION_UP:
