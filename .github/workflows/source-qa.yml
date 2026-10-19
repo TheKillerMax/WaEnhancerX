@@ -61,6 +61,24 @@ jobs:
           set -euo pipefail
           python3 qa/test_syntax_checker.py
 
+      - name: Validate complete status style and property hook contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_status_style_hook_contract.py --out "$RUNNER_TEMP/status-style-hook-contract"
+
+      - name: Preserve status style hook contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-style-hook-contract-evidence
+          path: |
+            ${{ runner.temp }}/status-style-hook-contract/*.json
+            ${{ runner.temp }}/status-style-hook-contract/*.log
+            ${{ runner.temp }}/status-style-hook-contract/sources
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Run required public-source JVM regression suites
         shell: bash
         run: |
