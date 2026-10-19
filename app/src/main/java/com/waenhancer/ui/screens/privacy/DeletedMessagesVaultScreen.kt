@@ -293,7 +293,7 @@ private fun loadRealPreservedChats(context: Context): List<PreservedChat> {
             "Preserved"
         }
         val msg = PreservedMessage(
-            id = rec.id,
+            id = "${if (rec.isFromMe) 1 else 0}:${rec.id}",
             text = rec.text.ifBlank { "Preserved message" },
             timestamp = dateTimeStr,
             isFromMe = rec.isFromMe,
