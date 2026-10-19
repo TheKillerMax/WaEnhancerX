@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -543,7 +544,7 @@ fun StargazersScreen() {
                                         )
                                     }
                                 }
-                            } else if ("pro".equals(stargazer.badge, ignoreCase = true)) {
+                            } else if ("contributor".equals(stargazer.badge, ignoreCase = true) || "pro".equals(stargazer.badge, ignoreCase = true)) {
                                 Surface(
                                     shape = CircleShape,
                                     color = colors.surfaceContainerHighest,
@@ -554,12 +555,11 @@ fun StargazersScreen() {
                                         .size(24.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = "PRO",
-                                            style = typography.labelSm,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 8.sp,
-                                            color = colors.primary
+                                        Icon(
+                                            imageVector = Icons.Rounded.VolunteerActivism,
+                                            contentDescription = stringResource(R.string.contributors),
+                                            tint = colors.primary,
+                                            modifier = Modifier.size(13.dp)
                                         )
                                     }
                                 }
@@ -647,8 +647,8 @@ fun StargazersScreen() {
                                         }
                                     }
                                 }
-                            } else if ("pro".equals(stargazer.badge, ignoreCase = true)) {
-                                val sheetProTooltipState = rememberTooltipState()
+                            } else if ("contributor".equals(stargazer.badge, ignoreCase = true) || "pro".equals(stargazer.badge, ignoreCase = true)) {
+                                val sheetBadgeTooltipState = rememberTooltipState()
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                                     tooltip = {
@@ -657,13 +657,13 @@ fun StargazersScreen() {
                                             contentColor = colors.onSurface
                                         ) {
                                             Text(
-                                                text = "Pro Supporter",
+                                                text = stringResource(R.string.contributors),
                                                 style = typography.labelSm,
                                                 fontWeight = FontWeight.Medium
                                             )
                                         }
                                     },
-                                    state = sheetProTooltipState
+                                    state = sheetBadgeTooltipState
                                 ) {
                                     Surface(
                                         shape = CircleShape,
@@ -672,16 +672,15 @@ fun StargazersScreen() {
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clickable {
-                                                scope.launch { sheetProTooltipState.show() }
+                                                scope.launch { sheetBadgeTooltipState.show() }
                                             }
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text(
-                                                text = "PRO",
-                                                style = typography.labelSm,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 8.sp,
-                                                color = colors.primary
+                                            Icon(
+                                                imageVector = Icons.Rounded.VolunteerActivism,
+                                                contentDescription = stringResource(R.string.contributors),
+                                                tint = colors.primary,
+                                                modifier = Modifier.size(13.dp)
                                             )
                                         }
                                     }
@@ -976,10 +975,14 @@ private fun sortStargazers(context: Context, rawList: List<GitHubStargazer>): Li
         !isDev && !isUser
     }
 
-    val proUsers = remaining.filter { "pro".equals(it.badge, ignoreCase = true) }
-    val regularUsers = remaining.filter { !"pro".equals(it.badge, ignoreCase = true) }
+    val contributorUsers = remaining.filter {
+        "contributor".equals(it.badge, ignoreCase = true) || "pro".equals(it.badge, ignoreCase = true)
+    }
+    val regularUsers = remaining.filter {
+        !"contributor".equals(it.badge, ignoreCase = true) && !"pro".equals(it.badge, ignoreCase = true)
+    }
 
-    result.addAll(proUsers)
+    result.addAll(contributorUsers)
     result.addAll(regularUsers)
 
     return result

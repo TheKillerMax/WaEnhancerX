@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -142,17 +144,17 @@ fun ModuleSettingsScreen() {
                 )
             }
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // Keep a bounded viewport so all language choices remain scrollable,
-                    // including on compact screens and with larger accessibility text.
-                    .heightIn(max = 520.dp)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            val sheetDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides sheetDensity) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 520.dp)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                 Text(
                     text = stringResource(R.string.choose_app_theme),
                     style = WaexTheme.typography.titleLg,
@@ -206,6 +208,7 @@ fun ModuleSettingsScreen() {
             }
         }
     }
+}
 
     if (showLanguageSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -224,16 +227,18 @@ fun ModuleSettingsScreen() {
                 )
             }
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                item {
-                    Text(
+            val sheetDensity = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides sheetDensity) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        Text(
                         text = stringResource(R.string.choose_app_language),
                         style = WaexTheme.typography.titleLg,
                         fontWeight = FontWeight.SemiBold,
@@ -291,6 +296,7 @@ fun ModuleSettingsScreen() {
             }
         }
     }
+}
 }
 
 @Composable

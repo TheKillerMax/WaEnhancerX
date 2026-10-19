@@ -22,8 +22,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.waenhancer.ui.designsystem.WaexTheme
@@ -53,40 +55,43 @@ fun WaexConfirmationBottomSheet(
         containerColor = colors.surface,
         shape = radius.bottomSheetShape
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(title, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
-            Text(message, style = typography.bodyMd, color = colors.onSurfaceVariant)
-            supportingContent?.invoke()
-            Spacer(Modifier.height(4.dp))
-            Button(
-                onClick = onConfirm,
-                enabled = confirmEnabled,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = radius.buttonShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = actionColor,
-                    contentColor = if (destructive) Color.White else colors.onPrimary
-                )
+        val sheetDensity = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides sheetDensity) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (confirmContent != null) confirmContent() else Text(confirmLabel, fontWeight = FontWeight.Bold)
-            }
-            OutlinedButton(
-                onClick = onDismiss,
-                enabled = confirmEnabled,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = radius.buttonShape,
-                border = BorderStroke(1.dp, colors.outlineVariant)
-            ) {
-                Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
+                Text(title, style = typography.headlineMd, fontWeight = FontWeight.Bold, color = colors.onSurface)
+                Text(message, style = typography.bodyMd, color = colors.onSurfaceVariant)
+                supportingContent?.invoke()
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = onConfirm,
+                    enabled = confirmEnabled,
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    shape = radius.buttonShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = actionColor,
+                        contentColor = if (destructive) Color.White else colors.onPrimary
+                    )
+                ) {
+                    if (confirmContent != null) confirmContent() else Text(confirmLabel, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = confirmEnabled,
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    shape = radius.buttonShape,
+                    border = BorderStroke(1.dp, colors.outlineVariant)
+                ) {
+                    Text(UiText.get(R.string.action_cancel, "Cancel"), color = colors.onSurface)
+                }
             }
         }
     }

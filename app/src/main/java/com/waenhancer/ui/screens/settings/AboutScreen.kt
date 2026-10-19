@@ -606,8 +606,8 @@ fun AboutScreen() {
                         onClick = { openUrl("https://t.me/WaEnhancerX") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(42.dp),
+                        shape = radius.buttonShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primary,
                             contentColor = colors.onPrimary
@@ -631,8 +631,8 @@ fun AboutScreen() {
                         onClick = { openUrl("https://github.com/WaEnhancerX/WaEnhancerX/issues") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(42.dp),
+                        shape = radius.buttonShape,
                         border = BorderStroke(1.dp, colors.outlineVariant),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = colors.onSurface
@@ -953,8 +953,8 @@ fun AboutScreen() {
                                 onClick = { openUrl(user.htmlUrl) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(12.dp),
+                                    .height(42.dp),
+                                shape = radius.buttonShape,
                                 border = BorderStroke(1.dp, colors.outlineVariant)
                             ) {
                                 Icon(
@@ -977,8 +977,8 @@ fun AboutScreen() {
                                     onClick = { openUrl(blogUrl) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(12.dp),
+                                        .height(42.dp),
+                                    shape = radius.buttonShape,
                                     border = BorderStroke(1.dp, colors.outlineVariant)
                                 ) {
                                     Icon(
@@ -1001,8 +1001,8 @@ fun AboutScreen() {
                                     onClick = { loadContributionStats(user.login) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(12.dp),
+                                        .height(42.dp),
+                                    shape = radius.buttonShape,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = colors.primary,
                                         contentColor = colors.onPrimary

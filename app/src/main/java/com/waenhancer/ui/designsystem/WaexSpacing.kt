@@ -7,12 +7,13 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class WaexSpacing(
-    val pageMargin: Dp = 16.dp,
-    val gutter: Dp = 12.dp,
-    val bentoGap: Dp = 10.dp,
-    val stackLg: Dp = 16.dp,
-    val stackMd: Dp = 12.dp,
-    val stackSm: Dp = 6.dp
+    val scale: Float = 1f,
+    val pageMargin: Dp = (16f * scale).dp,
+    val gutter: Dp = (12f * scale).dp,
+    val bentoGap: Dp = (10f * scale).dp,
+    val stackLg: Dp = (16f * scale).dp,
+    val stackMd: Dp = (12f * scale).dp,
+    val stackSm: Dp = (6f * scale).dp
 )
 
 val LocalWaexSpacing = staticCompositionLocalOf { WaexSpacing() }

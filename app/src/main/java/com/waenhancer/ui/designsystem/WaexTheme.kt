@@ -118,8 +118,8 @@ fun WaexTheme(
     val targetColors = systemPalette?.let { monetWaexColors(it, darkTheme) }
         ?: if (darkTheme) darkColors else lightColors
     val colors = animateWaexColors(targetColors)
-    val typography = WaexTypography()
-    val spacing = WaexSpacing()
+    val typography = WaexTypography(scale = interfaceSize.scale)
+    val spacing = WaexSpacing(scale = interfaceSize.scale)
     val radius = WaexRadius()
     val elevation = WaexElevation()
 
@@ -206,7 +206,7 @@ fun WaexTheme(
     ) {
         MaterialTheme(
             colorScheme = m3ColorScheme,
-            typography = MaterialTypography,
+            typography = materialTypography(scale = interfaceSize.scale),
             shapes = androidx.compose.material3.Shapes(
                 extraSmall = radius.smShape,
                 small = radius.defaultShape,

@@ -578,7 +578,7 @@ fun MainDashboardScreen(
                             onClick = startBackup,
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 48.dp),
+                                .height(42.dp),
                             shape = radius.buttonShape,
                             border = BorderStroke(1.dp, colors.outlineVariant),
                             colors = ButtonDefaults.outlinedButtonColors(
@@ -598,7 +598,7 @@ fun MainDashboardScreen(
                             onClick = startRestore,
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 48.dp),
+                                .height(42.dp),
                             shape = radius.buttonShape,
                             border = BorderStroke(1.dp, colors.outlineVariant),
                             colors = ButtonDefaults.outlinedButtonColors(
@@ -621,7 +621,7 @@ fun MainDashboardScreen(
                         onClick = { showResetSettingsDialog = true },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 48.dp),
+                            .height(42.dp),
                         shape = radius.buttonShape,
                         border = BorderStroke(1.dp, colors.error.copy(alpha = 0.55f)),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -1064,7 +1064,7 @@ private fun TargetCompatibilityBottomSheet(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp)
+                    .height(42.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1358,7 +1358,7 @@ private fun HmaDetailsBottomSheet(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp)
+                    .height(42.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1539,7 +1539,7 @@ private fun DashboardDiagnosticsCard(
                 onClick = onViewDetails,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp),
+                    .height(42.dp),
                 shape = radius.buttonShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
