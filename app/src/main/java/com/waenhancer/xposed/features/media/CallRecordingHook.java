@@ -90,6 +90,7 @@ public final class CallRecordingHook extends BaseFeature {
         try {
             contract = CallRecordingEventContract.resolve(callbackClass);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            XposedBridge.log(TAG + " Unsupported call recording event contract: " + failure);
             throw new IllegalStateException("Unsupported call recording event contract", failure);
         }
         AtomicBoolean ready = new AtomicBoolean(false);

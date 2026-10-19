@@ -59,10 +59,7 @@ final class CallRecordingEventContract {
         }
         Method changed = callback.getDeclaredMethod("callStateChanged", stateType, info);
         Method sound = callback.getDeclaredMethod("soundPortCreated", int.class);
-        Class<?> logInfo = Class.forName(info.getName().replace("CallInfo", "CallLogInfo"),
-                false, callback.getClassLoader());
-        Method ending = callback.getDeclaredMethod("callEnding", logInfo, int.class,
-                String.class, String.class);
+        Method ending = resolveCallEndingMethod(callback, info);
         requireVoidMethod(changed);
         requireVoidMethod(sound);
         requireVoidMethod(ending);
@@ -73,6 +70,41 @@ final class CallRecordingEventContract {
         sound.setAccessible(true);
         ending.setAccessible(true);
         return new CallRecordingEventContract(changed, sound, ending, currentInfo, id, state, active, none);
+    }
+
+    private static Method resolveCallEndingMethod(Class<?> callback, Class<?> info) throws NoSuchMethodException {
+        Class<?> logInfo = null;
+        try {
+            logInfo = Class.forName(info.getName().replace("CallInfo", "CallLogInfo"),
+                    false, callback.getClassLoader());
+        } catch (ClassNotFoundException ignored) {
+        }
+
+        // Try exact legacy signature: (CallLogInfo, int, String, String)
+        if (logInfo != null) {
+            try {
+                return callback.getDeclaredMethod("callEnding", logInfo, int.class, String.class, String.class);
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+
+        // Search declared methods for any callEnding starting with CallLogInfo or matching parameters
+        Method fallback = null;
+        for (Method m : callback.getDeclaredMethods()) {
+            if ("callEnding".equals(m.getName())) {
+                Class<?>[] params = m.getParameterTypes();
+                if (params.length >= 1 && (logInfo == null || params[0].equals(logInfo) || params[0].getName().endsWith("CallLogInfo"))) {
+                    return m;
+                }
+                if (fallback == null) {
+                    fallback = m;
+                }
+            }
+        }
+        if (fallback != null) {
+            return fallback;
+        }
+        throw new NoSuchMethodException("VoiceServiceEventCallback.callEnding not found");
     }
 
     private static void requireInstanceMethod(Method method) throws NoSuchMethodException {
