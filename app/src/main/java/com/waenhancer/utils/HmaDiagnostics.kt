@@ -229,13 +229,18 @@ object HmaDiagnostics {
         } catch (_: Exception) {}
 
         // Also query via root package manager in case package visibility is restricted
-        val pmCmd = "pm list packages 2>/dev/null | grep -iE 'hma|hidemyapp' | cut -d: -f2; true"
-        val pmOut = AppRestartHelper.runRootCommand(pmCmd)
+        val pmOut = AppRestartHelper.runRootCommand("pm list packages")
         if (!pmOut.isNullOrBlank()) {
-            pmOut.lines()
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .forEach { packages.add(it) }
+            pmOut.lines().forEach { raw ->
+                val line = raw.trim()
+                if (line.startsWith("package:")) {
+                    val p = line.removePrefix("package:").trim()
+                    val lower = p.lowercase()
+                    if (lower.contains("hidemyapp") || lower.contains("hma") || lower.endsWith(".hmal")) {
+                        packages.add(p)
+                    }
+                }
+            }
         }
 
         return packages.toList()
@@ -297,6 +302,9 @@ object HmaDiagnostics {
      * when whitelist mode is enabled).
      */
     suspend fun fixTargetIsolation(context: Context, targetPackage: String): Boolean = withContext(Dispatchers.IO) {
+        // Force-stop HMA and any related processes BEFORE reading/modifying configuration
+        forceStopHmaApps(context)
+
         val configPaths = findAllHmaConfigPaths()
         if (configPaths.isEmpty()) return@withContext false
 
@@ -407,18 +415,36 @@ object HmaDiagnostics {
             } catch (_: Exception) {}
         }
 
-        // Dynamically force-stop all installed HMA / HMAL packages & kill processes
-        val installedHmas = getInstalledHmaPackages(context)
-        val forceStopCmds = installedHmas.joinToString("; ") { "am force-stop $it 2>/dev/null" }
-        val killScript = "pkill -f hidemyapplist 2>/dev/null; " +
-                "pkill -f hma 2>/dev/null; " +
-                "for p in \$(pm list packages 2>/dev/null | grep -iE 'hma|hidemyapp' | cut -d: -f2); do am force-stop \"\$p\" 2>/dev/null; done; " +
-                if (forceStopCmds.isNotBlank()) "$forceStopCmds; true" else "true"
-        AppRestartHelper.runRootCommand(killScript)
+        // Force-stop again after updating config to ensure clean state
+        forceStopHmaApps(context)
 
         // Clear cached diagnostic result so next check reflects new state
         cachedResult.set(null)
         anySuccess
+    }
+
+    /**
+     * Force-stops all HMA and related app instances and processes.
+     */
+    fun forceStopHmaApps(context: Context) {
+        val installedHmas = getInstalledHmaPackages(context)
+        for (pkg in installedHmas) {
+            AppRestartHelper.runRootCommand("am force-stop $pkg")
+        }
+        // Also fallback to any packages directly found by pm
+        val pmOut = AppRestartHelper.runRootCommand("pm list packages")
+        if (!pmOut.isNullOrBlank()) {
+            pmOut.lines().forEach { raw ->
+                val line = raw.trim()
+                if (line.startsWith("package:")) {
+                    val p = line.removePrefix("package:").trim()
+                    val lower = p.lowercase()
+                    if (lower.contains("hma") || lower.contains("hidemyapp") || lower.endsWith(".hmal")) {
+                        AppRestartHelper.runRootCommand("am force-stop $p")
+                    }
+                }
+            }
+        }
     }
 
     private fun checkScopeBlockReason(
