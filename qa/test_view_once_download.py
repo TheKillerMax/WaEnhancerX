@@ -3,7 +3,7 @@
 
 Runs real reflection and a real bounded Java executor. This is not Android,
 DexKit native discovery, LSPosed, host database execution or MediaStore acceptance.
---dexkit-jar compiles the hook and complete resolvers against the real DexKit API.
+--dexkit-jar compiles both production files against the real DexKit API as well.
 --baseline-hook runs a selected regression against an unchanged earlier hook.
 """
 from pathlib import Path
@@ -22,8 +22,6 @@ STUBS = {
 'android/app/Activity.java': 'package android.app;public class Activity extends android.content.Context{public java.io.File unrelated;}',
 'android/graphics/drawable/Drawable.java': 'package android.graphics.drawable;public class Drawable{}',
 'android/os/Looper.java': 'package android.os;public class Looper{public static Looper getMainLooper(){return new Looper();}}',
-'android/os/Bundle.java': 'package android.os;public class Bundle{}',
-'android/view/View.java': 'package android.view;public class View{}',
 'android/os/Handler.java': 'package android.os;public class Handler{public Handler(Looper l){}public boolean post(Runnable r){r.run();return true;}}',
 'android/widget/Toast.java': '''package android.widget;import java.util.*;public class Toast{
  public static final int LENGTH_SHORT=0;public static final List<String> shown=Collections.synchronizedList(new ArrayList<>());
@@ -45,7 +43,7 @@ STUBS = {
  public class MenuIconLoader{public static boolean missing;public static android.graphics.drawable.Drawable load(android.content.Context c,String n){return missing?null:new android.graphics.drawable.Drawable();}}''',
 'de/robv/android/xposed/XC_MethodHook.java': '''package de.robv.android.xposed;public class XC_MethodHook{
  public class Unhook{private final Runnable action;public Unhook(Runnable r){action=r;}public void unhook(){action.run();}}
- public static class MethodHookParam{public Object thisObject;public Object[] args;public Throwable failure;public Object result=Boolean.TRUE;public Object getResult(){return result;}public boolean hasThrowable(){return failure!=null;}}
+ public static class MethodHookParam{public Object thisObject;public Object[] args;public Throwable failure;public boolean hasThrowable(){return failure!=null;}}
  protected void afterHookedMethod(MethodHookParam p)throws Throwable{}public void runAfter(MethodHookParam p)throws Throwable{afterHookedMethod(p);}}''',
 'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;import java.lang.reflect.*;import java.util.*;
  public class XposedBridge{public static final Map<Method,XC_MethodHook> hooks=new LinkedHashMap<>();public static final List<String> logs=new ArrayList<>();
@@ -66,8 +64,7 @@ STUBS = {
 'com/waenhancer/xposed/features/media/GalleryMediaExporter.java': '''package com.waenhancer.xposed.features.media;
  import java.io.*;import java.util.*;import java.util.concurrent.*;
  public class GalleryMediaExporter {public static final List<File> exported=Collections.synchronizedList(new ArrayList<>());
- public static volatile CountDownLatch entered,release;public static volatile boolean fail;public static volatile String thread;public static int audioCopies;
- public static void exportAudio(android.content.Context c,File f)throws IOException{export(c,f);audioCopies++;}
+ public static volatile CountDownLatch entered,release;public static volatile boolean fail;public static volatile String thread;
  public static void export(android.content.Context c,File f)throws IOException{
  thread=Thread.currentThread().getName();CountDownLatch a=entered,b=release;if(a!=null)a.countDown();
  try{if(b!=null&&!b.await(5,TimeUnit.SECONDS))throw new IOException("fixture wait");}catch(InterruptedException e){throw new IOException(e);}
@@ -110,14 +107,13 @@ DEX_STUBS = {
 'org/luckypray/dexkit/result/ClassData.java': 'package org.luckypray.dexkit.result;public class ClassData{public Class<?> getInstance(ClassLoader l){return com.whatsapp.viewonce.ui.messaging.ViewOnceViewerActivity.class;}}',
 'org/luckypray/dexkit/result/ClassDataList.java': 'package org.luckypray.dexkit.result;public class ClassDataList{public ClassData firstOrNull(){return new ClassData();}}',
 'org/luckypray/dexkit/result/FieldUsingType.java': 'package org.luckypray.dexkit.result;public enum FieldUsingType{Read,Write;public boolean isRead(){return this==Read;}}',
-'org/luckypray/dexkit/result/FieldData.java': 'package org.luckypray.dexkit.result;public class FieldData{public final java.lang.reflect.Field field;public String ownerOverride;public boolean unavailable;public FieldData(java.lang.reflect.Field f){field=f;}public String getTypeName(){return field.getType().getName();}public String getDeclaredClassName(){return ownerOverride!=null?ownerOverride:field.getDeclaringClass().getName();}public java.lang.reflect.Field getFieldInstance(ClassLoader l){if(unavailable)throw new AssertionError("Unrelated optional field owner resolved");return field;}}',
+'org/luckypray/dexkit/result/FieldData.java': 'package org.luckypray.dexkit.result;public class FieldData{public final java.lang.reflect.Field field;public FieldData(java.lang.reflect.Field f){field=f;}public String getDeclaredClassName(){return field.getDeclaringClass().getName();}public java.lang.reflect.Field getFieldInstance(ClassLoader l){return field;}}',
 'org/luckypray/dexkit/result/UsingFieldData.java': 'package org.luckypray.dexkit.result;public class UsingFieldData{public final FieldData field;public FieldUsingType type=FieldUsingType.Read;public UsingFieldData(java.lang.reflect.Field f){field=new FieldData(f);}public FieldData getField(){return field;}public FieldUsingType getUsingType(){return type;}}',
 'org/luckypray/dexkit/result/MethodDataList.java': 'package org.luckypray.dexkit.result;public class MethodDataList extends java.util.ArrayList<MethodData>{}',
 'org/luckypray/dexkit/result/MethodData.java': '''package org.luckypray.dexkit.result;import java.lang.reflect.*;import java.util.*;public class MethodData{
- public final Method method;public boolean callable=true,unavailable;public String ownerOverride,returnOverride;public final MethodDataList calls=new MethodDataList();public final List<UsingFieldData> fields=new ArrayList<>();public final List<String> strings=new ArrayList<>();
+ public final Method method;public boolean callable=true,unavailable;public String ownerOverride,returnOverride;public final MethodDataList calls=new MethodDataList();public final List<UsingFieldData> fields=new ArrayList<>();
  public MethodData(Method m){method=m;}public boolean isMethod(){return callable;}public Method getMethodInstance(ClassLoader l){if(!callable||unavailable)throw new AssertionError("Unrelated class or constructor resolved as Method");return method;}
  public String getDeclaredClassName(){return ownerOverride!=null?ownerOverride:method.getDeclaringClass().getName();}public String getReturnTypeName(){return returnOverride!=null?returnOverride:method.getReturnType().getName();}
- public String getName(){return method.getName();}public List<String> getUsingStrings(){return strings;}
  public MethodDataList getInvokes(){return calls;}public List<UsingFieldData> getUsingFields(){return fields;}
  public int getParamCount(){return method.getParameterCount();}public List<String> getParamTypeNames(){List<String> a=new ArrayList<>();for(Class<?> c:method.getParameterTypes())a.add(c.getName());return a;}}''',
 'org/luckypray/dexkit/DexKitBridge.java': '''package org.luckypray.dexkit;import java.lang.reflect.*;import java.util.*;import org.luckypray.dexkit.result.*;
@@ -132,7 +128,7 @@ def write(d, mapping):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--baseline-hook',type=Path)
-    p.add_argument('--scenario',default='all');p.add_argument('--dexkit-jar',type=Path);p.add_argument('--audio',action='store_true')
+    p.add_argument('--scenario',default='all');p.add_argument('--dexkit-jar',type=Path)
     a=p.parse_args()
     with tempfile.TemporaryDirectory(prefix='waex-view-once-') as temporary:
         d=Path(temporary);write(d,STUBS)
@@ -140,9 +136,7 @@ def main():
         # runs separately in test_es419_runtime.py. Keep all hook logic intact.
         write_display_adapter(ROOT, d)
         hook=a.baseline_hook or SOURCE/'DownloadViewOnceHook.java'
-        helpers=[SOURCE/'ViewOnceMediaResolver.java']
-        if (SOURCE/'ViewOnceAudioResolver.java').exists():helpers.append(SOURCE/'ViewOnceAudioResolver.java')
-        production=[str(hook),*map(str,helpers)]
+        production=[str(hook),str(SOURCE/'ViewOnceMediaResolver.java')]
         # A baseline source may have a different artifact basename, so compile its exact bytes
         # under Java's required public-class name without changing its contents.
         staged=d/'DownloadViewOnceHook.java';staged.write_bytes(hook.read_bytes());production[0]=str(staged)
@@ -153,18 +147,13 @@ def main():
             print('REAL_DEXKIT_API_COMPILE_OK: complete hook and resolver; no DexKit doubles',flush=True)
         write(d,DEX_STUBS)
         fixture=ROOT/'qa/view_once/ViewOnceDownloadTest.java'
-        fixtures=[str(fixture)]
-        if a.audio:
-            from view_once_audio_fixtures import AUDIO_STUBS
-            write(d,AUDIO_STUBS)
-            fixtures.append(str(ROOT/'qa/view_once/ViewOnceAudioTest.java'))
         sources=list(map(str,d.rglob('*.java')))
         # staged hook is already in the source list.
-        subprocess.run(['javac','--release','17','-d',str(d/'classes'),*map(str,helpers),
-                        *fixtures,*sources],check=True,timeout=60)
+        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(SOURCE/'ViewOnceMediaResolver.java'),
+                        str(fixture),*sources],check=True,timeout=60)
         print('COMPILE_OK: complete hook, complete resolver and explicit host/Android doubles',flush=True)
         subprocess.run(['java','-Xshare:off','-cp',str(d/'classes'),
-                        'com.waenhancer.xposed.features.media.'+('ViewOnceAudioTest' if a.audio else 'ViewOnceDownloadTest'),
+                        'com.waenhancer.xposed.features.media.ViewOnceDownloadTest',
                         a.scenario,*(['baseline'] if a.baseline_hook else [])],check=True,timeout=60)
         print('SOURCE_SHA256:',hook.name,hashlib.sha256(hook.read_bytes()).hexdigest(),flush=True)
 

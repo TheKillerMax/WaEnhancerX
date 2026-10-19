@@ -13,16 +13,16 @@ public void put(String k,String v){m.put(k,v);}public void put(String k,Integer 
 public Object get(String k){return m.get(k);} }''',
 'android/net/Uri.java': '''package android.net; public final class Uri {public final String s; private Uri(String v){s=v;} public static Uri parse(String v){return new Uri(v);} public String toString(){return s;} }''',
 'android/os/Build.java': '''package android.os; public class Build {public static class VERSION{public static int SDK_INT=34;}public static class VERSION_CODES{public static final int Q=29;}}''',
-'android/os/Environment.java': '''package android.os;import java.io.*;public class Environment {public static final String DIRECTORY_MUSIC="Music",DIRECTORY_MOVIES="Movies",DIRECTORY_PICTURES="Pictures";public static File root;public static File getExternalStoragePublicDirectory(String d){return new File(root,d);}}''',
-'android/media/MediaScannerConnection.java': '''package android.media;import android.content.Context; public class MediaScannerConnection{public static int scans;public static String[] paths,mimes;public static void scanFile(Context c,String[] p,String[] m,Object cb){scans++;paths=p;mimes=m;}}''',
-'android/provider/MediaStore.java': '''package android.provider;import android.net.Uri;public class MediaStore {public static class MediaColumns{public static final String DISPLAY_NAME="name",MIME_TYPE="mime",RELATIVE_PATH="path",IS_PENDING="pending";}public static class Audio{public static class Media{public static final Uri EXTERNAL_CONTENT_URI=Uri.parse("audio");}}public static class Images{public static class Media{public static final Uri EXTERNAL_CONTENT_URI=Uri.parse("images");}}public static class Video{public static class Media{public static final Uri EXTERNAL_CONTENT_URI=Uri.parse("videos");}}}''',
+'android/os/Environment.java': '''package android.os;import java.io.*;public class Environment {public static final String DIRECTORY_MOVIES="Movies",DIRECTORY_PICTURES="Pictures";public static File root;public static File getExternalStoragePublicDirectory(String d){return new File(root,d);}}''',
+'android/media/MediaScannerConnection.java': '''package android.media;import android.content.Context; public class MediaScannerConnection{public static int scans;public static void scanFile(Context c,String[] p,String[] m,Object cb){scans++;}}''',
+'android/provider/MediaStore.java': '''package android.provider;import android.net.Uri;public class MediaStore {public static class MediaColumns{public static final String DISPLAY_NAME="name",MIME_TYPE="mime",RELATIVE_PATH="path",IS_PENDING="pending";}public static class Images{public static class Media{public static final Uri EXTERNAL_CONTENT_URI=Uri.parse("images");}}public static class Video{public static class Media{public static final Uri EXTERNAL_CONTENT_URI=Uri.parse("videos");}}}''',
 'android/content/Context.java': '''package android.content;public class Context{public final ContentResolver r;public Context(ContentResolver v){r=v;}public ContentResolver getContentResolver(){return r;}}''',
 'android/content/ContentResolver.java': '''package android.content;
 import android.net.Uri;import java.io.*;import java.util.*;
 public class ContentResolver {
  public boolean nullInsert,nullOutput,failWrite,failFlush,failClose,failUpdate,failDelete,closed,pendingDuringWrite,publishAfterClose,deleted;
- public int creates,updates;public final List<ContentValues> inserted=new ArrayList<>();public final List<Uri> collections=new ArrayList<>();public byte[] copied;
- public Uri insert(Uri uri,ContentValues values){if(nullInsert)return null;creates++;inserted.add(values);collections.add(uri);return Uri.parse(uri+"/"+creates);}
+ public int creates,updates;public final List<ContentValues> inserted=new ArrayList<>();public byte[] copied;
+ public Uri insert(Uri uri,ContentValues values){if(nullInsert)return null;creates++;inserted.add(values);return Uri.parse(uri+"/"+creates);}
  public OutputStream openOutputStream(Uri row)throws IOException{return openOutputStream(row,"w");}
  public OutputStream openOutputStream(Uri row,String mode)throws IOException{
   if(nullOutput)return null; ByteArrayOutputStream data=new ByteArrayOutputStream();

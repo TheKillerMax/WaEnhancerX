@@ -1,8 +1,5 @@
 package com.waenhancer.xposed.features.media;
 
-import com.waenhancer.app.R;
-import com.waenhancer.utils.UiText;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
@@ -81,7 +78,6 @@ public class DownloadViewOnceHook extends BaseFeature {
                 }
             };
             hookMenuPair(contract.createMenu, contract.prepareMenu, callback);
-            hookAudioViewer(engine, application, contract);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
             XposedBridge.log(TAG + " Unsupported media viewer: " + failure.getClass().getSimpleName());
         }
@@ -103,33 +99,6 @@ public class DownloadViewOnceHook extends BaseFeature {
         }
     }
 
-    private void hookAudioViewer(DexSearchEngine engine, Context application, ViewOnceMediaResolver.Contract media) {
-        try {
-            ViewOnceAudioResolver audio = ViewOnceAudioResolver.discover(engine.getBridge(), classLoader, media);
-            XC_MethodHook callback = new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
-                    if (!(param.args[0] instanceof Menu)) return;
-                    Menu menu = (Menu) param.args[0];
-                    try {
-                        if (param.hasThrowable() || !Boolean.TRUE.equals(param.getResult())
-                                || !enabled() || !audio.hasAudio(param.thisObject)) {
-                            menu.removeItem(MENU_ID_DOWNLOAD);
-                            return;
-                        }
-                        bindAction(menu, param.thisObject, application, audio::fileAtActivity, true);
-                    } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
-                        menu.removeItem(MENU_ID_DOWNLOAD);
-                        XposedBridge.log(TAG + " Audio menu update failed: " + failure.getClass().getSimpleName());
-                    }
-                }
-            };
-            hookMenuPair(audio.createMenu, audio.prepareMenu, callback);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
-            // An optional audio contract cannot prevent the independent photo/video hooks.
-            XposedBridge.log(TAG + " Unsupported audio viewer: " + failure.getClass().getSimpleName());
-        }
-    }
-
     private boolean enabled() {
         try { return isEnabled("downloadviewonce", false); }
         catch (RuntimeException ignored) { return false; }
@@ -137,15 +106,8 @@ public class DownloadViewOnceHook extends BaseFeature {
 
     private void bindMenu(Menu menu, Object viewer, Context application, ViewOnceMediaResolver.Contract contract) {
         if (!contract.viewerClass.isInstance(viewer)) return;
-        bindAction(menu, viewer, application, contract::fileAtCurrentPage, false);
-    }
-
-    private interface MediaSelection { File select(Object viewer) throws ReflectiveOperationException; }
-
-    private void bindAction(Menu menu, Object viewer, Context application, MediaSelection selection, boolean audio) {
         MenuItem item = menu.findItem(MENU_ID_DOWNLOAD);
-        if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE,
-                UiText.get(R.string.waex_ui_download_d6eafe82, "Download"));
+        if (item == null) item = menu.add(Menu.NONE, MENU_ID_DOWNLOAD, Menu.NONE, "Download");
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
         Drawable icon = MenuIconLoader.load(application, "ic_waex_download");
         if (icon != null) item.setIcon(icon);
@@ -155,26 +117,21 @@ public class DownloadViewOnceHook extends BaseFeature {
             if (!enabled()) return true;
             Object ticket = new Object();
             if (!EXPORTING.compareAndSet(null, ticket)) {
-                showToast(application, UiText.get(R.string.waex_ui_media_export_in_progress_v36,
-                        "A media export is already in progress"));
+                showToast(application, "A media export is already in progress");
                 return true;
             }
             boolean queued = false;
             try {
-                File selected = selection.select(target.get());
+                File selected = contract.fileAtCurrentPage(target.get());
                 if (selected == null) {
-                    showToast(application, UiText.get(R.string.waex_ui_media_not_cached_or_available_yet_45e16ba0,
-                            "Media not cached or available yet"));
+                    showToast(application, "Media not cached or available yet");
                     return true;
                 }
                 ExportWorker.INSTANCE.execute(() -> {
                     try {
                         // A submission can fail after a queue offer if worker creation
                         // fails. The abandoned ticket cannot execute on a later retry.
-                        if (EXPORTING.get() == ticket && enabled()) {
-                            if (audio) saveAudioFile(application, selected);
-                            else saveMediaFile(application, selected);
-                        }
+                        if (EXPORTING.get() == ticket && enabled()) saveMediaFile(application, selected);
                     } finally {
                         EXPORTING.compareAndSet(ticket, null);
                     }
@@ -182,8 +139,7 @@ public class DownloadViewOnceHook extends BaseFeature {
                 queued = true;
             } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 XposedBridge.log(TAG + " Media selection failed: " + failure.getClass().getSimpleName());
-                showToast(application, UiText.get(R.string.waex_ui_media_save_failed_v30,
-                        "Unable to save this media file"));
+                showToast(application, "Unable to save this media file");
             } finally {
                 if (!queued) EXPORTING.compareAndSet(ticket, null);
             }
@@ -191,25 +147,13 @@ public class DownloadViewOnceHook extends BaseFeature {
         });
     }
 
-    private void saveAudioFile(Context ctx, File srcFile) {
-        try {
-            GalleryMediaExporter.exportAudio(ctx, srcFile);
-            showToast(ctx, UiText.get(R.string.waex_ui_audio_saved_v36, "Audio saved (WAEX)"));
-        } catch (Exception failure) {
-            XposedBridge.log(TAG + " Audio export failed: " + failure.getClass().getSimpleName());
-            showToast(ctx, UiText.get(R.string.waex_ui_audio_save_failed_v36,
-                    "Unable to save this audio file"));
-        }
-    }
-
     private void saveMediaFile(Context ctx, File srcFile) {
         try {
             GalleryMediaExporter.export(ctx, srcFile);
-            showToast(ctx, UiText.get(R.string.waex_ui_media_saved_v30, "Media saved (WAEX)"));
+            showToast(ctx, "Media saved (WAEX)");
         } catch (Exception failure) {
             XposedBridge.log(TAG + " Export failed: " + failure.getClass().getSimpleName());
-            showToast(ctx, UiText.get(R.string.waex_ui_media_save_failed_v30,
-                    "Unable to save this media file"));
+            showToast(ctx, "Unable to save this media file");
         }
     }
 

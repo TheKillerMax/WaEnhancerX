@@ -293,31 +293,8 @@ final class ViewOnceMediaResolver {
         }
 
         private Identity identity(Object message) throws ReflectiveOperationException {
-            return identityFromKey(key.get(message));
-        }
-
-        Class<?> messageBase() { return key.getDeclaringClass(); }
-        Class<?> keyType() { return key.getType(); }
-
-        boolean hasMediaKey(Object message, Object expectedKey) throws ReflectiveOperationException {
-            if (!currentMessage.getReturnType().isInstance(message)) return false;
-            Identity expected = identityFromKey(expectedKey);
-            return expected != null && expected.equals(identity(message));
-        }
-
-        File fileForKey(Object message, Object expectedKey) throws ReflectiveOperationException {
-            if (!hasMediaKey(message, expectedKey)) return null;
-            Identity expected = identityFromKey(expectedKey);
-            Object data = media.get(message);
-            if (data == null) return null;
-            Object result = invoke(fileGetter, data);
-            if (!(result instanceof File) || media.get(message) != data
-                    || !expected.equals(identity(message))) return null;
-            return (File) result;
-        }
-
-        private Identity identityFromKey(Object value) throws ReflectiveOperationException {
-            if (!key.getType().isInstance(value)) return null;
+            Object value = key.get(message);
+            if (value == null) return null;
             Object jid = chat.get(value);
             String messageId = (String) id.get(value);
             if (jid == null || messageId == null || messageId.isEmpty()) return null;
