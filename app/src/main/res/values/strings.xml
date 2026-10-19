@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wa Enhancer X</string>
-    <string name="xposed_description">Modular enhancement framework for WhatsApp and WhatsApp Business.</string>
+    <string name="xposed_description">Xposed/LSPosed privacy, anti-delete, media and customization tools for WhatsApp &amp; WhatsApp Business on rooted Android.</string>
     <string name="about_title">About &amp; Credits</string>
     <string name="maintainer">mubashardev</string>
     <string name="developer">Developed by Mubashar Dev</string>
