@@ -368,4 +368,10 @@
     <string name="stargazers_last_updated">"Última actualización: %1$s"</string>
     <string name="feat_status_style_title">Estilo de Estados e Historias</string>
     <string name="feat_status_style_desc">Personaliza el diseño de historias y estados con modelos nativos de WhatsApp</string>
+    <string name="status_style_default">Predeterminado</string>
+    <string name="status_style_vertical_rows">Filas verticales</string>
+    <string name="status_style_facebook_grid">Tarjetas de Facebook (cuadrícula)</string>
+    <string name="status_style_vertical_compact">Lista vertical (compacta)</string>
+    <string name="status_style_vertical_circle">Lista vertical (avatares circulares)</string>
+    <string name="status_style_vertical_square">Lista vertical (tarjetas cuadradas)</string>
 </resources>

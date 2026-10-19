@@ -369,4 +369,10 @@
     <string name="waex_l10n_builtin_match">"Suportado"</string>
     <string name="feat_status_style_title">Estilo dos Stories/Status</string>
     <string name="feat_status_style_desc">Personalize o estilo dos Stories e Status com modelos nativos do WhatsApp</string>
+    <string name="status_style_default">Padrão</string>
+    <string name="status_style_vertical_rows">Linhas verticais</string>
+    <string name="status_style_facebook_grid">Cartões do Facebook (grade)</string>
+    <string name="status_style_vertical_compact">Lista vertical (compacta)</string>
+    <string name="status_style_vertical_circle">Lista vertical (avatares circulares)</string>
+    <string name="status_style_vertical_square">Lista vertical (cartões quadrados)</string>
 </resources>
