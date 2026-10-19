@@ -21,7 +21,7 @@ data class WaexRadius(
 
     val smShape: RoundedCornerShape get() = RoundedCornerShape(sm)
     val defaultShape: RoundedCornerShape get() = RoundedCornerShape(default)
-    val buttonShape: RoundedCornerShape get() = RoundedCornerShape(full)
+    val buttonShape: RoundedCornerShape get() = RoundedCornerShape(button)
     val mdShape: RoundedCornerShape get() = RoundedCornerShape(md)
     val lgShape: RoundedCornerShape get() = RoundedCornerShape(lg)
     val cardShape: RoundedCornerShape get() = RoundedCornerShape(card)

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -573,15 +574,18 @@ fun MainDashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
+                        OutlinedButton(
+                            onClick = startBackup,
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(radius.buttonShape)
-                                .background(colors.surfaceDim)
-                                .border(1.dp, colors.outlineVariant, radius.buttonShape)
-                                .clickable(onClick = startBackup)
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                                .heightIn(min = 48.dp),
+                            shape = radius.buttonShape,
+                            border = BorderStroke(1.dp, colors.outlineVariant),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = colors.surfaceDim,
+                                contentColor = colors.onSurface
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = WaexIcons.Folder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(15.dp))
@@ -590,15 +594,18 @@ fun MainDashboardScreen(
                             }
                         }
 
-                        Box(
+                        OutlinedButton(
+                            onClick = startRestore,
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(radius.buttonShape)
-                                .background(colors.surfaceDim)
-                                .border(1.dp, colors.outlineVariant, radius.buttonShape)
-                                .clickable(onClick = startRestore)
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                                .heightIn(min = 48.dp),
+                            shape = radius.buttonShape,
+                            border = BorderStroke(1.dp, colors.outlineVariant),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = colors.surfaceDim,
+                                contentColor = colors.onSurface
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(imageVector = WaexIcons.Refresh, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(15.dp))
@@ -608,16 +615,20 @@ fun MainDashboardScreen(
                         }
                     }
 
-                    // Reset Settings Button under Backup & Restore
-                    Box(
+                    HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.65f))
+
+                    OutlinedButton(
+                        onClick = { showResetSettingsDialog = true },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(radius.buttonShape)
-                            .background(colors.surfaceDim)
-                            .border(1.dp, colors.outlineVariant, radius.buttonShape)
-                            .clickable { showResetSettingsDialog = true }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
+                            .heightIn(min = 48.dp),
+                        shape = radius.buttonShape,
+                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.55f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = colors.errorContainer.copy(alpha = 0.2f),
+                            contentColor = colors.error
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -1049,7 +1060,7 @@ private fun TargetCompatibilityBottomSheet(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .heightIn(min = 48.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1343,7 +1354,7 @@ private fun HmaDetailsBottomSheet(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .heightIn(min = 48.dp)
             ) {
                 Text(
                     text = stringResource(R.string.action_ok),
@@ -1524,7 +1535,7 @@ private fun DashboardDiagnosticsCard(
                 onClick = onViewDetails,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp),
+                    .heightIn(min = 48.dp),
                 shape = radius.buttonShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,

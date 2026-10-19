@@ -201,6 +201,8 @@ fun DesignSystemDashboard() {
 }
 
 @Preview(name = "Light Mode - Bento Dashboard", showBackground = true)
+@Preview(name = "Light Mode - 130% Font", showBackground = true, fontScale = 1.3f)
+@Preview(name = "Light Mode - 200% Font", showBackground = true, fontScale = 2f)
 @Composable
 fun LightDashboardPreview() {
     WaexTheme(darkTheme = false) {
@@ -232,13 +234,13 @@ fun TypographyAndColorsSpec() {
         Text(text = "Swiss Precision Typography Scaling", style = typography.headlineMd, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackMd))
 
-        Text(text = "displayLg (32sp, SemiBold)", style = typography.displayLg, color = colors.onSurface)
+        Text(text = "displayLg (26sp, Bold)", style = typography.displayLg, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackSm))
-        Text(text = "displayLgMobile (28sp, SemiBold)", style = typography.displayLgMobile, color = colors.onSurface)
+        Text(text = "displayLgMobile (22sp, Bold)", style = typography.displayLgMobile, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackSm))
-        Text(text = "headlineMd (20sp, SemiBold)", style = typography.headlineMd, color = colors.onSurface)
+        Text(text = "headlineMd (18sp, Bold)", style = typography.headlineMd, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackSm))
-        Text(text = "bodyLg (16sp, Normal)", style = typography.bodyLg, color = colors.onSurface)
+        Text(text = "bodyLg (15sp, Normal)", style = typography.bodyLg, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackSm))
         Text(text = "bodyMd (14sp, Normal)", style = typography.bodyMd, color = colors.onSurface)
         Spacer(modifier = Modifier.height(spacing.stackSm))
