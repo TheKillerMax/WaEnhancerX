@@ -188,6 +188,7 @@ jobs:
             qa/test_preference_type_audit.py \
             qa/test_provider_derived_keys.py \
             qa/test_backup_alias_policy.py \
+            qa/test_aosp_json_source_fetch.py \
             qa/test_settings_backup_binary_roundtrip.py \
             qa/test_settings_backup_json.py \
             qa/test_feature_preference_schema_coverage.py \
@@ -389,5 +390,67 @@ jobs:
         with:
           name: stability-framework-evidence
           path: ${{ runner.temp }}/waex-stability/*/evidence
+          retention-days: 14
+          if-no-files-found: error
+
+  preserved-vault-framework:
+    name: Preserved vault / Android SQLite upgrade compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require Kotlin and Maven for the complete production store
+        run: |
+          set -euo pipefail
+          kotlinc -version
+          mvn -version
+          test -f qa/fixtures/PreservedStoreCompatibilityTest.java
+      - name: Exercise versions 1, 2 and 3 without clearing the vault
+        run: python3 qa/android_preserved_store_test.py --out "$RUNNER_TEMP/waex-preserved-vault"
+      - name: Preserve source identities and Android SQLite results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preserved-vault-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-preserved-vault/*.json
+            ${{ runner.temp }}/waex-preserved-vault/*.log
+          retention-days: 14
+          if-no-files-found: error
+  ig-status-view-framework:
+    name: IG status / Android layout and refresh lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require the complete Android view fixture
+        run: |
+          set -euo pipefail
+          mvn -version
+          test -f qa/fixtures/IGStatusViewLifecycleTest.java
+      - name: Exercise collapsed rows, reattachment and refresh bursts
+        run: python3 qa/android_ig_status_view_test.py --out "$RUNNER_TEMP/waex-ig-status" --maven-repo "$RUNNER_TEMP/waex-ig-status-m2"
+      - name: Preserve source identities and Android layout results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ig-status-view-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-ig-status/*.json
+            ${{ runner.temp }}/waex-ig-status/*.log
           retention-days: 14
           if-no-files-found: error
