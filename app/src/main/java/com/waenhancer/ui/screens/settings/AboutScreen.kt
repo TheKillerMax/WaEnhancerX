@@ -1,6 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
 import com.waenhancer.utils.UiText
+import com.waenhancer.app.BuildConfig
 
 import android.content.Context
 import android.content.Intent
@@ -463,7 +464,39 @@ fun AboutScreen() {
                         letterSpacing = (-0.5).sp
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Module Version and Candidate Badge
+                    val isDebugCandidate = BuildConfig.DEBUG
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "v${BuildConfig.VERSION_NAME}",
+                            style = typography.bodyMd,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.onSurfaceVariant
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (isDebugCandidate) Color(0xFFF59E0B).copy(alpha = 0.15f) else colors.surfaceDim)
+                                .border(1.dp, if (isDebugCandidate) Color(0xFFF59E0B).copy(alpha = 0.35f) else colors.outlineVariant, CircleShape)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isDebugCandidate) stringResource(R.string.build_variant_debug) else stringResource(R.string.build_variant_release),
+                                style = typography.labelSm,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isDebugCandidate) Color(0xFFF59E0B) else colors.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Maintainer Pill Badge - mubashardev
                     Box(
