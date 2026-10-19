@@ -133,7 +133,7 @@ fun CallsHubScreen() {
 
     // Call Recording State
     var callRecordingEnabled by remember { mutableStateOf(prefManager.getBoolean("call_recording_enabled", false)) }
-    var useRootStream by remember { mutableStateOf(prefManager.getBoolean("call_recording_use_root", false)) }
+    var preferCallAudio by remember { mutableStateOf(prefManager.getBoolean("call_recording_use_root", false)) }
     var audioFormat by remember { mutableStateOf(prefManager.getString("call_recording_format", "m4a") ?: "m4a") }
 
     // Recordings list state
@@ -678,10 +678,10 @@ fun CallsHubScreen() {
                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
                                             listOf(
-                                                true to ("Direct Pipeline" to "Root / Direct"),
-                                                false to ("Microphone" to "Standard Mic")
-                                            ).forEach { (isRoot, labels) ->
-                                                val active = useRootStream == isRoot
+                                                true to ("Call audio" to "If supported"),
+                                                false to ("Standard audio" to "Communication / mic")
+                                            ).forEach { (preferCall, labels) ->
+                                                val active = preferCallAudio == preferCall
                                                 Box(
                                                     modifier = Modifier
                                                         .weight(1f)
@@ -693,8 +693,8 @@ fun CallsHubScreen() {
                                                             radius.defaultShape
                                                         )
                                                         .clickable {
-                                                            useRootStream = isRoot
-                                                            prefManager.putBoolean("call_recording_use_root", isRoot)
+                                                            preferCallAudio = preferCall
+                                                            prefManager.putBoolean("call_recording_use_root", preferCall)
                                                         }
                                                         .padding(vertical = 10.dp, horizontal = 12.dp),
                                                     contentAlignment = Alignment.Center

@@ -149,6 +149,10 @@ jobs:
           if grep -q 'release failed:' app/src/main/java/com/waenhancer/xposed/features/media/CallRecordingHook.java; then
             test -f qa/test_recorder_cleanup.py
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/media/CallRecordingEventContract.java ]]; then
+            test -f qa/test_call_recording_lifecycle.py
+            test -f qa/fixtures/CallRecordingLifecycleChecks.java
+          fi
 
       - name: Require regression tests for scoped export and identity changes
         shell: bash
@@ -227,6 +231,7 @@ jobs:
             qa/test_runtime_observation_clock.py \
             qa/test_filter_work.py \
             qa/test_recorder_cleanup.py \
+            qa/test_call_recording_lifecycle.py \
             qa/test_gallery_export.py \
             qa/test_contact_identity.py \
             qa/test_ig_status_loading.py \
