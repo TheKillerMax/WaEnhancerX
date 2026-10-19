@@ -51,17 +51,14 @@ public final class StatusStyleHook extends BaseFeature {
 
     @Override
     public void hook() throws Throwable {
-        String styleStr = prefs.getString("status_style", "1");
-        int style = 1;
+        String styleStr;
         try {
-            if (styleStr != null) {
-                style = Integer.parseInt(styleStr.trim());
-            }
-        } catch (NumberFormatException ignored) {
-            style = 1;
+            styleStr = prefs.getString("status_style", "1");
+        } catch (ClassCastException ignored) {
+            // A stale or imported value must not prevent the feature from loading.
+            styleStr = null;
         }
-
-        final int targetStyle = style;
+        final int targetStyle = parseStyle(styleStr);
 
         // Register overrides in central PropsOverrideHook
         PropsOverrideHook.INTEGERS.put(PROP_STATUS_STYLE_A, targetStyle);
@@ -76,12 +73,34 @@ public final class StatusStyleHook extends BaseFeature {
                 XposedBridge.hookMethod(statusStyleMethod, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
+                        if (param.hasThrowable() || !(param.getResult() instanceof Integer)) return;
                         param.setResult(targetStyle);
                     }
                 });
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Status style direct method hook skipped or failed: " + t.getMessage());
+        }
+    }
+
+    private static int parseStyle(String value) {
+        if (value == null) return 1;
+        try {
+            int style = Integer.parseInt(value.trim());
+            // Keep the same six values offered by the public STRING editor.
+            switch (style) {
+                case 0:
+                case 1:
+                case 3:
+                case 4:
+                case 5:
+                case 9:
+                    return style;
+                default:
+                    return 1;
+            }
+        } catch (NumberFormatException ignored) {
+            return 1;
         }
     }
 
