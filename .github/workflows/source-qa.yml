@@ -338,6 +338,37 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  ig-status-view-framework:
+    name: IG status / Android layout and refresh lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require the complete Android view fixture
+        run: |
+          set -euo pipefail
+          mvn -version
+          test -f qa/fixtures/IGStatusViewLifecycleTest.java
+      - name: Exercise collapsed rows, reattachment and refresh bursts
+        run: python3 qa/android_ig_status_view_test.py --out "$RUNNER_TEMP/waex-ig-status" --maven-repo "$RUNNER_TEMP/waex-ig-status-m2"
+      - name: Preserve source identities and Android layout results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ig-status-view-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-ig-status/*.json
+            ${{ runner.temp }}/waex-ig-status/*.log
+          retention-days: 14
+          if-no-files-found: error
+
   stability-framework:
     name: Stability / real Android Views and Compose runtime
     runs-on: ubuntu-24.04
@@ -389,36 +420,5 @@ jobs:
         with:
           name: stability-framework-evidence
           path: ${{ runner.temp }}/waex-stability/*/evidence
-          retention-days: 14
-          if-no-files-found: error
-
-  ig-status-view-framework:
-    name: IG status / Android layout and refresh lifecycle
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: false
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Require the complete Android view fixture
-        run: |
-          set -euo pipefail
-          mvn -version
-          test -f qa/fixtures/IGStatusViewLifecycleTest.java
-      - name: Exercise collapsed rows, reattachment and refresh bursts
-        run: python3 qa/android_ig_status_view_test.py --out "$RUNNER_TEMP/waex-ig-status" --maven-repo "$RUNNER_TEMP/waex-ig-status-m2"
-      - name: Preserve source identities and Android layout results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ig-status-view-framework-evidence
-          path: |
-            ${{ runner.temp }}/waex-ig-status/*.json
-            ${{ runner.temp }}/waex-ig-status/*.log
           retention-days: 14
           if-no-files-found: error
