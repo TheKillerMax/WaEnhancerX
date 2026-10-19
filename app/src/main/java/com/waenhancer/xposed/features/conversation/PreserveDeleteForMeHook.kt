@@ -491,7 +491,7 @@ class PreserveDeleteForMeHook(
         if (message == null) return null
         return try {
             val methodKey = message.javaClass.methods.firstOrNull {
-                it.name == "Atl" && it.parameterCount == 0
+                it.name == "Atl" && it.parameterTypes.isEmpty()
             }?.invoke(message)
             val key = methodKey ?: allInstanceFields(message.javaClass)
                 .filterNot { it.type.isPrimitive || it.type == String::class.java }
