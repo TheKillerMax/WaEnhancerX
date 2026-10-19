@@ -541,8 +541,10 @@ public class CallPrivacyHook extends BaseFeature {
     }
 
     private boolean shouldBlockCall(String callerJid) {
-        // 1. Check Per-Contact Privacy override first
-        JSONObject contactPrivacy = CustomPrivacyHook.getContactPrivacy(prefs, callerJid);
+        // Match both identities. Newer WhatsApp builds commonly deliver calls as
+        // @lid while an existing per-contact rule is stored under the phone JID.
+        String phoneJid = ContactNameResolver.INSTANCE.resolveLidToPhone(context, callerJid);
+        JSONObject contactPrivacy = findContactPrivacy(callerJid, phoneJid);
         if (contactPrivacy != null && contactPrivacy.optBoolean("BlockCall", false)) {
             return true;
         }
@@ -562,6 +564,14 @@ public class CallPrivacyHook extends BaseFeature {
         return false;
     }
 
+    private JSONObject findContactPrivacy(String rawJid, String phoneJid) {
+        JSONObject privacy = CustomPrivacyHook.getContactPrivacy(prefs, rawJid);
+        if (privacy == null && phoneJid != null && !phoneJid.equals(rawJid)) {
+            privacy = CustomPrivacyHook.getContactPrivacy(prefs, phoneJid);
+        }
+        return privacy;
+    }
+
     private boolean isUnknownCaller(String rawJid) {
         try {
             // Check if saved in wa_contacts in wa.db
@@ -575,6 +585,17 @@ public class CallPrivacyHook extends BaseFeature {
                         if (c != null && c.moveToFirst()) {
                             return false; // Known saved contact!
                         }
+                    }
+
+                    // New WhatsApp versions store saved contacts in wa_address_book,
+                    // frequently keyed by @lid rather than the legacy phone JID.
+                    String addressBookQuery = "SELECT 1 FROM wa_address_book "
+                            + "WHERE is_whatsapp_user = 1 AND (jid = ? OR jid = ?) LIMIT 1";
+                    try (Cursor c = db.rawQuery(addressBookQuery,
+                            new String[]{rawJid, phoneJid != null ? phoneJid : ""})) {
+                        if (c != null && c.moveToFirst()) return false;
+                    } catch (Throwable ignored) {
+                        // Older schemas do not have wa_address_book; wa_contacts remains valid.
                     }
                 }
             }

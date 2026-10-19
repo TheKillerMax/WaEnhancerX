@@ -47,7 +47,6 @@ public class AntiViewOnceHook extends BaseFeature {
             DexSearchEngine.getInstance().initialize(context);
             var bridge = DexSearchEngine.getInstance().getBridge();
             if (bridge == null) {
-                XposedBridge.log(TAG + " DexKitBridge is null, skipping AntiViewOnce search");
                 return;
             }
 

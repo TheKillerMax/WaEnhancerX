@@ -216,7 +216,6 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
         title.setOnLongClickListener(clicked -> openLongPressDestination(activity));
         title.setClickable(true);
         title.setOnClickListener(clicked -> handleArchiveTitleTap(activity));
-        XposedBridge.log(TAG + " Archive long press attached: " + resourceEntryName(title));
     }
 
     private synchronized void handleArchiveTitleTap(Activity activity) {

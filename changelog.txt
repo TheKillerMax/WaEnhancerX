@@ -3,6 +3,7 @@
 - Added support for switching between debug and release
 - Added HMA detection in diagnosis
 - Added interface size options in module settings to update the controls size
+- Added Status/Stories Style
 
 [Fixes]
 - Fixed missing texts or resources from category titles or descriptions
@@ -13,6 +14,7 @@
 - Fixed chat screen ui lags
 - Fixed version compatibility bug
 - Fixed Delete for me messages not saving + improvements
+- Fixed Disable Pinned chat limit
 
 [Improvements]
 - Improved Call recorder

@@ -109,7 +109,6 @@ public class HideChatsVaultHook extends BaseFeature {
             }
         });
 
-        XposedBridge.log(TAG + " Hook active; header resource id=" + lockedHeaderViewId);
     }
 
     private void hideIfLockedHeader(View view) {
@@ -121,7 +120,6 @@ public class HideChatsVaultHook extends BaseFeature {
         if (view.getVisibility() != View.GONE) {
             view.setVisibility(View.GONE);
         }
-        XposedBridge.log(TAG + " Hidden conversations_locked_header");
     }
 
     private boolean isLockedHeader(View view) {

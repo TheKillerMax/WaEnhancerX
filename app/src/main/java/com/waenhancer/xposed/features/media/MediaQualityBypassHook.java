@@ -49,9 +49,7 @@ public class MediaQualityBypassHook extends BaseFeature {
                     }
             );
 
-            if (imageQualityMethod != null && !HookReturnTypeGuard.firstParameterIsInteger(imageQualityMethod)) {
-                XposedBridge.log(TAG + " Skipping image-quality candidate without integer first parameter: " + imageQualityMethod);
-            } else if (imageQualityMethod != null) {
+            if (imageQualityMethod != null && HookReturnTypeGuard.firstParameterIsInteger(imageQualityMethod)) {
                 XposedBridge.hookMethod(imageQualityMethod, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
@@ -85,9 +83,7 @@ public class MediaQualityBypassHook extends BaseFeature {
                     }
             );
 
-            if (videoFpsMethod != null && !HookReturnTypeGuard.returnsInteger(videoFpsMethod)) {
-                XposedBridge.log(TAG + " Skipping video-FPS candidate without integer result: " + videoFpsMethod);
-            } else if (videoFpsMethod != null) {
+            if (videoFpsMethod != null && HookReturnTypeGuard.returnsInteger(videoFpsMethod)) {
                 XposedBridge.hookMethod(videoFpsMethod, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {

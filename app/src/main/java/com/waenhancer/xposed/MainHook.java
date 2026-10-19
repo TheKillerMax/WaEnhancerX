@@ -315,7 +315,6 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                                 com.waenhancer.xposed.core.VersionGuard.runtimeStatus(),
                                                 bridgeClient.getLastSyncSource(),
                                                 null);
-                                        XposedBridge.log("[WAEX] Feature initialization halted due to unverified WhatsApp version.");
                                     }
                                 } catch (Throwable t) {
                                     PreferenceBridgeClient bridge = sPreferenceBridge;

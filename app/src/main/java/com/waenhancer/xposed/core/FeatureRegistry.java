@@ -29,7 +29,9 @@ import com.waenhancer.xposed.features.customization.OnlinePresenceIndicatorsHook
 import com.waenhancer.xposed.features.customization.HideHomeTabsHook;
 import com.waenhancer.xposed.features.customization.IGStatusHook;
 import com.waenhancer.xposed.features.customization.NewSettingsStyleHook;
+import com.waenhancer.xposed.features.customization.PropsOverrideHook;
 import com.waenhancer.xposed.features.customization.SeparateGroupsHook;
+import com.waenhancer.xposed.features.customization.StatusStyleHook;
 import com.waenhancer.xposed.features.homescreen.ChatListCustomizationsHook;
 import com.waenhancer.xposed.features.homescreen.HomeScreenHeaderActionsHook;
 import com.waenhancer.xposed.features.media.CallRecordingHook;
@@ -225,6 +227,8 @@ public final class FeatureRegistry {
         addFeature(CssThemeHook.class, "Customization", () -> new CssThemeHook(context, classLoader, prefs));
         addFeature(HideHomeTabsHook.class, "Customization", () -> new HideHomeTabsHook(context, classLoader, prefs));
         addFeature(IGStatusHook.class, "Customization", () -> new IGStatusHook(context, classLoader, prefs));
+        addFeature(StatusStyleHook.class, "Customization", () -> new StatusStyleHook(context, classLoader, prefs));
+        addFeature(PropsOverrideHook.class, "Core", () -> new PropsOverrideHook(context, classLoader, prefs));
         addFeature(NewSettingsStyleHook.class, "Customization", () -> new NewSettingsStyleHook(context, classLoader, prefs));
         addFeature(OnlinePresenceIndicatorsHook.class, "Customization", () -> new OnlinePresenceIndicatorsHook(context, classLoader, prefs));
         addFeature(SeparateGroupsHook.class, "Customization", () -> new SeparateGroupsHook(context, classLoader, prefs));

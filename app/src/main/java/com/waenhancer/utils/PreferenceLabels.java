@@ -100,6 +100,7 @@ public final class PreferenceLabels {
             case "showonlinetext": return UiText.get(R.string.feat_showonlinetext_title, "Show Online/Last seen in Conversation List");
             case "stamp_copied_message": return UiText.get(R.string.feat_stamp_copied_message_title, "Remove Stamp from Copied Messages");
             case "status_downloader": return UiText.get(R.string.feat_status_downloader_title, "Download and Share Status");
+            case "status_style": return UiText.get(R.string.feat_status_style_title, "Stories & Status Style");
             case "status_text_composer": return UiText.get(R.string.feat_status_text_composer_title, "Custom colors for text status");
             case "status_video_splitter": return UiText.get(R.string.feat_status_video_splitter_title, "Status Video Splitter");
             case "stealth_status_view": return UiText.get(R.string.feat_stealth_status_view_title, "Hide Status View");

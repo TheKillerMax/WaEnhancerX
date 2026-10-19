@@ -118,8 +118,9 @@ public class TestReceiptExecutionContract {
 
  String extractJidString(Object obj,String key){Job j=(Job)obj;return key.equals("jid")?j.jid:j.participant;}
  boolean isStatusTarget(String a,String b){return "status@broadcast".equals(a)||"status@broadcast".equals(b);}
- static boolean hide=true;
+ static boolean hide=true, hideDelivery;
  boolean shouldHideStatusView(String target){return hide;}
+ boolean shouldHideDeliveryReceipt(String target){return hideDelivery;}
  enum StringMatchType {Equals,EndsWith}
  static class ClassMatcher {static ClassMatcher create(){return new ClassMatcher();} ClassMatcher className(String n,StringMatchType t){return this;}}
  static class FindClass {static FindClass create(){return new FindClass();} FindClass matcher(ClassMatcher m){return this;}}
@@ -169,7 +170,7 @@ public class TestReceiptExecutionContract {
  }
  static void setup(Method... candidates){
   Bridge.candidates=Arrays.asList(candidates);DexSearchEngine.cached=null;
-  XposedBridge.hooks.clear();XposedBridge.constructors=0;XposedHelpers.marks.clear();hide=true;
+  XposedBridge.hooks.clear();XposedBridge.constructors=0;XposedHelpers.marks.clear();hide=true;hideDelivery=false;
  }
  public static void main(String[] args)throws Throwable{
   TestReceiptExecutionContract hook=new TestReceiptExecutionContract();Method body=method("body");
@@ -192,6 +193,8 @@ public class TestReceiptExecutionContract {
   hide=false;invoke(job,body);check(job.ran==2,"Disabled status preference permits ordinary execution");
   XposedHelpers.marks.put(job,"notBoolean");job.jid="123@s.whatsapp.net";invoke(job,body);
   check(job.ran==3,"Unexpected mark type does not cause a cast failure");
+  hideDelivery=true;invoke(job,body);
+  check(job.ran==3,"Delivery-hidden chat job is cancelled at verified execution");
   check(!ReceiptJobExecutionPolicy.isExecutionCall(Job.class,body,method("onAdded"),job,new Object[0]),"Callback identity must match selected body");
   check(!ReceiptJobExecutionPolicy.isExecutionCall(Job.class,body,body,new Object(),new Object[0]),"Wrong receiver rejected");
   check(!ReceiptJobExecutionPolicy.isExecutionCall(Job.class,body,body,null,new Object[0]),"Null receiver rejected");

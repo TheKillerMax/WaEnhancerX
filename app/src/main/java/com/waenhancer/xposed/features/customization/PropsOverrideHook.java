@@ -1,0 +1,120 @@
+package com.waenhancer.xposed.features.customization;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import androidx.annotation.NonNull;
+import com.waenhancer.xposed.core.BaseFeature;
+import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.callbacks.XCallback;
+import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.enums.StringMatchType;
+import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.MethodData;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.concurrent.ConcurrentHashMap;
+
+/** Central, type-safe registry for WhatsApp MobileConfig/AB property overrides. */
+public final class PropsOverrideHook extends BaseFeature {
+    private static final String TAG = "[WAEX][PropsOverride]";
+
+    public static final ConcurrentHashMap<Integer, Boolean> BOOLEANS = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<Integer, Integer> INTEGERS = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<Integer, Float> FLOATS = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<Integer, String> STRINGS = new ConcurrentHashMap<>();
+
+    public PropsOverrideHook(@NonNull Context context, @NonNull ClassLoader classLoader,
+                             @NonNull SharedPreferences prefs) {
+        super(context, classLoader, prefs);
+    }
+
+    @NonNull @Override public String getName() { return "Props Override"; }
+    @NonNull @Override public String getCategory() { return "Core"; }
+
+    @Override
+    public void hook() {
+        Method booleanGetter = findFallbackGetter("wpp_props_boolean_method", "Unknown BooleanField");
+        Method integerGetter = findFallbackGetter("wpp_props_integer_method", "Unknown IntField");
+        Method resolver = findCentralResolver(booleanGetter);
+        if (resolver != null) {
+            hookPropertyMethod(resolver);
+            return;
+        }
+        XposedBridge.log(TAG + " Central resolver unavailable; installing fallback getters");
+        hookPropertyMethod(booleanGetter);
+        hookPropertyMethod(integerGetter);
+    }
+
+    private Method findFallbackGetter(String cacheKey, String anchor) {
+        try {
+            return DexSearchEngine.getInstance().findMethodWithCache(
+                    context, classLoader, cacheKey, (bridge, loader) -> {
+                        MethodData method = bridge.findMethod(FindMethod.create()
+                                .matcher(MethodMatcher.create().addUsingString(
+                                        anchor, StringMatchType.Contains))).firstOrNull();
+                        return method != null && method.isMethod()
+                                ? method.getMethodInstance(loader) : null;
+                    });
+        } catch (Throwable error) {
+            XposedBridge.log(TAG + " Getter unavailable for " + anchor + ": "
+                    + error.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private static Method findCentralResolver(Method fallbackGetter) {
+        if (fallbackGetter == null) return null;
+        Method selected = null;
+        Class<?> propsClass = fallbackGetter.getDeclaringClass();
+        for (Method candidate : propsClass.getDeclaredMethods()) {
+            Class<?>[] types = candidate.getParameterTypes();
+            if (!Modifier.isStatic(candidate.getModifiers())
+                    || candidate.getReturnType() != Object.class
+                    || types.length < 4
+                    || types[1] != propsClass
+                    || types[types.length - 2] != int.class
+                    || types[types.length - 1] != boolean.class) continue;
+            if (selected != null) return null; // Ambiguous host contract: use safe fallbacks.
+            selected = candidate;
+        }
+        return selected;
+    }
+
+    private static void hookPropertyMethod(Method method) {
+        if (method == null) return;
+        final int idIndex = lastPrimitiveIntParameter(method);
+        if (idIndex < 0) return;
+        XposedBridge.hookMethod(method, new XC_MethodHook(XCallback.PRIORITY_HIGHEST) {
+            @Override protected void afterHookedMethod(MethodHookParam param) {
+                if (param.args == null || idIndex >= param.args.length
+                        || !(param.args[idIndex] instanceof Integer)) return;
+                Object override = resolveOverride((Integer) param.args[idIndex], param.getResult());
+                if (override != null) param.setResult(override);
+            }
+        });
+    }
+
+    private static int lastPrimitiveIntParameter(Method method) {
+        Class<?>[] types = method.getParameterTypes();
+        for (int index = types.length - 1; index >= 0; index--) {
+            if (types[index] == int.class) return index;
+        }
+        return -1;
+    }
+
+    static Object resolveOverride(int id, Object original) {
+        if (original instanceof Boolean) return BOOLEANS.get(id);
+        if (original instanceof Integer) return INTEGERS.get(id);
+        if (original instanceof Float) return FLOATS.get(id);
+        if (original instanceof String) return STRINGS.get(id);
+        if (original != null) return null;
+        Object value = BOOLEANS.get(id);
+        if (value == null) value = INTEGERS.get(id);
+        if (value == null) value = FLOATS.get(id);
+        if (value == null) value = STRINGS.get(id);
+        return value;
+    }
+}

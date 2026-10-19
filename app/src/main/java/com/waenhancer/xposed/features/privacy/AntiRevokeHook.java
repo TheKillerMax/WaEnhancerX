@@ -1122,7 +1122,6 @@ public class AntiRevokeHook extends BaseFeature {
                     uiHandler.postDelayed(() -> tryDecorateStatusFragment(fragment), 250);
                 }
             });
-            XposedBridge.log(TAG + " AndroidX Fragment.onResume status fallback hook installed.");
         } catch (Throwable t) {
             XposedBridge.log(TAG + " AndroidX Fragment.onResume hook failed: " + t.getClass().getSimpleName());
         }
@@ -1518,7 +1517,6 @@ public class AntiRevokeHook extends BaseFeature {
                     try {
                         View r = extractFragmentRootView(fragment);
                         if (r != null) doApplyStatusDecoration(r, keyId, ts);
-                        else XposedBridge.log(TAG + " Status root view still null after delay");
                     } catch (Throwable ignored) {}
                 }, 350);
                 return;
@@ -1535,7 +1533,6 @@ public class AntiRevokeHook extends BaseFeature {
 
         TextView target = findStatusTimestampTextView((ViewGroup) root, ctx);
         if (target == null) {
-            XposedBridge.log(TAG + " No timestamp TextView in status view");
             return;
         }
         decorateRevokedStatusTextView(target, ts);

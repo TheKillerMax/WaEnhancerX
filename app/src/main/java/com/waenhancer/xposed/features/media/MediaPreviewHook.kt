@@ -1542,7 +1542,6 @@ class MediaPreviewHook(
                 if (executor.isShutdown || executor.isTerminated) {
                     executor = createPreviewExecutor()
                     previewExecutor = executor
-                    XposedBridge.log("[WAEX][MediaPreview] Recreated terminated preview executor")
                 }
                 return executor
             }

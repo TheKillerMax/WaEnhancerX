@@ -62,7 +62,6 @@ public final class DexCacheManager {
             long cachedHostVersion = mPrefs.getLong("host_version_code", -1);
 
             if (cachedHostVersion != hostVersionCode) {
-                XposedBridge.log("[WAEX] Host version changed (" + cachedHostVersion + " -> " + hostVersionCode + "). Invalidating Dex cache.");
                 mPrefs.edit().clear().putLong("host_version_code", hostVersionCode).apply();
                 mMemoryCache.clear();
                 mFailedKeys.clear();

@@ -106,9 +106,9 @@ fun StylesSettingsScreen() {
             "unlock_premium_customization", "custom_filters",
             "dotonline", "showonlinetext", "typing_online_toasts",
             "metaai", "channels_enhancements", "chat_filters", "hide_ui_tabs",
-            "instagram_status_layout", "separate_groups_tabs", "quick_home_menu",
+            "instagram_status_layout", "status_style", "separate_groups_tabs", "quick_home_menu",
             "contact_blocked_verify",
-            "send_audio_as_voice_status", "disable_sensor_proximity"
+            "disable_sensor_proximity"
         )
     }
 
@@ -125,9 +125,7 @@ fun StylesSettingsScreen() {
                         preferenceManager.getString("seentick", "0")
                     ))
                 } else {
-                    val defaultValue = if (key == "send_audio_as_voice_status") {
-                        preferenceManager.getBoolean("voice_status_enhancement", false)
-                    } else false
+                    val defaultValue = false
                     val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
                     val legacyDefault = if (canonicalKey == key) defaultValue
                         else preferenceManager.getBoolean(key, defaultValue)
@@ -151,12 +149,7 @@ fun StylesSettingsScreen() {
             return@update
         }
         val canonicalKey = StyleBooleanAliasPolicy.canonicalKey(key)
-        val changes = if (key == "send_audio_as_voice_status") {
-            // Persist the visible setting and its linked hook key atomically.
-            mapOf(canonicalKey to value, "voice_status_enhancement" to value)
-        } else {
-            mapOf(canonicalKey to value)
-        }
+        val changes = mapOf(canonicalKey to value)
         if (preferenceManager.putBooleans(changes)) {
             settingsState[key] = preferenceManager.getBoolean(canonicalKey, value)
         } else {
@@ -509,6 +502,20 @@ private fun TypedStyleEditorDialog(
             ),
             onDismiss = onDismiss,
             onSave = { completeSave(preferenceManager.putPublicStringSet("hidetabs", it)) }
+        )
+        "status_style" -> ChoiceValueEditorDialog(
+            title = UiText.get(R.string.feat_status_style_title, "Stories & Status Style"),
+            selectedValue = preferenceManager.getString("status_style", "1") ?: "1",
+            choices = listOf(
+                "1" to UiText.get(R.string.status_style_default, "Default"),
+                "0" to UiText.get(R.string.status_style_vertical_rows, "Vertical Rows"),
+                "5" to UiText.get(R.string.status_style_facebook_grid, "Facebook Cards (Grid)"),
+                "4" to UiText.get(R.string.status_style_vertical_compact, "Vertical List (Compact)"),
+                "3" to UiText.get(R.string.status_style_vertical_circle, "Vertical List (Circular Avatars)"),
+                "9" to UiText.get(R.string.status_style_vertical_square, "Vertical List (Square Cards)")
+            ),
+            onDismiss = onDismiss,
+            onSave = { completeSave(preferenceManager.putPublicString("status_style", it)) }
         )
         else -> onDismiss()
     }
@@ -877,6 +884,14 @@ private fun typedStyleSummary(
     "chat_filters" -> when (preferenceManager.getString("chatfilter", "2")) { "0" -> UiText.get(R.string.waex_ui_search_hidden_7723b9b3, "Search hidden"); "1" -> UiText.get(R.string.waex_ui_search_icon_edfdb08d, "Search icon"); else -> UiText.get(R.string.waex_ui_search_bar_de54d68f, "Search bar") }
     "hide_ui_tabs" -> preferenceManager.getStringSet("hidetabs", emptySet())?.let { if (it.isEmpty()) UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden") else UiText.get(R.string.waex_ui_1_s_hidden_416c73f0, "%1\$s hidden", it.size) } ?: UiText.get(R.string.waex_ui_no_tabs_hidden_eb0aba28, "No tabs hidden")
     "quick_home_menu" -> when (preferenceManager.getString("waex_menu_style", "grouped")) { "separate" -> UiText.get(R.string.waex_ui_separate_items_7f91460e, "Separate items"); "icons" -> UiText.get(R.string.waex_ui_toolbar_icons_12004bba, "Toolbar icons"); else -> UiText.get(R.string.waex_ui_grouped_89731456, "Grouped") }
+    "status_style" -> when (preferenceManager.getString("status_style", "1")) {
+        "0" -> UiText.get(R.string.status_style_vertical_rows, "Vertical Rows")
+        "5" -> UiText.get(R.string.status_style_facebook_grid, "Facebook Cards (Grid)")
+        "4" -> UiText.get(R.string.status_style_vertical_compact, "Vertical List (Compact)")
+        "3" -> UiText.get(R.string.status_style_vertical_circle, "Vertical List (Circular Avatars)")
+        "9" -> UiText.get(R.string.status_style_vertical_square, "Vertical List (Square Cards)")
+        else -> UiText.get(R.string.status_style_default, "Default")
+    }
     else -> UiText.get(R.string.waex_ui_configure_6defafa2, "Configure")
 }
 

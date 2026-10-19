@@ -74,4 +74,22 @@
         <item>2.26.37.xx</item>
         <item>2.26.36.xx</item>
     </string-array>
+
+    <string-array name="status_style_entries">
+        <item>@string/status_style_default</item>
+        <item>@string/status_style_vertical_rows</item>
+        <item>@string/status_style_facebook_grid</item>
+        <item>@string/status_style_vertical_compact</item>
+        <item>@string/status_style_vertical_circle</item>
+        <item>@string/status_style_vertical_square</item>
+    </string-array>
+
+    <string-array name="status_style_values">
+        <item>1</item>
+        <item>0</item>
+        <item>5</item>
+        <item>4</item>
+        <item>3</item>
+        <item>9</item>
+    </string-array>
 </resources>

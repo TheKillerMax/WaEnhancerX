@@ -187,8 +187,6 @@ public class BlueOnReplyHook extends BaseFeature {
         }
         constructor.setAccessible(true);
         PENDING_JOBS.add(key, new ReadJobRecipe(constructor, copy));
-        XposedBridge.log(TAG + " Captured hidden read job (pending="
-                + PENDING_JOBS.pendingCount(key) + ")");
     }
 
     private static Object getOrFindJobManager() {
@@ -230,7 +228,6 @@ public class BlueOnReplyHook extends BaseFeature {
         // their queued read receipts belong to the same recipient.
         List<ReadJobRecipe> pending = PENDING_JOBS.drain(key);
         if (pending.isEmpty()) {
-            XposedBridge.log(TAG + " No captured read jobs for reply");
             return 0;
         }
 
@@ -243,7 +240,6 @@ public class BlueOnReplyHook extends BaseFeature {
                 XposedHelpers.setAdditionalInstanceField(job, "blue_on_reply", true);
                 enqueue.invoke(manager, job);
                 sent++;
-                XposedBridge.log(TAG + " Enqueued blue-on-reply receipt");
             } catch (Throwable t) {
                 // Constructor or dispatch failure must not leave a stale permission.
                 HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments);
@@ -322,7 +318,6 @@ public class BlueOnReplyHook extends BaseFeature {
             for (Method menuMethod : menuMethods) {
                 menuMethod.setAccessible(true);
                 XposedBridge.hookMethod(menuMethod, menuHook);
-                XposedBridge.log(TAG + " Hooked Conversation menu method: " + menuMethod);
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + " Error adding conversation blue-tick menu: " + t.getClass().getSimpleName());

@@ -170,7 +170,6 @@ public class HideReceiptsHook extends BaseFeature {
                             // path may combine delivery and read acknowledgement generation. The
                             // ProtocolTreeNode hook below downgrades only type=read, preserving the
                             // sender's ordinary delivered (double-tick) acknowledgement.
-                            XposedBridge.log(TAG + " EnforceHiding: Downgrading read receipt");
                         }
                     }
                 });
@@ -264,7 +263,12 @@ public class HideReceiptsHook extends BaseFeature {
                             String target = participant != null && !participant.contains("@broadcast")
                                     ? participant : jid;
                             if (shouldHideStatusView(target)) param.setResult(null);
+                            return;
                         }
+                        // Never rewrite dispatcher type 89: SendReadReceiptJob waits for its
+                        // acknowledgement. Cancel its verified execution body instead.
+                        String target = resolveConversationTarget(jid, participant);
+                        if (shouldHideDeliveryReceipt(target)) param.setResult(null);
                     }
                 });
             }
@@ -448,7 +452,11 @@ public class HideReceiptsHook extends BaseFeature {
     }
 
     /**
-     * Hook onDispatchMessage (type 419 / 89) for delivery/read suppression.
+     * Hook onDispatchMessage for delivery/read suppression.
+     *
+     * Type 89 belongs to SendReadReceiptJob. Rewriting it prevents the job's
+     * acknowledgement future from completing and can stall WhatsApp's job queue.
+     * Job suppression must happen in the verified execution hook above instead.
      */
     private void hookOnDispatchMessage() {
         try {
@@ -477,10 +485,8 @@ public class HideReceiptsHook extends BaseFeature {
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (param.args.length > 0 && param.args[0] instanceof Message) {
                             Message msg = (Message) param.args[0];
-                            if (isHideDeliveryReceiptsEnabled()) {
-                                if (msg.arg1 == 419 || msg.arg1 == 89) {
-                                    msg.arg1 = -1; // Change/cancel type
-                                }
+                            if (isHideDeliveryReceiptsEnabled() && msg.arg1 == 419) {
+                                msg.arg1 = -1; // Cancel only the ordinary receipt dispatcher.
                             }
                         }
                     }

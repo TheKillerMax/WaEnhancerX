@@ -20,12 +20,22 @@ object UniversalVersionValidator {
         PREFERENCES_UNAVAILABLE(false)
     }
 
+    private val STATIC_BUILTIN_RULES = listOf(
+        "2.26.42.xx",
+        "2.26.41.xx",
+        "2.26.40.xx",
+        "2.26.39.xx",
+        "2.26.38.xx",
+        "2.26.37.xx",
+        "2.26.36.xx"
+    )
+
     /**
      * Read only the module's version-rule array. Numeric resource IDs are local
      * to a resource table, so a host or unrelated array must never supply rules.
      */
     private fun readBuiltinRules(context: Context?): List<String>? {
-        if (context == null) return null
+        if (context == null) return STATIC_BUILTIN_RULES
         return try {
             val moduleContext = if (context.packageName == MODULE_PACKAGE) {
                 context
@@ -35,22 +45,21 @@ object UniversalVersionValidator {
                     Context.CONTEXT_IGNORE_SECURITY
                 )
             }
-            if (moduleContext.packageName != MODULE_PACKAGE) return null
+            if (moduleContext.packageName != MODULE_PACKAGE) {
+                return STATIC_BUILTIN_RULES
+            }
             val resources = moduleContext.resources
-            // Resource access does not require loading the module's code in the host.
-            // The static fallback also keeps the array reachable in optimized builds.
             val id = resources.getIdentifier("universal_supported_versions", "array", MODULE_PACKAGE)
                 .takeIf { it != 0 } ?: R.array.universal_supported_versions
-            if (resources.getResourceName(id) != "$MODULE_PACKAGE:array/universal_supported_versions") return null
+            val resName = try { resources.getResourceName(id) } catch (_: Throwable) { null }
+            if (resName != "$MODULE_PACKAGE:array/universal_supported_versions") {
+                return STATIC_BUILTIN_RULES
+            }
             val rules = resources.getStringArray(id).map { it.trim() }
             val syntax = Regex("[0-9]+(?:\\.[0-9]+)+(?:\\.(?:xx|\\*))?", RegexOption.IGNORE_CASE)
-            rules.takeIf { it.isNotEmpty() && it.all(syntax::matches) }
-        } catch (_: RuntimeException) {
-            null
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
-        } catch (_: LinkageError) {
-            null
+            rules.takeIf { it.isNotEmpty() && it.all(syntax::matches) } ?: STATIC_BUILTIN_RULES
+        } catch (_: Throwable) {
+            STATIC_BUILTIN_RULES
         }
     }
 

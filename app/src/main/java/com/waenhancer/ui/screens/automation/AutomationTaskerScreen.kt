@@ -134,7 +134,6 @@ fun AutomationTaskerScreen() {
     val preferenceManager = LocalWaexPreferenceManager.current
 
     // Automation states
-    var alwaysTypingEnabled by remember { mutableStateOf(preferenceManager.getBoolean("always_typing", preferenceManager.getBoolean("ghostmode_t", false))) }
     var taskerIntegrationEnabled by remember { mutableStateOf(preferenceManager.getBoolean("tasker_integration", false)) }
 
     // Audio & AI states
@@ -233,11 +232,6 @@ fun AutomationTaskerScreen() {
         if (selectedTab == "automation") {
             // Automation Cards
             val cards = listOf(
-                AutomationCardData("always_typing", WaexIcons.Lock, alwaysTypingEnabled, FeatureCatalog.findByKey("always_typing")?.isPro ?: false) {
-                    alwaysTypingEnabled = it
-                    preferenceManager.putBoolean("always_typing", it)
-                    preferenceManager.putBoolean("ghostmode_t", it)
-                },
                 AutomationCardData("tasker_integration", WaexIcons.AutoAwesome, taskerIntegrationEnabled, FeatureCatalog.findByKey("tasker_integration")?.isPro ?: false) {
                     taskerIntegrationEnabled = it
                     preferenceManager.putBoolean("tasker_integration", it)

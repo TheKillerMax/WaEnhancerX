@@ -390,27 +390,59 @@ object HmaDiagnostics {
                     }
                 }
 
-                // Write modified JSON using base64 pipeline directly into config file
+                // Keep a recoverable copy before replacing HMA's live configuration.
+                val quotedConfig = shellQuote(configPath)
+                val backupConfig = "$configPath.waex.bak"
+                val quotedBackup = shellQuote(backupConfig)
+                val backupResult = AppRestartHelper.runRootCommand(
+                    "cp -p $quotedConfig $quotedBackup 2>/dev/null && " +
+                            "(restorecon $quotedBackup 2>/dev/null || true) && " +
+                            "echo WAEX_HMA_BACKUP_OK"
+                )
+                if (backupResult?.contains("WAEX_HMA_BACKUP_OK") != true) continue
+
+                // Write modified JSON using a temporary file, preserving owner and SELinux context.
                 val b64 = android.util.Base64.encodeToString(
                     root.toString().toByteArray(Charsets.UTF_8),
                     android.util.Base64.NO_WRAP
                 )
                 val tmpConfig = "$configPath.tmp"
+                val quotedTmp = shellQuote(tmpConfig)
 
-                // Preserve original owner/group and SELinux label
-                val writeScript = "OWNER=\$(stat -c '%u:%g' $configPath 2>/dev/null); " +
-                        "echo '$b64' | base64 -d > $tmpConfig && " +
-                        "[ -n \"\$OWNER\" ] && chown \$OWNER $tmpConfig 2>/dev/null; " +
-                        "chmod 600 $tmpConfig 2>/dev/null; " +
-                        "restorecon $tmpConfig 2>/dev/null; " +
-                        "mv -f $tmpConfig $configPath && " +
-                        "[ -n \"\$OWNER\" ] && chown \$OWNER $configPath 2>/dev/null; " +
-                        "chmod 600 $configPath 2>/dev/null; " +
-                        "restorecon $configPath 2>/dev/null; true"
+                val writeScript = "OWNER=\$(stat -c '%u:%g' $quotedConfig 2>/dev/null); " +
+                        "echo '$b64' | base64 -d > $quotedTmp && " +
+                        "([ -z \"\$OWNER\" ] || chown \$OWNER $quotedTmp 2>/dev/null) && " +
+                        "chmod 600 $quotedTmp 2>/dev/null && " +
+                        "(restorecon $quotedTmp 2>/dev/null || true) && " +
+                        "mv -f $quotedTmp $quotedConfig && " +
+                        "([ -z \"\$OWNER\" ] || chown \$OWNER $quotedConfig 2>/dev/null) && " +
+                        "chmod 600 $quotedConfig 2>/dev/null && " +
+                        "(restorecon $quotedConfig 2>/dev/null || true) && " +
+                        "echo WAEX_HMA_WRITE_OK"
 
                 val writeResult = AppRestartHelper.runRootCommand(writeScript)
-                if (writeResult != null) {
+                val verifiedJson = if (writeResult?.contains("WAEX_HMA_WRITE_OK") == true) {
+                    AppRestartHelper.runRootCommand("cat $quotedConfig 2>/dev/null")
+                } else null
+                val verified = try {
+                    val parsed = JSONObject(verifiedJson ?: "")
+                    val verifiedScope = parsed.optJSONObject("scope")?.optJSONObject(targetPackage)
+                    val verifiedTemplates = parsed.optJSONObject("templates") ?: JSONObject()
+                    verifiedScope != null && checkScopeBlockReason(
+                        verifiedScope, verifiedTemplates, moduleSignatures
+                    ) == null
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (verified) {
                     anySuccess = true
+                } else {
+                    // A failed/partial write must never strand the user with a broken HMA config.
+                    AppRestartHelper.runRootCommand(
+                        "cp -p $quotedBackup $quotedConfig 2>/dev/null && " +
+                                "restorecon $quotedConfig 2>/dev/null; true"
+                    )
                 }
             } catch (_: Exception) {}
         }
@@ -515,4 +547,6 @@ object HmaDiagnostics {
         }
         return set
     }
+
+    private fun shellQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
 }

@@ -101,14 +101,12 @@ class HideForwardedTagHook(
             }
 
             if (forwardMethod != null) {
-                XposedBridge.log("[WAEX][HideForwardedTag] Hooked forwardMethod: " + forwardMethod.declaringClass.name + "." + forwardMethod.name + ", forwardClasses: " + forwardClasses.map { it.name })
                 XposedBridge.hookMethod(forwardMethod, object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (!isFeatureEnabled()) return
                         val arg = param.args[0]
                         if (arg is Number && arg.toLong() > 0) {
                             val calledFromForward = forwardClasses.isEmpty() || isCalledFromAnyClass(forwardClasses)
-                            XposedBridge.log("[WAEX][HideForwardedTag] Intercepted setForwardScore(arg=$arg), calledFromForward=$calledFromForward")
                             if (calledFromForward) {
                                 if (arg is Int) {
                                     param.args[0] = 0
@@ -119,8 +117,6 @@ class HideForwardedTagHook(
                         }
                     }
                 })
-            } else {
-                XposedBridge.log("[WAEX][HideForwardedTag] forwardMethod not found via DexSearchEngine")
             }
         } catch (t: Throwable) {
             XposedBridge.log("[WAEX] Error hooking forward score setter: ${t.message}")

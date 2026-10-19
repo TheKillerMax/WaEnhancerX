@@ -74,7 +74,6 @@ object VersionGuard {
                 return true
             }
             sCurrentVersion = currentVersion.ifBlank { "unknown" }
-            XposedBridge.log("$TAG Compatibility decision: ${decision.name}. Pausing features.")
 
             return false
         } catch (t: Throwable) {
@@ -86,7 +85,6 @@ object VersionGuard {
     @JvmStatic
     fun onTargetActivityResumed(activity: Activity) {
         val prefs = sPrefs ?: run {
-            XposedBridge.log("$TAG onTargetActivityResumed: sPrefs is null")
             return
         }
         val currentVersion = sCurrentVersion.ifEmpty {
@@ -107,7 +105,6 @@ object VersionGuard {
             return
         }
 
-        XposedBridge.log("$TAG Posting showUnsupportedBottomSheetOnce for $currentVersion on ${activity.javaClass.name}")
 
         val generation = decisionGeneration.get()
         val decision = sDecision

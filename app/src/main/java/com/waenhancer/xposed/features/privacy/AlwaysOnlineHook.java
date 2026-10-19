@@ -49,7 +49,6 @@ public class AlwaysOnlineHook extends BaseFeature {
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (isEnabled(PREF_KEY, false)) {
                         param.setResult(null); // Prevent transition to unavailable
-                        XposedBridge.log(TAG + " Suppressed transition to unavailable state.");
                     }
                 }
             });

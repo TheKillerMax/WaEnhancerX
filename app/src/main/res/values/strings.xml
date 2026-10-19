@@ -374,4 +374,13 @@
     <string name="dep_disabled_hide_blue_ticks">(Disabled: Turn on \"Hide Blue Ticks\" first)</string>
     <string name="title_call_configurations">Call Configurations</string>
     <string name="title_call_recordings">Recordings</string>
+
+    <string name="feat_status_style_title">Stories &amp; Status Style</string>
+    <string name="feat_status_style_desc">Customize WhatsApp Stories and Status layout with native UI variants</string>
+    <string name="status_style_default">Default</string>
+    <string name="status_style_vertical_rows">Vertical Rows</string>
+    <string name="status_style_facebook_grid">Facebook Cards (Grid)</string>
+    <string name="status_style_vertical_compact">Vertical List (Compact)</string>
+    <string name="status_style_vertical_circle">Vertical List (Circular Avatars)</string>
+    <string name="status_style_vertical_square">Vertical List (Square Cards)</string>
 </resources>

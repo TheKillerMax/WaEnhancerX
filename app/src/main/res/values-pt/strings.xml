@@ -367,4 +367,6 @@
     <string name="diag_target_sheet_injected_badge">Injetado</string>
     <string name="diag_target_sheet_section_targets">Alvos instalados</string>
     <string name="waex_l10n_builtin_match">"Suportado"</string>
+    <string name="feat_status_style_title">Estilo dos Stories/Status</string>
+    <string name="feat_status_style_desc">Personalize o estilo dos Stories e Status com modelos nativos do WhatsApp</string>
 </resources>

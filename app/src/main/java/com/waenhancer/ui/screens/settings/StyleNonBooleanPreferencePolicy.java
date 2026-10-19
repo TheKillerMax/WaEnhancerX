@@ -17,6 +17,7 @@ public final class StyleNonBooleanPreferencePolicy {
             case "custom_view_dpi":
             case "chat_filters":
             case "quick_home_menu":
+            case "status_style":
                 return Kind.STRING;
             case "hide_ui_tabs":
                 return Kind.STRING_SET;

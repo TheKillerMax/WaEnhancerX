@@ -88,15 +88,6 @@
     ]
   },
   {
-    "id": "advanced_rules_filtering",
-    "tabIndex": 1,
-    "subTabId": "privacy",
-    "tabId": "privacy",
-    "keys": [
-      "call_privacy"
-    ]
-  },
-  {
     "id": "message_controls",
     "tabIndex": 1,
     "subTabId": "conversation",
@@ -178,7 +169,6 @@
     "subTabId": "automation",
     "tabId": "automation",
     "keys": [
-      "always_typing",
       "tasker_integration"
     ]
   },
@@ -233,6 +223,7 @@
       "chat_filters",
       "hide_ui_tabs",
       "instagram_status_layout",
+      "status_style",
       "separate_groups_tabs",
       "quick_home_menu"
     ]
@@ -244,7 +235,6 @@
     "tabId": "styles",
     "keys": [
       "contact_blocked_verify",
-      "send_audio_as_voice_status",
       "disable_sensor_proximity"
     ]
   },
