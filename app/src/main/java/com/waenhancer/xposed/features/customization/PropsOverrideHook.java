@@ -89,6 +89,7 @@ public final class PropsOverrideHook extends BaseFeature {
         if (idIndex < 0) return;
         XposedBridge.hookMethod(method, new XC_MethodHook(XCallback.PRIORITY_HIGHEST) {
             @Override protected void afterHookedMethod(MethodHookParam param) {
+                if (param.hasThrowable()) return;
                 if (param.args == null || idIndex >= param.args.length
                         || !(param.args[idIndex] instanceof Integer)) return;
                 Object override = resolveOverride((Integer) param.args[idIndex], param.getResult());
