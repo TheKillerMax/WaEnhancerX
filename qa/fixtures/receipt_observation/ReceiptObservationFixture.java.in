@@ -258,7 +258,7 @@ public class ReceiptObservationFixture {
     static final class ReceiptToastText {
         String format(ReceiptObservationPolicy.Kind kind, String name) {
             check("worker".equals(phase), "Text/resources prepared off UI thread");
-            return "Read receipt from " + name + (kind == ReceiptObservationPolicy.Kind.STATUS ? " for your status" : " for your message");
+            return name + (kind == ReceiptObservationPolicy.Kind.STATUS ? " just viewed your status" : " just read your message");
         }
     }
     static final class SystemClock { static long now = 10_000L; static long elapsedRealtime() { return now; } }
@@ -309,7 +309,7 @@ public class ReceiptObservationFixture {
         check(p.args[0] == input && input.get(0) == good && p.result instanceof List && store.calls == 1, "Original arguments/result and host call preserved");
         check(Toast.shown.isEmpty() && f.asyncExecutor.queue.size() == 1, "After callback queues, never resolves a name synchronously");
         f.deliver();
-        check(Toast.shown.equals(List.of("Read receipt from 10@lid for your message")), "Both switches cannot relabel message as status");
+        check(Toast.shown.equals(List.of("10@lid just read your message")), "Both switches cannot relabel message as status");
         check(READ_OBSERVATIONS.sizeForTests() == 1 && READ_OBSERVATIONS.pendingForTests() == 0, "Observation becomes delivered only after UI request");
 
         for (int type : new int[]{5, 8, 0, -1, 17, Integer.MAX_VALUE}) {
@@ -352,7 +352,7 @@ public class ReceiptObservationFixture {
 
         f = fresh(); StatusItem status = new StatusItem(new Key("status-a", true, "status@broadcast"));
         invoke(new Store(), "status", new UserJid("60@lid"), status, 13, 123L); f.deliver();
-        check(Toast.shown.equals(List.of("Read receipt from 60@lid for your status")), "Typed normal status receipt has explicit observed-receipt text");
+        check(Toast.shown.equals(List.of("60@lid just viewed your status")), "Typed normal status receipt has explicit observed-receipt text");
         for (int type : new int[]{5, 8, 17, -1}) {
             f = fresh(); invoke(new Store(), "status", new UserJid("60@lid"), status, type, 123L); f.deliver();
             check(Toast.shown.isEmpty(), "Status delivery/non-read type cannot announce read");

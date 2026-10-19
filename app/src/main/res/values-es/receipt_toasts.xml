@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="receipt_observed_message">Se recibió la confirmación de lectura de %1$s para tu mensaje</string>
-    <string name="receipt_observed_status">Se recibió la confirmación de lectura de %1$s para tu estado</string>
+    <string name="receipt_observed_message">%1$s acaba de leer tu mensaje</string>
+    <string name="receipt_observed_status">%1$s acaba de ver tu estado</string>
 </resources>

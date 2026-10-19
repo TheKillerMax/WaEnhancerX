@@ -36,7 +36,7 @@ final class ReceiptToastText {
         } catch (PackageManager.NameNotFoundException | Resources.NotFoundException | SecurityException unavailable) {
             // Missing resources and foreign numeric resource IDs share the same fallback.
         }
-        return "Read receipt from " + contact + (kind == ReceiptObservationPolicy.Kind.STATUS
-                ? " for your status" : " for your message");
+        return contact + (kind == ReceiptObservationPolicy.Kind.STATUS
+                ? " just viewed your status" : " just read your message");
     }
 }

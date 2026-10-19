@@ -82,32 +82,32 @@ public final class ReceiptTextFixture {
  public static void main(String[] args){
   /* RESOURCE_TEXTS */
   Context host=new Context(); ReceiptToastText text=new ReceiptToastText(host);
-  check(text.format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Read receipt from Alex for your message"),"English message observation");
-  check(text.format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Read receipt from Alex for your status"),"Status has own resource");
+  check(text.format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Alex just read your message"),"English message observation");
+  check(text.format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Alex just viewed your status"),"Status has own resource");
   check(host.packages==1 && host.module.configurations==1,"Contexts reused for unchanged configuration");
   host.resources.config.locale="es";
   check(text.format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals(String.format(Context.texts.get("es")[0],"Alex")),"Spanish configuration applied");
   check(host.module.configurations==2 && host.packages==1,"Locale change replaces only configured context");
   host.resources.config.locale="es-419"; host.module.denied=true;
-  check(text.format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Read receipt from Alex for your status"),"Unavailable configuration uses explicit fallback");
+  check(text.format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Alex just viewed your status"),"Unavailable configuration uses explicit fallback");
   host.module.denied=false;
   check(text.format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals(String.format(Context.texts.get("es-419")[1],"Alex")),"Failed configuration change is retried, never cached as applied");
   check(host.module.configurations==4,"Failed configuration is not consumed");
   Context missing=new Context();missing.missing=true;
-  check(new ReceiptToastText(missing).format(ReceiptObservationPolicy.Kind.MESSAGE,null).equals("Read receipt from A contact for your message"),"Missing package/null name fallback");
+  check(new ReceiptToastText(missing).format(ReceiptObservationPolicy.Kind.MESSAGE,null).equals("A contact just read your message"),"Missing package/null name fallback");
   missing.missing=false;missing.module=new Context();missing.module.missingString=true;
-  check(new ReceiptToastText(missing).format(ReceiptObservationPolicy.Kind.STATUS,"").equals("Read receipt from A contact for your status"),"Missing resource/empty name fallback");
+  check(new ReceiptToastText(missing).format(ReceiptObservationPolicy.Kind.STATUS,"").equals("A contact just viewed your status"),"Missing resource/empty name fallback");
   Context foreignPackage=new Context();foreignPackage.module=new Context();foreignPackage.resources.config.locale="es";
   foreignPackage.module.packageName="com.example.foreign"; int before=Context.stringsRead;
-  check(new ReceiptToastText(foreignPackage).format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Read receipt from Alex for your message"),"Foreign context with valid numeric string ID uses honest fallback");
+  check(new ReceiptToastText(foreignPackage).format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Alex just read your message"),"Foreign context with valid numeric string ID uses honest fallback");
   check(Context.stringsRead==before,"Foreign package string is not read");
   Context foreignTable=new Context();foreignTable.module=new Context();foreignTable.resources.config.locale="es";
   foreignTable.module.resources.owner="com.example.foreign";before=Context.stringsRead;
-  check(new ReceiptToastText(foreignTable).format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Read receipt from Alex for your status"),"Foreign table with valid numeric string ID uses honest fallback");
+  check(new ReceiptToastText(foreignTable).format(ReceiptObservationPolicy.Kind.STATUS,"Alex").equals("Alex just viewed your status"),"Foreign table with valid numeric string ID uses honest fallback");
   check(Context.stringsRead==before,"Foreign table string is not read");
   Context wrongName=new Context();wrongName.module=new Context();wrongName.resources.config.locale="es";
   wrongName.module.resources.swapped=true;before=Context.stringsRead;
-  check(new ReceiptToastText(wrongName).format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Read receipt from Alex for your message"),"Same package with a different resource name uses fallback");
+  check(new ReceiptToastText(wrongName).format(ReceiptObservationPolicy.Kind.MESSAGE,"Alex").equals("Alex just read your message"),"Same package with a different resource name uses fallback");
   check(Context.stringsRead==before,"Wrong named resource is not read despite a valid numeric ID and module package");
   System.out.println("TEXT_CHECKS="+checks+"; production ReceiptToastText and XML strings with Android API doubles");
  }
