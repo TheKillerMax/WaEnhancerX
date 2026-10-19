@@ -26,6 +26,15 @@ public class IGStatusView extends FrameLayout {
         this.mStatusAdapter = adapter;
         if (adapter != null && mStatusListView != null) {
             mStatusListView.setAdapter(adapter);
+            mStatusListView.refreshData();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (mStatusListView != null && mStatusAdapter != null) {
+            mStatusListView.refreshData();
         }
     }
 
@@ -45,6 +54,10 @@ public class IGStatusView extends FrameLayout {
             if (mStatusAdapter instanceof android.widget.BaseAdapter) {
                 ((android.widget.BaseAdapter) mStatusAdapter).notifyDataSetChanged();
             }
+            if (mStatusListView != null) {
+                mStatusListView.refreshData();
+            }
+            requestLayout();
             invalidate();
         });
     }

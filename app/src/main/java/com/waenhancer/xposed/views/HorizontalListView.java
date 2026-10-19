@@ -202,6 +202,29 @@ public class HorizontalListView extends AdapterView<ListAdapter> {
         requestLayout();
     }
 
+    /**
+     * Forces a real adapter rebind even when this view is hosted inside a ListView header.
+     * Some WhatsApp layouts consume the first requestLayout while the header is attaching;
+     * a later horizontal gesture then becomes the first event that lays out the children.
+     */
+    public void refreshData() {
+        synchronized (this) {
+            mDataChanged = true;
+        }
+        forceLayout();
+        requestLayout();
+        invalidate();
+        ViewParent parent = getParent();
+        if (parent instanceof View) {
+            ((View) parent).requestLayout();
+        }
+        postOnAnimation(() -> {
+            forceLayout();
+            requestLayout();
+            invalidate();
+        });
+    }
+
     @Override
     public void setSelection(int position) {
     }
