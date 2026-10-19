@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Runs root shell commands with bounded wait and captured output (but always drains stdout). */
 public final class RootCommandRunner {
@@ -17,6 +18,17 @@ public final class RootCommandRunner {
     private static final int MAX_CAPTURE_CHARS = 8192;
     private static final int READ_CHUNK = 1024;
 
+    /** Config readers require the complete output, never a silently truncated document. */
+    public static String runBounded(String command, long timeoutMillis, int captureLimit) {
+        return runBounded(command, timeoutMillis, captureLimit,
+                value -> new ProcessBuilder("su", "-c", value).redirectErrorStream(true).start());
+    }
+
+    static String runBounded(String command, long timeoutMillis, int captureLimit, Starter starter) {
+        if (captureLimit < 1 || captureLimit > 1024 * 1024) return null;
+        return run(command, timeoutMillis, captureLimit, true, starter);
+    }
+
     @FunctionalInterface
     interface Starter { Process start(String command) throws IOException; }
 
@@ -24,10 +36,16 @@ public final class RootCommandRunner {
 
     /** A null result means startup, exit, timeout or stream processing failed. Empty output can be success. */
     static String run(String command, long timeoutMillis, Starter starter) {
+        return run(command, timeoutMillis, MAX_CAPTURE_CHARS, false, starter);
+    }
+
+    private static String run(String command, long timeoutMillis, int captureLimit,
+                              boolean requireComplete, Starter starter) {
         if (command == null || command.trim().isEmpty() || timeoutMillis <= 0 || starter == null) return null;
         Process process = null;
         Thread drain = null;
-        StringBuilder output = new StringBuilder(MAX_CAPTURE_CHARS);
+        StringBuilder output = new StringBuilder(Math.min(captureLimit, MAX_CAPTURE_CHARS));
+        AtomicBoolean incomplete = new AtomicBoolean();
         try {
             process = starter.start(command);
             final Process currentProcess = process;
@@ -38,13 +56,15 @@ public final class RootCommandRunner {
                     int count;
                     while ((count = reader.read(chunk)) != -1) {
                         synchronized (output) {
-                            int room = MAX_CAPTURE_CHARS - output.length();
+                            int room = captureLimit - output.length();
+                            if (count > room) incomplete.set(true);
                             if (room > 0) output.append(chunk, 0, Math.min(room, count));
                         }
                         // Keep draining even after the capture is full so the process
                         // never blocks on a full OS pipe.
                     }
                 } catch (IOException ignored) {
+                    incomplete.set(true);
                     // Process termination can close the stream while it is being read.
                 }
             }, "WAEX-root-stdout");
@@ -73,6 +93,7 @@ public final class RootCommandRunner {
             }
             if (drain.isAlive()) drain.join(250L);
             if (process.exitValue() != 0) return null;
+            if (requireComplete && (drain.isAlive() || incomplete.get())) return null;
             synchronized (output) { return output.toString().trim(); }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
