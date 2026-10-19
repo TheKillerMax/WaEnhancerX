@@ -61,6 +61,8 @@
     <string name="filter_all">All</string>
     <string name="requires_pro">Requires Pro</string>
     <string name="pro_feature_tag">Pro</string>
+    <string name="build_variant_debug">Debug</string>
+    <string name="build_variant_release">Release</string>
     <string name="dashboard_title">WaEnhancerX</string>
     <string name="module_active">Module Active</string>
     <string name="module_inactive">Module Inactive</string>

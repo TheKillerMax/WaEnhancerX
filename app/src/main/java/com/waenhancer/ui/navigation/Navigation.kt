@@ -3,6 +3,7 @@ package com.waenhancer.ui.navigation
 import com.waenhancer.utils.UiText
 
 import com.waenhancer.licensing.LicenseManager
+import com.waenhancer.app.BuildConfig
 import androidx.activity.compose.BackHandler
 
 import androidx.compose.animation.animateColorAsState
@@ -443,6 +444,35 @@ fun MainContainerScreen() {
                                         fontWeight = FontWeight.Medium,
                                         color = chipText,
                                         fontSize = 11.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // Build Variant Chip (Debug / Release)
+                                val isDebugBuild = BuildConfig.DEBUG
+                                val variantBg = if (isDebugBuild) Color(0xFFF59E0B).copy(alpha = 0.15f) else colors.surfaceDim
+                                val variantText = if (isDebugBuild) Color(0xFFF59E0B) else colors.onSurfaceVariant
+                                val variantLabel = if (isDebugBuild) {
+                                    stringResource(R.string.build_variant_debug)
+                                } else {
+                                    stringResource(R.string.build_variant_release)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(variantBg)
+                                        .border(1.dp, variantText.copy(alpha = 0.25f), CircleShape)
+                                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = variantLabel,
+                                        style = typography.labelSm,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = variantText,
+                                        fontSize = 10.sp
                                     )
                                 }
                             }

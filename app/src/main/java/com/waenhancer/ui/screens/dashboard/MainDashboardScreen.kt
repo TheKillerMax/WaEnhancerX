@@ -3,6 +3,7 @@ package com.waenhancer.ui.screens.dashboard
 import com.waenhancer.utils.UiText
 import com.waenhancer.utils.InternalLabels
 
+import com.waenhancer.app.BuildConfig
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -308,6 +309,34 @@ fun MainDashboardScreen(
                             color = if (hasTargetReview) Color(0xFFEF4444) else colors.onSurface,
                             modifier = Modifier.weight(1f)
                         )
+                        Box(
+                            modifier = Modifier
+                                .clip(radius.smShape)
+                                .background(
+                                    if (BuildConfig.DEBUG) Color(0xFFF59E0B).copy(alpha = 0.15f) else colors.surfaceDim
+                                )
+                                .border(
+                                    1.dp,
+                                    if (BuildConfig.DEBUG) Color(0xFFF59E0B).copy(alpha = 0.35f) else colors.outlineVariant,
+                                    radius.smShape
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (BuildConfig.DEBUG) {
+                                    stringResource(R.string.build_variant_debug)
+                                } else {
+                                    stringResource(R.string.build_variant_release)
+                                },
+                                style = typography.labelSm,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (BuildConfig.DEBUG) Color(0xFFF59E0B) else colors.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
                         Box(
                             modifier = Modifier
                                 .clip(radius.smShape)
