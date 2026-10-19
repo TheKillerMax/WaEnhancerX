@@ -296,7 +296,10 @@ private fun loadRealPreservedChats(context: Context): List<PreservedChat> {
             UiText.get(R.string.waex_ui_preserved_9d31b48b, "Preserved")
         }
         val msg = PreservedMessage(
-            id = rec.id,
+            // The vault list needs a unique, stable row key. Historical v3 files
+            // can contain the same logical message ID in both directions, and
+            // old nullable msg_id rows must remain individually displayable.
+            id = rec.storageId.toString(),
             text = rec.text.ifBlank { UiText.get(R.string.waex_ui_preserved_message_547f6da1, "Preserved message") },
             timestamp = dateTimeStr,
             isFromMe = rec.isFromMe,

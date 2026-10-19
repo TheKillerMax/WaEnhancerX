@@ -18,7 +18,11 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
 ) {
     companion object {
         private const val DATABASE_NAME = "waex_preserved_messages.db"
-        private const val DATABASE_VERSION = 2
+        // Version 3 was merged before its capture hook was reverted. Keep the
+        // version monotonic: Android refuses to open those existing files at 2.
+        // Version 4 reads both historical UNIQUE-key layouts without rebuilding
+        // either table or changing the restored capture/insert behavior.
+        private const val DATABASE_VERSION = 4
         const val TABLE_NAME = "preserved_messages"
 
         const val COL_ID = "_id"
@@ -42,7 +46,7 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
         }
     }
 
-    data class StoredMessage(
+    data class StoredMessage @JvmOverloads constructor(
         val id: String,
         val jid: String,
         val chatName: String,
@@ -50,7 +54,8 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
         val text: String,
         val timestamp: Long,
         val isFromMe: Boolean,
-        val isGroup: Boolean
+        val isGroup: Boolean,
+        val storageId: Long = 0L
     )
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -84,6 +89,10 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
                 db.execSQL("ALTER TABLE $TABLE_NAME ADD COLUMN $COL_SENDER_NAME TEXT")
             }
         }
+        // Versions 2 and 3 have the same readable columns. Retain their existing
+        // table, indexes, row IDs and sqlite_sequence; only user_version advances.
+        // In particular, rebuilding a v3 table with v2's msg_id UNIQUE would lose
+        // or reject messages that share a logical ID across chats/directions.
     }
 
     fun insertPreservedMessage(
@@ -139,7 +148,7 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
             val db = readableDatabase
             val cursor: Cursor? = db.query(
                 TABLE_NAME,
-                arrayOf(COL_MSG_ID, COL_JID, COL_NAME, COL_SENDER_NAME, COL_TEXT, COL_TIMESTAMP, COL_FROM_ME, COL_IS_GROUP),
+                arrayOf(COL_MSG_ID, COL_JID, COL_NAME, COL_SENDER_NAME, COL_TEXT, COL_TIMESTAMP, COL_FROM_ME, COL_IS_GROUP, COL_ID),
                 null, null, null, null,
                 "$COL_TIMESTAMP ASC"
             )
@@ -164,7 +173,8 @@ class PreservedMessageStore private constructor(context: Context) : SQLiteOpenHe
                             text = text,
                             timestamp = timestamp,
                             isFromMe = isFromMe,
-                            isGroup = isGroup
+                            isGroup = isGroup,
+                            storageId = it.getLong(8)
                         )
                     )
                 }

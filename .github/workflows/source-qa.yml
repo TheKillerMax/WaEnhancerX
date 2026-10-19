@@ -391,3 +391,35 @@ jobs:
           path: ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
+
+  preserved-vault-framework:
+    name: Preserved vault / Android SQLite upgrade compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require Kotlin and Maven for the complete production store
+        run: |
+          set -euo pipefail
+          kotlinc -version
+          mvn -version
+          test -f qa/fixtures/PreservedStoreCompatibilityTest.java
+      - name: Exercise versions 1, 2 and 3 without clearing the vault
+        run: python3 qa/android_preserved_store_test.py --out "$RUNNER_TEMP/waex-preserved-vault"
+      - name: Preserve source identities and Android SQLite results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preserved-vault-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-preserved-vault/*.json
+            ${{ runner.temp }}/waex-preserved-vault/*.log
+          retention-days: 14
+          if-no-files-found: error
