@@ -53,7 +53,6 @@ class PreserveDeleteForMeHook(
         try {
             val deleteMethod = resolveDeleteForMeMethod()
             if (deleteMethod != null) {
-                XposedBridge.log("$TAG Installed Delete for me hook: $deleteMethod")
                 XposedBridge.hookMethod(
                     deleteMethod,
                     object : XC_MethodHook() {
@@ -476,7 +475,6 @@ class PreserveDeleteForMeHook(
                     }
                 }
             }
-            XposedBridge.log("$TAG Copied $captured Delete for me message(s) to vault")
             return captured > 0
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error copying selected messages: ${t.javaClass.simpleName}")
