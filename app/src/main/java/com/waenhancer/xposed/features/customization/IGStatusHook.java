@@ -137,17 +137,11 @@ public class IGStatusHook extends BaseFeature {
                                 statusContainer.setLayoutParams(layoutParams);
                                 parentGroup.addView(statusContainer, 0);
 
-                                final View scrollingView = listChild;
-                                final int fullHeight = heightPx;
-                                scrollingView.getViewTreeObserver().addOnScrollChangedListener(() -> {
-                                    int offset = verticalScrollOffset(scrollingView);
-                                    int visibleHeight = Math.max(0, fullHeight - Math.min(fullHeight, offset));
-                                    ViewGroup.LayoutParams params = statusContainer.getLayoutParams();
-                                    if (params.height == visibleHeight) return;
-                                    params.height = visibleHeight;
-                                    statusContainer.setLayoutParams(params);
-                                    statusContainer.setTranslationY(visibleHeight - fullHeight);
-                                });
+                                // Keep the row's geometry stable. Deriving its height from the
+                                // scrolling child's offset creates a feedback loop: resizing this
+                                // sibling relays out the list, which changes the reported offset
+                                // and immediately resizes the row again. At the top/overscroll
+                                // boundary that presents as rapid flickering.
                             }
                         }
 
@@ -296,16 +290,6 @@ public class IGStatusHook extends BaseFeature {
                     view.updateList();
                 }
             }
-        }
-    }
-
-    private static int verticalScrollOffset(View view) {
-        try {
-            Method method = view.getClass().getMethod("computeVerticalScrollOffset");
-            Object value = method.invoke(view);
-            return value instanceof Integer ? Math.max(0, (Integer) value) : 0;
-        } catch (Throwable ignored) {
-            return view.canScrollVertically(-1) ? view.getHeight() : 0;
         }
     }
 

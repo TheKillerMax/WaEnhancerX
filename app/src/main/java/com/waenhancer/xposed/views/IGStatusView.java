@@ -53,8 +53,7 @@ public class IGStatusView extends FrameLayout {
         post(() -> {
             if (mStatusAdapter instanceof android.widget.BaseAdapter) {
                 ((android.widget.BaseAdapter) mStatusAdapter).notifyDataSetChanged();
-            }
-            if (mStatusListView != null) {
+            } else if (mStatusListView != null) {
                 mStatusListView.refreshData();
             }
             requestLayout();
