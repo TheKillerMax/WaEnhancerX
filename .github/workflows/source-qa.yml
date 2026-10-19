@@ -169,12 +169,6 @@ jobs:
           if [[ -f app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java ]]; then
             test -f qa/test_contact_identity.py
           fi
-          if [[ -f app/src/main/java/com/waenhancer/xposed/views/StatusRowWorkQueue.java ]]; then
-            test -f qa/test_ig_status_loading.py
-            test -f qa/fixtures/ig_status_android_doubles.py
-            test -f qa/java/TestIGStatusLoading.java
-            test -f qa/java/TestStatusRowWorkQueue.java
-          fi
           if grep -q 'prefs.contains("hide_forwarded_tag")' app/src/main/java/com/waenhancer/xposed/features/privacy/HideForwardedTagHook.kt; then
             test -f qa/test_forwarded_metadata_scope.py
           fi
@@ -238,7 +232,6 @@ jobs:
             qa/test_call_recording_lifecycle.py \
             qa/test_gallery_export.py \
             qa/test_contact_identity.py \
-            qa/test_ig_status_loading.py \
             qa/test_db_migrations.py; do
             echo "::group::$test_script"
             python3 "$test_script"

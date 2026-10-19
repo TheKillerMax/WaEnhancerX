@@ -11,14 +11,11 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -38,7 +35,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.waenhancer.utils.ContactNameResolver;
-import com.waenhancer.utils.ContactIdentityPolicy;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
 import com.waenhancer.xposed.features.customization.IGStatusHook;
 import com.waenhancer.xposed.features.homescreen.MenuIconLoader;
@@ -56,21 +52,6 @@ import de.robv.android.xposed.XposedHelpers;
 public class IGStatusAdapter extends ArrayAdapter<Object> {
 
     private static final String TAG = "[WAEX][IGStatusAdapter]";
-    private static final StatusRowWorkQueue ROW_WORK = new StatusRowWorkQueue(2, 32);
-    private static final StatusRowWorkQueue.Dispatcher MAIN = new StatusRowWorkQueue.Dispatcher() {
-        private final Handler handler = new Handler(Looper.getMainLooper());
-        @Override public boolean post(Runnable delivery) { return handler.post(delivery); }
-        @Override public void remove(Runnable delivery) { handler.removeCallbacks(delivery); }
-    };
-
-    private Object[] statusItems = IGStatusHook.snapshotItems();
-    private Bitmap defaultAvatarBitmap;
-    private boolean defaultAvatarDark;
-
-    @Override public void notifyDataSetChanged() {
-        statusItems = IGStatusHook.snapshotItems();
-        super.notifyDataSetChanged();
-    }
 
     private final Class<?> statusInfoClazz;
     private final Class<?> contactStatusThumbnailClazz;
@@ -101,28 +82,19 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
 
     @Override
     public int getCount() {
-        return statusItems.length;
+        return IGStatusHook.items.size();
     }
 
     @NonNull
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        Object[] snapshot = statusItems;
-        if (position < 0 || position >= snapshot.length) {
-            if (convertView != null && convertView.getTag() instanceof ViewHolder) {
-                ((ViewHolder) convertView.getTag()).cancelLoad();
-                convertView.setOnClickListener(null);
-            }
-            return new View(getContext());
+        if (position >= IGStatusHook.items.size()) {
+            return convertView != null ? convertView : new View(getContext());
         }
 
-        Object item = snapshot[position];
+        Object item = IGStatusHook.items.get(position);
         ViewHolder holder;
-        if (convertView == null || !(convertView.getTag() instanceof ViewHolder)
-                || !((ViewHolder) convertView.getTag()).belongsTo(this)) {
-            if (convertView != null && convertView.getTag() instanceof ViewHolder) {
-                ((ViewHolder) convertView.getTag()).cancelLoad();
-            }
+        if (convertView == null) {
             holder = new ViewHolder();
             convertView = createItemView(holder);
             convertView.setTag(holder);
@@ -234,7 +206,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
             } catch (Throwable ignored) {}
         }
 
-        for (Object item : IGStatusHook.snapshotItems()) {
+        for (Object item : IGStatusHook.items) {
             if (item == null) continue;
             try {
                 Object jidObj = findJidObject(item, 4);
@@ -337,7 +309,6 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         column.addView(nameView);
         frame.addView(column);
         root.addView(frame);
-        root.addOnAttachStateChangeListener(holder);
 
         return root;
     }
@@ -374,42 +345,39 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         return null;
     }
 
-    private class ViewHolder implements StatusRowWorkQueue.Target<LoadedRow>, View.OnAttachStateChangeListener {
+    private class ViewHolder {
         ImageView photoView;
         RelativeLayout addBadge;
         TextView nameView;
         boolean isMyStatus = false;
         String targetJid = null;
-        boolean detached;
-        boolean loaded;
-        StatusRowWorkQueue.Ticket<LoadedRow> pending;
-
-        boolean belongsTo(IGStatusAdapter adapter) { return IGStatusAdapter.this == adapter; }
-
-        void cancelLoad() {
-            if (pending != null) pending.cancel();
-            pending = null;
-        }
-
-        void resetBinding() {
-            cancelLoad();
-            loaded = false;
-            if (photoView != null) photoView.setImageDrawable(createDefaultAvatarDrawable());
-        }
 
         void bindMyStatus() {
-            resetBinding();
             this.isMyStatus = true;
             this.targetJid = "status@broadcast";
-            if (addBadge != null) addBadge.setVisibility(View.VISIBLE);
+            boolean hasActive = hasOwnActiveStatus(getContext());
+            if (addBadge != null) {
+                addBadge.setVisibility(hasActive ? View.GONE : View.VISIBLE);
+            }
             if (nameView != null) nameView.setText(UiText.get(R.string.waex_ui_my_status_43503c17, "My Status"));
-            requestLoad();
+
+            Drawable preview = hasActive ? loadMyLatestStatusPreview() : null;
+            if (preview != null && photoView != null) {
+                photoView.setImageDrawable(toCircleDrawable(preview));
+            } else {
+                Drawable myPhoto = loadMyPhoto();
+                if (myPhoto != null && photoView != null) {
+                    photoView.setImageDrawable(toCircleDrawable(myPhoto));
+                } else if (photoView != null) {
+                    photoView.setImageDrawable(createDefaultAvatarDrawable());
+                }
+            }
         }
 
         void bindItem(Object item) {
-            resetBinding();
             this.isMyStatus = false;
             if (addBadge != null) addBadge.setVisibility(View.GONE);
+
             String jid = null;
             Object jidObj = findJidObject(item, 4);
             if (jidObj != null) {
@@ -420,74 +388,28 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                     jid = String.valueOf(jidObj);
                 }
             }
-            if (jid != null && jid.contains("@")) jid = jid.trim();
-            this.targetJid = jid;
-            if (nameView != null) nameView.setText("Contact");
-            requestLoad();
-        }
 
-        void requestLoad() {
-            if (detached || pending != null) return;
-            Context app = getContext().getApplicationContext();
-            // A queued load must not retain an Activity through this adapter.
-            if (app == null || app instanceof Activity) return;
-            final boolean own = isMyStatus;
-            final String jid = targetJid;
-            final int size = StatusThumbnailPolicy.targetSize(dipToPx(62));
-            pending = ROW_WORK.submit(() -> loadRow(app, own, jid, size), this, MAIN);
-            if (pending.isCancelled()) pending = null;
-        }
-
-        @Override public void onLoaded(StatusRowWorkQueue.Ticket<LoadedRow> ticket, LoadedRow row) {
-            if (pending != ticket || ticket.isCancelled() || detached) return;
-            pending = null;
-            loaded = true;
-            if (row == null) return;
-            if (isMyStatus && addBadge != null) {
-                addBadge.setVisibility(row.ownActive ? View.GONE : View.VISIBLE);
+            if (jid != null && jid.contains("@")) {
+                // Ensure bare/clean JID
+                jid = jid.trim();
             }
-            if (!isMyStatus && row.name != null && nameView != null) nameView.setText(row.name);
-            if (row.photo != null && photoView != null) photoView.setImageDrawable(row.photo);
-        }
 
-        @Override public void onViewAttachedToWindow(View view) {
-            detached = false;
-            if (!loaded) requestLoad();
-        }
+            this.targetJid = jid;
+            String resolvedName = jid != null ? ContactNameResolver.INSTANCE.resolveName(getContext(), jid, null, null) : "Contact";
+            if (nameView != null) nameView.setText(resolvedName);
 
-        @Override public void onViewDetachedFromWindow(View view) {
-            detached = true;
-            if (pending != null) loaded = false;
-            cancelLoad();
+            Drawable contactPhoto = jid != null ? loadContactPhoto(jid) : null;
+            if (contactPhoto != null && photoView != null) {
+                photoView.setImageDrawable(toCircleDrawable(contactPhoto));
+            } else if (photoView != null) {
+                photoView.setImageDrawable(createDefaultAvatarDrawable());
+            }
         }
     }
 
-    private static final class LoadedRow {
-        final boolean ownActive;
-        final String name;
-        final Drawable photo;
-        LoadedRow(boolean ownActive, String name, Drawable photo) {
-            this.ownActive = ownActive;
-            this.name = name;
-            this.photo = photo;
-        }
-    }
-
-    private static LoadedRow loadRow(Context context, boolean own, String jid, int size) {
-        if (own) {
-            boolean active = hasOwnActiveStatus(context);
-            Drawable photo = active ? loadMyLatestStatusPreview(context, size) : null;
-            if (photo == null) photo = loadMyPhoto(context, size);
-            return new LoadedRow(active, null, toCircleDrawable(context, photo, size));
-        }
-        String name = jid != null ? ContactNameResolver.INSTANCE.resolveName(context, jid, null, null) : null;
-        Drawable photo = jid != null ? loadContactPhoto(context, jid, size) : null;
-        return new LoadedRow(false, name, toCircleDrawable(context, photo, size));
-    }
-
-    private static Drawable loadMyLatestStatusPreview(Context context, int size) {
+    private Drawable loadMyLatestStatusPreview() {
         try {
-            File statusDb = context.getDatabasePath("status.db");
+            File statusDb = getContext().getDatabasePath("status.db");
             if (statusDb == null || !statusDb.exists()) return null;
 
             android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(
@@ -515,15 +437,15 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                     if (thumbCursor.moveToFirst()) {
                         byte[] blob = thumbCursor.getBlob(0);
                         if (blob != null && blob.length > 0) {
-                            Bitmap bmp = decodeThumbnail(blob, size);
-                            if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                            Bitmap bmp = BitmapFactory.decodeByteArray(blob, 0, blob.length);
+                            if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
                         }
                         String path = thumbCursor.getString(1);
                         if (path != null && !path.isEmpty()) {
                             File f = new File(path);
                             if (f.exists()) {
-                                Bitmap bmp = decodeThumbnail(f.getAbsolutePath(), size);
-                                if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                                Bitmap bmp = BitmapFactory.decodeFile(f.getAbsolutePath());
+                                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
                             }
                         }
                     }
@@ -541,13 +463,14 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                         }
                         byte[] blob = textCursor.getBlob(1);
                         if (blob != null && blob.length > 0) {
-                            Bitmap bmp = decodeThumbnail(blob, size);
-                            if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                            Bitmap bmp = BitmapFactory.decodeByteArray(blob, 0, blob.length);
+                            if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
                         }
                     }
                 }
 
                 // Render circular preview bitmap with background color and text snippet
+                int size = dipToPx(62);
                 Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(bitmap);
 
@@ -558,7 +481,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                 if (textData != null && !textData.trim().isEmpty()) {
                     TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
                     textPaint.setColor(Color.WHITE);
-                    textPaint.setTextSize(size * 13f / 62f);
+                    textPaint.setTextSize(dipToPx(13f));
                     textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
                     textPaint.setTextAlign(Paint.Align.CENTER);
 
@@ -573,7 +496,7 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
                     canvas.drawText(previewSnippet, size / 2f, textY, textPaint);
                 }
 
-                return new BitmapDrawable(context.getResources(), bitmap);
+                return new BitmapDrawable(getContext().getResources(), bitmap);
             } finally {
                 db.close();
             }
@@ -581,106 +504,83 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
         return null;
     }
 
-    private static Drawable loadMyPhoto(Context context, int size) {
+    private Drawable loadMyPhoto() {
         try {
-            File filesDir = context.getFilesDir();
+            File filesDir = getContext().getFilesDir();
             File avatarDir = new File(filesDir, "Avatars");
             File meJ = new File(avatarDir, "me.j");
             if (meJ.exists()) {
-                Bitmap bmp = decodeThumbnail(meJ.getAbsolutePath(), size);
-                if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                Bitmap bmp = BitmapFactory.decodeFile(meJ.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
             }
             File me = new File(filesDir, "me.jpg");
             if (me.exists()) {
-                Bitmap bmp = decodeThumbnail(me.getAbsolutePath(), size);
-                if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                Bitmap bmp = BitmapFactory.decodeFile(me.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
             }
         } catch (Throwable ignored) {}
         return null;
     }
 
-    private static Drawable loadContactPhoto(Context context, String jid, int size) {
-        if (ContactIdentityPolicy.canonicalJid(jid) == null) return null;
+    private Drawable loadContactPhoto(String jid) {
+        if (jid == null) return null;
         try {
-            File filesDir = context.getFilesDir();
+            File filesDir = getContext().getFilesDir();
             File avatarDir = new File(filesDir, "Avatars");
             // Check direct avatar file: e.g. <jid>.j or <user>@s.whatsapp.net.j
             File jFile = new File(avatarDir, jid + ".j");
             if (jFile.exists()) {
-                Bitmap bmp = decodeThumbnail(jFile.getAbsolutePath(), size);
-                if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                Bitmap bmp = BitmapFactory.decodeFile(jFile.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
             }
 
-            // A LID/group number is not a phone alias. Only the exact JID above
-            // is valid without a verified mapping; phone-only caches require PN.
-            String user = ContactIdentityPolicy.phoneUser(jid);
-            if (user == null) return null;
+            String user = jid.contains("@") ? jid.substring(0, jid.indexOf("@")) : jid;
+            File userJFile = new File(avatarDir, user + "@s.whatsapp.net.j");
+            if (userJFile.exists()) {
+                Bitmap bmp = BitmapFactory.decodeFile(userJFile.getAbsolutePath());
+                if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
+            }
 
             // Check Profile Pictures cache
-            File cacheDir = context.getCacheDir();
+            File cacheDir = getContext().getCacheDir();
             File picDir = new File(cacheDir, "Profile Pictures");
             if (picDir.exists()) {
                 File pic = new File(picDir, user + ".jpg");
                 if (pic.exists()) {
-                    Bitmap bmp = decodeThumbnail(pic.getAbsolutePath(), size);
-                    if (bmp != null) return new BitmapDrawable(context.getResources(), bmp);
+                    Bitmap bmp = BitmapFactory.decodeFile(pic.getAbsolutePath());
+                    if (bmp != null) return new BitmapDrawable(getContext().getResources(), bmp);
                 }
             }
         } catch (Throwable ignored) {}
         return null;
     }
 
-    private static Bitmap decodeThumbnail(String path, int size) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(path, options);
-        if (options.outWidth <= 0 || options.outHeight <= 0) return null;
-        options.inSampleSize = StatusThumbnailPolicy.sampleSize(options.outWidth, options.outHeight, size);
-        options.inJustDecodeBounds = false;
-        return BitmapFactory.decodeFile(path, options);
-    }
-
-    private static Bitmap decodeThumbnail(byte[] bytes, int size) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
-        if (options.outWidth <= 0 || options.outHeight <= 0) return null;
-        options.inSampleSize = StatusThumbnailPolicy.sampleSize(options.outWidth, options.outHeight, size);
-        options.inJustDecodeBounds = false;
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
-    }
-
-    private static Drawable toCircleDrawable(Context context, Drawable drawable, int requestedSize) {
+    private Drawable toCircleDrawable(Drawable drawable) {
         if (drawable == null) return null;
-        int size = StatusThumbnailPolicy.targetSize(requestedSize);
         try {
             Bitmap src;
             if (drawable instanceof BitmapDrawable) {
                 src = ((BitmapDrawable) drawable).getBitmap();
             } else {
-                src = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+                int w = Math.max(1, drawable.getIntrinsicWidth());
+                int h = Math.max(1, drawable.getIntrinsicHeight());
+                src = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
                 Canvas canvas = new Canvas(src);
-                drawable.setBounds(0, 0, size, size);
+                drawable.setBounds(0, 0, w, h);
                 drawable.draw(canvas);
             }
-            if (src == null || src.getWidth() <= 0 || src.getHeight() <= 0) return null;
+            if (src == null) return drawable;
+
+            int size = Math.min(src.getWidth(), src.getHeight());
             Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(output);
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-            android.graphics.BitmapShader shader = new android.graphics.BitmapShader(src,
-                    android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP);
-            float scale = Math.max(size / (float) src.getWidth(), size / (float) src.getHeight());
-            Matrix matrix = new Matrix();
-            matrix.setScale(scale, scale);
-            matrix.postTranslate((size - src.getWidth() * scale) / 2f,
-                    (size - src.getHeight() * scale) / 2f);
-            shader.setLocalMatrix(matrix);
-            paint.setShader(shader);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setShader(new android.graphics.BitmapShader(src, android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP));
             float r = size / 2f;
             canvas.drawCircle(r, r, r, paint);
-            return new BitmapDrawable(context.getResources(), output);
-        } catch (RuntimeException | LinkageError ignored) {
-            return null;
+            return new BitmapDrawable(getContext().getResources(), output);
+        } catch (Throwable ignored) {
+            return drawable;
         }
     }
 
@@ -700,25 +600,19 @@ public class IGStatusAdapter extends ArrayAdapter<Object> {
     }
 
     private Drawable createDefaultAvatarDrawable() {
-        int size = StatusThumbnailPolicy.targetSize(dipToPx(62));
-        boolean dark = isDarkTheme();
-        if (defaultAvatarBitmap != null && defaultAvatarBitmap.getWidth() == size && defaultAvatarDark == dark) {
-            return new BitmapDrawable(getContext().getResources(), defaultAvatarBitmap);
-        }
+        int size = dipToPx(62);
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(dark ? 0xFF2A3942 : 0xFFDFE5E7);
+        bgPaint.setColor(isDarkTheme() ? 0xFF2A3942 : 0xFFDFE5E7);
         float radius = size / 2f;
         canvas.drawCircle(radius, radius, radius, bgPaint);
 
         Paint fgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        fgPaint.setColor(dark ? 0xFF8696A0 : 0xFF667781);
+        fgPaint.setColor(isDarkTheme() ? 0xFF8696A0 : 0xFF667781);
         canvas.drawCircle(radius, size * 0.38f, size * 0.18f, fgPaint);
         RectF bodyRect = new RectF(size * 0.22f, size * 0.62f, size * 0.78f, size * 1.05f);
         canvas.drawRoundRect(bodyRect, size * 0.25f, size * 0.25f, fgPaint);
-        defaultAvatarBitmap = bitmap;
-        defaultAvatarDark = dark;
         return new BitmapDrawable(getContext().getResources(), bitmap);
     }
 
