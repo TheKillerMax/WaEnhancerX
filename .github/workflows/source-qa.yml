@@ -106,6 +106,10 @@ jobs:
             test -f qa/test_presence_invalidation.py
             test -f qa/test_presence_state_invalidation.py
           fi
+          if [[ -f app/src/main/java/com/waenhancer/xposed/features/automation/PresenceToastsHook.java ]]; then
+            test -f qa/test_receipt_observation.py
+            test -f qa/fixtures/receipt_observation/ReceiptObservationFixture.java.in
+          fi
           if grep -q 'putPublicString("seentick", nextPlacement)' "$ui"; then
             test -f qa/test_manual_seen_tick_persistence.py
           fi
@@ -191,6 +195,7 @@ jobs:
             qa/test_manual_seen_tick_persistence.py \
             qa/test_receipt_job_execution_contract.py \
             qa/test_played_receipt_dispatch_contract.py \
+            qa/test_receipt_observation.py \
             qa/test_presence_event_contract.py \
             qa/test_presence_state_replay.py \
             qa/test_presence_invalidation.py \

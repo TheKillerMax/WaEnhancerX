@@ -1,0 +1,537 @@
+package com.waenhancer.xposed.features.automation;
+
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.*;
+
+public class ReceiptObservationFixture {
+    static int checks;
+    static String phase = "host";
+    static void check(boolean condition, String label) {
+        checks++;
+        if (!condition) throw new AssertionError(label);
+    }
+    static final String TAG = "fixture";
+    static final String MESSAGE_SNAPSHOT = "WAEX:observed-message-read:v1";
+    static final String STATUS_SNAPSHOT = "WAEX:observed-status-read:v1";
+    static ReceiptObservationPolicy.Seen READ_OBSERVATIONS = new ReceiptObservationPolicy.Seen(2048, 96);
+    static ToastThrottle TOAST_THROTTLE = new ToastThrottle(1500L, 2048);
+    final Object context = new Object();
+    final ClassLoader classLoader = new ModelLoader();
+    final QueueExecutor asyncExecutor = new QueueExecutor();
+    final Handler mainHandler = new Handler();
+    final ReceiptToastText receiptText = new ReceiptToastText();
+    ReceiptTypes receiptTypes;
+    boolean receiptTypesResolved;
+    boolean messages, statuses;
+    boolean isMessageViewedToastEnabled() { return messages; }
+    boolean isStatusViewedToastEnabled() { return statuses; }
+
+    public static class Jid {
+        final String raw;
+        Jid(String raw) { this.raw = raw; }
+        public String getRawString() { return raw; }
+        @Override public String toString() { throw new AssertionError("Do not stringify host objects"); }
+    }
+    public static class UserJid extends Jid { UserJid(String raw) { super(raw); } }
+    public static final class DeviceJid extends Jid {
+        public final UserJid userJid;
+        DeviceJid(UserJid user) { super("unused-device-string"); userJid = user; }
+    }
+    public static final class Key {
+        public final String id;
+        public final boolean fromMe;
+        public final Jid chat;
+        Key(String id, boolean own, String chat) { this.id = id; fromMe = own; this.chat = new Jid(chat); }
+    }
+    public static class HostMessage {
+        public final Key canonical;
+        public Key unrelated;
+        HostMessage(Key key) { canonical = key; unrelated = new Key("decoy", false, "666@lid"); }
+        public UserJid sender() { return null; }
+    }
+    public static final class Receipt {
+        public final int type;
+        public final long time;
+        public final DeviceJid device;
+        public final UserJid viewer;
+        public final HostMessage message;
+        Receipt(DeviceJid device, UserJid viewer, HostMessage message, int type, long time) {
+            this.device = device; this.viewer = viewer; this.message = message; this.type = type; this.time = time;
+        }
+    }
+    public static class StatusBase {
+        public final Jid sender;
+        public final Key messageKey;
+        StatusBase(Key key) { sender = new Jid("0@s.whatsapp.net"); messageKey = key; }
+    }
+    public static final class StatusKey extends StatusBase {
+        public final String id;
+        public final boolean own;
+        public final Jid senderAgain;
+        public final Jid chatAgain;
+        StatusKey(Key key) { super(key); id = key.id; own = key.fromMe; senderAgain = sender; chatAgain = key.chat; }
+    }
+    public static class StatusItem {
+        public final StatusKey key;
+        public Long rowId;
+        public Long unrelatedNumber;
+        StatusItem(Key key) { this.key = new StatusKey(key); }
+    }
+    public static final class Provider {
+        boolean fail;
+        boolean fatal;
+        final Set<String> own = new HashSet<>(Arrays.asList("999@s.whatsapp.net", "999@lid"));
+    }
+    public static class PredicateCalls {
+        public static boolean isSelf(Provider provider, Jid jid) {
+            if (provider.fatal) throw new OutOfMemoryError("synthetic propagation check");
+            if (provider.fail) throw new IllegalStateException("self account unavailable");
+            return provider.own.contains(jid.getRawString());
+        }
+        public static boolean ambiguous(Provider provider, Jid jid) { return false; }
+    }
+    public static class Store {
+        public final Provider provider = new Provider();
+        public final Provider ignoredProvider = new Provider();
+        int calls;
+        boolean throwOriginal;
+        boolean clearInput;
+        public void status(UserJid viewer, StatusItem item, int type, long timestamp) {
+            calls++;
+            if (throwOriginal) throw new IllegalStateException("original failed");
+            // A normal no-op is intentionally eligible only as an observed typed receipt.
+        }
+        public List<Object> messages(Collection<?> input) {
+            calls++;
+            if (clearInput) input.clear();
+            if (throwOriginal) throw new IllegalStateException("original failed");
+            // An empty returned list is NOT a storage result used by this contract.
+            return Collections.emptyList();
+        }
+        public static List<Object> wrongStatic(Collection<?> input) { return Collections.emptyList(); }
+    }
+    static class ModelLoader extends ClassLoader {
+        @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
+            switch (name) {
+                case "com.whatsapp.infra.core.jid.Jid": return Jid.class;
+                case "com.whatsapp.infra.core.jid.UserJid": return UserJid.class;
+                case "com.whatsapp.infra.core.jid.DeviceJid": return DeviceJid.class;
+                default: return super.loadClass(name);
+            }
+        }
+    }
+    enum StringMatchType { Equals, Contains }
+    static final class MethodMatcher {
+        String name, returns;
+        String[] params;
+        int count = -1;
+        Map<String, StringMatchType> anchors = new LinkedHashMap<>();
+        static MethodMatcher create() { return new MethodMatcher(); }
+        MethodMatcher name(String value) { name = value; return this; }
+        MethodMatcher returnType(String value) { returns = value; return this; }
+        MethodMatcher paramCount(int value) { count = value; return this; }
+        MethodMatcher paramTypes(String... value) { params = value; return this; }
+        MethodMatcher addUsingString(String value, StringMatchType type) { anchors.put(value, type); return this; }
+    }
+    static final class FindMethod {
+        MethodMatcher matcher;
+        static FindMethod create() { return new FindMethod(); }
+        FindMethod matcher(MethodMatcher value) { matcher = value; return this; }
+    }
+    static final class FieldData {
+        final Field field;
+        FieldData(Field field) { this.field = field; }
+        Field getFieldInstance(ClassLoader loader) { return field; }
+    }
+    static final class UsingFieldData {
+        final FieldData field;
+        UsingFieldData(Field value) { field = new FieldData(value); }
+        FieldData getField() { return field; }
+    }
+    static class MethodData {
+        final Method method;
+        final Constructor<?> constructor;
+        final List<UsingFieldData> fields = new ArrayList<>();
+        final MethodDataList invokes = new MethodDataList();
+        MethodData(Method method) { this.method = method; constructor = null; }
+        MethodData(Constructor<?> constructor) { this.constructor = constructor; method = null; }
+        MethodData field(Field field) { fields.add(new UsingFieldData(field)); return this; }
+        MethodData call(MethodData call) { invokes.add(call); return this; }
+        boolean isMethod() { return method != null; }
+        boolean isConstructor() { return constructor != null; }
+        Method getMethodInstance(ClassLoader loader) { return method; }
+        Class<?> getClassInstance(ClassLoader loader) { return method != null ? method.getDeclaringClass() : constructor.getDeclaringClass(); }
+        int getParamCount() { return method.getParameterCount(); }
+        String getReturnTypeName() { return method.getReturnType().getName(); }
+        List<UsingFieldData> getUsingFields() { return fields; }
+        MethodDataList getInvokes() { return invokes; }
+    }
+    static final class MethodDataList extends ArrayList<MethodData> {
+        MethodDataList(MethodData... values) { super(Arrays.asList(values)); }
+    }
+    static final class DexKitBridge {
+        String defective;
+        MethodData sender, status, message, receiptConstructor, statusConstructor;
+        void reset() throws Exception {
+            defective = null;
+            sender = new MethodData(HostMessage.class.getMethod("sender")).field(HostMessage.class.getField("canonical"));
+            status = new MethodData(Store.class.getMethod("status", UserJid.class, StatusItem.class, int.class, long.class))
+                    .field(Store.class.getField("provider"))
+                    .call(new MethodData(PredicateCalls.class.getMethod("isSelf", Provider.class, Jid.class)));
+            message = new MethodData(Store.class.getMethod("messages", Collection.class));
+            receiptConstructor = new MethodData(Receipt.class.getDeclaredConstructor(DeviceJid.class, UserJid.class, HostMessage.class, int.class, long.class));
+            statusConstructor = new MethodData(StatusKey.class.getDeclaredConstructor(Key.class));
+        }
+        MethodDataList findMethod(FindMethod query) {
+            MethodMatcher m = query.matcher;
+            for (StringMatchType type : m.anchors.values()) check(type == StringMatchType.Equals, "All receipt anchors are exact");
+            MethodData selected;
+            String route;
+            if (m.anchors.containsKey("FMessage/getSenderUserJid/key.id=")) {
+                route = "sender"; selected = sender;
+                check(m.count == 0 && UserJid.class.getName().equals(m.returns), "Sender anchor constrained by signature");
+            } else if (m.anchors.containsKey("StatusReceiptStore/insertOrUpdateSeenReceiptForStatus status key=")) {
+                route = "status"; selected = status;
+                check(m.anchors.size() == 3 && m.params.length == 4 && "void".equals(m.returns), "Status requires all anchors/signature");
+            } else if (m.anchors.containsKey("Invalid remoteChatJid passed into FStatusKey constructor")) {
+                route = "status-constructor"; selected = statusConstructor;
+                check("<init>".equals(m.name), "Status key must be constructor-anchored");
+            } else if (m.anchors.containsKey("upsertUserReceiptForMessage/INSERT_RECEIPT_USER")) {
+                route = "message"; selected = message;
+                check(Arrays.equals(m.params, new String[]{"java.util.Collection"}) && "java.util.List".equals(m.returns), "Message receipt handler signature exact");
+            } else {
+                route = "receipt-constructor"; selected = receiptConstructor;
+                check("<init>".equals(m.name) && Arrays.equals(m.params, new String[]{DeviceJid.class.getName(), UserJid.class.getName(), HostMessage.class.getName(), "int", "long"}), "Receipt constructor requires all model relationships");
+            }
+            if (("missing-" + route).equals(defective)) return new MethodDataList();
+            if (("ambiguous-" + route).equals(defective)) return new MethodDataList(selected, selected);
+            return new MethodDataList(selected);
+        }
+    }
+    static final class DexSearchEngine {
+        static final DexSearchEngine INSTANCE = new DexSearchEngine();
+        static final DexKitBridge BRIDGE = new DexKitBridge();
+        static DexSearchEngine getInstance() { return INSTANCE; }
+        void initialize(Object context) {}
+        DexKitBridge getBridge() { return BRIDGE; }
+    }
+    static class XC_MethodHook {
+        static class MethodHookParam {
+            Object thisObject;
+            Object[] args;
+            Throwable throwable;
+            Object result;
+            Map<String, Object> extras = new HashMap<>();
+            void setObjectExtra(String key, Object value) { extras.put(key, value); }
+            Object getObjectExtra(String key) { return extras.get(key); }
+            boolean hasThrowable() { return throwable != null; }
+        }
+        protected void beforeHookedMethod(MethodHookParam param) {}
+        protected void afterHookedMethod(MethodHookParam param) {}
+    }
+    static final class XposedBridge {
+        static Map<Method, XC_MethodHook> hooks = new LinkedHashMap<>();
+        static void hookMethod(Method method, XC_MethodHook hook) { hooks.put(method, hook); }
+        static void log(String message) {}
+    }
+    static final class QueueExecutor implements Executor {
+        final ArrayDeque<Runnable> queue = new ArrayDeque<>();
+        @Override public void execute(Runnable task) { queue.add(task); }
+        void drain() { phase = "worker"; while (!queue.isEmpty()) queue.remove().run(); phase = "host"; }
+    }
+    static final class Handler {
+        final ArrayDeque<Runnable> queue = new ArrayDeque<>();
+        boolean accept = true;
+        boolean post(Runnable task) { if (!accept) return false; queue.add(task); return true; }
+        void drain() { phase = "ui"; while (!queue.isEmpty()) queue.remove().run(); phase = "host"; }
+    }
+    static final class ContactNameResolver {
+        static final ContactNameResolver INSTANCE = new ContactNameResolver();
+        String resolveName(Object context, String jid, Object first, Object second) {
+            check("worker".equals(phase), "Contact lookup stays off host/UI callback");
+            return jid;
+        }
+    }
+    static final class ReceiptToastText {
+        String format(ReceiptObservationPolicy.Kind kind, String name) {
+            check("worker".equals(phase), "Text/resources prepared off UI thread");
+            return "Read receipt from " + name + (kind == ReceiptObservationPolicy.Kind.STATUS ? " for your status" : " for your message");
+        }
+    }
+    static final class SystemClock { static long now = 10_000L; static long elapsedRealtime() { return now; } }
+    static final class Toast {
+        static final int LENGTH_SHORT = 0;
+        static List<String> shown = new ArrayList<>();
+        static boolean fail;
+        final String text;
+        Toast(String text) { this.text = text; }
+        static Toast makeText(Object context, String text, int duration) { check("ui".equals(phase), "Toast is on UI thread"); return new Toast(text); }
+        void show() { if (fail) throw new IllegalStateException("toast failed"); shown.add(text); }
+    }
+
+    /* PRODUCTION_DECLARATIONS */
+
+    static Receipt receipt(String id, String viewer, String chat, boolean own, int type, long timestamp) {
+        return new Receipt(null, viewer == null ? null : new UserJid(viewer), new HostMessage(new Key(id, own, chat)), type, timestamp);
+    }
+    static ReceiptObservationFixture fresh() throws Exception {
+        READ_OBSERVATIONS = new ReceiptObservationPolicy.Seen(2048, 96);
+        TOAST_THROTTLE = new ToastThrottle(1500L, 2048);
+        XposedBridge.hooks.clear(); Toast.shown.clear(); Toast.fail = false;
+        DexSearchEngine.BRIDGE.reset();
+        ReceiptObservationFixture f = new ReceiptObservationFixture(); f.messages = true; f.statuses = true;
+        f.hookStatusViewedReceipt(); f.hookOnInsertReceipt();
+        check(XposedBridge.hooks.size() == 2, "Verified handler contracts install both observers");
+        return f;
+    }
+    static XC_MethodHook.MethodHookParam invoke(Store store, String methodName, Object... args) throws Exception {
+        Method method = methodName.equals("messages") ? Store.class.getMethod("messages", Collection.class)
+                : Store.class.getMethod("status", UserJid.class, StatusItem.class, int.class, long.class);
+        XC_MethodHook hook = XposedBridge.hooks.get(method);
+        check(hook != null, "Expected actual production callback installed");
+        XC_MethodHook.MethodHookParam p = new XC_MethodHook.MethodHookParam(); p.thisObject = store; p.args = args;
+        hook.beforeHookedMethod(p);
+        check(Toast.shown.isEmpty(), "Before callback never emits a success toast");
+        try { p.result = method.invoke(store, args); } catch (InvocationTargetException failure) { p.throwable = failure.getCause(); }
+        hook.afterHookedMethod(p);
+        return p;
+    }
+    void deliver() { asyncExecutor.drain(); mainHandler.drain(); }
+
+    public static void main(String[] ignored) throws Exception {
+        ReceiptObservationFixture f = fresh(); Store store = new Store();
+        Receipt good = receipt("message-a", "10@lid", "20@s.whatsapp.net", true, 13, 123L);
+        ArrayList<Receipt> input = new ArrayList<>(List.of(good));
+        XC_MethodHook.MethodHookParam p = invoke(store, "messages", input);
+        check(p.args[0] == input && input.get(0) == good && p.result instanceof List && store.calls == 1, "Original arguments/result and host call preserved");
+        check(Toast.shown.isEmpty() && f.asyncExecutor.queue.size() == 1, "After callback queues, never resolves a name synchronously");
+        f.deliver();
+        check(Toast.shown.equals(List.of("Read receipt from 10@lid for your message")), "Both switches cannot relabel message as status");
+        check(READ_OBSERVATIONS.sizeForTests() == 1 && READ_OBSERVATIONS.pendingForTests() == 0, "Observation becomes delivered only after UI request");
+
+        for (int type : new int[]{5, 8, 0, -1, 17, Integer.MAX_VALUE}) {
+            f = fresh(); invoke(new Store(), "messages", List.of(receipt("a", "11@lid", "20@lid", true, type, 1L))); f.deliver();
+            check(Toast.shown.isEmpty(), "Delivery/played/unknown cannot be read receipt: " + type);
+        }
+        f = fresh(); invoke(new Store(), "messages", List.of(receipt("foreign", "11@lid", "20@lid", false, 13, 1L))); f.deliver();
+        check(Toast.shown.isEmpty(), "Someone else's message cannot become your read receipt");
+        f = fresh(); f.messages = false; invoke(new Store(), "messages", List.of(good)); f.deliver();
+        check(Toast.shown.isEmpty(), "Status switch alone cannot enable ordinary message notifications");
+        f = fresh(); store = new Store(); store.throwOriginal = true; p = invoke(store, "messages", List.of(good)); f.deliver();
+        check(p.hasThrowable() && Toast.shown.isEmpty() && READ_OBSERVATIONS.pendingForTests() == 0, "Original failure preserved without notification or consumed identity");
+
+        f = fresh(); store = new Store(); store.clearInput = true; input = new ArrayList<>(List.of(good));
+        invoke(store, "messages", input); f.deliver();
+        check(input.isEmpty() && Toast.shown.size() == 1, "Before snapshot survives original collection mutation");
+        f = fresh(); Receipt fallback = new Receipt(new DeviceJid(new UserJid("33@lid")), null, good.message, 13, 1L);
+        invoke(new Store(), "messages", List.of(fallback)); f.deliver();
+        check(Toast.shown.get(0).contains("33@lid"), "Viewer fallback uses validated DeviceJid.userJid");
+        f = fresh(); Receipt direct = new Receipt(new DeviceJid(new UserJid("44@lid")), new UserJid("55@lid"), good.message, 13, 1L);
+        invoke(new Store(), "messages", List.of(direct)); f.deliver();
+        check(Toast.shown.get(0).contains("55@lid") && !Toast.shown.get(0).contains("44@lid"), "Direct UserJid has priority over device fallback");
+        f = fresh(); invoke(new Store(), "messages", List.of(new Receipt(null, null, good.message, 13, 1L))); f.deliver();
+        check(Toast.shown.isEmpty(), "Missing viewer never falls back to arbitrary fields");
+
+        for (String chat : new String[]{"status@broadcast", "10@broadcast", "bad@evil", "20@lid extra"}) {
+            f = fresh(); invoke(new Store(), "messages", List.of(receipt("a", "11@lid", chat, true, 13, 1L))); f.deliver();
+            check(Toast.shown.isEmpty(), "Message handler rejects unknown/broadcast domain: " + chat);
+        }
+        f = fresh(); invoke(new Store(), "messages", List.of(receipt("group", "11@lid", "123-456@g.us", true, 13, 1L))); f.deliver();
+        check(Toast.shown.size() == 1, "Group chat identity remains a message domain");
+        for (String viewer : new String[]{"", "null", "12@lid\n", "13@s.whatsapp.net.evil", "10-20@g.us"}) {
+            f = fresh(); invoke(new Store(), "messages", List.of(receipt("a", viewer, "20@lid", true, 13, 1L))); f.deliver();
+            check(Toast.shown.isEmpty(), "Malformed viewer rejected");
+        }
+        for (long timestamp : new long[]{0L, -1L, Long.MIN_VALUE}) {
+            f = fresh(); invoke(new Store(), "messages", List.of(receipt("a", "11@lid", "20@lid", true, 13, timestamp))); f.deliver();
+            check(Toast.shown.isEmpty(), "Nonpositive timestamp cannot announce read receipt");
+        }
+
+        f = fresh(); StatusItem status = new StatusItem(new Key("status-a", true, "status@broadcast"));
+        invoke(new Store(), "status", new UserJid("60@lid"), status, 13, 123L); f.deliver();
+        check(Toast.shown.equals(List.of("Read receipt from 60@lid for your status")), "Typed normal status receipt has explicit observed-receipt text");
+        for (int type : new int[]{5, 8, 17, -1}) {
+            f = fresh(); invoke(new Store(), "status", new UserJid("60@lid"), status, type, 123L); f.deliver();
+            check(Toast.shown.isEmpty(), "Status delivery/non-read type cannot announce read");
+        }
+        for (String self : new String[]{"999@s.whatsapp.net", "999@lid"}) {
+            f = fresh(); invoke(new Store(), "status", new UserJid(self), status, 13, 123L); f.deliver();
+            check(Toast.shown.isEmpty(), "Verified self predicate rejects own PN/LID status receipt");
+        }
+        f = fresh(); store = new Store(); store.provider.fail = true;
+        invoke(store, "status", new UserJid("60@lid"), status, 13, 123L); f.deliver();
+        check(Toast.shown.isEmpty(), "Failed self predicate is unknown, never treated as false");
+        f = fresh(); store = new Store(); store.throwOriginal = true;
+        invoke(store, "status", new UserJid("60@lid"), status, 13, 123L); f.deliver();
+        check(Toast.shown.isEmpty(), "Failed original status handler cannot announce read receipt");
+        f = fresh(); invoke(new Store(), "status", new UserJid("60@lid"), new StatusItem(new Key("foreign", false, "status@broadcast")), 13, 123L); f.deliver();
+        check(Toast.shown.isEmpty(), "Status author must be the current account");
+
+        f = fresh(); invoke(new Store(), "messages", List.of(good)); f.messages = false; f.deliver();
+        check(Toast.shown.isEmpty() && READ_OBSERVATIONS.pendingForTests() == 0 && READ_OBSERVATIONS.sizeForTests() == 0, "Disabling before lookup cancels reservation");
+        f.messages = true; invoke(new Store(), "messages", List.of(good)); f.deliver();
+        check(Toast.shown.size() == 1, "Cancelled observation can be retried after enabling");
+        f = fresh(); invoke(new Store(), "messages", List.of(good)); f.asyncExecutor.drain(); f.messages = false; f.mainHandler.drain();
+        check(Toast.shown.isEmpty() && READ_OBSERVATIONS.sizeForTests() == 0 && READ_OBSERVATIONS.pendingForTests() == 0, "Disabling after lookup cancels at UI delivery");
+        f = fresh(); f.mainHandler.accept = false; invoke(new Store(), "messages", List.of(good)); f.deliver();
+        check(READ_OBSERVATIONS.pendingForTests() == 0 && READ_OBSERVATIONS.sizeForTests() == 0, "Rejected UI post leaves retry eligible");
+        f = fresh(); Toast.fail = true; invoke(new Store(), "messages", List.of(good)); f.deliver();
+        check(READ_OBSERVATIONS.sizeForTests() == 0 && READ_OBSERVATIONS.pendingForTests() == 0, "Toast request failure cancels reservation");
+        Toast.fail = false; SystemClock.now += 1600L; invoke(new Store(), "messages", List.of(good)); f.deliver();
+        check(Toast.shown.size() == 1, "Toast failure can retry after display throttle");
+
+        testDedupeAndDispatch();
+        testModelBoundsAndRejection();
+        testDiscoveryRejection();
+        System.out.println("CHECKS=" + checks + "; actual policy/contract/dispatch and extracted installers/callbacks; JVM doubles only");
+    }
+
+    static void testDedupeAndDispatch() throws Exception {
+        ReceiptObservationPolicy.Observation one = ReceiptObservationPolicy.capture(ReceiptObservationPolicy.Kind.MESSAGE, 13, 100L, true, "20@lid", "a", "10@lid");
+        ReceiptObservationPolicy.Observation older = ReceiptObservationPolicy.capture(ReceiptObservationPolicy.Kind.MESSAGE, 13, 1L, true, "20@lid", "a", "10@lid");
+        ReceiptObservationPolicy.Seen seen = new ReceiptObservationPolicy.Seen(2, 2);
+        ReceiptObservationPolicy.Seen.Reservation ticket = seen.reserve(one);
+        check(ticket != null && seen.reserve(older) == null && seen.sizeForTests() == 0, "Pending dedupe is identity-based, not timestamp-based");
+        seen.cancel(ticket); check(seen.pendingForTests() == 0, "Cancellation releases pending identity");
+        ReceiptObservationPolicy.Seen.Reservation retry = seen.reserve(one); seen.delivered(ticket);
+        check(seen.pendingForTests() == 1 && seen.sizeForTests() == 0, "Old reservation cannot consume a newer retry");
+        seen.delivered(retry); check(seen.reserve(older) == null, "Older/duplicate receipt cannot repeat a delivered identity");
+        for (String[] identity : new String[][]{{"20@lid","b","10@lid"},{"21@lid","a","10@lid"},{"20@lid","a","11@lid"},{"20@s.whatsapp.net","a","10@lid"}}) {
+            ReceiptObservationPolicy.Observation e = ReceiptObservationPolicy.capture(ReceiptObservationPolicy.Kind.MESSAGE,13,1,true,identity[0],identity[1],identity[2]);
+            ReceiptObservationPolicy.Seen.Reservation r = seen.reserve(e); check(r != null, "Key/chat/viewer/namespace isolate identities"); seen.delivered(r);
+        }
+        check(seen.sizeForTests() == 2, "Delivered history remains bounded after eviction");
+        check(seen.reserve(one) != null, "Evicted identity may be observed again: not durable view history");
+        ReceiptObservationPolicy.Seen bounded = new ReceiptObservationPolicy.Seen(2,1);
+        ReceiptObservationPolicy.Seen.Reservation hold = bounded.reserve(one);
+        ReceiptObservationPolicy.Observation second = ReceiptObservationPolicy.capture(ReceiptObservationPolicy.Kind.MESSAGE,13,1,true,"20@lid","b","10@lid");
+        check(bounded.reserve(second) == null && bounded.pendingForTests() == 1, "Pending UI/lookup work is separately bounded");
+        bounded.cancel(hold); check(bounded.reserve(second) != null, "Backpressure rejection does not consume identity");
+
+        AtomicInteger shown = new AtomicInteger(); QueueExecutor worker = new QueueExecutor(); Handler ui = new Handler();
+        ReceiptObservationPolicy.Seen dispatch = new ReceiptObservationPolicy.Seen(8,8);
+        ReceiptToastDispatch.submit(one, dispatch, worker, ui::post, () -> true, () -> { throw new IllegalStateException("lookup failed"); }, s -> true);
+        worker.drain(); check(dispatch.pendingForTests() == 0 && dispatch.sizeForTests() == 0, "Lookup failure releases reservation");
+        ReceiptToastDispatch.submit(one, dispatch, r -> { throw new RejectedExecutionException(); }, ui::post, () -> true, () -> "read receipt", s -> true);
+        check(dispatch.pendingForTests() == 0, "Executor rejection releases reservation");
+        ReceiptToastDispatch.submit(one, dispatch, worker, ui::post, () -> true, () -> { throw new OutOfMemoryError("synthetic"); }, s -> true);
+        boolean fatal = false; try { worker.drain(); } catch (OutOfMemoryError expected) { fatal = true; phase="host"; }
+        check(fatal && dispatch.pendingForTests() == 0, "Fatal lookup errors propagate with reservation cleanup");
+
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(0,1,10,TimeUnit.SECONDS,new ArrayBlockingQueue<>(1));
+        CountDownLatch busy = new CountDownLatch(1), release = new CountDownLatch(1);
+        pool.execute(() -> { busy.countDown(); try { release.await(); } catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); } });
+        check(busy.await(5,TimeUnit.SECONDS), "Real pool worker is blocked while the queue is saturated");
+        try {
+        ReceiptToastDispatch.submit(one, dispatch, worker, ui::post, () -> true, () -> "first", s -> { shown.incrementAndGet(); return true; });
+        Runnable first = worker.queue.remove(); pool.getQueue().add(first);
+        ReceiptToastDispatch.submit(second, dispatch, worker, ui::post, () -> true, () -> "second", s -> { shown.incrementAndGet(); return true; });
+        Runnable next = worker.queue.remove(); ReceiptToastDispatch.discardOldest(next,pool);
+        check(dispatch.pendingForTests() == 1 && dispatch.reserve(one) != null, "Displacing old receipt task releases its reservation");
+        pool.shutdown(); ReceiptToastDispatch.discardOldest(pool.getQueue().poll(),pool);
+        check(dispatch.pendingForTests() == 1, "Shutdown rejection releases queued receipt without caller execution");
+        check(shown.get() == 0, "Backpressure never runs lookup/toast on the caller thread");
+        } finally { release.countDown(); pool.shutdownNow(); check(pool.awaitTermination(5,TimeUnit.SECONDS), "Blocked worker terminates"); }
+
+        ReceiptObservationPolicy.Seen sleeping = new ReceiptObservationPolicy.Seen(8,8);
+        ThreadPoolExecutor dormant = new ThreadPoolExecutor(0,1,10,TimeUnit.SECONDS,new ArrayBlockingQueue<>(1));
+        CountDownLatch awakened = new CountDownLatch(1);
+        ConcurrentLinkedQueue<Runnable> delivery = new ConcurrentLinkedQueue<>();
+        try {
+            ReceiptToastDispatch.submit(one, sleeping, worker, delivery::offer, () -> true, () -> "old", s -> true);
+            dormant.getQueue().add(worker.queue.remove());
+            ReceiptToastDispatch.submit(second, sleeping, worker, delivery::offer, () -> true,
+                    () -> { awakened.countDown(); return "new"; }, s -> true);
+            ReceiptToastDispatch.discardOldest(worker.queue.remove(), dormant);
+            check(awakened.await(5,TimeUnit.SECONDS), "Retry restarts a missing worker instead of stranding the queue");
+            dormant.shutdown(); check(dormant.awaitTermination(5,TimeUnit.SECONDS), "Restarted worker terminates");
+            check(sleeping.pendingForTests() == 1 && sleeping.sizeForTests() == 0, "Restarted worker still waits for UI delivery");
+            delivery.remove().run();
+            check(sleeping.pendingForTests() == 0 && sleeping.sizeForTests() == 1, "Restarted task is delivered exactly once");
+        } finally { dormant.shutdownNow(); }
+
+        AtomicInteger retries = new AtomicInteger();
+        ThreadPoolExecutor refilling = new ThreadPoolExecutor(0,1,10,TimeUnit.SECONDS,new ArrayBlockingQueue<>(1)) {
+            @Override public void execute(Runnable next) { retries.incrementAndGet(); ReceiptToastDispatch.discardOldest(next,this); }
+        };
+        ReceiptObservationPolicy.Seen racing = new ReceiptObservationPolicy.Seen(8,8);
+        try {
+            ReceiptToastDispatch.submit(one, racing, worker, ui::post, () -> true, () -> "never", s -> true);
+            ReceiptToastDispatch.discardOldest(worker.queue.remove(),refilling);
+            check(retries.get() == 1 && racing.pendingForTests() == 0, "Concurrent refilling gets only one retry and releases the dropped task");
+        } finally { refilling.shutdownNow(); }
+
+        fatal = false;
+        try { ReceiptToastDispatch.submit(one, racing, r -> { throw new OutOfMemoryError("synthetic submit"); },
+                ui::post, () -> true, () -> "never", s -> true); }
+        catch (OutOfMemoryError expected) { fatal = true; }
+        check(fatal && racing.pendingForTests() == 0, "Fatal executor failures propagate with reservation cleanup");
+
+        AtomicInteger starts = new AtomicInteger(), orphanLookups = new AtomicInteger(), orphanShows = new AtomicInteger();
+        ReceiptObservationPolicy.Seen orphaned = new ReceiptObservationPolicy.Seen(8,8);
+        ThreadPoolExecutor starting = new ThreadPoolExecutor(0,1,1L,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4), r -> {
+            if (starts.getAndIncrement() == 0) throw new SecurityException("synthetic first worker creation failure");
+            return new Thread(r,"receipt-worker-retry");
+        }, ReceiptToastDispatch::discardOldest);
+        try {
+            ReceiptToastDispatch.Poster directUi = r -> { r.run(); return true; };
+            Supplier<String> name = () -> { orphanLookups.incrementAndGet(); return "read receipt"; };
+            ReceiptToastDispatch.Sink show = s -> { orphanShows.incrementAndGet(); return true; };
+            ReceiptToastDispatch.submit(one,orphaned,starting,directUi,() -> true,name,show);
+            check(starting.getQueue().size() == 1 && orphaned.pendingForTests() == 0,
+                    "Worker creation failure leaves a queued task whose reservation has been cancelled");
+            ReceiptToastDispatch.submit(one,orphaned,starting,directUi,() -> true,name,show);
+            starting.shutdown(); check(starting.awaitTermination(5,TimeUnit.SECONDS), "Retry worker drains queue after construction failure");
+            check(orphanLookups.get() == 1 && orphanShows.get() == 1,
+                    "Cancelled queued task cannot look up or notify alongside its legitimate retry");
+            check(orphaned.pendingForTests() == 0 && orphaned.sizeForTests() == 1, "Only the legitimate retry consumes its identity");
+        } finally { starting.shutdownNow(); }
+    }
+
+    public static class AmbiguousKey { public final String id="a", other="b"; public final boolean own=true; public final Jid chat=new Jid("1@lid"); }
+    public static class MutableKey { public String id="a"; public final boolean own=true; public final Jid chat=new Jid("1@lid"); }
+    public static class ExtraReceipt extends ReceiptLike { public final long unexpected = 1; }
+    public static class ReceiptLike { public final int type=13; }
+    static void testModelBoundsAndRejection() throws Exception {
+        check(ReceiptObservationContract.Keys.create(AmbiguousKey.class,Jid.class)==null, "Multiple identity strings are rejected");
+        check(ReceiptObservationContract.Keys.create(MutableKey.class,Jid.class)==null, "Mutable message key fields rejected");
+        ReceiptObservationContract.Keys keys = ReceiptObservationContract.Keys.create(Key.class,Jid.class);
+        check(keys != null, "Actual key layout accepted");
+        ReceiptObservationContract.Messages model = ReceiptObservationContract.Messages.create(Receipt.class,HostMessage.class,UserJid.class,DeviceJid.class,keys,HostMessage.class.getField("canonical"));
+        check(model != null, "Record and anchored key relations accepted");
+        check(ReceiptObservationContract.Messages.create(Receipt.class,HostMessage.class,UserJid.class,DeviceJid.class,keys,HostMessage.class.getField("unrelated"))==null,"Unanchored mutable secondary message key rejected");
+        Receipt item=receipt("a","1@lid","2@lid",true,13,1L);
+        check(model.snapshot(Collections.nCopies(301,item)).isEmpty(),"Oversized batch rejected before any event can publish");
+        Collection<Object> misleading = new AbstractCollection<>() { public int size(){return 1;} public Iterator<Object> iterator(){return Collections.nCopies(301,(Object)item).iterator();} };
+        check(model.snapshot(misleading).isEmpty(),"Iterator work bound does not trust size metadata");
+        Collection<Object> broken = new AbstractCollection<>() { public int size(){return 2;} public Iterator<Object> iterator(){return new Iterator<>() { int step; public boolean hasNext(){return step<2;} public Object next(){if(step++==0)return item;throw new IllegalStateException("iterator failed");} };} };
+        check(model.snapshot(broken).isEmpty(),"Broken batch discards all snapshots before any publication");
+        check(model.snapshot(List.of(new Object(),item)).size()==1,"Unrelated element is not stringified or misclassified");
+        for(String id:new String[]{"","a\nb","a".repeat(257)}) check(ReceiptObservationPolicy.capture(ReceiptObservationPolicy.Kind.MESSAGE,13,1,true,"2@lid",id,"1@lid")==null,"Malformed message key is rejected");
+        Store store=new Store();store.provider.fatal=true;
+        ReceiptObservationContract.Statuses status=ReceiptObservationContract.Statuses.create(Store.class.getMethod("status",UserJid.class,StatusItem.class,int.class,long.class),UserJid.class,StatusKey.class,keys,Store.class.getField("provider"),PredicateCalls.class.getMethod("isSelf",Provider.class,Jid.class));
+        boolean fatal=false;try{status.snapshot(store,new Object[]{new UserJid("1@lid"),new StatusItem(new Key("s",true,"status@broadcast")),13,1L});}catch(OutOfMemoryError expected){fatal=true;}
+        check(fatal,"Reflection wrapper does not swallow fatal self-predicate error");
+    }
+
+    static void testDiscoveryRejection() throws Exception {
+        for(String defective:new String[]{"missing-sender","ambiguous-sender","missing-status","ambiguous-status","missing-status-constructor","ambiguous-status-constructor","missing-message","ambiguous-message","missing-receipt-constructor","ambiguous-receipt-constructor"}) {
+            DexSearchEngine.BRIDGE.reset();DexSearchEngine.BRIDGE.defective=defective;XposedBridge.hooks.clear();
+            ReceiptObservationFixture f=new ReceiptObservationFixture();f.hookStatusViewedReceipt();f.hookOnInsertReceipt();
+            boolean sender=defective.endsWith("sender");
+            check(XposedBridge.hooks.size()==(sender?0:1),"Missing/ambiguous discovery fails closed: "+defective);
+        }
+        DexSearchEngine.BRIDGE.reset();XposedBridge.hooks.clear();
+        DexSearchEngine.BRIDGE.status.call(new MethodData(PredicateCalls.class.getMethod("ambiguous",Provider.class,Jid.class)));
+        new ReceiptObservationFixture().hookStatusViewedReceipt();check(XposedBridge.hooks.isEmpty(),"Ambiguous self predicate cannot install status observer");
+        DexSearchEngine.BRIDGE.reset();XposedBridge.hooks.clear();
+        DexSearchEngine.BRIDGE.status.field(Store.class.getField("ignoredProvider"));
+        new ReceiptObservationFixture().hookStatusViewedReceipt();check(XposedBridge.hooks.isEmpty(),"Ambiguous read provider cannot be chosen by field order");
+        DexSearchEngine.BRIDGE.reset();XposedBridge.hooks.clear();
+        DexSearchEngine.BRIDGE.message=new MethodData(Store.class.getMethod("wrongStatic",Collection.class));
+        new ReceiptObservationFixture().hookOnInsertReceipt();check(XposedBridge.hooks.isEmpty(),"Cached/static-looking handler cannot bypass instance contract");
+    }
+}
