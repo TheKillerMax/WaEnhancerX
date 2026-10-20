@@ -33,6 +33,7 @@ DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f3
 DEXKIT_JAR_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
 
 SERVICES = {
+    'com/waenhancer/app/BuildConfig.java': 'package com.waenhancer.app; public final class BuildConfig { public static final int VERSION_CODE=20100; public static final String VERSION_NAME="fixture"; }',
     'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
     'androidx/annotation/Nullable.java': 'package androidx.annotation; public @interface Nullable {}',
     'androidx/core/content/ContextCompat.java': 'package androidx.core.content; public class ContextCompat {}',
