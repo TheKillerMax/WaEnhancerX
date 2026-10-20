@@ -117,6 +117,7 @@ def main():
         source=root/relative;dest=stage/relative;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,dest);sources.append(dest)
         identities[str(relative)]=hashlib.sha256(source.read_bytes()).hexdigest()
     fixtures={
+        'com/waenhancer/app/BuildConfig.java':'package com.waenhancer.app;public final class BuildConfig{public static final int VERSION_CODE=20100;public static final String VERSION_NAME="fixture";}',
         'androidx/annotation/NonNull.java':'package androidx.annotation;public @interface NonNull{}',
         'androidx/annotation/Nullable.java':'package androidx.annotation;public @interface Nullable{}',
         'de/robv/android/xposed/XposedBridge.java':XPOSED,
