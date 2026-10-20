@@ -43,6 +43,36 @@ The runner reuses `qa/android_media_preview_test.py` and `qa/maven_dependencies.
 for public dependency and process helpers. It does not execute MediaPreviewHook or
 substitute it for any appearance implementation.
 
+### Reproducible public bootstrap
+
+The workflow downloads the official Kotlin 2.0.20 compiler, verifies its SHA-256
+and bounded archive contents, and checks the selected executable before either
+suite runs. It does not use the runner image's unpinned Kotlin installation.
+
+AndroidX Core 1.18.0 is downloaded separately as its official Google Maven AAR.
+Both the AAR and its complete `classes.jar` are size-bounded and SHA-256 verified;
+an optional `--core-api-jar` must have that same identity. The project catalog
+must still declare 1.18.0. DexKit 2.2.0 uses the existing pinned public bootstrap.
+Robolectric and annotation dependencies retain their fixed Maven coordinates.
+The bootstrap, classpath and instrumented Android SDK identities are recorded
+alongside the execution logs.
+
+This avoids asking Maven for nonexistent JAR variants of Core's Android
+transitive dependencies. The former default bootstrap failed during dependency
+resolution on integration commit `4e68f7302707dd98645ae4a518bea0faddc58d7e`;
+neither appearance suite reached compilation or test execution. Earlier local
+results used supplied dependencies and did not prove that default route. The
+failure is a deterministic QA configuration defect, not a product regression or
+a transient network failure.
+
+The corrected route compiles and executes the unchanged production classes and
+all existing cases against real Core classes. Its standalone Robolectric
+classpath does not resolve or validate the entire app's Gradle dependency graph,
+and the tests do not establish behavior of unexercised Core APIs or transitive
+libraries. A missing runtime class, skipped case or dependency failure remains a
+failed gate. Public-bootstrap validation must run both commands above without
+`--deps`, `--core-api-jar`, `--dexkit-jar` or `--sdk-jars`.
+
 ### Localization scope
 
 The four `overlay_permission.xml` files provide the same three keys in English,
@@ -50,8 +80,11 @@ Spanish, Latin American Spanish and Slovenian. Their XML structure, non-empty
 values, placeholder consistency and matching Spanish variants are checked when
 preparing the focused change.
 
-The global es-419 and Slovenian gates passed in the combined V39/V40 integration
-checkout. They do not pass on the isolated upstream-main parent
+The global es-419 and Slovenian gates passed in the earlier combined V39/V40
+checkout used to prepare this focused change. That result does not cover later
+integration additions: source QA on `4e68f7302707dd98645ae4a518bea0faddc58d7e`
+reported the unrelated missing Slovenian `call_recording_delete_failed` key.
+The gates also do not pass on the isolated upstream-main parent
 `a565e1a1a50ebfe5d633e8cd0d43c6dc6025a8ac`: that parent already lacks 14 unrelated
 Spanish keys and 16 Slovenian keys. The appearance stage has the identical gaps;
 the overlay additions do not introduce them. The appearance workflow therefore

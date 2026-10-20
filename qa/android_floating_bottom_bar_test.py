@@ -16,6 +16,7 @@ import runpy
 import shutil
 import subprocess
 import tomllib
+import zipfile
 
 import android_media_preview_test as framework
 
@@ -29,10 +30,33 @@ CHANNEL = JAVA/'xposed/features/customization/ChannelRecommendationsFilterHook.k
 HIDER = JAVA/'xposed/utils/ViewVisibilityGuard.java'
 SELECTOR = JAVA/'xposed/utils/ViewClassSelector.java'
 FIXTURES = ROOT/'qa/fixtures/floating_bottom_bar'
+CORE_VERSION = '1.18.0'
+CORE_URL = 'https://dl.google.com/dl/android/maven2/androidx/core/core/1.18.0/core-1.18.0.aar'
+CORE_AAR_SHA256 = '311d83ac67d394076ec21d12ed2d10a44b59cb2929b7dce00e5a90a93842e37d'
+CORE_SHA256 = 'd1f5a319a77555df7e23858ffb5ed45a95ebb4263fa1ab7a993510ceb53555a0'
 
 
 def run(command, log, allow_failure=False):
     return framework.run(command, log, allow_failure=allow_failure, timeout=240)
+
+
+def resolve_core(args, out):
+    version = tomllib.loads((ROOT/'gradle/libs.versions.toml').read_text())['versions']['androidxCore']
+    if version != CORE_VERSION:
+        raise RuntimeError('Update the pinned Core QA artifact for project version ' + version)
+    if args.core_api_jar:
+        core = args.core_api_jar.resolve()
+    else:
+        directory = out/'public-apis'
+        archive = framework.download_pinned(CORE_URL, directory/'core-1.18.0.aar',
+                                            CORE_AAR_SHA256, 8*1024*1024)
+        with zipfile.ZipFile(archive) as bundle:
+            matches = [entry for entry in bundle.infolist() if entry.filename == 'classes.jar']
+            if len(matches) != 1 or matches[0].file_size > 4*1024*1024:
+                raise RuntimeError('Core AAR must contain one bounded classes.jar')
+            core = directory/'core-1.18.0.jar'
+            core.write_bytes(bundle.read(matches[0]))
+    return framework.verify_api(core, CORE_SHA256, 4*1024*1024)
 
 
 def execute(root, out, dependencies, compiler, baseline):
@@ -125,7 +149,7 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--deps', type=Path)
     parser.add_argument('--dexkit-jar', type=Path)
-    parser.add_argument('--core-api-jar', type=Path, help='Additional real AndroidX Core API JAR when reusing minimal framework dependencies')
+    parser.add_argument('--core-api-jar', type=Path, help='Reuse the SHA-pinned Core classes.jar; default: verified public Google Maven AAR')
     parser.add_argument('--sdk-jars', type=Path)
     parser.add_argument('--maven', default='mvn')
     parser.add_argument('--maven-repo', type=Path)
@@ -135,12 +159,15 @@ def main():
     if out.exists() and any(out.iterdir()):
         parser.error('--out must be empty; preserve previous logs and classes')
     out.mkdir(parents=True, exist_ok=True)
-    version = tomllib.loads((ROOT/'gradle/libs.versions.toml').read_text())['versions']['androidxCore']
-    framework.POM = framework.POM.replace('</dependencies>', '<dependency><groupId>androidx.core</groupId>'
-        '<artifactId>core</artifactId><version>'+version+'</version><type>aar</type></dependency>'
+    # Maven cannot resolve Android Gradle variant metadata: Core's transitive
+    # lifecycle/tracing coordinates otherwise request nonexistent JARs. Load its
+    # complete, pinned classes.jar separately, as in the recordings framework QA.
+    # This standalone test classpath does not certify the app dependency graph.
+    framework.POM = framework.POM.replace('</dependencies>',
         '<dependency><groupId>androidx.annotation</groupId><artifactId>annotation-jvm</artifactId>'
         '<version>1.9.1</version></dependency></dependencies>')
     deps = framework.resolve_framework(ARGS, out)
+    core = resolve_core(ARGS, out)
     dexkit = ARGS.dexkit_jar.resolve() if ARGS.dexkit_jar else out/'apis/dexkit-2.2.0.jar'
     if ARGS.dexkit_jar:
         framework.verify_api(dexkit, framework.DEXKIT_SHA256, 2*1024*1024)
@@ -149,9 +176,17 @@ def main():
         ARGS.http_api_jar = None
         dexkit, _ = framework.resolve_apis(ARGS, out)
     kotlin_home, compiler = framework.find_kotlin()
-    dependencies = sorted(deps.glob('*.jar')) + [dexkit, kotlin_home/'lib/kotlin-stdlib.jar']
-    if ARGS.core_api_jar:
-        dependencies.append(ARGS.core_api_jar.resolve())
+    dependencies = sorted(deps.glob('*.jar')) + [dexkit, core, kotlin_home/'lib/kotlin-stdlib.jar']
+    (out/'bootstrap.json').write_text(json.dumps({
+        'framework': 'provided' if ARGS.deps else 'public-maven',
+        'core': 'provided' if ARGS.core_api_jar else CORE_URL,
+        'core_aar_sha256': CORE_AAR_SHA256, 'core_classes_sha256': CORE_SHA256,
+        'dexkit': 'provided' if ARGS.dexkit_jar else framework.DEXKIT_URL,
+        'dexkit_classes_sha256': framework.DEXKIT_SHA256,
+        'kotlin_compiler': str(compiler),
+        'sdk_mode': 'offline-directory' if ARGS.sdk_jars else 'public-maven-resolver',
+        'scope': 'Complete Core classes with standalone Robolectric dependencies; not the app dependency graph',
+    }, indent=2)+'\n')
     (out/'dependency-sha256.json').write_text(json.dumps({str(p): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in dependencies}, indent=2)+'\n')
     if ARGS.sdk_jars:
@@ -161,6 +196,10 @@ def main():
     if ARGS.baseline_root:
         results.append(execute(ARGS.baseline_root.resolve(), out/'baseline', dependencies, compiler, True))
     results.append(execute(ARGS.source_root.resolve(), out/'candidate', dependencies, compiler, False))
+    if not ARGS.sdk_jars:
+        sdk_root = (ARGS.maven_repo.resolve() if ARGS.maven_repo else Path.home()/'.m2/repository')/'org/robolectric/android-all-instrumented'
+        (out/'sdk-sha256.json').write_text(json.dumps({str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(sdk_root.glob('*/*.jar'))}, indent=2)+'\n')
     (out/'results.json').write_text(json.dumps({'results': results, 'limits': __doc__}, indent=2)+'\n')
     print('PASS: complete-hook compilation and Android View/Drawable/Intent regression cases; not an APK/LSPosed/GPU test.')
 
