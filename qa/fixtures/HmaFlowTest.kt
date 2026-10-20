@@ -1,6 +1,10 @@
 package com.waenhancer.utils
 
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.os.Process
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -10,7 +14,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowProcess
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
@@ -29,6 +35,7 @@ class HmaFlowTest {
 
     @Before fun setup() {
         context = RuntimeEnvironment.getApplication()
+        ShadowProcess.setUid(context.applicationInfo.uid)
         module = context.packageName
         val root = File(System.getenv("HMA_QA_ROOT"))
         directory = Files.createTempDirectory(root.toPath(), "flow-").toFile()
@@ -94,6 +101,24 @@ class HmaFlowTest {
             assertEquals(size, it.toByteArray(Charsets.UTF_8).size)
         }
     }
+
+    private fun scopedContext(userId: Int, packageName: String = module, uidOffset: Int = 0): Context {
+        val base = context
+        val info = ApplicationInfo(base.applicationInfo).also {
+            it.uid = userId * 100_000 + 10_000 + uidOffset
+            it.packageName = packageName
+        }
+        return object : ContextWrapper(base) {
+            override fun getApplicationInfo(): ApplicationInfo = info
+            override fun getApplicationContext(): Context = this
+            override fun getPackageName(): String = packageName
+        }
+    }
+    private fun useProfile(userId: Int) {
+        context = scopedContext(userId)
+        ShadowProcess.setUid(context.applicationInfo.uid)
+    }
+    private fun privatePath(userId: Int) = "/data/user/$userId/org.frknkrc44.hma_oss/files/config.json"
 
     @Test fun sharedAndUnappliedTemplatesRemainUnchanged() {
         val selected = scope().put("applyTemplates", array("shared"))
@@ -318,6 +343,169 @@ class HmaFlowTest {
         HmaDiagnostics.forceStopHmaApps(context)
         val stops = events().filter { it.optString("kind") == "stop" }.map { it.getString("package") }
         assertEquals(managers, stops)
+        assertTrue(events().filter { it.optString("kind") == "stop" }.all { it.getInt("user") == 0 })
+    }
+
+    @Test fun workProfileDiscoveryAndForceStopUseTheCallingUser() {
+        useProfile(10)
+        control.put("packages_by_user", JSONObject()
+            .put("0", array("com.tsng.hidemyapplist"))
+            .put("10", array("org.frknkrc44.hma_oss")))
+        save()
+        HmaDiagnostics.forceStopHmaApps(context)
+        val stops = events().filter { it.optString("kind") == "stop" }
+        assertEquals(listOf("org.frknkrc44.hma_oss"), stops.map { it.getString("package") })
+        assertTrue(stops.all { it.getInt("user") == 10 })
+        assertTrue(events().filter { it.optString("kind") == "list" }.all { it.getInt("user") == 10 })
+    }
+
+    @Test fun managerInstalledOnlyForOwnerIsNotStoppedFromWorkProfile() {
+        useProfile(10)
+        control.put("packages_by_user", JSONObject().put("0", array("org.frknkrc44.hma_oss")))
+        save()
+        HmaDiagnostics.forceStopHmaApps(context)
+        assertTrue(events().none { it.optString("kind") == "stop" })
+    }
+
+    @Test fun packageManagerEntryFromAnotherUserCannotAuthorizeStop() {
+        useProfile(10)
+        val pkg = "org.frknkrc44.hma_oss"
+        shadowOf(context.packageManager).installPackage(PackageInfo().also { packageInfo ->
+            packageInfo.packageName = pkg
+            packageInfo.applicationInfo = ApplicationInfo().also { it.packageName = pkg; it.uid = 10_100 }
+        })
+        HmaDiagnostics.forceStopHmaApps(context)
+        assertTrue(events().none { it.optString("kind") == "stop" })
+    }
+
+    @Test fun mismatchedContextAndProcessUserNeverReachesRoot() {
+        val workContext = scopedContext(10)
+        add(document())
+        val result = runBlocking { HmaDiagnostics.checkHmaStatus(workContext, listOf(target), true) }
+        assertEquals("UNAVAILABLE", result.state.name)
+        assertFalse(runBlocking { HmaDiagnostics.fixTargetIsolation(workContext, target) })
+        HmaDiagnostics.forceStopHmaApps(workContext)
+        assertTrue(events().isEmpty())
+    }
+
+    @Test fun invalidOrForeignApplicationUidNeverReachesRoot() {
+        val foreignContext = scopedContext(0, uidOffset = 1)
+        ShadowProcess.setUid(10_000)
+        assertEquals("UNAVAILABLE", runBlocking {
+            HmaDiagnostics.checkHmaStatus(foreignContext, listOf(target), true)
+        }.state.name)
+        assertFalse(runBlocking { HmaDiagnostics.fixTargetIsolation(foreignContext, target) })
+        HmaDiagnostics.forceStopHmaApps(foreignContext)
+        ShadowProcess.setUid(-1)
+        val invalid = scopedContext(0, uidOffset = -10_001)
+        assertEquals("UNAVAILABLE", runBlocking { HmaDiagnostics.checkHmaStatus(invalid, listOf(target), true) }.state.name)
+        assertTrue(events().isEmpty())
+    }
+
+    @Test fun workProfilePrivateRepairPreservesOwnerAliasesAndOtherProfiles() {
+        useProfile(10)
+        val original = document().toString()
+        val owner = add(original, privatePath(0))
+        val ownerAlias = add(original, "/data/data/org.frknkrc44.hma_oss/files/config.json")
+        val selected = add(original, privatePath(10))
+        val differentProfile = add(original, privatePath(11))
+        assertTrue(repair())
+        assertNotEquals(original, selected.readText())
+        assertEquals(original, owner.readText())
+        assertEquals(original, ownerAlias.readText())
+        assertEquals(original, differentProfile.readText())
+        assertEquals(original, readBackup(selected))
+        assertTrue(events().filter { it.optString("kind") in setOf("read", "backup", "write", "restore") }
+            .all { it.getString("path") == privatePath(10) })
+        blocked(false)
+    }
+
+    @Test fun profileDiscoveryRequestsOnlyExactManagerCandidatesAndGlobalStores() {
+        useProfile(10)
+        report()
+        val searches = events().filter { it.optString("kind") == "command" }
+            .map { it.getString("command") }.filter { it.contains("readlink -f") }
+        assertEquals(1, searches.size)
+        val search = searches.single()
+        assertFalse(search.contains("/data/user/0/"))
+        assertFalse(search.contains("/data/data"))
+        assertTrue(search.contains(privatePath(10)))
+        assertTrue(search.contains("/data/misc/hide_my_applist"))
+        assertTrue(search.contains("/data/system/hide_my_applist"))
+        assertFalse(search.contains("find /data/"))
+    }
+
+    @Test fun ownerIgnoresForeignPrivateRulesWhileGlobalStoreRemainsShared() {
+        useProfile(0)
+        val original = document().toString()
+        val otherProfile = add(original, privatePath(10))
+        add(document(scope()), logical)
+        blocked(false)
+        assertFalse(repair())
+        assertEquals(original, otherProfile.readText())
+        useProfile(10)
+        val global = control.getJSONObject("files").getString(logical).let { File(it) }
+        global.writeText(original)
+        assertTrue(repair())
+        assertNotEquals(original, global.readText())
+        assertEquals(original, readBackup(global))
+    }
+
+    @Test fun cachedReportIsSpecificToRequestedTargets() {
+        val data = document()
+        data.getJSONObject("scope").put(other, scope())
+        add(data)
+        report()
+        val next = runBlocking { HmaDiagnostics.checkHmaStatus(context, listOf(other)) }
+        assertEquals(listOf(other), next.targetDetails.map { it.packageName })
+        assertEquals(HmaDiagnostics.HmaState.CLEAN, next.state)
+    }
+
+    @Test fun cachedReportIsSpecificToModuleIdentity() {
+        add(document())
+        report()
+        val otherModule = scopedContext(0, "com.waenhancer.another")
+        ShadowProcess.setUid(otherModule.applicationInfo.uid)
+        val next = runBlocking { HmaDiagnostics.checkHmaStatus(otherModule, listOf(target)) }
+        assertEquals(HmaDiagnostics.HmaState.CLEAN, next.state)
+    }
+
+    @Test fun cachedReportCannotCrossProfiles() {
+        useProfile(0)
+        add(document(), privatePath(0))
+        add(document(scope()), privatePath(10))
+        assertEquals(HmaDiagnostics.HmaState.BLOCKING_TARGETS, report().state)
+        useProfile(10)
+        val next = runBlocking { HmaDiagnostics.checkHmaStatus(context, listOf(target)) }
+        assertEquals(HmaDiagnostics.HmaState.CLEAN, next.state)
+    }
+
+    @Test fun invalidRequestCannotReuseAHealthyCachedReport() {
+        add(document(scope()))
+        assertEquals(HmaDiagnostics.HmaState.CLEAN, report().state)
+        val otherUser = scopedContext(10)
+        val before = events().size
+        assertEquals("UNAVAILABLE", runBlocking {
+            HmaDiagnostics.checkHmaStatus(otherUser, listOf(target))
+        }.state.name)
+        assertEquals(before, events().size)
+    }
+
+    @Test fun equivalentTargetSetsReuseTheSameCachedSnapshot() {
+        add(document())
+        runBlocking { HmaDiagnostics.checkHmaStatus(context, listOf(other, target, target), true) }
+        val before = events().size
+        val next = runBlocking { HmaDiagnostics.checkHmaStatus(context, listOf(target, other)) }
+        assertEquals(setOf(target, other), next.targetDetails.map { it.packageName }.toSet())
+        assertEquals(before, events().size)
+    }
+
+    @Test fun successfulRepairInvalidatesCachedBlockingReport() {
+        add(document())
+        assertEquals(HmaDiagnostics.HmaState.BLOCKING_TARGETS, report().state)
+        assertTrue(repair())
+        assertEquals(HmaDiagnostics.HmaState.CLEAN,
+            runBlocking { HmaDiagnostics.checkHmaStatus(context, listOf(target)) }.state)
     }
 
     @Test fun hmaNamedSubdirectoryOfAnotherAppIsRejected() {

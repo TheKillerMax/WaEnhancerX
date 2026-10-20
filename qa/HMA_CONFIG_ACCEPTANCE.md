@@ -1,11 +1,11 @@
 # HMA configuration repair: scope and acceptance
 
 The public-source runner compiles the complete `HmaDiagnostics`, `HmaConfigPolicy`,
-`HmaConfigFile` and `RootCommandRunner`, together with the actual declared-target
-set. It runs 50 diagnostics/repair scenarios and 15 policy/snapshot scenarios on
-each of Android API 24, 28 and 34 using Robolectric 4.17: **195 framework test
-executions**. These are 65 scenarios repeated on three framework versions, not
-195 devices. A separate runner executes **20 process/output checks**.
+`HmaConfigFile`, `AndroidUserScope` and `RootCommandRunner`, together with the actual
+declared-target set. It runs 64 diagnostics/repair scenarios and 15 policy/snapshot
+scenarios on each of Android API 24, 28 and 34 using Robolectric 4.17: **237 framework
+test executions**. These are 79 scenarios repeated on three framework versions,
+not 237 devices. A separate runner executes **20 process/output checks**.
 
 ```bash
 python3 qa/android_hma_test.py \
@@ -29,6 +29,12 @@ not become successful baseline evidence.
 - Complete public diagnostics and repair entry points, including their IO
   dispatcher, target validation, manager discovery, result cache invalidation,
   pre/post repair manager passes, and final Boolean result.
+- Calling-user identity checks before root access, explicit package-list and
+  force-stop user arguments, profile-specific private file candidates, and cache
+  keys covering the application UID, module package and normalized target set.
+  Invalid or mismatched Context/UID requests return unavailable and never issue a
+  root command. Checks and repairs share a lock so an old check cannot overwrite
+  repair's cache invalidation.
 - The complete production process runner. A test-owned executable accepts the
   runner's command protocol; it does not invoke a root manager or elevate
   privileges. Logical Android paths map to temporary files owned by this test.
@@ -87,15 +93,27 @@ public root endpoint.
 | --- | --- |
 | Inspected HMA/OSS service storage | `/data/misc/hide_my_applist*/config.json` |
 | Inspected legacy migration source | `/data/system/hide_my_applist*/config.json` |
-| Exact known manager's own files | `/data/data/<manager>/files/config.json` |
-| Canonical primary-user manager data | `/data/user/0/<manager>/files/config.json` |
+| Exact known manager's own file, owner-user alias only | `/data/data/<manager>/files/config.json` |
+| Private manager candidate for the calling user's verified UID | `/data/user/<userId>/<manager>/files/config.json` |
 
 `<manager>` must be exactly `com.tsng.hidemyapplist`, `org.frknkrc44.hma_oss`, or
 `com.google.android.hmal`. Descendants of another app/service, additional nested
-directories, unsupported users/roots, traversal components, controls and
-oversized components are rejected. Discovery canonicalizes paths; read/write
+directories, another user's private files, noncanonical user numbers, unsupported
+roots, traversal components, controls and oversized components are rejected.
+Discovery checks direct service paths and three exact private manager candidates,
+without a recursive scan of unrelated application directories. It canonicalizes
+paths and rechecks their user ownership; read/write
 commands recheck canonical identity and reject a symlinked file. Additional forks
 or storage layouts require their own confirmed contracts before being accepted.
+
+The global service configurations remain shared by package name across Android
+users. Selecting a target repairs that package's rules in those global stores; it
+does not create a profile-specific HMA rule. A private manager file is only a
+candidate. Its existence does not establish that the service imported or uses it.
+In particular, the inspected OSS importer names owner-user locations, so discovery
+of a profile-10 manager file is not evidence that the running service imported
+that file. Root package discovery and manager force-stop use the calling app's
+verified user even when repairing a global service store.
 
 ## Source basis
 
@@ -105,6 +123,9 @@ The rule review uses these immutable public implementations:
 - [Legacy service, bd5466b](https://github.com/Dr-TSNG/Hide-My-Applist/blob/bd5466b37bae15e3ea2a66694e7624ce3d33479d/xposed/src/main/java/icu/nullptr/hidemyapplist/xposed/HMAService.kt).
 - [OSS config schema, 1fe86ce](https://github.com/frknkrc44/HMA-OSS/blob/1fe86ce2b4a6f21197e6e92d15e054d609b7d77c/common/src/main/java/icu/nullptr/hidemyapplist/common/JsonConfig.kt).
 - [OSS service, 1fe86ce](https://github.com/frknkrc44/HMA-OSS/blob/1fe86ce2b4a6f21197e6e92d15e054d609b7d77c/zygote/src/main/java/org/frknkrc44/hma_oss/zygote/service/HMAService.kt).
+- [AOSP multi-user testing](https://source.android.com/docs/devices/admin/multi-user-testing),
+  including the owner-user default for `pm list packages` and the need to identify
+  the intended Android user explicitly.
 
 Both services apply `extraAppList` before template rules and use the target's
 whitelist mode when evaluating template membership. The template's `isWhitelist`
@@ -119,7 +140,28 @@ system-app, WebView/browser, Google service, disabled-hook or per-user decision.
 Legacy's missing-template behavior differs from OSS; the tests do not describe
 legacy as ignoring such a reference.
 
+`python3 qa/test_hma_dashboard_state.py` compiles the dashboard's exact HMA value,
+health and loading expressions against the production state enum. It checks all
+states, including an unavailable result that remains unconfirmed and raises the
+overall warning indication. This is a display-policy check, not Compose rendering.
+
+## Paired profile regression evidence
+
+The profile candidate passes **237/237** framework executions and **20/20** bounded
+process checks. The same 237 fixtures compiled against the immutable integration
+baseline `5cd69d8e7fbad0379f417134cbb2ce289dfa3baa` produce **39 assertion failures**,
+with no setup or compilation failures, while retaining 20/20 bounded checks. The
+failures expose unscoped manager stops, owner-user package discovery, rejection
+of the caller's work-profile candidate, invalid-context access and stale cache
+reuse. They are intentional baseline failures, not a passing baseline run.
+
 ## Device acceptance still required
+
+`UNAVAILABLE` currently covers an invalid or mismatched caller identity. Other
+diagnostic failures retain the existing classification: inaccessible root
+discovery can still yield `NOT_ACTIVE`, and an empty or unreadable config set can
+yield `NOT_CONFIGURED`. This change does not make permission denial distinguishable
+from absence throughout the HMA diagnostic pipeline.
 
 Successful replacement means that the script returned the exact acknowledgement
 and a subsequent bounded snapshot matched the intended document. It does not

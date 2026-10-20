@@ -8,6 +8,8 @@ paths are mapped to test-owned temporary files. Unknown commands fail closed.
 import json
 import os
 from pathlib import Path
+import re
+import shlex
 import subprocess
 import sys
 
@@ -53,22 +55,43 @@ if len(sys.argv) != 3 or sys.argv[1] != '-c':
     raise SystemExit(96)
 command = sys.argv[2]
 event('command', command=command)
-if command == 'pm list packages':
-    print('\n'.join('package:' + name for name in control.get('packages', [])))
+if re.fullmatch(r'pm list packages(?: --user [0-9]+)?', command):
+    words = shlex.split(command)
+    user = int(words[4]) if len(words) == 5 else 0
+    event('list', user=user)
+    packages = control.get('packages_by_user', {}).get(str(user), control.get('packages', []))
+    print('\n'.join('package:' + name for name in packages))
     raise SystemExit(0)
 if command.startswith('am force-stop '):
-    import shlex
     words = shlex.split(command)
-    if len(words) != 3 or words[:2] != ['am', 'force-stop']:
+    if words[:2] != ['am', 'force-stop']:
         raise SystemExit(96)
-    event('stop', package=words[2])
+    if len(words) == 5 and words[2] == '--user' and words[3].isdigit():
+        user, package = int(words[3]), words[4]
+    elif len(words) == 3:
+        user, package = -1, words[2]  # Historical am default: all Android users.
+    else:
+        raise SystemExit(96)
+    event('stop', package=package, user=user)
     raise SystemExit(0)
 if command.startswith('[ -d /data/adb/modules/hma_oss_zygisk ]'):
-    print('active')
+    if control.get('zygisk_active', True):
+        print('active')
     raise SystemExit(0)
 if command == '[ -f /data/adb/lspd/config/modules_config.db ] && echo exists':
     raise SystemExit(1)
 if command.startswith('find /data/misc /data/system /data/adb /data/user/0 /data/data '):
+    event('discover', user=0)
+    print('\n'.join(control['paths']))
+    raise SystemExit(0)
+if command.startswith('for waex_path in /data/misc/hide_my_applist*/config.json /data/system/hide_my_applist*/config.json '):
+    candidates = re.findall(r'/data/user/([0-9]+)/([^/]+)/files/config.json', command)
+    managers = {'com.tsng.hidemyapplist', 'org.frknkrc44.hma_oss', 'com.google.android.hmal'}
+    if len(candidates) != 3 or {pkg for _, pkg in candidates} != managers or len({uid for uid, _ in candidates}) != 1:
+        raise SystemExit(96)
+    event('discover', user=int(candidates[0][0]))
+    # Return every fixture path, including foreign users. Production must filter
+    # canonical output itself before reading or repairing a private configuration.
     print('\n'.join(control['paths']))
     raise SystemExit(0)
 

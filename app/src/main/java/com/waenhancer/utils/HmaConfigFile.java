@@ -42,13 +42,36 @@ public final class HmaConfigFile {
         if (("misc".equals(parts[2]) || "system".equals(parts[2])) && parts.length == 5) {
             return parts[3].startsWith("hide_my_applist");
         }
-        // The OSS importer also reads the manager's own files/config.json.
-        // /data/data may resolve to its canonical /data/user/0 form during discovery.
+        // A known manager's private file is a configuration candidate, not proof
+        // that the HMA service imported it. Callers must also check the user scope.
+        // Keep the owner-user alias because canonicalization can return /data/data.
         if ("data".equals(parts[2]) && parts.length == 6) {
             return HmaConfigPolicy.isManagerPackage(parts[3]) && "files".equals(parts[4]);
         }
-        return parts.length == 7 && "user".equals(parts[2]) && "0".equals(parts[3])
+        return parts.length == 7 && "user".equals(parts[2]) && isCanonicalUserId(parts[3])
                 && HmaConfigPolicy.isManagerPackage(parts[4]) && "files".equals(parts[5]);
+    }
+
+    /** Global service stores are shared; private manager candidates belong to one user. */
+    public static boolean isConfigPathForUser(String path, int userId) {
+        if (userId < 0 || !isConfigPath(path)) return false;
+        if (path.startsWith("/data/user/")) {
+            return path.startsWith("/data/user/" + userId + "/");
+        }
+        if (path.startsWith("/data/data/")) return userId == 0;
+        return true;
+    }
+
+    private static boolean isCanonicalUserId(String value) {
+        if (value.isEmpty() || (value.length() > 1 && value.charAt(0) == '0')) return false;
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) < '0' || value.charAt(i) > '9') return false;
+        }
+        try {
+            return Integer.parseInt(value) >= 0;
+        } catch (NumberFormatException invalid) {
+            return false;
+        }
     }
 
     public static String readCommand(String path) {

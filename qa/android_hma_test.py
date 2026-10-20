@@ -24,6 +24,7 @@ PRODUCTION = [
     'app/src/main/java/com/waenhancer/utils/HmaConfigFile.java',
     'app/src/main/java/com/waenhancer/xposed/utils/RootCommandRunner.java',
     'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java',
+    'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
 ]
 POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
 <modelVersion>4.0.0</modelVersion><groupId>org.waex.qa</groupId>
