@@ -4,4 +4,5 @@
     <string name="call_recording_allow_mic_fallback_title">"Dovoli preklop na mikrofon"</string>
     <string name="call_recording_allow_mic_fallback_description">"Če Android zavrne zajem zvoka klica, se poskusijo viri zvoka iz mikrofona. Če to možnost izklopiš, se poskus snemanja namesto tega ustavi. Velja za naslednji poskus snemanja."</string>
     <string name="call_recording_setting_save_failed">"Nastavitve snemanja ni bilo mogoče shraniti"</string>
+    <string name="call_recording_delete_failed">"Posnetka ni bilo mogoče izbrisati"</string>
 </resources>
