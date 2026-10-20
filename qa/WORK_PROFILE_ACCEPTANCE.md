@@ -22,11 +22,13 @@ only a complete "Status: ok" line on a successful command counts as an acknowled
 launch. Missing packages, foreign components/UIDs and invalid component names
 fail before force-stop. Root denial and launch failure keep the existing local
 Context fallback; an already stopped app does not receive a subsequent self-kill
-broadcast. The bulk restart follows the same target validation. Its existing
-behavior after a failed root launch is unchanged: it does not check that launch
-result or use the individual restart's fallback before relaunching the manager.
-The new bulk cases verify target selection and component rejection; they do not
-exercise a rejected root launch after a successful bulk force-stop.
+broadcast. Bulk restart follows the same target validation and checks the launch
+acknowledgement. A denied root stop uses a target-scoped restart broadcast and the
+verified normal launcher Intent. If root already stopped the target but its
+launch fails or is unacknowledged, bulk restart uses the normal Intent without
+sending another kill broadcast. A broadcast failure does not prevent that
+target's normal launch or the next verified target. Rejected main-thread
+scheduling releases the shared pending-request guard.
 
 The root updater chooses that same explicit user instead of user 0. This selects
 the installation user; it does not create independent APK versions across users
@@ -64,12 +66,15 @@ The runner copies only the exact one-line normalizeVersion function from
 ReleaseRepository, recording that source file's identity separately. It does
 not claim to compile the complete release repository.
 
-Twenty-five scenarios run on API 24, 28 and 34: exactly 75 executions. They cover
+Twenty-nine scenarios run on API 24, 28 and 34: exactly 87 executions. They cover
 owner user 0, work-profile user 10, secondary user 11, a supported clone, a launcher
 class from another Java namespace, unavailable packages, invalid target names and
 components, negative/foreign Context UIDs, foreign target UIDs, root denial,
 rejected/timed-out/malformed launch results, duplicate requests, bulk restart,
 three updater users, invalid APK/version, foreign updater Context and failed copy.
+The four additional bulk scenarios cover denied root stop, failed launch after a
+successful stop, an unacknowledged launch, and an isolated restart-broadcast
+failure while subsequent verified targets continue.
 
 Android Context, Activity, Intent, PackageManager, Handler and Toast run under
 Robolectric. Profile UIDs and package/archive metadata are controlled fixtures.
@@ -83,14 +88,21 @@ path runs. Bulk manager termination is also excluded from the main-looper drain.
 Display localization, scope lookup and the normal external installer are adapters.
 Real OkHttp classes are used, but no HTTP request is made.
 
-The final candidate passes 75/75. The same test fixture against the complete
-a565e1a1a50ebfe5d633e8cd0d43c6dc6025a8ac sources executes 75 cases and produces
-39 assertion failures. The accepted negative baseline uses
-"--expect-assertion-failures 39"; the default always requires 75 successful cases.
+The current V39 candidate passes 87/87. The identical 87-case fixture against
+integration V38 (`5cd69d8e7fbad0379f417134cbb2ce289dfa3baa`) produces 12 assertion
+failures from the four added bulk scenarios. That negative control uses
+"--expect-assertion-failures 12"; the default requires all 87 cases to pass.
 Compilation errors, unexpected exceptions, zero tests and different failure
 counts cannot satisfy that control.
 
-Six isolated negative controls reintroduced one regression each: hardcoded stop
+The earlier profile-scoping comparison used 25 scenarios across the three SDKs,
+before those four bulk scenarios were added. Its candidate passed 75/75; the
+same earlier fixture against a565e1a1a50ebfe5d633e8cd0d43c6dc6025a8ac completed
+75 cases with 39 assertion failures. The corresponding expected count of 39
+belongs to that historical fixture, not the current 87-case gate.
+
+On that earlier 75-case fixture, six isolated negative controls reintroduced one
+regression each: hardcoded stop
 user 0 (12 failures), hardcoded launch user 0 (12), hardcoded installer user 0 (6),
 removed target-UID check (3), removed Context/process profile check (3) and loose
 launch acknowledgement (3). These are repeated executions of the same scenarios,
@@ -135,7 +147,8 @@ No startup-time, FPS, memory or universal feature-performance gain is claimed.
 - [AOSP Monkey: launcher discovery uses the foreground user](https://github.com/aosp-mirror/platform_development/blob/master/cmds/monkey/src/com/android/commands/monkey/Monkey.java)
 - [AOSP multi-user behavior](https://source.android.com/docs/devices/admin/multi-user)
 - [AOSP multi-user testing: user-scoped installation and process storage paths](https://source.android.com/docs/devices/admin/multi-user-testing)
-# V39: complete the bulk restart fallback
+
+## V39: complete the bulk restart fallback
 
 Bulk restart now checks the activity-launch acknowledgement after a successful
 root stop. A denied stop uses the target-scoped restart broadcast followed by a
