@@ -1,0 +1,52 @@
+name: Floating bar lifecycle, local visibility and overlay settings
+
+on:
+  push:
+    branches: [main, 'integration/preview-current-main-*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exercise real Android Views, Drawables and settings Intents
+        shell: bash
+        run: |
+          set -euo pipefail
+          kotlinc -version
+          mvn -version
+          test -f qa/maven_dependencies.py
+          test -f qa/android_media_preview_test.py
+          python3 qa/android_floating_bottom_bar_test.py --out "$RUNNER_TEMP/waex-appearance-hooks/floating"
+          python3 qa/android_floating_bottom_bar_test.py --view-visibility --out "$RUNNER_TEMP/waex-appearance-hooks/visibility"
+      - name: Preserve source identities and execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-appearance-hooks-evidence
+          path: |
+            ${{ runner.temp }}/waex-appearance-hooks/**/*.json
+            ${{ runner.temp }}/waex-appearance-hooks/**/*.log
+          if-no-files-found: error
+          retention-days: 14
