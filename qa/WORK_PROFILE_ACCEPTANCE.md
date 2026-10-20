@@ -135,3 +135,19 @@ No startup-time, FPS, memory or universal feature-performance gain is claimed.
 - [AOSP Monkey: launcher discovery uses the foreground user](https://github.com/aosp-mirror/platform_development/blob/master/cmds/monkey/src/com/android/commands/monkey/Monkey.java)
 - [AOSP multi-user behavior](https://source.android.com/docs/devices/admin/multi-user)
 - [AOSP multi-user testing: user-scoped installation and process storage paths](https://source.android.com/docs/devices/admin/multi-user-testing)
+# V39: complete the bulk restart fallback
+
+Bulk restart now checks the activity-launch acknowledgement after a successful
+root stop. A denied stop uses the target-scoped restart broadcast followed by a
+normal verified launcher Intent; a failed or unacknowledged root launch uses the
+normal Intent without sending a second kill broadcast. Failure to broadcast to
+one target does not prevent its normal launch or the next verified target.
+Rejected main-thread scheduling releases the shared pending-request guard.
+
+The complete helper and root-update sources pass 87 Robolectric executions on
+API 24, 28 and 34. The identical fixture against V38 executes all 87 and detects
+12 assertion failures from the four new bulk cases across the three SDKs.
+`qa/test_restart_safety.py` additionally covers rejected scheduling and release
+of the duplicate-request guard. Context/UID/package metadata and privileged
+endpoints are controlled. The framework does not create an Android work profile,
+run `su`/`am`/`pm`, install an APK or terminate the manager process.

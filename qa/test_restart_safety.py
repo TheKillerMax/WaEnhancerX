@@ -111,9 +111,10 @@ public class Looper { public static Looper getMainLooper(){return new Looper();}
 ''',
  'android/os/Handler.java': '''package android.os;
 public class Handler {
+ public static volatile boolean reject;
  public Handler(Looper loop) {}
- public boolean post(Runnable task) { task.run(); return true; }
- public boolean postDelayed(Runnable task,long delay){ task.run(); return true; }
+ public boolean post(Runnable task) { if(reject)return false; task.run(); return true; }
+ public boolean postDelayed(Runnable task,long delay){ if(reject)return false; task.run(); return true; }
 }
 ''',
  'android/os/Process.java': '''package android.os;
