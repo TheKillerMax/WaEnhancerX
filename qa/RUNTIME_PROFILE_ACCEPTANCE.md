@@ -43,6 +43,14 @@ Kotlin runtime, with no skipped metadata or API checks:
 - `InjectionEvidence.kt`
 - `XposedRuntimeInspector.kt`
 
+The existing `app/src/test/.../WhatsAppPackageDetectorTest.kt` is also compiled
+in full against real JUnit, with an exact `hasCurrentInjection` production
+delegate extracted from `WhatsAppPackageDetector.kt`. This is an API-consumer
+gate: it catches a unit test left on the old parser signature or PID-only
+protocol. Its separate compiler log and source/fragment hashes are retained.
+The full detector, Gradle app test task and those unit-test methods are not
+executed by this harness; the 30 runtime cases below remain the executed gate.
+
 `AppRestartHelper.runRootCommand` is the only controlled production endpoint. The
 test uses Robolectric's Android Application, Context, PackageManager,
 ApplicationInfo, Process and SystemClock classes. UID values and installed-package

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = Path('app/src/main/java/com/waenhancer/utils')
 PRODUCTION = [BASE / name for name in
               ('AndroidUserScope.java', 'InjectionEvidence.kt', 'XposedRuntimeInspector.kt')]
+UNIT_TEST = Path('app/src/test/java/com/waenhancer/utils/WhatsAppPackageDetectorTest.kt')
 EXPECTED_TESTS = 30
 
 
@@ -96,6 +97,21 @@ def main():
         shutil.copyfile(source, stage / name)
         fixtures[str(source.relative_to(ROOT))] = digest(source)
 
+    # Compile the existing Gradle unit test as an API-consumer gate. Its small
+    # detector delegate is an exact production fragment; the full detector also
+    # depends on Compose and is outside this isolated framework harness.
+    detector = root / BASE / 'WhatsAppPackageDetector.kt'
+    detector_text = detector.read_text()
+    start = detector_text.index('internal fun hasCurrentInjection(')
+    end = detector_text.index('\n\nobject WhatsAppPackageDetector', start)
+    delegate = 'package com.waenhancer.utils\n\n' + detector_text[start:end] + '\n'
+    (stage / 'CurrentInjectionDelegate.kt').write_text(delegate)
+    shutil.copyfile(root / UNIT_TEST, stage / UNIT_TEST.name)
+    fixtures[str(UNIT_TEST)] = digest(root / UNIT_TEST)
+    delegate_identity = {'source_path': str(BASE / 'WhatsAppPackageDetector.kt'),
+                         'source_sha256': digest(detector),
+                         'fragment_sha256': hashlib.sha256(delegate.encode()).hexdigest()}
+
     # Production Kotlin sees Android APIs and the project Kotlin runtime only.
     android_cp = os.pathsep.join(str(p) for p in jars if p.name.startswith(
         ('android-all-', 'kotlin-stdlib')))
@@ -107,9 +123,18 @@ def main():
          str(stage / 'InjectionEvidence.kt'), str(stage / 'XposedRuntimeInspector.kt')],
     ]
     runtime_cp = os.pathsep.join([str(classes), *map(str, jars)])
+    # The unit source imports JUnit only. Do not put unrelated Robolectric
+    # transitive Kotlin metadata on this project's Kotlin compilation classpath.
+    unit_cp = os.pathsep.join([str(classes), android_cp, *[
+        str(p) for p in jars if p.name.startswith(('junit-', 'hamcrest-'))]])
     commands.append(['javac', '--release', '17', '-cp', runtime_cp, '-d', str(classes),
                      str(stage / 'RuntimeProfileInspectorTest.java')])
-    for command, name in zip(commands, ('javac-production.log', 'kotlinc-production.log', 'javac-tests.log')):
+    commands.append([compiler, '-language-version', '2.0', '-jvm-target', '17',
+                     '-classpath', unit_cp, '-Xfriend-paths=' + str(classes),
+                     '-d', str(out / 'unit-test-classes'),
+                     str(stage / 'CurrentInjectionDelegate.kt'), str(stage / UNIT_TEST.name)])
+    for command, name in zip(commands, ('javac-production.log', 'kotlinc-production.log',
+                                       'javac-tests.log', 'kotlinc-unit-test.log')):
         if execute(command, out / name):
             print((out / name).read_text())
             raise RuntimeError(name + ' failed')
@@ -147,6 +172,9 @@ def main():
     summary = {
         'source_root': str(root), 'source_sha256': identities,
         'fixture_sha256': fixtures, 'harness_sha256': digest(Path(__file__)),
+        'existing_gradle_unit_test_compiled': str(UNIT_TEST),
+        'detector_delegate': delegate_identity,
+        'existing_gradle_unit_test_executed': False,
         'commands': commands, 'junit_exit': result,
         'tests': tests, 'failures': failures, 'assertion_failures': assertions,
         'expected_assertion_failures': expected, 'accepted_result': accepted,
