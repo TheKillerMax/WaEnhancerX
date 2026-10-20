@@ -149,6 +149,12 @@ def main():
     if declared_tests != EXPECTED_TESTS:
         raise RuntimeError('Fixture count differs from the reviewed 87-case gate')
     r_source, _ = write_r(root, stage / 'generated')
+    build_config = stage / 'generated/com/waenhancer/app/BuildConfig.java'
+    build_config.parent.mkdir(parents=True, exist_ok=True)
+    build_config.write_text('package com.waenhancer.app; public final class BuildConfig { '
+                            'public static final int VERSION_CODE=20100; '
+                            'public static final String VERSION_NAME="fixture"; }\n')
+    identities['generated/BuildConfig.java'] = digest(build_config)
     # Compile-only annotation types; no behavior or framework API is substituted.
     annotations = []
     for name in ('NonNull', 'Nullable'):
@@ -169,7 +175,7 @@ def main():
         raise RuntimeError('Pinned Android compilation API is missing')
     production_cp = os.pathsep.join(map(str, (classes, android, kotlin_runtime, dexkit)))
     run(['javac', '--release', '17', '-cp', production_cp, '-d', str(classes),
-         *map(str, annotations), str(r_source), *[str(staged[p]) for p in FIXTURES[:-1] + JAVA_FIRST]],
+         *map(str, annotations), str(r_source), str(build_config), *[str(staged[p]) for p in FIXTURES[:-1] + JAVA_FIRST]],
         out / 'javac-production-dependencies.log')
     run([compiler, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes),
          *[str(staged[p]) for p in KOTLIN]], out / 'kotlinc-production.log')
