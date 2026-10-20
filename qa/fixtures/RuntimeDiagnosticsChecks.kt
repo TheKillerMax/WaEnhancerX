@@ -129,8 +129,8 @@ fun main(args:Array<String>){
     ck("compat helper preserves strict proof",hasCurrentInjection(true,7,7,123,setOf(123),10000,35000),true)
     ck("compat helper expires",hasCurrentInjection(true,7,7,123,setOf(123),10000,35001),false)
     SystemClock.time=1000
-    Root.output="PID|com.whatsapp|123 456\n\nEND|WAEX_PROCESS_SNAPSHOT"
-    val snap=XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!
+    Root.output="PID|com.whatsapp|23456|123 456\n\nEND|WAEX_PROCESS_SNAPSHOT"
+    val snap=XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"))!!
     File(args.single()).writeText(Root.lastCommand)
     ck("PID values",snap.pidsFor("com.whatsapp",1000),setOf(123,456))
     ck("missing package isn't stopped",snap.pidsFor("com.whatsapp.w4b",1000),null)
@@ -140,29 +140,52 @@ fun main(args:Array<String>){
     ck("fresh cache",XposedRuntimeInspector.cached()!=null,true)
     SystemClock.time=26001;ck("cache expires",XposedRuntimeInspector.cached(),null)
     SystemClock.time=1000
-    for(text in listOf("", "bad", "PID|com.whatsapp|123\nPID|com.whatsapp|456", "PID|com.whatsapp|0", "PID|com.whatsapp|-1", "PID|com.whatsapp|abc", "PID|com.whatsapp|2147483648", "PID|com.whatsapp|123 other", "PID|com.whatsapp;bad|123", "PID|com.whatsapp.w4b|456")){
+    for(text in listOf("", "bad", "PID|com.whatsapp|23456|123\nPID|com.whatsapp|23456|456", "PID|com.whatsapp|23456|0", "PID|com.whatsapp|23456|-1", "PID|com.whatsapp|23456|abc", "PID|com.whatsapp|23456|2147483648", "PID|com.whatsapp|23456|123 other", "PID|com.whatsapp;bad|23456|123", "PID|com.whatsapp.w4b|23456|456")){
         Root.output=text+"\nEND|WAEX_PROCESS_SNAPSHOT\n"
-        ck("incomplete or malformed probe rejected",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+        ck("incomplete or malformed probe rejected",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp")),null)
         ck("failed probe clears old proof",XposedRuntimeInspector.cached(),null)
     }
-    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(listOf("com.whatsapp"))
-    Root.output=null;ck("root denied",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+    Root.output="PID|com.whatsapp|23456|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"))
+    Root.output=null;ck("root denied",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp")),null)
     ck("denied invalidates cached",XposedRuntimeInspector.cached(),null)
-    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(listOf("com.whatsapp"));Root.fail=true
-    ck("root exception unavailable",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null);Root.fail=false
+    Root.output="PID|com.whatsapp|23456|123\nEND|WAEX_PROCESS_SNAPSHOT";XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"));Root.fail=true
+    ck("root exception unavailable",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp")),null);Root.fail=false
     ck("exception clears cache",XposedRuntimeInspector.cached(),null)
-    Root.output="PID|com.whatsapp|\nEND|WAEX_PROCESS_SNAPSHOT"
-    ck("true absence is distinct",XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!.pidsFor("com.whatsapp",1000),emptySet<Int>())
-    Root.output="PID|com.whatsapp|123\nEND|WAEX_PROCESS_SNAPSHOT";val calls=Root.calls
-    ck("invalid package refused",XposedRuntimeInspector.inspect(listOf("com.whatsapp;id")),null)
+    Root.output="PID|com.whatsapp|23456|\nEND|WAEX_PROCESS_SNAPSHOT"
+    ck("true absence is distinct",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"))!!.pidsFor("com.whatsapp",1000),emptySet<Int>())
+    Root.output="PID|com.whatsapp|23456|123\nEND|WAEX_PROCESS_SNAPSHOT";val calls=Root.calls
+    ck("invalid package refused",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp;id")),null)
     ck("invalid input never reaches shell",Root.calls,calls)
-    ck("partial report refuses multiple packages",XposedRuntimeInspector.inspect(listOf("com.whatsapp","com.whatsapp.w4b")),null)
-    Root.output="PID|com.whatsapp|123\nPID|com.whatsapp.w4b|456\nEND|WAEX_PROCESS_SNAPSHOT"
-    ck("both identities present",XposedRuntimeInspector.inspect(listOf("com.whatsapp","com.whatsapp.w4b"))!!.runningPids.size,2)
+    ck("partial report refuses multiple packages",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp","com.whatsapp.w4b")),null)
+    Root.output="PID|com.whatsapp|23456|123\nPID|com.whatsapp.w4b|23456|456\nEND|WAEX_PROCESS_SNAPSHOT"
+    ck("both identities present",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp","com.whatsapp.w4b"))!!.runningPids.size,2)
     var immutable=false
     try{(snap.runningPids as MutableMap).clear()}catch(_:UnsupportedOperationException){immutable=true}
     ck("observations immutable",immutable,true)
-    ck("empty request neutral",XposedRuntimeInspector.inspect(emptyList())!!.runningPids.size,0)
+    ck("empty request neutral",XposedRuntimeInspector.inspect(mod, emptyList())!!.runningPids.size,0)
+    val beforeRejectedScope=Root.calls
+    mod.applicationInfo.uid=1012345
+    mod.packageManager.uid=1023456
+    Root.output="PID|com.whatsapp|1023456|123\nEND|WAEX_PROCESS_SNAPSHOT"
+    ck("foreign manager context is refused",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp")),null)
+    ck("foreign context never reaches root",Root.calls,beforeRejectedScope)
+    android.os.Process.uid=1012345
+    mod.packageManager.uid=23456
+    ck("foreign package UID is refused",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp")),null)
+    ck("foreign package never reaches root",Root.calls,beforeRejectedScope)
+    mod.packageManager.uid=1023456
+    Root.output="PID|com.whatsapp|1023456|123\nEND|WAEX_PROCESS_SNAPSHOT"
+    ck("same profile exact UID is accepted",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp"))?.pidsFor("com.whatsapp",1000),setOf(123))
+    Root.output="PID|com.whatsapp|23456|123\nEND|WAEX_PROCESS_SNAPSHOT"
+    ck("foreign returned UID cannot be evidence",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp")),null)
+    ck("foreign result clears cached proof",XposedRuntimeInspector.cached(),null)
+    mod.packageManager.wrongPackage=true
+    val wrongPackageCalls=Root.calls
+    ck("mismatched package metadata is refused",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp")),null)
+    ck("mismatched metadata never reaches root",Root.calls,wrongPackageCalls)
+    mod.packageManager.wrongPackage=false;mod.packageManager.fail=true
+    ck("missing package metadata is unknown",XposedRuntimeInspector.inspect(mod,listOf("com.whatsapp")),null)
+    mod.packageManager.fail=false;mod.applicationInfo.uid=12345;mod.packageManager.uid=23456;android.os.Process.uid=12345
     val app=HookedAppInfo("com.whatsapp","WhatsApp","2.26.40.76",true,true,lastActiveTime=10000,runtimeStatus="READY",bridgeStatus="PROVIDER",processObservedAtElapsed=1000)
     fun card(a:HookedAppInfo,d:D=D.BUILTIN_RULE)=TargetRuntimePresentation.card(a,true,d)
     ck("current complete",card(app).severity,S.OK)
@@ -196,19 +219,19 @@ fun main(args:Array<String>){
 
     // Complete-looking final PID tokens are not completion evidence without the sentinel.
     Root.fail=false;Root.advance=0;SystemClock.time=1000
-    Root.output="PID|com.whatsapp|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
-    ck("finished probe accepted",XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!=null,true)
-    Root.output="PID|com.whatsapp|42"
-    ck("missing terminal record is unknown",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+    Root.output="PID|com.whatsapp|23456|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
+    ck("finished probe accepted",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"))!=null,true)
+    Root.output="PID|com.whatsapp|23456|42"
+    ck("missing terminal record is unknown",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp")),null)
     ck("truncated new probe removes cached proof",XposedRuntimeInspector.cached(),null)
-    Root.output="PID|com.whatsapp|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
+    Root.output="PID|com.whatsapp|23456|42\nEND|WAEX_PROCESS_SNAPSHOT\n"
     Root.advance=4000
-    val slow=XposedRuntimeInspector.inspect(listOf("com.whatsapp"))!!
+    val slow=XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp"))!!
     ck("probe age starts before command",slow.observedAtElapsed,1000L)
     SystemClock.time=26001
     ck("slow probe cannot extend validity",XposedRuntimeInspector.cached(),null)
     SystemClock.time=1000;Root.advance=25001
-    ck("probe expiring during collection rejected",XposedRuntimeInspector.inspect(listOf("com.whatsapp")),null)
+    ck("probe expiring during collection rejected",XposedRuntimeInspector.inspect(mod, listOf("com.whatsapp")),null)
     SystemClock.time=1000;Root.advance=0
     ck("custom allowance card is not verified",TargetRuntimePresentation.card(app,true,D.CUSTOM_RULE).severity,S.REVIEW)
     ck("custom allowance summary not verified",sum(listOf(app),D.CUSTOM_RULE).healthy,false)

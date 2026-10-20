@@ -49,7 +49,8 @@ public class HmaContractTest {
             "/data/data/com.google.android.hmal/files/config.json",
             "/data/user/0/com.tsng.hidemyapplist/files/config.json",
             "/data/user/0/org.frknkrc44.hma_oss/files/config.json",
-            "/data/user/0/com.google.android.hmal/files/config.json"
+            "/data/user/0/com.google.android.hmal/files/config.json",
+            "/data/user/10/org.frknkrc44.hma_oss/files/config.json"
         };
         for (String value : accepted) assertTrue(value, HmaConfigFile.isConfigPath(value));
     }
@@ -63,7 +64,10 @@ public class HmaContractTest {
             "/data/system/example/hma/config.json",
             "/data/adb/hma/config.json",
             "/data/adb/hide_my_applist/config.json",
-            "/data/user/10/org.frknkrc44.hma_oss/files/config.json",
+            "/data/user/010/org.frknkrc44.hma_oss/files/config.json",
+            "/data/user/-1/org.frknkrc44.hma_oss/files/config.json",
+            "/data/user/+10/org.frknkrc44.hma_oss/files/config.json",
+            "/data/user/2147483648/org.frknkrc44.hma_oss/files/config.json",
             "/data/data/com.tsng.hidemyapplist/cache/config.json",
             "/data/data/com.tsng.hidemyapplist/files/nested/config.json",
             "/data/data/com.tsng.hidemyapplist.suffix/files/config.json",

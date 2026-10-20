@@ -24,7 +24,7 @@ SOURCES = [BASE / name for name in (
     'xposed/utils/AppRestartHelper.java', 'xposed/utils/RestartTargetPolicy.java',
     'update/UpdateDownloader.kt', 'update/UpdateTransferPolicy.kt')]
 OPTIONAL_BASELINE_SOURCE = BASE / 'utils/AndroidUserScope.java'
-EXPECTED_TESTS = 75
+EXPECTED_TESTS = 87
 
 
 def digest(path):

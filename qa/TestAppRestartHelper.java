@@ -30,6 +30,7 @@ public final class TestAppRestartHelper {
         volatile int broadcasts;
         volatile int launches;
         volatile boolean failLaunch;
+        volatile boolean failBroadcast;
         volatile CountDownLatch awaited = new CountDownLatch(1);
         @Override public Context getApplicationContext() { return this; }
         @Override public PackageManager getPackageManager() { return pm; }
@@ -38,6 +39,7 @@ public final class TestAppRestartHelper {
         @Override public void sendBroadcast(Intent intent) {
             broadcast = intent;
             broadcasts++;
+            if (failBroadcast) throw new SecurityException("broadcast rejected");
         }
         @Override public void startActivity(Intent intent) {
             launches++;
@@ -161,6 +163,34 @@ public final class TestAppRestartHelper {
         ok(simultaneous.broadcasts == 1 && simultaneous.launches == 1,
                 "duplicate requests triggered too many broadcasts/launches");
         awaitIdle();
+        WhatsAppPackageDetector.SCOPE = new LinkedHashSet<>(Arrays.asList("com.whatsapp"));
+        for (String mode : new String[]{"denied", "stoponly", "root"}) {
+            RootCommandRunner.mode = mode;
+            RootCommandRunner.commands.clear();
+            FakeContext bulk = new FakeContext();
+            bulk.setTarget("com.whatsapp");
+            AppRestartHelper.restartWhatsAppAndModule(bulk);
+            awaitIdle();
+            ok(bulk.launches == (mode.equals("root") ? 0 : 1), "bulk launch recovery: " + mode);
+            ok(bulk.broadcasts == (mode.equals("denied") ? 1 : 0), "bulk second-kill guard: " + mode);
+            ok(RootCommandRunner.commands.size() == (mode.equals("denied") ? 1 : 2), "bulk commands: " + mode);
+        }
+        RootCommandRunner.mode = "denied";
+        FakeContext refusedBroadcast = new FakeContext();
+        refusedBroadcast.setTarget("com.whatsapp");
+        refusedBroadcast.failBroadcast = true;
+        AppRestartHelper.restartWhatsAppAndModule(refusedBroadcast);
+        awaitIdle();
+        ok(refusedBroadcast.launches == 1, "bulk broadcast failure prevented fallback launch");
+        RootCommandRunner.mode = "root";
+        android.os.Handler.reject = true;
+        try {
+            FakeContext rejectedPost = new FakeContext();
+            rejectedPost.setTarget("com.whatsapp");
+            AppRestartHelper.restartWhatsAppAndModule(rejectedPost);
+            awaitIdle();
+            ok(rejectedPost.launches == 0, "rejected callback still ran");
+        } finally { android.os.Handler.reject = false; }
         System.out.println("PASS: " + assertions + " AppRestartHelper launch, authorization and duplicate-request checks");
     }
 }

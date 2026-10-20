@@ -2,6 +2,7 @@ package com.waenhancer.utils
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.os.Process
 import com.waenhancer.xposed.utils.AppRestartHelper
 import com.waenhancer.xposed.utils.RootCommandRunner
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +23,15 @@ object HmaDiagnostics {
     private const val HMA_ZYGISK_PATH = "/data/adb/modules/hma_oss_zygisk"
     private const val LSP_CONFIG_DB = "/data/adb/lspd/config/modules_config.db"
 
-    private val cachedResult = AtomicReference<HmaReport?>(null)
+    private data class RequestKey(val applicationUid: Int, val modulePackage: String, val targets: List<String>) {
+        val userId: Int get() = AndroidUserScope.userIdForUid(applicationUid)
+    }
+    private data class CachedReport(val request: RequestKey, val report: HmaReport)
+    private val cachedResult = AtomicReference<CachedReport?>(null)
 
     enum class HmaState {
         CHECKING,
+        UNAVAILABLE,
         NOT_ACTIVE,
         NOT_CONFIGURED,
         CLEAN,
@@ -46,7 +52,18 @@ object HmaDiagnostics {
         val message: String? = null
     )
 
-    fun cached(): HmaReport? = cachedResult.get()
+    private fun requestKey(context: Context, targetPackages: Collection<String>): RequestKey? = try {
+        val uid = context.applicationInfo.uid
+        // Resolve the calling app's identity before entering a root shell. A Context
+        // for another package or profile must not select which manager is stopped.
+        if (uid != Process.myUid()) null else {
+            AndroidUserScope.matchingUserId(uid, Process.myUid())
+            val targets = if (targetPackages.isEmpty()) DeclaredWhatsAppTargets.packages() else targetPackages
+            RequestKey(uid, context.packageName, targets.toSortedSet().toList())
+        }
+    } catch (_: Exception) {
+        null
+    }
 
     /**
      * Inspects HMA state and verifies if any target package in [targetPackages]
@@ -57,34 +74,32 @@ object HmaDiagnostics {
         targetPackages: Collection<String>,
         forceRefresh: Boolean = false
     ): HmaReport = withContext(Dispatchers.IO) {
-        if (!forceRefresh) {
-            cachedResult.get()?.let { return@withContext it }
+        val request = requestKey(context, targetPackages)
+            ?: return@withContext HmaReport(HmaState.UNAVAILABLE)
+        // A check cannot publish a pre-repair snapshot after repair invalidates it.
+        synchronized(repairLock) {
+            if (!forceRefresh) {
+                cachedResult.get()?.takeIf { it.request == request }?.let { return@synchronized it.report }
+            }
+            val report = runCheck(context, request)
+            cachedResult.set(CachedReport(request, report))
+            report
         }
-
-        val report = runCheck(context.applicationContext, targetPackages)
-        cachedResult.set(report)
-        report
     }
 
-    private fun runCheck(context: Context, targetPackages: Collection<String>): HmaReport {
-        if (!isHmaInstalledAndActive(context)) {
+    private fun runCheck(context: Context, request: RequestKey): HmaReport {
+        if (!isHmaInstalledAndActive(context, request.userId)) {
             return HmaReport(HmaState.NOT_ACTIVE)
         }
 
-        val allConfigs = readAllHmaConfigs()
+        val allConfigs = readAllHmaConfigs(request.userId)
         if (allConfigs.isEmpty()) {
             return HmaReport(HmaState.NOT_CONFIGURED)
         }
 
         // Known module package identifiers to check for concealment
-        val currentPackage = context.packageName
-
-        // Packages to check: target packages passed in plus DeclaredWhatsAppTargets if targetPackages is empty
-        val packagesToCheck = if (targetPackages.isNotEmpty()) {
-            targetPackages.toSet()
-        } else {
-            DeclaredWhatsAppTargets.packages()
-        }
+        val currentPackage = request.modulePackage
+        val packagesToCheck = request.targets
 
         val details = mutableListOf<TargetIsolationDetail>()
         val blockedList = mutableListOf<String>()
@@ -165,7 +180,7 @@ object HmaDiagnostics {
     )
     private val repairLock = Any()
 
-    private fun isHmaInstalledAndActive(context: Context): Boolean {
+    private fun isHmaInstalledAndActive(context: Context, userId: Int): Boolean {
         // 1. Zygisk module directory check
         val zygiskCheck = AppRestartHelper.runRootCommand(
             "[ -d $HMA_ZYGISK_PATH ] && [ ! -f $HMA_ZYGISK_PATH/disable ] && echo active; " +
@@ -199,32 +214,34 @@ object HmaDiagnostics {
         }
 
         // 3. Installed package manager check dynamically for any HMA / HMAL packages
-        val installedHmaPackages = getInstalledHmaPackages(context)
+        val installedHmaPackages = getInstalledHmaPackages(context, userId)
         if (installedHmaPackages.isNotEmpty()) {
             return true
         }
 
         // 4. Check if any HMA config file exists directly
-        val configPaths = findAllHmaConfigPaths()
+        val configPaths = findAllHmaConfigPaths(userId)
         return configPaths.isNotEmpty()
     }
 
     /**
-     * Dynamically discovers all installed HMA / HMAL packages on the system.
+     * Discovers exact HMA / HMAL managers installed for the calling app's user.
      */
-    private fun getInstalledHmaPackages(context: Context): List<String> {
+    private fun getInstalledHmaPackages(context: Context, userId: Int): List<String> {
         val packages = linkedSetOf<String>()
         val pm = context.packageManager
         for (pkg in KNOWN_HMA_PACKAGES) {
             try {
-                pm.getApplicationInfo(pkg, 0)
-                packages.add(pkg)
+                val info = pm.getApplicationInfo(pkg, 0)
+                if (AndroidUserScope.userIdForUid(info.uid) == userId) packages.add(pkg)
             } catch (_: Exception) {}
         }
         // Package visibility can hide a known manager from the app. Never guess
         // an unrelated package from a substring before issuing a force-stop.
-        AppRestartHelper.runRootCommand("pm list packages")?.lineSequence()?.forEach { raw ->
-            val pkg = raw.trim().removePrefix("package:")
+        AppRestartHelper.runRootCommand("pm list packages --user $userId")?.lineSequence()?.forEach { raw ->
+            val line = raw.trim()
+            if (!line.startsWith("package:")) return@forEach
+            val pkg = line.removePrefix("package:")
             if (HmaConfigPolicy.isManagerPackage(pkg)) packages.add(pkg)
         }
         return packages.toList()
@@ -249,7 +266,7 @@ object HmaDiagnostics {
     }
 
     /**
-     * Reads all available HMA / HMAL configurations across the device.
+     * Reads a previously discovered, canonical HMA / HMAL configuration candidate.
      */
     private fun readConfigSnapshot(path: String): HmaConfigFile.Snapshot? {
         if (!HmaConfigFile.isConfigPath(path)) return null
@@ -259,9 +276,9 @@ object HmaDiagnostics {
         return HmaConfigFile.parseSnapshot(path, output)
     }
 
-    private fun readAllHmaConfigs(): List<Pair<String, JSONObject>> {
+    private fun readAllHmaConfigs(userId: Int): List<Pair<String, JSONObject>> {
         val configs = mutableListOf<Pair<String, JSONObject>>()
-        for (path in findAllHmaConfigPaths()) {
+        for (path in findAllHmaConfigPaths(userId)) {
             val snapshot = readConfigSnapshot(path) ?: continue
             try {
                 configs.add(path to JSONObject(snapshot.json))
@@ -271,16 +288,23 @@ object HmaDiagnostics {
     }
 
     /**
-     * Finds all valid HMA / HMAL configuration paths across system directories,
-     * zygisk data directories, and app-internal private files.
+     * Global HMA service stores use package-name rules shared across users. Private
+     * manager files are only candidates for this user; finding one does not prove
+     * that the running service imported or currently enforces those rules.
      */
-    private fun findAllHmaConfigPaths(): List<String> {
-        val findCmd = "find /data/misc /data/system /data/adb /data/user/0 /data/data -name 'config.json' " +
-                "\\( -path '*hide_my_applist*' -o -path '*hma*' \\) -exec readlink -f {} \\; 2>/dev/null; true"
+    private fun findAllHmaConfigPaths(userId: Int): List<String> {
+        val privateCandidates = KNOWN_HMA_PACKAGES.joinToString(" ") {
+            HmaConfigFile.quote("/data/user/$userId/$it/files/config.json")
+        }
+        // Direct service paths plus exact manager files avoid a recursive scan of
+        // unrelated apps and never ask the root namespace to resolve /data/data.
+        val findCmd = "for waex_path in /data/misc/hide_my_applist*/config.json " +
+                "/data/system/hide_my_applist*/config.json $privateCandidates; do " +
+                "[ -f \"\$waex_path\" ] && readlink -f \"\$waex_path\"; done 2>/dev/null; true"
         val out = AppRestartHelper.runRootCommand(findCmd) ?: return emptyList()
         return out.lines()
             .map { it.trim() }
-            .filter { HmaConfigFile.isConfigPath(it) }
+            .filter { HmaConfigFile.isConfigPathForUser(it, userId) }
             .distinct()
     }
 
@@ -291,12 +315,13 @@ object HmaDiagnostics {
     suspend fun fixTargetIsolation(context: Context, targetPackage: String): Boolean =
         withContext(Dispatchers.IO) {
             if (!DeclaredWhatsAppTargets.contains(targetPackage)) return@withContext false
+            val request = requestKey(context, listOf(targetPackage)) ?: return@withContext false
             synchronized(repairLock) {
                 var changed = false
                 var failed = false
                 try {
-                    forceStopHmaApps(context)
-                    for (path in findAllHmaConfigPaths()) {
+                    forceStopHmaApps(context, request.userId)
+                    for (path in findAllHmaConfigPaths(request.userId)) {
                         val snapshot = readConfigSnapshot(path)
                         if (snapshot == null) {
                             failed = true
@@ -304,7 +329,7 @@ object HmaDiagnostics {
                         }
                         try {
                             val updated = HmaConfigPolicy.repair(
-                                JSONObject(snapshot.json), targetPackage, context.packageName
+                                JSONObject(snapshot.json), targetPackage, request.modulePackage
                             ) ?: continue
                             val json = updated.toString()
                             // Validate the replacement size before creating a recovery copy.
@@ -331,7 +356,7 @@ object HmaDiagnostics {
                     }
                     changed && !failed
                 } finally {
-                    forceStopHmaApps(context)
+                    forceStopHmaApps(context, request.userId)
                     cachedResult.set(null)
                 }
             }
@@ -345,10 +370,15 @@ object HmaDiagnostics {
             readConfigSnapshot(snapshot.path)?.digest == snapshot.digest
     }
 
-    /** Force-stop only known manager packages, once per pass. */
+    /** Force-stop only known manager packages for this app's user, once per pass. */
     fun forceStopHmaApps(context: Context) {
-        for (pkg in getInstalledHmaPackages(context)) {
-            AppRestartHelper.runRootCommand("am force-stop " + HmaConfigFile.quote(pkg))
+        val request = requestKey(context, emptyList()) ?: return
+        forceStopHmaApps(context, request.userId)
+    }
+
+    private fun forceStopHmaApps(context: Context, userId: Int) {
+        for (pkg in getInstalledHmaPackages(context, userId)) {
+            AppRestartHelper.runRootCommand("am force-stop --user $userId " + HmaConfigFile.quote(pkg))
         }
     }
 

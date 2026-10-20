@@ -81,7 +81,7 @@ public class WorkProfileRuntimeTest {
     }
 
     /** The framework Context remains real; this fixture supplies the manager's per-profile UID. */
-    private static final class ProfileContext extends ContextWrapper {
+    private static class ProfileContext extends ContextWrapper {
         final int uid;
         final List<Intent> starts = new ArrayList<>();
         ProfileContext(Context base, int uid) { super(base); this.uid = uid; }
@@ -357,6 +357,62 @@ public class WorkProfileRuntimeTest {
         AppRestartHelper.restartWhatsAppAndModule(context(1012345));
         awaitWorker();
         assertTrue(RootCommandRunner.commands.isEmpty());
+    }
+
+    private ProfileContext bulkFallback(String mode) throws Exception {
+        RootCommandRunner.mode = mode;
+        launcher("com.whatsapp");
+        launcher("com.whatsapp.w4b");
+        ProfileContext context = context(1012345);
+        // A missing manager launcher makes the real final callback release its
+        // gate without scheduling an alarm or terminating this test process.
+        assertNull(app.getPackageManager().getLaunchIntentForPackage(app.getPackageName()));
+        AppRestartHelper.restartWhatsAppAndModule(context);
+        awaitWorker();
+        drainMain();
+        assertFalse(((AtomicBoolean) field("RESTART_PENDING")).get());
+        assertEquals(2, context.starts.size());
+        for (Intent launch : context.starts) {
+            assertEquals(launch.getComponent().getPackageName(), launch.getPackage());
+            assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK,
+                    launch.getFlags() & (Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        }
+        return context;
+    }
+
+    @Test public void bulkDeniedRootReopensBothTargetsAfterBroadcast() throws Exception {
+        bulkFallback("denied");
+        assertEquals(2, RootCommandRunner.commands.size());
+        assertEquals(2, Shadows.shadowOf(app).getBroadcastIntents().size());
+    }
+
+    @Test public void bulkTimedOutLaunchRecoversWithoutAnotherKill() throws Exception {
+        bulkFallback("start-timeout");
+        assertEquals(4, RootCommandRunner.commands.size());
+        assertTrue(Shadows.shadowOf(app).getBroadcastIntents().isEmpty());
+    }
+
+    @Test public void bulkMalformedLaunchAcknowledgmentRecoversWithoutAnotherKill() throws Exception {
+        bulkFallback("start-malformed");
+        assertEquals(4, RootCommandRunner.commands.size());
+        assertTrue(Shadows.shadowOf(app).getBroadcastIntents().isEmpty());
+    }
+
+    @Test public void bulkBroadcastFailureStillProcessesBothTargets() throws Exception {
+        RootCommandRunner.mode = "denied";
+        launcher("com.whatsapp");
+        launcher("com.whatsapp.w4b");
+        context(1012345);
+        ProfileContext context = new ProfileContext(app, 1012345) {
+            @Override public void sendBroadcast(Intent intent) { throw new SecurityException("controlled denial"); }
+        };
+        assertNull(app.getPackageManager().getLaunchIntentForPackage(app.getPackageName()));
+        AppRestartHelper.restartWhatsAppAndModule(context);
+        awaitWorker();
+        drainMain();
+        assertEquals(2, RootCommandRunner.commands.size());
+        assertEquals(2, context.starts.size());
+        assertFalse(((AtomicBoolean) field("RESTART_PENDING")).get());
     }
 
     private ProfileActivity activity(int uid) {

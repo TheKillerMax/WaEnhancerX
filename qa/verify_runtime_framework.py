@@ -155,7 +155,7 @@ dependencies {
   p=probe/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
  identities={}
  # Compile all of these source files unchanged; unrelated private services are test doubles.
- files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','ui/components/RuntimeObservationClock.kt','xposed/core/VersionGuard.kt']
+ files=['utils/AndroidUserScope.java','utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','ui/components/RuntimeObservationClock.kt','xposed/core/VersionGuard.kt']
  if (root/'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java').exists():files+=['utils/DeclaredWhatsAppTargets.java']
  for name in files:
   p=root/'app/src/main/java/com/waenhancer'/name
