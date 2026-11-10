@@ -111,12 +111,18 @@ public final class ParallelDownloadingInputStream extends InputStream {
     }
 
     private byte[] fetchRange(long offsetInFile, int length) throws IOException {
+        if (offsetInFile < 0 || length <= 0 || startOffset > Long.MAX_VALUE - offsetInFile) {
+            throw new IOException("Invalid download range");
+        }
         long rangeStart = startOffset + offsetInFile;
+        if (rangeStart > Long.MAX_VALUE - (length - 1L)) {
+            throw new IOException("Download range overflow");
+        }
         long rangeEnd = rangeStart + length - 1;
 
         URLConnection rawConn = downloadUrl.openConnection();
         if (!(rawConn instanceof HttpURLConnection)) {
-            throw new IOException("URL is not HTTP/HTTPS: " + downloadUrl);
+            throw new IOException("Download URL is not HTTP/HTTPS");
         }
         HttpURLConnection conn = (HttpURLConnection) rawConn;
         try {
@@ -127,12 +133,18 @@ public final class ParallelDownloadingInputStream extends InputStream {
 
             int code = conn.getResponseCode();
             String contentRange = conn.getHeaderField("Content-Range");
-            if (contentRange == null) contentRange = "";
 
             if (code == 206) {
-                String expectedPrefix = "bytes " + rangeStart + "-";
-                if (!contentRange.startsWith(expectedPrefix)) {
-                    throw new IOException("Unexpected Content-Range: " + contentRange + ", expected: " + expectedPrefix);
+                if (!matchesContentRange(contentRange, rangeStart, rangeEnd)) {
+                    throw new IOException("Download server returned an incompatible Content-Range");
+                }
+                String encoding = conn.getContentEncoding();
+                if (encoding != null && !"identity".equalsIgnoreCase(encoding)) {
+                    throw new IOException("Download server transformed the requested range");
+                }
+                long declaredLength = conn.getContentLengthLong();
+                if (declaredLength >= 0 && declaredLength != length) {
+                    throw new IOException("Download server returned an incompatible range length");
                 }
 
                 byte[] data = new byte[length];
@@ -155,9 +167,29 @@ public final class ParallelDownloadingInputStream extends InputStream {
         }
     }
 
+    /** The returned inclusive byte interval must match the exact requested range. */
+    private static boolean matchesContentRange(String header, long start, long end) {
+        if (header == null) return false;
+        String value = header.trim();
+        String expectedPrefix = "bytes " + start + "-" + end + "/";
+        if (!value.regionMatches(true, 0, expectedPrefix, 0, expectedPrefix.length())) {
+            return false;
+        }
+        String total = value.substring(expectedPrefix.length());
+        if ("*".equals(total)) return true;
+        try {
+            return Long.parseLong(total) > end;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     @Override
     public int read(byte[] buffer, int offset, int length) throws IOException {
         if (buffer == null) throw new NullPointerException("buffer is null");
+        if (offset < 0 || length < 0 || offset > buffer.length - length) {
+            throw new IndexOutOfBoundsException("Invalid read offset or length");
+        }
         if (isClosed) throw new IOException("Stream closed");
         if (length == 0) return 0;
 
@@ -172,6 +204,8 @@ public final class ParallelDownloadingInputStream extends InputStream {
                 int bytesRead = originalStream.read(buffer, offset, Math.min(length, chunk0Remaining));
                 if (bytesRead > 0) {
                     currentChunkOffset += bytesRead;
+                } else if (bytesRead < 0) {
+                    throw new IOException("Original download stream ended before the initial chunk was complete");
                 }
                 return bytesRead;
             }
