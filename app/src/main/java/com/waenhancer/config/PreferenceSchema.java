@@ -192,6 +192,10 @@ public final class PreferenceSchema {
         add(entries, "download_local", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "download_video_note", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "download_status", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        // The new parallel media downloader is configured by hooks in WhatsApp.
+        // Register both settings so backup/restore and per-target migration retain them.
+        add(entries, "parallel_downloading", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
+        add(entries, "parallel_downloading_connections", Type.INT, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "downloadstatus", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "status_downloader", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "status_download_save_duplicates", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
