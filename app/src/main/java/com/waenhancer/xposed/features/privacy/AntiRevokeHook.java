@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.features.privacy;
 
+import com.waenhancer.config.StatusAntiRevokePolicy;
+
 
 import com.waenhancer.app.R;
 import com.waenhancer.utils.UiText;
@@ -2439,7 +2441,7 @@ public class AntiRevokeHook extends BaseFeature {
     }
 
     private boolean isAntiRevokeStatusEnabled() {
-        return isEnabled("antirevokestatus", false);
+        return StatusAntiRevokePolicy.isEnabled(prefs.getAll().get("antirevokestatus"));
     }
 
     private boolean isColorDeletedMessagesEnabled() {

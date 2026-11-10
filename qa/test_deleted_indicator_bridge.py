@@ -89,6 +89,7 @@ public final class IndicatorBridgeChecks {
     static class Ctx extends Context {
         final Resolver resolver;
         Ctx(Map<String, Object> values) { resolver = new Resolver(values); }
+        public String getPackageName() { return "com.whatsapp"; }
         public ContentResolver getContentResolver() { return resolver; }
     }
     static SharedPreferences strict(Map<String, Object> values) {

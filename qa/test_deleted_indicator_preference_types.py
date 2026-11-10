@@ -40,3 +40,6 @@ with tempfile.TemporaryDirectory(prefix='waex_deleted_indicator_') as output:
                     'com.waenhancer.ui.screens.privacy.TestDeletedIndicatorPreferencePolicy'], check=True)
 print('PASS: Anti-Revoke indicator type-safe UI and compatible hook wiring')
 subprocess.run([sys.executable, str(ROOT / 'qa/test_deleted_indicator_bridge.py')], check=True)
+
+# Validate activation as well as indicator formatting, through the same bridge.
+subprocess.run([sys.executable, str(ROOT / "qa/test_status_antirevoke_activation.py")], check=True)
