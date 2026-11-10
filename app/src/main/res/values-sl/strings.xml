@@ -392,4 +392,58 @@
     <string name="waex_ui_selected_icon_color">Barva izbranih ikon</string>
     <string name="waex_ui_unselected_icon_color">Barva neizbranih ikon</string>
     <string name="waex_ui_using_app_default_color">Uporablja privzeto barvo aplikacije</string>
+
+    <!-- New feature controls in WaEnhancerX 2.0.6. -->
+    <string name="feat_disable_defemojis_title">Uporabi privzete emojije naprave</string>
+    <string name="feat_disable_defemojis_desc">Uporabi sistemske emojije (iOS, Samsung, Google) namesto vgrajenih emojijev WhatsAppa</string>
+    <string name="feat_parallel_downloading_title">Vzporedno prenašanje</string>
+    <string name="feat_parallel_downloading_desc">Prenašaj velike predstavnostne in druge datoteke prek več sočasnih povezav</string>
+    <string name="parallel_downloading_connections_title">VZPOREDNE POVEZAVE</string>
+    <string name="parallel_downloading_connections_desc">Izberi število sočasnih povezav za posamezen prenos</string>
+    <string name="parallel_downloading_2">2 povezavi</string>
+    <string name="parallel_downloading_4">4 povezave (priporočeno)</string>
+    <string name="parallel_downloading_8">8 povezav</string>
+    <string name="timestamp_format_title">Oblika časovnega žiga</string>
+    <string name="timestamp_modify_text_title">Spremeni besedilo</string>
+    <string name="timestamp_custom_pattern_label">Poljubni vzorec</string>
+    <string name="timestamp_custom_pattern_hint">npr. HH:mm a, dd/MM HH:mm:ss</string>
+    <string name="timestamp_modify_text_instructions">Za časovni žig v izbrani obliki uporabi spremenljivko ${t}. Pred njo ali za njo lahko dodaš poljubno besedilo ali vneseš lastno besedilo.</string>
+    <string name="timestamp_modify_text_preview">Predogled</string>
+    <string name="timestamp_invalid_pattern">Neveljaven vzorec datuma ali časa</string>
+    <string name="feat_custom_ab_props_title">Prilagojene lastnosti AB</string>
+    <string name="feat_custom_ab_props_desc">Ob zagonu prepiši vrednosti tipiziranih lastnosti AB v WhatsAppu na podlagi ID-ja lastnosti</string>
+
+    <!-- Magisk DenyList diagnostics and actions. -->
+    <string name="diag_label_denylist">Magisk DenyList</string>
+    <string name="diag_denylist_not_active">Ni aktivno</string>
+    <string name="diag_denylist_clean">Nobena ciljna aplikacija ni blokirana</string>
+    <string name="diag_denylist_blocked">Blokiranje WhatsAppa</string>
+    <string name="diag_denylist_checking">Preverjanje…</string>
+    <string name="diag_denylist_sheet_title">Diagnostika seznama Magisk DenyList</string>
+    <string name="diag_denylist_sheet_desc">Pregled pravil Magisk DenyList, ki vplivajo na ciljne pakete in vbrizgavanje modula prek Zygiska.</string>
+    <string name="diag_denylist_active_targets">Ciljne aplikacije na seznamu DenyList</string>
+    <string name="diag_denylist_inactive_targets">Druge ciljne aplikacije</string>
+    <string name="diag_denylist_btn_fix">Popravi</string>
+    <string name="diag_denylist_btn_fix_all">Popravi vse</string>
+    <string name="diag_denylist_fix_title">Popravi seznam Magisk DenyList</string>
+    <string name="diag_denylist_fix_message">S tem bo %1$s odstranjen s seznama Magisk DenyList, aplikacija pa prisilno ustavljena, da bo lahko Zygisk/LSPosed ob naslednjem zagonu vanjo vstavil hooke.</string>
+    <string name="diag_denylist_fix_all_message">S tem bodo vsi zaznani paketi WhatsApp odstranjeni s seznama Magisk DenyList, njihove aplikacije pa prisilno ustavljene, da bo lahko Zygisk/LSPosed ob naslednjem zagonu vanje vstavil hooke.</string>
+    <string name="diag_denylist_fix_success">Uspešno odstranjeno s seznama Magisk DenyList</string>
+    <string name="diag_denylist_fix_failed">Odstranitev s seznama Magisk DenyList ni uspela</string>
+    <string name="diag_denylist_target_blocked">Blokirano zaradi uveljavljenega seznama DenyList</string>
+    <string name="diag_denylist_target_clean">Ni na uveljavljenem seznamu DenyList</string>
+    <string name="diag_denylist_target_not_enforced">Uveljavljanje seznama DenyList je izklopljeno</string>
+    <string name="diag_denylist_target_magisk_inactive">Magisk ni aktiven</string>
+
+    <!-- Settings dependencies and configuration modes. -->
+    <string name="requires_setting_enabled">Zahteva omogočeno nastavitev %1$s</string>
+    <string name="navigation_drawer_open">Odpri navigacijski meni</string>
+    <string name="config_mode_title">Način konfiguracije</string>
+    <string name="config_mode_desc">Nastavitve določi skupno ali ločeno za vsako ciljno aplikacijo</string>
+    <string name="config_mode_universal">Univerzalno</string>
+    <string name="config_mode_universal_desc">Uporabi enake nastavitve za vse aplikacije WhatsApp, za katere je modul omogočen.</string>
+    <string name="config_mode_per_target_app">Za vsako ciljno aplikacijo</string>
+    <string name="config_mode_per_target_app_desc">Prilagodi funkcije in nastavitve neodvisno za vsako ciljno aplikacijo.</string>
+    <string name="target_whatsapp">WhatsApp</string>
+    <string name="target_whatsapp_business">WhatsApp Business</string>
 </resources>
