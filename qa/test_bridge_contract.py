@@ -88,7 +88,13 @@ STUBS = {
     'android/content/Context.java': '''package android.content;
         public abstract class Context {
             public Context getApplicationContext() { return this; }
+            public abstract String getPackageName();
             public abstract ContentResolver getContentResolver();
+        }''',
+    'com/waenhancer/config/PreferenceRestartTracker.java': '''package com.waenhancer.config;
+        public final class PreferenceRestartTracker {
+            public static final String NEED_RESTART = "need_restart";
+            public static final String PENDING_CHANGES = "pending_restart_changes";
         }''',
     'android/content/ContentResolver.java': '''package android.content;
         public abstract class ContentResolver {
@@ -167,6 +173,10 @@ STUBS = {
             }
             static class Ctx extends Context {
                 final Resolver resolver = new Resolver();
+                final String packageName;
+                Ctx() { this("com.whatsapp"); }
+                Ctx(String packageName) { this.packageName = packageName; }
+                @Override public String getPackageName() { return packageName; }
                 @Override public ContentResolver getContentResolver() { return resolver; }
             }
             static void check(boolean expected, String message) {
@@ -187,7 +197,10 @@ STUBS = {
                 check(prefs.getInt("int_as_string", 0)==42, "numeric compatibility");
                 prefs.getStringSet("choices", null).clear();
                 check(prefs.getStringSet("choices", null).size()==2, "defensive string sets");
-                prefs.getAll().clear();
+                boolean immutableSnapshot = false;
+                try { prefs.getAll().clear(); }
+                catch (UnsupportedOperationException expected) { immutableSnapshot = true; }
+                check(immutableSnapshot, "getAll must protect its immutable cache snapshot");
                 check(prefs.contains("choices"), "detached getAll result");
                 AtomicInteger notifications = new AtomicInteger();
                 SharedPreferences.OnSharedPreferenceChangeListener listener = (p, key) -> notifications.incrementAndGet();
@@ -210,7 +223,33 @@ STUBS = {
                 check(!prefs.edit().putString("failure", "x").commit(), "IPC failure returns false");
                 check(!prefs.contains("failure"), "failed commit does not mutate cache");
                 check(notifications.get()==notificationsBefore, "listener unregister works");
-                System.out.println("OK: hydration, type coercion, snapshots, set-copy, atomic edits, clear, remove, async apply, failure and listeners");
+                // Exercise the real injected-process per-target resolver, including
+                // both scalar and set values and a WhatsApp Business negative control.
+                Ctx scopedCtx = new Ctx("com.whatsapp");
+                scopedCtx.resolver.db.put("module_config_mode", "Per Target App");
+                scopedCtx.resolver.db.put("parallel_downloading", false);
+                scopedCtx.resolver.db.put("parallel_downloading_connections", 4);
+                scopedCtx.resolver.db.put("com.whatsapp:parallel_downloading", true);
+                scopedCtx.resolver.db.put("com.whatsapp:parallel_downloading_connections", 8);
+                scopedCtx.resolver.db.put("com.whatsapp:need_restart", true);
+                scopedCtx.resolver.db.put("com.whatsapp:pending_restart_changes", Set.of("parallel_downloading"));
+                PreferenceBridgeClient scopedPrefs = new PreferenceBridgeClient(scopedCtx, null);
+                check(scopedPrefs.getBoolean("parallel_downloading", false), "Messenger scoped switch not projected");
+                check(scopedPrefs.getInt("parallel_downloading_connections", 0)==8,
+                      "Messenger scoped connection count not projected");
+                check(scopedPrefs.getBoolean("need_restart", false), "scoped restart flag not projected");
+                check(scopedPrefs.getStringSet("pending_restart_changes", Set.of())
+                      .contains("parallel_downloading"), "scoped restart set not projected");
+                Ctx businessCtx = new Ctx("com.whatsapp.w4b");
+                businessCtx.resolver.db.putAll(scopedCtx.resolver.db);
+                PreferenceBridgeClient businessPrefs = new PreferenceBridgeClient(businessCtx, null);
+                check(!businessPrefs.getBoolean("parallel_downloading", true),
+                      "Messenger scoped toggle leaked into Business");
+                check(businessPrefs.getInt("parallel_downloading_connections", 0)==4,
+                      "Messenger scoped connection count leaked into Business");
+                check(!businessPrefs.getBoolean("need_restart", true),
+                      "Messenger scoped restart flag leaked into Business");
+                System.out.println("OK: hydration, type coercion, immutable snapshots, set-copy, atomic edits, clear, remove, async apply, failure, listeners and Messenger/Business per-target isolation");
             }
         }''',
 }
