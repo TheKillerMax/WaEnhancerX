@@ -23,6 +23,8 @@ public final class TestFeaturePreferenceSchemaCoverage {
                 Map.entry("hide_typing", PreferenceSchema.Type.BOOLEAN),
                 Map.entry("media_upload_quality", PreferenceSchema.Type.BOOLEAN),
                 Map.entry("open_wae", PreferenceSchema.Type.BOOLEAN),
+                Map.entry("parallel_downloading", PreferenceSchema.Type.BOOLEAN),
+                Map.entry("parallel_downloading_connections", PreferenceSchema.Type.INT),
                 Map.entry("separate_groups_tabs", PreferenceSchema.Type.BOOLEAN),
                 Map.entry("statusdowload", PreferenceSchema.Type.BOOLEAN),
                 Map.entry("video_preview_muted", PreferenceSchema.Type.BOOLEAN)

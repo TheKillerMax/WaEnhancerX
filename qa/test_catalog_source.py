@@ -89,9 +89,9 @@ class CatalogSourceTest(unittest.TestCase):
         self.write(source=SOURCE.replace('"preference_catalog.json"','"../private.json"'));self.rejects()
     def test_unsupported_routing_rejected(self):
         self.write(source=SOURCE.replace('.distinctBy { it.key }','.distinctBy { it.groupId }'));self.rejects()
-    def test_current_tree_uses_asset_and_92_canonical_features(self):
+    def test_current_tree_uses_asset_and_93_canonical_features(self):
         rows=catalog_features(ROOT)
-        self.assertEqual(92,len(rows));self.assertEqual(92,len({r['key'] for r in rows}))
+        self.assertEqual(93,len(rows));self.assertEqual(93,len({r['key'] for r in rows}))
         by_key={r['key']:r for r in rows}
         self.assertNotIn('call_privacy',by_key)
         self.assertNotIn('always_typing',by_key)
@@ -102,6 +102,9 @@ class CatalogSourceTest(unittest.TestCase):
         self.assertEqual('home_layout_navigation',by_key['status_style']['group_id'])
         self.assertEqual('media_utility_downloader',by_key['download_view_once']['group_id'])
         self.assertEqual('media_quality_status',by_key['send_audio_as_voice_status']['group_id'])
+        self.assertEqual('message_protection_security',by_key['bypass_screenshot_restriction']['group_id'])
+        self.assertEqual('media_utility_downloader',by_key['parallel_downloading']['group_id'])
+        self.assertEqual('visual_styles',by_key['custom_ab_props']['group_id'])
         self.assertEqual('layout',by_key['disable_sensor_proximity']['sub_tab_id'])
         self.assertEqual(('home_layout_navigation', 4, 'layout', False),
                          (by_key['metaai']['group_id'], by_key['metaai']['tab_index'],
@@ -118,11 +121,19 @@ class CatalogSourceTest(unittest.TestCase):
         self.assertIn('return isEnabled("metaai", false);',hook)
         schema=(source/'config/PreferenceSchema.java').read_text()
         self.assertIn('"metaai", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC',schema)
+        subsettings=('metaai_remove_home_fab','metaai_remove_entry_points','metaai_block_chat')
+        for key in subsettings:
+            self.assertIn(f'"{key}"',styles)
+            self.assertIn(f'"{key}"',hook)
+            self.assertIn(f'"{key}", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC',schema)
         values=[]
         for folder in ('values-es','values-b+es+419'):
             tree=ET.parse(ROOT/f'app/src/main/res/{folder}/meta_ai_control.xml')
             values.append({n.attrib['name']:n.text for n in tree.getroot()})
         self.assertEqual(values[0],values[1])
-        self.assertEqual({'feat_metaai_title','feat_metaai_desc'},set(values[0]))
+        expected_resources={'feat_metaai_title','feat_metaai_desc',
+                            'meta_ai_remove_home_fab','meta_ai_remove_entry_points','meta_ai_block_chat'}
+        self.assertEqual(expected_resources,set(values[0]))
+        self.assertTrue(all(value and value.strip() for value in values[0].values()))
 
 if __name__=='__main__': unittest.main()

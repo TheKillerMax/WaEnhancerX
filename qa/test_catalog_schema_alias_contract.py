@@ -66,9 +66,11 @@ def main():
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)
-    assert count == 91, 'Catalog size changed; review and update feature acceptance matrix'
+    assert count == 93, 'Catalog size changed; review and update feature acceptance matrix'
     assert schema['app_interface_size'] == 'STRING', 'Interface size must remain a typed choice'
     assert schema['status_style'] == 'STRING', 'Status style must remain a typed choice'
+    assert schema['parallel_downloading'] == 'BOOLEAN', 'Download acceleration must be a public Boolean preference'
+    assert schema['parallel_downloading_connections'] == 'INT', 'Connection count must be an integer preference'
     assert missing in (13, 14), f'Unexpected intentionally non-schema keys: {missing}'
     # Negative fixtures: an unknown catalog entry, wrong alias, or promotion
     # of license/navigation keys to writable preferences must be rejected.
