@@ -1,0 +1,71 @@
+name: Stage final manual receipt retry blobs
+on:
+  push:
+    branches: ['qa/reconcile-three-import-20261110']
+    paths: ['.github/workflows/stage-retry-blobs-20261110.yml']
+permissions:
+  contents: write
+jobs:
+  blobs:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Validate both source bundles and publish only content-addressed blobs
+        env:
+          GH_OBJECT_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import ast,base64,hashlib,json,pathlib,subprocess,textwrap
+          data=pathlib.Path('.github/workflows/import-reviewed-objects-20261110.yml').read_bytes()
+          assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()=='f518239f472854f8c903a5892026293507198190'
+          source=textwrap.dedent(data.decode().split("          python3 - <<'PY'\n",1)[1].split('\n          PY\n',1)[0])
+          assert source.count('results=[]\n')==1
+          prefix=source.split('results=[]\n',1)[0];ast.parse(prefix)
+          exec(compile(prefix,'<verified-original-bundle>','exec'),globals())
+          subprocess.run(['git','fetch',str(bundle),'refs/heads/update/pr105-v206-20261110:refs/remotes/reviewed/pr105'],check=True)
+          assert git('rev-parse','refs/remotes/reviewed/pr105')=='08307f32fdc474807cc5db01b470b0106d6e4176'
+          folder=pathlib.Path('.qa-transfer/retry20261110');chunks=[]
+          suffix='LuqlhVnUwUyUHvLtReFATPHmRg/otd8B/QRTx7EO8ivv7K5GM0l5BUvVe/r/fefNn3z5Mftv+bs48qR+3fc5WVNf/aDb/eunzFb7b8ZnN17Y8mXISTfYZbrZiJhEWtoMNMixmDcdecvGDPuEs7H+ZeHqsUf9n3t+ftq1Mnhnu0ci9UofjwNjhFBXChDRMByjasZW80kIV+fujCg1FN+lleBh8iGbAIuor3WDCAHhoJXIOQBhjoJAhQ6/YwiUBhgLxrPGigYVyAFNEATAdBKr7JBYumW7PAcCl+NTzGtJh3EdpSAaPWHVSAW92IB9wU92ogsEd/Z1cSI2NmeEB1Rg286vnx1o6zB7GCvuvRS1KF9ZTUTeLi2BeXDtvFoGo/nK3aqj648/zU03324y/7f5d0j3Ab1IDiXoIJEpS7QvYjDDcxRmGgz00H9EAEHSWFTDRxhRAjNsCw0C3VC7UHp5ftigsHp5BZ5vo/lvrYxy4MiU4j02LXvUx6g7AhZYRMEIgAuwbDb9/IHqXz0YUZQZzrRnGxmevOiUoN0tPf7P9ufVgCojCqKSyFdU2ylWiTT6kJRLojtYE7cgNiNoA4MSkabjQwpdiAvtqGrAskZU8lmZ3edMtG6mSWlxslnREOLVhXdySBTGPX5hiFGtpKxtl93MIgMSkbAjDZ13S49rKMNOzFcwvzOR1vBESqGth//dNnHu5qVdrJ75OJPcnDcddX8yA49lN9frk0wk1jmCgxKVN5SirSW6Sh9ddhOCZ4Sc+drEs='
+          before=['a1cc4ef1a8563712e720ad1c768615bcbbb8203c226955fe489a197aab8eb651','e80d95402faaf6b4e393da434e07825e43fd2c0c74b504e7ae78c0f77701c799','077c272b5b40e9e1e91818f3433030ff6a79b6395d29f9dbd822ffa62fb2aacf','8944141d71fadf137fb03c12a2114efa86cfc3b7af773b167894af8c3afee42a','a8805d1decd309eb0694dd7179de72a32874947b6db9eaa60890156eb1cea4b7','d0d11c692d4753d430a05b7e8cb1d184db8831e6772d32264915ffbaf1fe377d']
+          decoded=['71b579115a7ed4f5095ac5f023c9d324b56f2ade4d2c778041e571e5899b4596','cb5bb6b3923e8d79bec375d6339946a1f277e6a9c9bc2759daee6fae564c0c4c','234ec36768b35a64da410dc6e5f60524026dc50d483c8d0d3090c4dc25095f1b','16c5e5c5070f8132dd81fd406965f1274156b866fa68ad671919f47ff26724c9','b948724ceddcb70119416f4d455bc796560191ffa44fa5cd9578e32ee04cb7c6','893caeb1e7b965d2c39c9acfaff8c783ade20973ebb5dba24217ddb7f36aec3f']
+          corrections={1:[[311,312,'J','6'],[1055,1058,'E68','9a']],2:[[322,324,'CF','/J'],[339,342,'SgV','Rq'],[2469,2470,'W','l']]}
+          for i in range(6):
+              text=(folder/f'{i:02d}.b64').read_text(encoding='ascii');assert hashlib.sha256(text.encode()).hexdigest()==before[i]
+              if i==0:
+                  assert text[497:499]=='fJ';text=text[:497]+'OF'+text[499:1958]+suffix
+              for a,b,old,new in reversed(corrections.get(i,[])):
+                  assert text[a:b]==old;text=text[:a]+new+text[b:]
+              part=base64.b64decode(text,validate=True);assert hashlib.sha256(part).hexdigest()==decoded[i];chunks.append(part)
+          delta=b''.join(chunks);assert len(delta)==11925 and hashlib.sha256(delta).hexdigest()=='b2c097f4ec0ae9cc7b75091c2ea095e03d8d2b78b824be7040fce344878b2a42'
+          retry=pathlib.Path('/tmp/retry.bundle');retry.write_bytes(delta);subprocess.run(['git','bundle','verify',str(retry)],check=True)
+          subprocess.run(['git','fetch',str(retry),'HEAD:refs/remotes/reviewed/pr105-final'],check=True)
+          sha=git('rev-parse','refs/remotes/reviewed/pr105-final');assert sha=='35e25814dc06663087dbf62657013d7c5d70b4a0'
+          tree=git('rev-parse',sha+'^{tree}');assert tree=='ab2beb99d53cdef53cc8dc6a0348dd2cf0ded157'
+          for parent in ['25dad18b2588dc87cc0763c666ced143cafd3292','4750124e36223dd21d8535c14f2fb658025d8480']:
+              subprocess.run(['git','merge-base','--is-ancestor',parent,sha],check=True)
+          names=git('diff','--name-only','--no-renames','4750124e36223dd21d8535c14f2fb658025d8480',sha).splitlines();assert 1<=len(names)<=22
+          elements=[]
+          for path in names:
+              assert path.startswith(('app/src/main/java/','qa/','.github/workflows/')) and path.endswith(('.java','.kt','.py','.md','.yml'))
+              row=git('ls-tree',sha,'--',path);metadata,actual_path=row.split('\t',1);mode,kind,blob=metadata.split();assert actual_path==path and kind=='blob' and mode in ('100644','100755')
+              body=git('cat-file','blob',blob,binary=True);assert len(body)<150000
+              assert hashlib.sha1(b'blob '+str(len(body)).encode()+b'\0'+body).hexdigest()==blob
+              remote=api('blobs',{'content':base64.b64encode(body).decode(),'encoding':'base64'});assert remote['sha']==blob
+              elements.append({'path':path,'mode':mode,'type':'blob','sha':blob})
+          result={'local_commit':sha,'tree':tree,'elements':elements,'refs_changed':False,'bundle_sha256':hashlib.sha256(delta).hexdigest()}
+          print('FINAL_RETRY_BLOBS '+json.dumps(result),flush=True)
+          pathlib.Path('/tmp/retry-blob-identities.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: final-retry-blob-identities
+          path: /tmp/retry-blob-identities.json
+          if-no-files-found: error
+          retention-days: 14
