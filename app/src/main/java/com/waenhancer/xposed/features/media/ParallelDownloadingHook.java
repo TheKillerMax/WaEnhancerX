@@ -7,12 +7,14 @@ import androidx.annotation.NonNull;
 
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.core.devkit.HookReturnTypeGuard;
 
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URL;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -34,6 +36,7 @@ public class ParallelDownloadingHook extends BaseFeature {
     public static final String PREF_CONNECTIONS_KEY = "parallel_downloading_connections";
     public static final int DEFAULT_CONNECTIONS = 4;
     private static final long MIN_PARALLEL_SIZE_BYTES = 6L * 1024L * 1024L; // 6 MB threshold
+    private static final AtomicBoolean INCOMPATIBLE_PROXY_LOGGED = new AtomicBoolean(false);
 
     public ParallelDownloadingHook(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
         super(context, classLoader, prefs);
@@ -100,8 +103,11 @@ public class ParallelDownloadingHook extends BaseFeature {
 
                     int connections = readConnectionCount();
                     Object proxy = createResponseProxy(response, contentLength, connections, url, startOffset);
-                    if (proxy != null) {
+                    if (HookReturnTypeGuard.canSetObjectResult(downloadMethod, proxy)) {
                         param.setResult(proxy);
+                    } else if (proxy != null && INCOMPATIBLE_PROXY_LOGGED.compareAndSet(false, true)) {
+                        XposedBridge.log(TAG + " Skipped response proxy: not assignable to "
+                                + downloadMethod.getReturnType().getName());
                     }
                 }
             });

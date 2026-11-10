@@ -28,4 +28,10 @@ public final class HookReturnTypeGuard {
         return parameterTypes.length > 0
                 && (parameterTypes[0] == int.class || parameterTypes[0] == Integer.class);
     }
+
+    /** A dynamic proxy cannot replace a concrete host return type it does not implement. */
+    public static boolean canSetObjectResult(Method method, Object replacement) {
+        return method != null && replacement != null
+                && method.getReturnType().isInstance(replacement);
+    }
 }
