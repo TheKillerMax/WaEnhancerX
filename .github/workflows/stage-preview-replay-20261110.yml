@@ -1,0 +1,28 @@
+name: Stage exact reviewed preview blobs
+on:
+  push:
+    branches: ['qa/preview-reconcile-staging-20261110']
+permissions:
+  contents: write
+jobs:
+  stage:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Verify complete reviewed tree before staging public blobs
+        env:
+          GH_OBJECT_TOKEN: ${{ github.token }}
+        run: python3 .qa-preview-replay/replay.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: preview-staged-identities
+          path: ${{ runner.temp }}/preview-staged-identities.json
+          if-no-files-found: warn
+          retention-days: 14
