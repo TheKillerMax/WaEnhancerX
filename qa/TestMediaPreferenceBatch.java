@@ -57,6 +57,7 @@ public final class TestMediaPreferenceBatch {
             Object v = values.get(key);
             return v == null ? fallback : (Float) v;
         }
+        @Override public boolean contains(String key) { return values.containsKey(key); }
         @Override public Map<String, ?> getAll() { return Collections.unmodifiableMap(new HashMap<>(values)); }
         @Override public SharedPreferences.Editor edit() {
             if (throwEdit) throw new IllegalStateException("Editor unavailable");
@@ -72,6 +73,7 @@ public final class TestMediaPreferenceBatch {
                 adds.put(key, value); return this;
             }
             @Override public Editor putInt(String key, int value) { adds.put(key, value); return this; }
+            @Override public Editor putLong(String key, long value) { adds.put(key, value); return this; }
             @Override public Editor putFloat(String key, float value) { adds.put(key, value); return this; }
             @Override public Editor remove(String key) { adds.put(key, null); return this; }
             @Override public boolean commit() {
@@ -83,6 +85,13 @@ public final class TestMediaPreferenceBatch {
                     else values.put(entry.getKey(), entry.getValue());
                 }
                 return !failCommit;
+            }
+            @Override public void apply() {
+                // Model apply's in-memory publication without counting an explicit commit.
+                for (Map.Entry<String, Object> entry : adds.entrySet()) {
+                    if (entry.getValue() == null) values.remove(entry.getKey());
+                    else values.put(entry.getKey(), entry.getValue());
+                }
             }
         }
     }
@@ -102,6 +111,7 @@ public final class TestMediaPreferenceBatch {
         }
         @Override public ContentResolver getContentResolver() { return resolver; }
         @Override public ApplicationInfo getApplicationInfo() { return info; }
+        @Override public java.io.File getFilesDir() { return new java.io.File("/nonexistent/waex-fixture/files"); }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

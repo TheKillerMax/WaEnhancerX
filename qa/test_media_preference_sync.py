@@ -44,6 +44,7 @@ public interface SharedPreferences {
  java.util.Set<String> getStringSet(String key, java.util.Set<String> fallback);
  int getInt(String key, int fallback);
  float getFloat(String key, float fallback);
+ boolean contains(String key);
  Map<String, ?> getAll();
  Editor edit();
  interface Editor {
@@ -51,9 +52,11 @@ public interface SharedPreferences {
   Editor putString(String key, String value);
   Editor putStringSet(String key, java.util.Set<String> value);
   Editor putInt(String key, int value);
+  Editor putLong(String key, long value);
   Editor putFloat(String key, float value);
   Editor remove(String key);
   boolean commit();
+  void apply();
  }
 }
 """,
@@ -64,6 +67,7 @@ public abstract class Context {
  public abstract SharedPreferences getSharedPreferences(String name, int mode);
  public abstract ContentResolver getContentResolver();
  public abstract ApplicationInfo getApplicationInfo();
+ public abstract java.io.File getFilesDir();
 }
 """,
     "dagger/hilt/android/qualifiers/ApplicationContext.java": """package dagger.hilt.android.qualifiers;
@@ -74,6 +78,27 @@ public @interface Inject {}
 """,
     "javax/inject/Singleton.java": """package javax.inject;
 public @interface Singleton {}
+""",
+    "androidx/annotation/NonNull.java": """package androidx.annotation;
+public @interface NonNull {}
+""",
+    "androidx/annotation/Nullable.java": """package androidx.annotation;
+public @interface Nullable {}
+""",
+    "com/waenhancer/licensing/customprops/CustomAbPropsStore.java": """package com.waenhancer.licensing.customprops;
+public interface CustomAbPropsStore {
+ boolean getBoolean(String key, boolean fallback);
+ void putBoolean(String key, boolean value);
+ String getString(String key, String fallback);
+ void putString(String key, String value);
+}
+""",
+    # Only the catalog lookup is stubbed. Keep the real restart tracker and
+    # SharedPreferences interactions under test; catalog UI is out of scope.
+    "com/waenhancer/config/FeatureCatalog.java": """package com.waenhancer.config;
+public final class FeatureCatalog {
+ public static Object findByKey(String key) { return null; }
+}
 """,
     "com/waenhancer/core/preferences/SettingsBackupCodec.java": """package com.waenhancer.core.preferences;
 import android.content.Context; import java.io.InputStream; import java.io.OutputStream;
@@ -94,6 +119,7 @@ with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
     sources = stub_paths + [
         str(SRC / "config/PreferenceSchema.java"),
         str(SRC / "config/PreferenceStores.java"),
+        str(SRC / "config/PreferenceRestartTracker.java"),
         str(SRC / "core/preferences/WaexPreferenceManager.java"),
         str(POLICY),
         str(ROOT / "qa/TestMediaPreferenceBatch.java"),
@@ -138,7 +164,7 @@ checks = {
     "saved status identities are non-exported cache": '"status_download_saved_identities", Type.STRING_SET, Sensitivity.CACHE, Store.PUBLIC' in schema,
     "Privacy uses localized failure feedback": 'context.getString(R.string.view_once_setting_save_failed)' in privacy_ui,
     "no automatic old alias migration": 'putBoolean("call_recording_enabled", true)' not in ui,
-    "batch method defined": 'public boolean putBooleans(java.util.Map<String, Boolean> values)' in manager,
+    "batch method defined": 'public boolean putBooleans(Map<String, Boolean> values)' in manager,
     "batch editor used": 'PreferenceStores.publicStore(context).edit()' in manager,
     "single commit": 'if (!editor.commit()) return false;' in manager,
     "reject non-Boolean or private schema": 'definition.type != PreferenceSchema.Type.BOOLEAN' in manager and
