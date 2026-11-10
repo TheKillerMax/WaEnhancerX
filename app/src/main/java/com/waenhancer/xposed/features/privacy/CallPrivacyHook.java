@@ -646,16 +646,7 @@ public class CallPrivacyHook extends BaseFeature {
     }
 
     private File findDatabase(String dbName) {
-        String targetPkg = "com.whatsapp";
-        File[] candidates = new File[]{
-                new File(context.getFilesDir() != null ? context.getFilesDir().getParentFile() : null, "databases/" + dbName),
-                new File("/data/data/" + targetPkg + "/databases/" + dbName),
-                new File("/data/user/0/" + targetPkg + "/databases/" + dbName)
-        };
-        for (File f : candidates) {
-            if (f != null && f.exists()) return f;
-        }
-        return null;
+        return CallPrivacyDatabaseLocator.findExisting(context, dbName);
     }
 
     private String extractCallerJid(Object callInfo) {
