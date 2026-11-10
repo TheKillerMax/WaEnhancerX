@@ -1,0 +1,28 @@
+
+    @Test public void identityReplacementBeforeTempRegistrationRemovesOrphan()throws Exception {
+        open(null,"image/png",local(".png"));settle();Object previous=activeSession();
+        Field active=MediaPreviewHook.class.getDeclaredField("activePreview");active.setAccessible(true);
+        Constructor<?> ctor=previous.getClass().getDeclaredConstructor(ThreadPoolExecutor.class);ctor.setAccessible(true);
+        Object replacement=ctor.newInstance(worker());
+        Method download=sessionMethod("downloadAndDisplayMedia",String.class,String.class,String.class,long.class,boolean.class,
+                Context.class,android.widget.FrameLayout.class,android.widget.LinearLayout.class,android.widget.ProgressBar.class,android.widget.TextView.class);
+        android.widget.FrameLayout content=new android.widget.FrameLayout(activity);
+        android.widget.LinearLayout loading=new android.widget.LinearLayout(activity);
+        android.widget.ProgressBar progress=new android.widget.ProgressBar(activity);
+        android.widget.TextView text=new android.widget.TextView(activity);
+        Set<File> before=previews();java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();
+        Thread thread=new Thread(()->{try{download.invoke(hook,previous,"https://example.invalid/unregistered-temp",null,"image/png",0L,true,
+                activity,content,loading,progress,text);}catch(Throwable t){error.set(t);}},"WAEX-MediaPreview-orphan-fixture");
+        synchronized(previous){
+            thread.start();
+            await(()->thread.getState()==Thread.State.BLOCKED&&!previews().equals(before));
+            // This models preemption between publishing the new identity and closing the old one.
+            active.set(hook,replacement);
+        }
+        thread.join(4000);assertFalse("Old worker must finish its failed registration",thread.isAlive());assertNull(error.get());
+        sessionMethod("closePreview").invoke(hook,previous);Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Identity-invalidated unregistered temporary must be removed",before,previews());
+        assertSame("Old cleanup must not replace the new session",replacement,activeSession());
+        assertEquals(0,FixtureNetwork.calls.size());
+        sessionMethod("closePreview").invoke(hook,replacement);
+    }
