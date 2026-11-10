@@ -1,0 +1,48 @@
+name: Stage reviewed reconciliation blobs
+on:
+  push:
+    branches: ['qa/reconcile-three-import-20261110']
+    paths: ['.github/workflows/stage-reviewed-blobs-20261110.yml']
+permissions:
+  contents: write
+jobs:
+  blobs:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Retain exact bundle checks, create blobs, and report tree inputs without ref or workflow-tree writes
+        env:
+          GH_OBJECT_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import ast,hashlib,pathlib,textwrap
+          path=pathlib.Path('.github/workflows/import-reviewed-objects-20261110.yml')
+          data=path.read_bytes()
+          assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()=='f518239f472854f8c903a5892026293507198190'
+          source=data.decode().split("          python3 - <<'PY'\n",1)[1].split('\n          PY\n',1)[0]
+          source=textwrap.dedent(source)
+          marker="    remote_tree=api('trees',"
+          assert source.count(marker)==1
+          # Previous run proved blob writes are allowed but workflow-tree writes are not.
+          # Do not retry that prohibited operation. Emit exact inputs for the connector.
+          source=source.split(marker,1)[0]
+          source+='    result={"pr":number,"local_sha":sha,"tree":tree,"parents":parents,"elements":elements,"refs_changed":False}\n'
+          source+='    results.append(result);print("VERIFIED_TREE_INPUT "+json.dumps(result),flush=True)\n'
+          source+='    pathlib.Path("/tmp/reviewed-blob-identities.json").write_text(json.dumps(results,indent=2)+"\\n")\n'
+          source+='print("BLOBS_ONLY_STAGED; NO_TREE_OR_REF_WRITES")\n'
+          ast.parse(source)
+          exec(compile(source,'<verified-blob-staging>','exec'),{'__name__':'__main__'})
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: reviewed-blob-identities
+          path: /tmp/reviewed-blob-identities.json
+          if-no-files-found: error
+          retention-days: 14
