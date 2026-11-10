@@ -10,6 +10,7 @@ still contain ELF segments aligned to only 4 KiB.
 ```sh
 python3 qa/audit_native_alignment.py /path/to/module.apk --json
 python3 qa/test_native_alignment.py
+python3 qa/test_whisper_native_alignment.py
 ```
 
 Exit 0 means these packaging checks passed; 1 reports alignment findings; 2 means
@@ -25,6 +26,16 @@ headers, every load segment, distinct ZIP/ELF failures, native CRC
 corruption, duplicate ZIP members, ABI mismatches, and CLI exit codes. Synthetic
 ELF containers do not execute native code. Public CI uses these synthetic inputs
 only; do not commit APKs, extracted libraries, signing material, or private code.
+
+`test_whisper_native_alignment.py` additionally configures the actual
+`app/src/main/cpp/CMakeLists.txt` with a local, minimal substitute for the pinned
+whisper.cpp source. It verifies that an Android-conditional CMake link option
+reaches both the JNI bridge and shared libraries in nested fetched directories,
+then builds three host ELF fixtures and compares their `PT_LOAD` alignments with
+an unmodified 4 KiB host-linker control. This detects missing or misplaced
+linker flags without downloading whisper.cpp or needing the private module.
+The Linux host surrogate is **not** an NDK build, nor an Android 16 KiB runtime
+acceptance test. Actual final APKs must still pass the audit above.
 
 ## Release acceptance
 

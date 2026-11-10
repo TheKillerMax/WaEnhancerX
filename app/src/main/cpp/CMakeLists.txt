@@ -7,6 +7,18 @@ project(waexwhisper C CXX)
 # as Release, also inside debug APKs (an -O0 build ran 19x slower than real time).
 set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 
+# NDK r27 does not use 16 KiB ELF PT_LOAD alignment by default. Apply these
+# options before FetchContent_MakeAvailable: whisper.cpp creates shared GGML
+# CPU backends in child directories, and aligning only waexwhisper would leave
+# those dynamically loaded libraries unusable on 16 KiB-page Android devices.
+# This applies to targets compiled here, not third-party prebuilt .so files.
+if(ANDROID)
+    add_link_options(
+        "-Wl,-z,max-page-size=16384"
+        "-Wl,-z,common-page-size=16384"
+    )
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
     whisper
