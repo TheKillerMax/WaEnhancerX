@@ -1,0 +1,73 @@
+name: Import reviewed WAEX candidates 20261109
+on:
+  push:
+    branches: [qa/reviewed-candidates-20261109]
+    paths: [.github/workflows/import-reviewed-waex-20261109.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: waex-reviewed-import-20261109
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          submodules: false
+      - name: Validate exact bundle and fixed branch destinations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,hashlib,json,pathlib,subprocess
+          def git(*args):
+              return subprocess.check_output(['git',*args],text=True).strip()
+          folder=pathlib.Path('.qa-transfer/20261109')
+          data=b''.join((folder/f'part-{i:02d}.bin').read_bytes() for i in range(10))
+          data+=b''.join(base64.b64decode((folder/f'tail-{i:02d}.b64').read_bytes(),validate=True) for i in range(39))
+          assert len(data)==40358
+          assert hashlib.sha256(data).hexdigest()=='4d893e4b7152f77c2bbafa7d98730fab63c051a40bb1fa22c8b204438bab11ec'
+          bundle=pathlib.Path('/tmp/waex-reviewed.bundle');bundle.write_bytes(data)
+          subprocess.run(['git','bundle','verify',str(bundle)],check=True)
+          rows=[
+           ('preserved','74b4d1fc472da79a76142341babd768371a8556c','ef26fcbdb1db84016933a38eaf099274f35e4bf9','fix/preserved-vault-acknowledgement-v38-2026-10-19','19d3bae12fdf7ddd81da74f0f8c000f6f0a443fa','4750124e36223dd21d8535c14f2fb658025d8480'),
+           ('l10n','1afa18aa7939bc50f61e5bcdb3a40637b505497b','2e4d3906abf1eb06580bcfcc71c711889a0e7d42','fix/es419-v206-new-feature-resources-20261109',None,'857464107f797d9d2c2bfd7c30ec59951b3d70cf'),
+           ('calls','8e956ed218591e13fd6899b91a54a80cb942ea99','fa0cdfcd25c6ddec0e9c26d15ff1dd53b4c3423c','fix/call-block-explicit-opt-out-20261109',None,'4750124e36223dd21d8535c14f2fb658025d8480'),
+           ('startup','5ed80c9afc25f27b867f345c3b98077f6c3938fd','4e1bd7c3171c7b6da0a4f115cd0092385644d30b','fix/startup-hook-report-batch-20261109',None,'4750124e36223dd21d8535c14f2fb658025d8480')]
+          imported=[]
+          for name,sha,tree,destination,previous,base in rows:
+              ref='refs/heads/qa-reviewed-transfer-'+name+'-20261109'
+              subprocess.run(['git','fetch',str(bundle),ref+':refs/remotes/reviewed/'+name],check=True)
+              assert git('rev-parse','refs/remotes/reviewed/'+name)==sha
+              assert git('rev-parse',sha+'^{tree}')==tree
+              subprocess.run(['git','merge-base','--is-ancestor',base,sha],check=True)
+              if previous:subprocess.run(['git','merge-base','--is-ancestor',previous,sha],check=True)
+              current=git('ls-remote','origin','refs/heads/'+destination)
+              current=current.split()[0] if current else None
+              assert current in (previous,sha),(destination,current,previous)
+              imported.append({'name':name,'sha':sha,'tree':tree,'branch':destination,'previous':current})
+          pathlib.Path('/tmp/reviewed-import.json').write_text(json.dumps(imported,indent=2))
+          print(json.dumps(imported,indent=2))
+          PY
+      - name: Publish atomically without force and verify all heads
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,subprocess
+          rows=json.loads(pathlib.Path('/tmp/reviewed-import.json').read_text())
+          specs=[r['sha']+':refs/heads/'+r['branch'] for r in rows]
+          subprocess.run(['git','push','--atomic','origin',*specs],check=True)
+          for r in rows:
+              output=subprocess.check_output(['git','ls-remote','origin','refs/heads/'+r['branch']],text=True)
+              assert output.split()[0]==r['sha']
+          print('FOUR_EXACT_REVIEWED_HEADS_PUBLISHED_WITHOUT_FORCE')
+          print(json.dumps(rows,indent=2))
+          PY
