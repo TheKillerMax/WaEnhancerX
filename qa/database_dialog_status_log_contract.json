@@ -1,0 +1,198 @@
+{
+  "schema": 1,
+  "scope": "Three reviewed source files; no taint analysis, runtime hook or full-app privacy assertion.",
+  "files": {
+    "app/src/main/java/com/waenhancer/xposed/core/db/MessageStore.kt": {
+      "reviewed_source_sha256": "ba817e472fda53d7dd2a4823e7b4f10d709d4d9a79846bb069a2ccf5762f9d1d",
+      "tag_declaration": null,
+      "sites": [
+        {
+          "id": "MessageStore-01",
+          "expression": "\"[WAEX][MessageStore] Failed to open msgstore.db: ${ex.javaClass.simpleName}\"",
+          "purpose": "Opening msgstore failed after read-write and read-only attempts; keep failure category without database path.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "MessageStore-02",
+          "expression": "\"[WAEX][MessageStore] getIdFromKey error: ${e.javaClass.simpleName}\"",
+          "purpose": "Message key lookup failed; keep category without message key.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "MessageStore-03",
+          "expression": "\"[WAEX][MessageStore] getMediaFromId error: ${e.javaClass.simpleName}\"",
+          "purpose": "Media path lookup failed; keep category without returned path or row identifier.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "MessageStore-04",
+          "expression": "\"[WAEX][MessageStore] findAccountDataDir error: ${t.javaClass.simpleName}\"",
+          "purpose": "Account directory resolution failed; keep category without account or path.",
+          "allowed_data": "exception_class"
+        }
+      ]
+    },
+    "app/src/main/java/com/waenhancer/xposed/core/components/NativeWhatsAppDialog.kt": {
+      "reviewed_source_sha256": "687eb9845d3473e25e28c32d700d3c5b8b44b80fa1c6811eb32c98123c27f473",
+      "tag_declaration": "private const val TAG = \"[WAEX:NativeDialog]\"",
+      "sites": [
+        {
+          "id": "NativeWhatsAppDialog-01",
+          "expression": "\"$TAG Failed to instantiate native dialog builder: ${t.javaClass.simpleName}\"",
+          "purpose": "Native builder creation failed; preserve fallback diagnostic.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-02",
+          "expression": "\"$TAG setTitle error: ${t.javaClass.simpleName}\"",
+          "purpose": "Native title assignment failed; exclude title.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-03",
+          "expression": "\"$TAG setMessage error: ${t.javaClass.simpleName}\"",
+          "purpose": "Native message assignment failed; exclude dialog message.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-04",
+          "expression": "\"$TAG setView error: ${t.javaClass.simpleName}\"",
+          "purpose": "Native view assignment failed; exclude view contents.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-05",
+          "expression": "\"$TAG setPositiveButton error: ${t.javaClass.simpleName}\"",
+          "purpose": "Native positive-button assignment failed; exclude button text and listener.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-06",
+          "expression": "\"$TAG setNegativeButton error: ${t.javaClass.simpleName}\"",
+          "purpose": "Native negative-button assignment failed; exclude button text and listener.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-07",
+          "expression": "\"$TAG Error showing dialog: ${t.javaClass.simpleName}\"",
+          "purpose": "Native dialog display failed; retain fallback event.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "NativeWhatsAppDialog-08",
+          "expression": "\"$TAG Could not initialize native dialog: ${t.javaClass.simpleName}\"",
+          "purpose": "Native dialog discovery/initialization failed; retain category only.",
+          "allowed_data": "exception_class"
+        }
+      ]
+    },
+    "app/src/main/java/com/waenhancer/xposed/features/media/StatusDownloadHook.java": {
+      "reviewed_source_sha256": "a5691eecc64df4a581f7a51b0ce9e3ebf9778d95765f2859acd175bce65e4ebb",
+      "tag_declaration": "private static final String TAG = \"[WAEX][StatusDownload]\";",
+      "sites": [
+        {
+          "id": "StatusDownloadHook-01",
+          "expression": "TAG + \" findStatusListField failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Status-list field discovery failed; preserve stage and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-02",
+          "expression": "TAG + \" findCurrentStatusIndexField failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Current-status-index field discovery failed; preserve stage and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-03",
+          "expression": "TAG + \" hookMenuRefreshMethods failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Menu-refresh hook setup failed; preserve stage and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-04",
+          "expression": "TAG + \" hookStatusSeenIcon failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Fragment seen-icon hook setup failed; preserve stage and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-05",
+          "expression": "TAG + \" hookStatusSeenIconActivity failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Activity seen-icon hook setup failed; preserve stage and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-06",
+          "expression": "TAG + \" Error handling status menu hook: \" + t.getClass().getSimpleName()",
+          "purpose": "Status menu callback failed; preserve event and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-07",
+          "expression": "TAG + \" hookMethod(menuStatusMethod) failed: \" + t.getClass().getSimpleName()",
+          "purpose": "Status menu method registration failed; preserve event and exception class.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-08",
+          "expression": "TAG + \" Error setting up status playback hook: \" + t.getClass().getSimpleName()",
+          "purpose": "Outer playback setup failed; preserve event and exception class without Throwable stack/message.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-09",
+          "expression": "TAG + \" Download error: \" + t.getClass().getSimpleName()",
+          "purpose": "Asynchronous status download failed; keep category without media path or content.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-10",
+          "expression": "TAG + \" DexKit activity search failed: \" + t.getClass().getSimpleName()",
+          "purpose": "DexKit status activity search failed; keep category only.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-11",
+          "expression": "TAG + \" StatusPlaybackActivity not found — icon placement unavailable\"",
+          "purpose": "Status activity unavailable; a fixed literal explains missing icon placement without runtime payload.",
+          "allowed_data": "literal_only"
+        },
+        {
+          "id": "StatusDownloadHook-12",
+          "expression": "TAG + \" Could not hook status icon activity: \" + t.getClass().getSimpleName()",
+          "purpose": "Status activity icon hook failed; keep category only.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-13",
+          "expression": "TAG + \" Could not attach OnPageChangeListener: \" + t.getClass().getSimpleName()",
+          "purpose": "Page-change listener attachment failed; keep category only.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-14",
+          "expression": "TAG + \" Error resolving current status item: \" + t.getClass().getSimpleName()",
+          "purpose": "Current status item resolution failed; exclude status identity/content.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-15",
+          "expression": "TAG + \" Error resolving current status index: \" + t.getClass().getSimpleName()",
+          "purpose": "Current status index resolution failed; exclude runtime values.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-16",
+          "expression": "TAG + \" status export failed: \" + failure.getClass().getSimpleName()",
+          "purpose": "Status export failed; exclude source and destination paths; localized UI separately reports category.",
+          "allowed_data": "exception_class"
+        },
+        {
+          "id": "StatusDownloadHook-17",
+          "expression": "TAG + \" status identity save failed: \" + failure.getClass().getSimpleName()",
+          "purpose": "Saved-identity persistence failed; exclude stored identity set.",
+          "allowed_data": "exception_class"
+        }
+      ]
+    }
+  }
+}
