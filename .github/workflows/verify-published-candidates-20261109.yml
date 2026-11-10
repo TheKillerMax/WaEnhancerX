@@ -1,0 +1,96 @@
+name: Verify published WAEX candidates 20261109
+on:
+  push:
+    branches: [qa/reviewed-candidates-20261109]
+    paths: [.github/workflows/verify-published-candidates-20261109.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'TheKillerMax/WaEnhancerX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: calls
+            sha: 8e956ed218591e13fd6899b91a54a80cb942ea99
+            tree: fa0cdfcd25c6ddec0e9c26d15ff1dd53b4c3423c
+          - name: startup
+            sha: 5ed80c9afc25f27b867f345c3b98077f6c3938fd
+            tree: 4e1bd7c3171c7b6da0a4f115cd0092385644d30b
+          - name: localization
+            sha: 1afa18aa7939bc50f61e5bcdb3a40637b505497b
+            tree: 2e4d3906abf1eb06580bcfcc71c711889a0e7d42
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Verify identity and record the effective toolchain
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+          EXPECTED_TREE: ${{ matrix.tree }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          test -z "$(git status --porcelain)"
+          mkdir -p "$RUNNER_TEMP/waex-final"
+          java -version 2>&1 | tee "$RUNNER_TEMP/waex-final/java.log"
+          kotlinc -version 2>&1 | tee "$RUNNER_TEMP/waex-final/kotlin.log"
+          KOTLIN_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v kotlinc)")")")"
+          test -f "$KOTLIN_HOME/lib/kotlin-compiler.jar"
+          test -f "$KOTLIN_HOME/lib/kotlin-stdlib.jar"
+          echo "KOTLIN_HOME=$KOTLIN_HOME" >> "$GITHUB_ENV"
+          git rev-parse HEAD 'HEAD^{tree}' > "$RUNNER_TEMP/waex-final/source.txt"
+      - name: Run exact candidate and negative controls
+        shell: bash
+        env:
+          CASE: ${{ matrix.name }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/waex-final"
+          case "$CASE" in
+            calls)
+              python3 qa/test_call_privacy_optout.py --out "$out/positive" --kotlin-home "$KOTLIN_HOME" | tee "$out/positive.log"
+              python3 qa/mutate_call_privacy_optout.py --out "$out/mutations" --kotlin-home "$KOTLIN_HOME" | tee "$out/mutations.log"
+              ;;
+            startup)
+              python3 qa/test_startup_hook_reporting.py --out "$out/positive" | tee "$out/positive.log"
+              python3 qa/mutate_startup_hook_reporting.py --out "$out/mutations" | tee "$out/mutations.log"
+              ;;
+            localization)
+              python3 qa/test_es419_localization.py | tee "$out/source.log"
+              python3 qa/test_es419_runtime.py --kotlin-home "$KOTLIN_HOME" | tee "$out/runtime.log"
+              python3 qa/mutate_es419.py --out "$out/mutations" | tee "$out/mutations.log"
+              AAPT2="$ANDROID_HOME/build-tools/36.0.0/aapt2"
+              test -x "$AAPT2"
+              "$AAPT2" version | tee "$out/aapt2.log"
+              python3 qa/verify_es419_resources.py --aapt2 "$AAPT2" --out "$out/resources" | tee "$out/resources.log"
+              ;;
+            *) exit 2 ;;
+          esac
+      - name: Preserve observed results, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: reviewed-${{ matrix.name }}-${{ matrix.sha }}
+          path: |
+            ${{ runner.temp }}/waex-final/**/*.json
+            ${{ runner.temp }}/waex-final/**/*.log
+            ${{ runner.temp }}/waex-final/source.txt
+          if-no-files-found: error
+          retention-days: 14
