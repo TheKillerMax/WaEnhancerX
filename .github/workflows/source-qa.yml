@@ -132,6 +132,24 @@ jobs:
             echo '::endgroup::'
           done
 
+      - name: Verify device source listener ownership and recycled rows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/device_source_lifecycle/verify.py --out "$RUNNER_TEMP/waex-device-source-lifecycle"
+
+      - name: Preserve device source A/B and negative control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-source-lifecycle-evidence
+          path: |
+            ${{ runner.temp }}/waex-device-source-lifecycle/**/*.json
+            ${{ runner.temp }}/waex-device-source-lifecycle/**/*.txt
+            ${{ runner.temp }}/waex-device-source-lifecycle/**/*.log
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Verify public Spanish Latin America resources and runtime lookup
         shell: bash
         run: |

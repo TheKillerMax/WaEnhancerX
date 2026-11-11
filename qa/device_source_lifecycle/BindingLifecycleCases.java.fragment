@@ -1,0 +1,110 @@
+    private static final String PHONE = "This message was sent via Phone";
+    private static final String LINKED = "This message was sent via a Linked Device (Desktop/Phone)";
+    private final BindObserver observer = new BindObserver();
+    private final TextObserver textObserver = new TextObserver();
+    private BindingLifecycleProbe() {
+        onTextChange = view -> {
+            XC_MethodHook.MethodHookParam param = new XC_MethodHook.MethodHookParam();
+            param.thisObject = view;
+            textObserver.afterHookedMethod(param);
+        };
+    }
+    private static boolean conversationActive = true;
+    private static Class<?> fMessageClass = HostMessage.class;
+    private static Class<?> deviceJidClass = DeviceJid.class;
+    private static final java.util.concurrent.Executor UI_EXECUTOR = Runnable::run;
+    private void resolveMessageClasses() { throw new AssertionError("Unexpected class resolution; fixture classes are already known"); }
+    static final class Key { final String id; Key(String id) { this.id=id; } }
+    static final class DeviceJid { final int device; DeviceJid(int value){device=value;} public int getDevice(){return device;} }
+    static final class HostMessage { final Key key; final DeviceJid device; HostMessage(String id,int value){key=new Key(id);device=new DeviceJid(value);} }
+    interface ListAdapter { Object getItem(int position); }
+    static final class Adapter implements ListAdapter {
+        Object item; boolean fail;
+        Adapter(Object value){item=value;}
+        public Object getItem(int position) {
+            if (fail) throw new IllegalStateException("synthetic item lookup failure");
+            if(position!=0) throw new AssertionError("Unexpected item position"); return item;
+        }
+    }
+    static class XC_MethodHook {
+        static final class MethodHookParam { Object thisObject;Object[] args;Object result;Object getResult(){return result;} }
+        protected void beforeHookedMethod(MethodHookParam param){}
+        protected void afterHookedMethod(MethodHookParam param){}
+    }
+    static final class MessageDeviceSourceStore {
+        private static final MessageDeviceSourceStore INSTANCE=new MessageDeviceSourceStore();
+        private final Map<String,Integer> devices=new HashMap<>();
+        static MessageDeviceSourceStore getInstance(Context context){return INSTANCE;}
+        void upsertDeviceId(String key,int device){devices.put(key,device);}
+        int getDeviceId(String key){return devices.getOrDefault(key,-1);}
+    }
+    static final class CompletableFuture<T> {
+        private static final List<CompletableFuture<?>> pending=new ArrayList<>();
+        final java.util.function.Supplier<T> supplier;java.util.function.Consumer<? super T> consumer;
+        java.util.concurrent.Executor executor;T value;boolean started;
+        CompletableFuture(java.util.function.Supplier<T> supplier){this.supplier=supplier;}
+        static <T> CompletableFuture<T> supplyAsync(java.util.function.Supplier<T> supplier){
+            CompletableFuture<T> task=new CompletableFuture<>(supplier);pending.add(task);return task;
+        }
+        CompletableFuture<Void> thenAcceptAsync(java.util.function.Consumer<? super T> consumer,java.util.concurrent.Executor executor){this.consumer=consumer;this.executor=executor;return null;}
+        void start(){if(started)throw new AssertionError("task started twice");value=supplier.get();started=true;}
+        void deliver(){if(!started)start();executor.execute(()->consumer.accept(value));}
+        static void deliver(int index){pending.get(index).deliver();}
+        static void drain(){for(int i=0;i<pending.size();i++){CompletableFuture<?> task=pending.get(i);task.deliver();}pending.clear();}
+    }
+    static final class Row {
+        final ViewGroup view=new ViewGroup();final TextView anchor=new TextView();final TextView secondary=new TextView();
+        Row(){anchor.setId(91);secondary.setId(93);view.add(anchor);view.add(secondary);}
+    }
+    private void bind(Row row,Object message,View convert) {
+        XC_MethodHook.MethodHookParam param=new XC_MethodHook.MethodHookParam();param.thisObject=new Adapter(message);
+        param.args=new Object[]{0,convert,row.view};param.result=row.view;
+        observer.beforeHookedMethod(param);observer.afterHookedMethod(param);
+    }
+    private String bindWithHostText(Row row,Object message,String hostText) {
+        XC_MethodHook.MethodHookParam p=new XC_MethodHook.MethodHookParam();p.thisObject=new Adapter(message);
+        p.args=new Object[]{0,row.view,row.view};p.result=row.view;
+        observer.beforeHookedMethod(p);
+        row.anchor.setText(hostText);
+        String during=String.valueOf(row.anchor.getText());
+        observer.afterHookedMethod(p);CompletableFuture.drain();
+        return during;
+    }
+    private void known(Row row,String id,int device) {bind(row,new HostMessage(id,device),row.view);CompletableFuture.drain();}
+    private static void require(boolean condition,String detail){if(!condition)throw new AssertionError(detail);}
+    private static void noToast(String detail){require(toasts.isEmpty(),detail+": "+toasts);}
+    private static void reset(){enabled=true;conversationActive=true;toasts.clear();textUpdateCount=0;CompletableFuture.pending.clear();MessageDeviceSourceStore.INSTANCE.devices.clear();}
+    private static void check(String name,Runnable test){reset();try{test.run();System.out.println(name+"\tPASS\tfulfilled");}catch(AssertionError failure){System.out.println(name+"\tFAIL\t"+failure.getMessage().replace('\t',' '));}}
+    public static void main(String[] ignored){
+        BindingLifecycleProbe hook=new BindingLifecycleProbe();
+        check("valid_full_callback_binding_control",()->{Row row=new Row();hook.known(row,"message-0001",0);row.anchor.performClick();require(toasts.equals(List.of(PHONE)),"valid binding did not reach toast");});
+        check("known_rebind_invalidates_captured_old_callback",()->{Row row=new Row();hook.known(row,"message-0001",0);View.OnClickListener old=row.anchor.currentListener();hook.known(row,"message-0002",3);old.onClick(row.anchor);noToast("old callback reactivated");});
+        check("disabled_getView_invalidates_previous_targets",()->{Row row=new Row();hook.known(row,"message-0001",0);enabled=false;hook.bind(row,new HostMessage("message-0002",3),row.view);row.anchor.performClick();noToast("disabled row kept action");});
+        check("null_message_invalidates_previous_targets",()->{Row row=new Row();hook.known(row,"message-0001",0);hook.bind(row,null,row.view);row.anchor.performClick();noToast("null message kept previous action");});
+        check("missing_message_id_invalidates_previous_targets",()->{Row row=new Row();hook.known(row,"message-0001",0);hook.bind(row,new HostMessage(null,-1),row.view);row.anchor.performClick();noToast("missing identity kept previous action");});
+        check("missing_anchor_invalidates_detached_previous_target",()->{Row row=new Row();hook.known(row,"message-0001",0);row.view.children.remove(row.anchor);hook.bind(row,new HostMessage("message-0002",3),row.view);row.anchor.performClick();noToast("removed anchor retained previous action");});
+        check("item_lookup_failure_invalidates_previous_targets",()->{Row row=new Row();hook.known(row,"message-0001",0);XC_MethodHook.MethodHookParam p=new XC_MethodHook.MethodHookParam();Adapter adapter=new Adapter(null);adapter.fail=true;p.thisObject=adapter;p.args=new Object[]{0,row.view,row.view};p.result=row.view;hook.observer.afterHookedMethod(p);row.anchor.performClick();noToast("lookup failure kept action");});
+        check("unknown_binding_invalidates_secondary_previous_target",()->{Row row=new Row();hook.known(row,"message-0001",0);hook.known(row,"message-0002",-1);row.secondary.performClick();noToast("secondary retained known-device action");});
+        check("unknown_binding_removes_secondary_suffix",()->{Row row=new Row();hook.known(row,"message-0001",0);require(row.secondary.getText().endsWith("\uD83D\uDCF1"),"fixture failed to add previous suffix");hook.known(row,"message-0002",-1);require("12:00".equals(row.secondary.getText()),"unknown binding retained old secondary suffix");});
+        check("replaced_convert_view_invalidates_its_old_targets",()->{Row old=new Row();hook.known(old,"message-0001",0);Row next=new Row();hook.bind(next,new HostMessage("message-0002",3),old.view);old.anchor.performClick();noToast("converted-away view retained action");});
+        check("late_resolution_after_invalid_bind_cannot_restore_state",()->{Row row=new Row();hook.bind(row,new HostMessage("message-0001",0),row.view);hook.bind(row,null,row.view);CompletableFuture.deliver(0);row.anchor.performClick();noToast("late result restored invalid binding");require("12:00".equals(row.anchor.getText()),"late result restored suffix");});
+        check("different_identity_rejects_late_resolution_control",()->{Row row=new Row();hook.bind(row,new HostMessage("message-0001",0),row.view);hook.bind(row,new HostMessage("message-0002",3),row.view);CompletableFuture.deliver(1);CompletableFuture.deliver(0);row.anchor.performClick();require(toasts.equals(List.of(LINKED)),"newer distinct identity was overwritten");});
+        check("same_identity_new_generation_rejects_late_resolution",()->{Row row=new Row();hook.bind(row,new HostMessage("message-0001",0),row.view);hook.bind(row,new HostMessage("message-0001",3),row.view);CompletableFuture.deliver(1);CompletableFuture.deliver(0);row.anchor.performClick();require(toasts.equals(List.of(LINKED)),"same-id old generation overwrote new binding");});
+        check("no_longer_matching_secondary_loses_old_action",()->{Row row=new Row();hook.known(row,"message-0001",0);row.secondary.setText("different text");hook.known(row,"message-0002",3);row.secondary.performClick();noToast("nonmatching old target kept action");});
+        check("live_disable_suppresses_click_without_another_bind",()->{Row row=new Row();hook.known(row,"message-0001",0);enabled=false;row.anchor.performClick();noToast("click ignored current disabled state");});
+        check("disabled_recycle_reenable_does_not_revive_old_callback",()->{Row row=new Row();hook.known(row,"message-0001",0);View.OnClickListener old=row.anchor.currentListener();enabled=false;hook.bind(row,null,row.view);enabled=true;old.onClick(row.anchor);noToast("old callback revived after disabled recycle");});
+        check("foreign_anchor_listener_survives_recycle",()->{Row row=new Row();int[] calls={0};View.OnClickListener foreign=v->calls[0]++;row.anchor.setOnClickListener(foreign);hook.known(row,"message-0001",0);require(row.anchor.currentListener()==foreign,"foreign anchor was overwritten");row.anchor.performClick();hook.bind(row,null,row.view);row.anchor.performClick();require(calls[0]==2,"foreign anchor listener was removed");noToast("foreign anchor produced device toast");});
+        check("foreign_secondary_listener_survives_recycle",()->{Row row=new Row();int[] calls={0};View.OnClickListener foreign=v->calls[0]++;row.secondary.setOnClickListener(foreign);hook.known(row,"message-0001",0);require(row.secondary.currentListener()==foreign,"foreign secondary was overwritten");row.secondary.performClick();hook.bind(row,null,row.view);row.secondary.performClick();require(calls[0]==2,"foreign secondary listener was removed");noToast("foreign secondary produced device toast");});
+        check("disabled_before_async_completion_stays_inert",()->{Row row=new Row();hook.bind(row,new HostMessage("message-0001",0),row.view);enabled=false;CompletableFuture.deliver(0);enabled=true;row.anchor.performClick();noToast("late resolution ignored disabled interval");require("12:00".equals(row.anchor.getText()),"late resolution retained suffix");});
+        check("detached_anchor_before_async_completion_stays_inert",()->{Row row=new Row();hook.bind(row,new HostMessage("message-0001",0),row.view);row.view.children.remove(row.anchor);CompletableFuture.deliver(0);row.anchor.performClick();noToast("detached anchor gained listener");require("12:00".equals(row.anchor.getText()),"detached anchor gained suffix");});
+        check("non_row_result_invalidates_convert_view",()->{Row row=new Row();hook.known(row,"message-0001",0);XC_MethodHook.MethodHookParam p=new XC_MethodHook.MethodHookParam();p.thisObject=new Adapter(null);p.args=new Object[]{0,row.view,row.view};p.result=new TextView();hook.observer.afterHookedMethod(p);row.anchor.performClick();noToast("non-row return preserved old listener");require("12:00".equals(row.anchor.getText()),"non-row return preserved suffix");});
+        check("independent_rows_with_reordered_completions",()->{Row a=new Row(),b=new Row();hook.bind(a,new HostMessage("message-0001",0),a.view);hook.bind(b,new HostMessage("message-0002",3),b.view);CompletableFuture.deliver(1);CompletableFuture.deliver(0);a.anchor.performClick();b.anchor.performClick();require(toasts.equals(List.of(PHONE,LINKED)),"out-of-order results crossed row identities: "+toasts);});
+        check("unreadable_listener_during_recycle_keeps_captured_callback_inert",()->{Row row=new Row();hook.known(row,"message-0001",0);View.OnClickListener old=row.anchor.currentListener();row.anchor.hideInspectionShape();hook.bind(row,null,row.view);old.onClick(row.anchor);noToast("hidden listener revived old callback");});
+        check("embedded_legitimate_phone_emoji_restored",()->{Row row=new Row();String original="log \uD83D\uDCF1 text";row.anchor.setText(original);hook.known(row,"message-0001",3);hook.bind(row,null,row.view);require(original.equals(row.anchor.getText()),"embedded original emoji changed: "+row.anchor.getText());});
+        check("trailing_legitimate_phone_emoji_restored",()->{Row row=new Row();String original="12:00 \uD83D\uDCF1";row.anchor.setText(original);hook.known(row,"message-0001",3);hook.bind(row,null,row.view);require(original.equals(row.anchor.getText()),"trailing original emoji changed: "+row.anchor.getText());});
+        check("secondary_changed_by_host_loses_device_action",()->{Row row=new Row();hook.known(row,"message-0001",0);row.secondary.setText("different");row.secondary.performClick();noToast("secondary host update retained old action");require("different".equals(row.secondary.getText()),"secondary host text was modified");});
+        check("secondary_same_base_host_update_invalidates_safely",()->{Row row=new Row();hook.known(row,"message-0001",0);row.secondary.setText("12:00");row.secondary.performClick();noToast("host secondary update retained old action");require("12:00".equals(row.secondary.getText()),"secondary update was overwritten");});
+        check("anchor_host_text_update_preserves_original_emoji",()->{Row row=new Row();hook.known(row,"message-0001",0);String next="now \uD83D\uDCF1";row.anchor.setText(next);require(row.anchor.getText().equals(next+" \uD83D\uDCF1"),"host anchor update did not append exactly one feature marker");hook.bind(row,null,row.view);require(next.equals(row.anchor.getText()),"host anchor's legitimate emoji lost during cleanup");});
+        check("rendering_guard_bounds_recursive_set_text",()->{Row row=new Row();hook.known(row,"message-0001",0);row.anchor.setText("13:00");require(textUpdateCount<=8,"unexpected recursive setText calls: "+textUpdateCount);require(row.anchor.getText().equals("13:00 \uD83D\uDCF1"),"setText hook did not retain current marker");});
+        check("host_getView_never_sees_previous_message_suffix",()->{Row row=new Row();hook.known(row,"message-0001",0);String during=hook.bindWithHostText(row,new HostMessage("message-0002",3),"13:00");require("13:00".equals(during),"host saw stale suffix during getView: "+during);require(row.anchor.getText().equals("13:00 \uD83D\uDCBB"),"new device suffix missing after callback");});
+    }

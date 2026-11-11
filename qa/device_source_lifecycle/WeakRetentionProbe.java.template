@@ -1,0 +1,62 @@
+import java.lang.ref.WeakReference;
+import java.util.*;
+
+/** Models the actual weak-key / strong-value shape of Xposed additional fields. */
+public final class WeakRetentionProbe {
+    private static final String FIELD_DEVICE_ROW_BINDING = "wae_device_source_row_binding";
+
+    static class View { ViewGroup parent; }
+    static final class ViewGroup extends View { TextView child; }
+    static final class TextView extends View { }
+
+    static final class XposedHelpers {
+        // The strong value is intentional, matching Xposed's global weak map.
+        static final Map<Object,Map<String,Object>> extra = new WeakHashMap<>();
+        static void setAdditionalInstanceField(Object object, String key, Object value) {
+            extra.computeIfAbsent(object, ignored -> new HashMap<>()).put(key, value);
+        }
+    }
+
+/* EXACT_ROW_BINDING */
+
+    static final class DeliberatelyLeakingBinding {
+        final List<TextView> targets = new ArrayList<>();
+    }
+
+    private static WeakReference<ViewGroup> construct(boolean negative) {
+        ViewGroup row = new ViewGroup();
+        TextView child = new TextView();
+        row.child = child;
+        child.parent = row;
+        if (negative) {
+            DeliberatelyLeakingBinding leak = new DeliberatelyLeakingBinding();
+            leak.targets.add(child);
+            XposedHelpers.setAdditionalInstanceField(row, FIELD_DEVICE_ROW_BINDING, leak);
+            XposedHelpers.setAdditionalInstanceField(child, FIELD_DEVICE_ROW_BINDING, leak);
+        } else {
+            WeakRetentionProbe probe = new WeakRetentionProbe();
+            DeviceSourceRowBinding real = new DeviceSourceRowBinding();
+            XposedHelpers.setAdditionalInstanceField(row, FIELD_DEVICE_ROW_BINDING, real);
+            probe.trackDeviceSourceTarget(real, child);
+        }
+        return new WeakReference<>(row);
+    }
+
+    public static void main(String[] ignored) throws Exception {
+        WeakReference<ViewGroup> strongControl = construct(true);
+        WeakReference<ViewGroup> candidate = construct(false);
+        boolean collected = false;
+        for (int i = 0; i < 100; i++) {
+            System.gc();
+            XposedHelpers.extra.size();
+            if (candidate.get() == null) { collected = true; break; }
+            Thread.sleep(25);
+        }
+        boolean strongRetained = strongControl.get() != null;
+        System.out.println("weak_candidate_collected\t" + (collected ? "PASS" : "FAIL"));
+        System.out.println("strong_negative_retained\t" + (strongRetained ? "PASS" : "FAIL"));
+        System.out.println("remaining_weak_map_entries\t" + XposedHelpers.extra.size());
+        XposedHelpers.extra.clear();
+        if (!collected || !strongRetained) System.exit(1);
+    }
+}
