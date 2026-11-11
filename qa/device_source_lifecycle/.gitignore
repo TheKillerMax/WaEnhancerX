@@ -1,0 +1,4 @@
+__pycache__/
+ownership-results/
+binding-lifecycle-results/
+*.class

@@ -30,10 +30,13 @@ import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -65,6 +68,22 @@ public class MessageDeviceSourceHook extends BaseFeature {
     private static final String FIELD_DEVICE_SUFFIX = "wae_device_source_suffix";
     private static final String FIELD_DEVICE_GUARD = "wae_device_source_guard";
     private static final String FIELD_DEVICE_MSG_ID = "wae_device_source_message_id";
+    private static final String FIELD_DEVICE_ROW_BINDING = "wae_device_source_row_binding";
+    private static final String FIELD_DEVICE_CLICK_LISTENER = "wae_device_source_click_listener";
+    private static final String FIELD_DEVICE_ORIGINAL_TEXT = "wae_device_source_original_text";
+    private static final String FIELD_DEVICE_RENDERED_TEXT = "wae_device_source_rendered_text";
+
+    private static volatile Field sDeviceListenerInfoField;
+    private static volatile Field sDeviceOnClickListenerField;
+
+    /** Row state with weak references to views, including detached targets from earlier binds. */
+    private static final class DeviceSourceRowBinding {
+        volatile boolean active = true;
+        WeakReference<TextView> anchor;
+        // Xposed's additional-instance-field values have weak keys. Avoid a
+        // row -> binding -> target -> row retention cycle through the values.
+        final List<WeakReference<TextView>> targets = new ArrayList<>();
+    }
 
     private static volatile boolean conversationActive = false;
     private final Set<Class<?>> hookedAdapterClasses = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -182,7 +201,26 @@ public class MessageDeviceSourceHook extends BaseFeature {
 
                             XposedBridge.hookMethod(getViewMethod, new XC_MethodHook() {
                                 @Override
+                                protected void beforeHookedMethod(MethodHookParam p) {
+                                    // The host may populate convertView using setText() before return.
+                                    if (p.args != null && p.args.length > 1
+                                            && p.args[1] instanceof ViewGroup) {
+                                        invalidateDeviceSourceRow((ViewGroup) p.args[1]);
+                                    }
+                                }
+
+                                @Override
                                 protected void afterHookedMethod(MethodHookParam p) {
+                                    // Invalidate both supplied and returned row identities even if
+                                    // the option is disabled or the new message cannot be resolved.
+                                    if (p.args != null && p.args.length > 1
+                                            && p.args[1] instanceof ViewGroup
+                                            && p.args[1] != p.getResult()) {
+                                        invalidateDeviceSourceRow((ViewGroup) p.args[1]);
+                                    }
+                                    if (p.getResult() instanceof ViewGroup) {
+                                        invalidateDeviceSourceRow((ViewGroup) p.getResult());
+                                    }
                                     if (!isEnabled(PREF_KEY, false)) return;
                                     if (!(p.thisObject instanceof ListAdapter)) return;
                                     ListAdapter activeAdapter = (ListAdapter) p.thisObject;
@@ -315,22 +353,91 @@ public class MessageDeviceSourceHook extends BaseFeature {
         String messageId = extractMessageId(messageObj);
         if (messageId == null || messageId.isEmpty()) return;
 
+        DeviceSourceRowBinding binding = new DeviceSourceRowBinding();
+        XposedHelpers.setAdditionalInstanceField(row, FIELD_DEVICE_ROW_BINDING, binding);
+        binding.anchor = new WeakReference<>(dateTextView);
+        trackDeviceSourceTarget(binding, dateTextView);
         XposedHelpers.setAdditionalInstanceField(dateTextView, FIELD_DEVICE_MSG_ID, messageId);
         dateTextView.setTag(R.id.wae_device_source_tag, Boolean.TRUE);
 
         CompletableFuture.supplyAsync(() -> resolveMessageDeviceId(messageId, messageObj))
                 .thenAcceptAsync(resolvedDeviceId -> {
+                    if (!binding.active || !isEnabled(PREF_KEY, false)
+                            || XposedHelpers.getAdditionalInstanceField(row, FIELD_DEVICE_ROW_BINDING) != binding
+                            || XposedHelpers.getAdditionalInstanceField(dateTextView, FIELD_DEVICE_ROW_BINDING) != binding
+                            || findDateTextView(row) != dateTextView) return;
                     Object currentId = XposedHelpers.getAdditionalInstanceField(dateTextView, FIELD_DEVICE_MSG_ID);
                     if (!Objects.equals(currentId, messageId)) return;
 
                     String suffix = getDeviceEmojiSuffix(resolvedDeviceId);
                     XposedHelpers.setAdditionalInstanceField(dateTextView, FIELD_DEVICE_SUFFIX, suffix);
 
-                    bindDeviceSourceUi(dateTextView, resolvedDeviceId);
+                    bindDeviceSourceUi(dateTextView, resolvedDeviceId, binding);
                     if (!suffix.isEmpty()) {
-                        applyDeviceSourceToMatchingViews(row, dateTextView, suffix, resolvedDeviceId);
+                        applyDeviceSourceToMatchingViews(row, dateTextView, suffix, resolvedDeviceId, binding);
                     }
                 }, UI_EXECUTOR);
+    }
+
+    private void trackDeviceSourceTarget(DeviceSourceRowBinding binding, TextView target) {
+        binding.targets.add(new WeakReference<>(target));
+        XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_ROW_BINDING, binding);
+    }
+
+    private void invalidateDeviceSourceRow(ViewGroup row) {
+        Object previous = XposedHelpers.removeAdditionalInstanceField(row, FIELD_DEVICE_ROW_BINDING);
+        if (!(previous instanceof DeviceSourceRowBinding)) return;
+        DeviceSourceRowBinding binding = (DeviceSourceRowBinding) previous;
+        binding.active = false;
+        for (WeakReference<TextView> tracked : binding.targets) {
+            TextView target = tracked.get();
+            if (target == null) continue;
+            if (XposedHelpers.getAdditionalInstanceField(target, FIELD_DEVICE_ROW_BINDING) != binding) continue;
+            clearDeviceSourceTarget(target);
+        }
+        binding.targets.clear();
+    }
+
+    /** Remove only text rendered by this feature; preserve independent host changes. */
+    private String unannotatedText(TextView target) {
+        String current = String.valueOf(target.getText());
+        Object rendered = XposedHelpers.getAdditionalInstanceField(target, FIELD_DEVICE_RENDERED_TEXT);
+        Object original = XposedHelpers.getAdditionalInstanceField(target, FIELD_DEVICE_ORIGINAL_TEXT);
+        return current.equals(rendered) && original instanceof String ? (String) original : current;
+    }
+
+    private void renderDeviceSourceText(TextView target, String original, String suffix) {
+        String desired = original + suffix;
+        XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_GUARD, true);
+        try {
+            if (!desired.equals(String.valueOf(target.getText()))) target.setText(desired);
+            // Immutable snapshots cannot retain mutable spans or Android view references.
+            XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_ORIGINAL_TEXT, original);
+            XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_RENDERED_TEXT,
+                    String.valueOf(target.getText()));
+        } finally {
+            XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_GUARD, false);
+        }
+    }
+
+    private void clearDeviceSourceTarget(TextView target) {
+        String current = String.valueOf(target.getText());
+        String original = unannotatedText(target);
+        XposedHelpers.removeAdditionalInstanceField(target, FIELD_DEVICE_ROW_BINDING);
+        attachClickToast(target, -1, null);
+        XposedHelpers.removeAdditionalInstanceField(target, FIELD_DEVICE_SUFFIX);
+        XposedHelpers.removeAdditionalInstanceField(target, FIELD_DEVICE_MSG_ID);
+        XposedHelpers.removeAdditionalInstanceField(target, FIELD_DEVICE_ORIGINAL_TEXT);
+        XposedHelpers.removeAdditionalInstanceField(target, FIELD_DEVICE_RENDERED_TEXT);
+        target.setTag(R.id.wae_device_source_tag, null);
+        if (!current.equals(original)) {
+            XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_GUARD, true);
+            try {
+                target.setText(original);
+            } finally {
+                XposedHelpers.setAdditionalInstanceField(target, FIELD_DEVICE_GUARD, false);
+            }
+        }
     }
 
     private static volatile int sDateResId = -1;
@@ -414,49 +521,128 @@ public class MessageDeviceSourceHook extends BaseFeature {
     }
 
     private void bindDeviceSourceUi(TextView dateTextView, int deviceId) {
-        String baseText = stripDeviceEmoji(String.valueOf(dateTextView.getText()));
+        bindDeviceSourceUi(dateTextView, deviceId, null);
+    }
+
+    private void bindDeviceSourceUi(TextView dateTextView, int deviceId, DeviceSourceRowBinding binding) {
+        String baseText = unannotatedText(dateTextView);
         String suffix = getDeviceEmojiSuffix(deviceId);
         XposedHelpers.setAdditionalInstanceField(dateTextView, FIELD_DEVICE_SUFFIX, suffix);
 
-        attachClickToast(dateTextView, deviceId);
-        dateTextView.setText(baseText + suffix);
+        attachClickToast(dateTextView, deviceId, binding);
+        renderDeviceSourceText(dateTextView, baseText, suffix);
     }
 
-    private void applyDeviceSourceToMatchingViews(ViewGroup root, TextView anchor, String suffix, int deviceId) {
-        String anchorBase = stripDeviceEmoji(String.valueOf(anchor.getText()));
+    private void applyDeviceSourceToMatchingViews(ViewGroup root, TextView anchor, String suffix, int deviceId,
+                                                   DeviceSourceRowBinding binding) {
+        String anchorBase = unannotatedText(anchor);
         if (TextUtils.isEmpty(anchorBase)) return;
 
         forEachTextView(root, textView -> {
-            String current = String.valueOf(textView.getText());
-            String base = stripDeviceEmoji(current);
+            if (textView == anchor) return;
+            String base = unannotatedText(textView);
             if (!anchorBase.equals(base)) return;
 
+            trackDeviceSourceTarget(binding, textView);
+            textView.setTag(R.id.wae_device_source_tag, Boolean.TRUE);
             XposedHelpers.setAdditionalInstanceField(textView, FIELD_DEVICE_SUFFIX, suffix);
-            attachClickToast(textView, deviceId);
-            if (!current.equals(base + suffix)) {
-                textView.setText(base + suffix);
-            }
+            attachClickToast(textView, deviceId, binding);
+            renderDeviceSourceText(textView, base, suffix);
         });
     }
 
     private void attachClickToast(TextView textView, int deviceId) {
-        // Unknown device: leave the view alone; clearing it would also remove listeners other
-        // features put on this timestamp.
-        if (deviceId < 0) return;
-        // Voice notes use their timestamp for the transcript sheet (VoiceNoteRowTranscriptHook,
-        // #110); keep that tap. Matched by field name so this has no compile-time dependency.
-        if (XposedHelpers.getAdditionalInstanceField(textView, "waex_stt_file") != null) {
+        attachClickToast(textView, deviceId, null);
+    }
+
+    private void attachClickToast(TextView textView, int deviceId, DeviceSourceRowBinding binding) {
+        Object tracked = XposedHelpers.getAdditionalInstanceField(textView, FIELD_DEVICE_CLICK_LISTENER);
+        DeviceSourceClickListener owned = tracked instanceof DeviceSourceClickListener
+                ? (DeviceSourceClickListener) tracked : null;
+        if (owned != null) owned.deviceId = -1;
+
+        final View.OnClickListener current;
+        try {
+            current = readDeviceSourceClickListener(textView);
+        } catch (ReflectiveOperationException | RuntimeException unavailable) {
+            // Unreadable ownership is not permission to replace a foreign action.
             return;
         }
 
-        textView.setOnClickListener(v -> {
-            Context ctx = v.getContext();
-            if (deviceId == 0) {
+        if (owned != null && current != owned) {
+            XposedHelpers.removeAdditionalInstanceField(textView, FIELD_DEVICE_CLICK_LISTENER);
+            owned = null;
+        }
+
+        // Voice notes own their transcript click (VoiceNoteRowTranscriptHook, #110).
+        if (deviceId < 0 || XposedHelpers.getAdditionalInstanceField(textView, "waex_stt_file") != null) {
+            if (owned != null) {
+                boolean keepClickable = owned.wasClickable && textView.isClickable();
+                textView.setOnClickListener(null);
+                textView.setClickable(keepClickable);
+                XposedHelpers.removeAdditionalInstanceField(textView, FIELD_DEVICE_CLICK_LISTENER);
+            }
+            return;
+        }
+
+        if (current != null && owned == null) return;
+        boolean wasClickable = owned != null ? owned.wasClickable : textView.isClickable();
+        DeviceSourceClickListener listener = new DeviceSourceClickListener(deviceId, wasClickable, binding);
+        XposedHelpers.setAdditionalInstanceField(textView, FIELD_DEVICE_CLICK_LISTENER, listener);
+        textView.setOnClickListener(listener);
+    }
+
+    private static View.OnClickListener readDeviceSourceClickListener(View view)
+            throws ReflectiveOperationException {
+        Field infoField = sDeviceListenerInfoField;
+        if (infoField == null) {
+            infoField = View.class.getDeclaredField("mListenerInfo");
+            infoField.setAccessible(true);
+            sDeviceListenerInfoField = infoField;
+        }
+        Object info = infoField.get(view);
+        if (info == null) return null;
+
+        Field clickField = sDeviceOnClickListenerField;
+        if (clickField == null) {
+            clickField = info.getClass().getDeclaredField("mOnClickListener");
+            clickField.setAccessible(true);
+            sDeviceOnClickListenerField = clickField;
+        }
+        return (View.OnClickListener) clickField.get(info);
+    }
+
+    private final class DeviceSourceClickListener implements View.OnClickListener {
+        private int deviceId;
+        private final boolean wasClickable;
+        private final DeviceSourceRowBinding binding;
+
+        DeviceSourceClickListener(int deviceId, boolean wasClickable, DeviceSourceRowBinding binding) {
+            this.deviceId = deviceId;
+            this.wasClickable = wasClickable;
+            this.binding = binding;
+        }
+
+        @Override
+        public void onClick(View view) {
+            int currentDeviceId = deviceId;
+            if (currentDeviceId < 0 || !isEnabled(PREF_KEY, false)
+                    || (binding != null && (!binding.active
+                            || XposedHelpers.getAdditionalInstanceField(view, FIELD_DEVICE_ROW_BINDING) != binding))
+                    || XposedHelpers.getAdditionalInstanceField(view, FIELD_DEVICE_CLICK_LISTENER) != this
+                    || XposedHelpers.getAdditionalInstanceField(view, "waex_stt_file") != null) return;
+            try {
+                if (readDeviceSourceClickListener(view) != this) return;
+            } catch (ReflectiveOperationException | RuntimeException unavailable) {
+                return;
+            }
+            Context ctx = view.getContext();
+            if (currentDeviceId == 0) {
                 Toast.makeText(ctx, UiText.get(R.string.message_sent_via_phone, "This message was sent via Phone"), Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(ctx, UiText.get(R.string.waex_ui_this_message_was_sent_via_a_linked_dev, "This message was sent via a Linked Device (Desktop/Phone)"), Toast.LENGTH_SHORT).show();
             }
-        });
+        }
     }
 
     private void forEachTextView(View view, Consumer<TextView> consumer) {
@@ -469,15 +655,6 @@ public class MessageDeviceSourceHook extends BaseFeature {
         for (int i = 0; i < group.getChildCount(); i++) {
             forEachTextView(group.getChildAt(i), consumer);
         }
-    }
-
-    private String stripDeviceEmoji(String text) {
-        if (text == null) return "";
-        return text.replace(PRIMARY_DEVICE_EMOJI, "")
-                .replace(LINKED_DEVICE_EMOJI, "")
-                .replace(" \uD83D\uDDA5\uFE0F", "")
-                .replace("\uD83D\uDCF1", "")
-                .replace("\uD83D\uDCBB", "");
     }
 
     private void hookTextViewSetText() {
@@ -497,17 +674,24 @@ public class MessageDeviceSourceHook extends BaseFeature {
 
                 if (Boolean.TRUE.equals(XposedHelpers.getAdditionalInstanceField(textView, FIELD_DEVICE_GUARD))) return;
 
+                Object state = XposedHelpers.getAdditionalInstanceField(textView, FIELD_DEVICE_ROW_BINDING);
+                if (state instanceof DeviceSourceRowBinding) {
+                    DeviceSourceRowBinding binding = (DeviceSourceRowBinding) state;
+                    // A host update to a secondary target ends our ownership until
+                    // the adapter rebinds and proves that this is the same message.
+                    if (!binding.active || binding.anchor == null
+                            || binding.anchor.get() != textView) {
+                        clearDeviceSourceTarget(textView);
+                        return;
+                    }
+                }
+
                 String current = String.valueOf(textView.getText());
-                String base = stripDeviceEmoji(current);
+                String base = unannotatedText(textView);
                 String desired = base + suffix;
                 if (desired.equals(current)) return;
 
-                XposedHelpers.setAdditionalInstanceField(textView, FIELD_DEVICE_GUARD, true);
-                try {
-                    textView.setText(desired);
-                } finally {
-                    XposedHelpers.setAdditionalInstanceField(textView, FIELD_DEVICE_GUARD, false);
-                }
+                renderDeviceSourceText(textView, base, suffix);
             }
         };
 

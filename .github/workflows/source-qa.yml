@@ -25,6 +25,7 @@ jobs:
         with:
           persist-credentials: false
           submodules: false
+          fetch-depth: 0 # Device Source A/B gate reads its pinned main ancestor
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -154,6 +155,21 @@ jobs:
             python3 "$test_script"
             echo '::endgroup::'
           done
+
+      - name: Verify Device Source row lifecycle against pinned main and negative controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/device_source_lifecycle/verify.py --out "$RUNNER_TEMP/device-source-lifecycle"
+
+      - name: Preserve Device Source lifecycle A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-source-lifecycle-evidence
+          path: ${{ runner.temp }}/device-source-lifecycle
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Verify public Spanish Latin America resources and runtime lookup
         shell: bash

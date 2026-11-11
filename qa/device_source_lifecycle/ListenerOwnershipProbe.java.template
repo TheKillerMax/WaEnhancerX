@@ -1,0 +1,193 @@
+import java.lang.reflect.Field;
+import java.lang.ref.WeakReference;
+import java.util.*;
+
+public final class ListenerOwnershipProbe {
+    private static final List<String> toasts = new ArrayList<>();
+    private static final Context context = new Context();
+    private static int failures = 0;
+    private static boolean enabled = true;
+    private static final String PREF_KEY = "message_device_source";
+    private boolean isEnabled(String key, boolean fallback) { return enabled; }
+    private static java.util.function.Consumer<TextView> onTextChange = ignored -> {};
+    private static int textUpdateCount = 0;
+    static final class Context {}
+
+    static class View {
+        interface OnClickListener { void onClick(View view); }
+        static final class ListenerInfo { OnClickListener mOnClickListener; }
+        // Normal mode matches the AOSP listener-info shape. Fault injection hides
+        // that introspection shape without changing the actual installed callback.
+        private Object mListenerInfo;
+        private ListenerInfo actualInfo;
+        private boolean clickable;
+        private final Map<String,Object> extra = new HashMap<>();
+        private final Map<Integer,Object> tags = new HashMap<>();
+        void setTag(int key,Object value){tags.put(key,value);}
+        Object getTag(int key){return tags.get(key);}
+        Context getContext() { return context; }
+        void setOnClickListener(OnClickListener listener) {
+            if (!clickable) setClickable(true);
+            if (actualInfo == null) actualInfo = new ListenerInfo();
+            actualInfo.mOnClickListener = listener;
+            mListenerInfo = actualInfo;
+        }
+        boolean isClickable() { return clickable; }
+        void setClickable(boolean value) { clickable = value; }
+        OnClickListener currentListener() { return actualInfo == null ? null : actualInfo.mOnClickListener; }
+        void performClick() { OnClickListener listener = currentListener(); if (listener != null) listener.onClick(this); }
+        void hideInspectionShape() { mListenerInfo = new Object(); }
+        void restoreInspectionShape() { mListenerInfo = actualInfo; }
+    }
+    static final class TextView extends View {
+        private String text = "12:00";
+        String getText() { return text; }
+        void setText(String value) {
+            text = value;
+            if (++textUpdateCount > 50) throw new AssertionError("recursive setText without guard");
+            onTextChange.accept(this);
+        }
+    }
+    static final class XposedHelpers {
+        static void setAdditionalInstanceField(Object view, String key, Object value) { ((View)view).extra.put(key,value); }
+        static Object getAdditionalInstanceField(Object view, String key) { return ((View)view).extra.get(key); }
+        static Object removeAdditionalInstanceField(Object view, String key) { return ((View)view).extra.remove(key); }
+    }
+    static final class R {
+        static final class id { static final int wae_device_source_tag=500; }
+        static final class string {
+            static final int message_sent_via_phone = 1;
+            static final int waex_ui_this_message_was_sent_via_a_linked_dev = 2;
+        }
+    }
+    static final class UiText { static String get(int key, String fallback) { return fallback; } }
+    static final class Toast {
+        static final int LENGTH_SHORT = 0;
+        private final String text;
+        private Toast(String value) { text = value; }
+        static Toast makeText(Context owner, String text, int duration) {
+            if (owner == null || duration != LENGTH_SHORT) throw new AssertionError("invalid toast contract");
+            return new Toast(text);
+        }
+        void show() { toasts.add(text); }
+    }
+
+/* EXACT_SOURCE_FRAGMENTS */
+
+    private static final String PHONE = "This message was sent via Phone";
+    private static final String LINKED = "This message was sent via a Linked Device (Desktop/Phone)";
+    private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
+    private static void check(String name, Runnable action) {
+        toasts.clear();
+        try { action.run(); System.out.println(name + "\tPASS\tfulfilled"); }
+        catch (AssertionError failure) {
+            failures++;
+            System.out.println(name + "\tFAIL\t" + failure.getMessage().replace('\t',' '));
+        }
+    }
+    private static void noToast(String message) { require(toasts.isEmpty(), message + ": " + toasts); }
+    private static void oneToast(String expected) { require(toasts.equals(List.of(expected)), "expected " + expected + ", got " + toasts); }
+    private static void marker(View view, boolean present) {
+        if (present) XposedHelpers.setAdditionalInstanceField(view,"waex_stt_file","synthetic-file");
+        else XposedHelpers.removeAdditionalInstanceField(view,"waex_stt_file");
+    }
+
+    public static void main(String[] ignored) {
+        ListenerOwnershipProbe hook = new ListenerOwnershipProbe();
+        check("preserve_unrelated_listener_for_unknown", () -> {
+            TextView view = new TextView(); int[] calls = {0};
+            view.setOnClickListener(v -> calls[0]++);
+            hook.bindDeviceSourceUi(view,-1); view.performClick();
+            require(calls[0] == 1,"host listener lost"); noToast("unknown device toast");
+        });
+        for (int old : new int[]{0,3}) check("known_"+old+"_then_unknown_has_no_stale_toast", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,old); hook.bindDeviceSourceUi(view,-1); view.performClick();
+            noToast("stale device toast"); require("12:00".equals(view.getText()),"stale device suffix");
+        });
+        for (int id : new int[]{0,3}) check("known_"+id+"_uses_correct_toast", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,id); view.performClick(); oneToast(id == 0 ? PHONE : LINKED);
+        });
+        check("known_rebind_uses_latest_device", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); hook.bindDeviceSourceUi(view,3); view.performClick(); oneToast(LINKED);
+        });
+        check("preserve_transcript_listener_when_marked", () -> {
+            TextView view = new TextView(); int[] calls = {0}; view.setOnClickListener(v -> calls[0]++); marker(view,true);
+            hook.bindDeviceSourceUi(view,0); view.performClick(); require(calls[0]==1,"transcript listener lost"); noToast("device displaced transcript");
+        });
+        check("preserve_unrelated_listener_for_known", () -> {
+            TextView view = new TextView(); int[] calls = {0}; View.OnClickListener foreign = v -> calls[0]++; view.setOnClickListener(foreign);
+            hook.bindDeviceSourceUi(view,0); require(view.currentListener()==foreign,"foreign listener identity replaced");
+            view.performClick(); require(calls[0]==1,"foreign action lost"); noToast("foreign action displaced");
+        });
+        for (int next : new int[]{-1,3}) check("host_replacement_survives_rebind_"+next, () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); int[] calls={0};
+            View.OnClickListener foreign=v -> calls[0]++; view.setOnClickListener(foreign); hook.bindDeviceSourceUi(view,next);
+            require(view.currentListener()==foreign,"host replacement removed"); view.performClick(); require(calls[0]==1,"host replacement did not execute"); noToast("stale feature action");
+        });
+        for (boolean wasClickable : new boolean[]{false,true}) check("cleanup_restores_initial_clickability_"+wasClickable, () -> {
+            TextView view = new TextView(); view.setClickable(wasClickable); hook.bindDeviceSourceUi(view,0); hook.bindDeviceSourceUi(view,-1);
+            require(view.currentListener()==null,"owned listener not removed"); require(view.isClickable()==wasClickable,"clickability not restored");
+        });
+        check("retained_callback_inert_after_unknown", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); View.OnClickListener old=view.currentListener();
+            hook.bindDeviceSourceUi(view,-1); old.onClick(view); noToast("retained callback still active");
+        });
+        check("retained_callback_inert_after_host_replacement", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); View.OnClickListener old=view.currentListener();
+            view.setOnClickListener(v -> {}); old.onClick(view); noToast("detached callback still active");
+        });
+        check("marker_arriving_after_owned_binding_releases_only_owned", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); marker(view,true); hook.bindDeviceSourceUi(view,0);
+            view.performClick(); noToast("owned listener survives transcription marker"); require(view.currentListener()==null,"owned listener retained after marker");
+        });
+        check("marker_without_rebind_suppresses_retained_owned_action", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); marker(view,true); view.performClick(); noToast("late marker ignored");
+        });
+        check("marker_removal_allows_new_owned_action", () -> {
+            TextView view = new TextView(); marker(view,true); hook.bindDeviceSourceUi(view,0); marker(view,false);
+            hook.bindDeviceSourceUi(view,3); view.performClick(); oneToast(LINKED);
+        });
+        check("failed_ownership_inspection_preserves_foreign", () -> {
+            TextView view = new TextView(); int[] calls={0}; View.OnClickListener foreign=v -> calls[0]++;
+            view.setOnClickListener(foreign); view.hideInspectionShape(); hook.bindDeviceSourceUi(view,0);
+            require(view.currentListener()==foreign,"unreadable ownership overwrote foreign listener"); view.performClick(); require(calls[0]==1,"foreign action lost"); noToast("speculative device action");
+        });
+        check("failed_cleanup_inspection_invalidates_owned_callback", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); View.OnClickListener old=view.currentListener();
+            view.hideInspectionShape(); hook.bindDeviceSourceUi(view,-1); old.onClick(view); noToast("unreadable cleanup left active stale callback");
+            require(view.currentListener()==old,"unreadable ownership must not authorize listener mutation");
+        });
+        check("cleanup_recovers_when_inspection_becomes_available", () -> {
+            TextView view = new TextView(); hook.bindDeviceSourceUi(view,0); view.hideInspectionShape(); hook.bindDeviceSourceUi(view,-1);
+            view.restoreInspectionShape(); hook.bindDeviceSourceUi(view,-1);
+            require(view.currentListener()==null,"cleanup did not recover"); require(!view.isClickable(),"original clickability lost on recovery");
+        });
+        check("independent_views_do_not_share_device_state", () -> {
+            TextView a=new TextView(), b=new TextView(); hook.bindDeviceSourceUi(a,0); hook.bindDeviceSourceUi(b,3); hook.bindDeviceSourceUi(a,-1);
+            a.performClick(); noToast("A retained action"); b.performClick(); oneToast(LINKED);
+        });
+        check("old_callback_inert_after_new_owned_binding", () -> {
+            TextView view=new TextView(); hook.bindDeviceSourceUi(view,0); View.OnClickListener old=view.currentListener();
+            hook.bindDeviceSourceUi(view,-1); hook.bindDeviceSourceUi(view,3); old.onClick(view); noToast("old callback impersonates new binding");
+            view.performClick(); oneToast(LINKED);
+        });
+        check("fresh_unknown_does_not_make_view_clickable", () -> {
+            TextView view=new TextView(); hook.bindDeviceSourceUi(view,-1);
+            require(view.currentListener()==null,"fresh unknown gained listener"); require(!view.isClickable(),"fresh unknown became clickable");
+        });
+        check("known_unknown_known_roundtrip", () -> {
+            TextView view=new TextView(); hook.bindDeviceSourceUi(view,3); hook.bindDeviceSourceUi(view,-1); hook.bindDeviceSourceUi(view,0);
+            view.performClick(); oneToast(PHONE); require(view.getText().endsWith("\uD83D\uDCF1"),"phone suffix missing");
+        });
+        check("cleanup_preserves_clickability_disabled_by_host", () -> {
+            TextView view=new TextView(); view.setClickable(true); hook.bindDeviceSourceUi(view,0); view.setClickable(false);
+            hook.bindDeviceSourceUi(view,-1); require(!view.isClickable(),"cleanup re-enabled host-disabled clicks");
+            require(view.currentListener()==null,"owned listener not cleared");
+        });
+        check("unknown_during_inspection_failure_stays_inert_after_recovery", () -> {
+            TextView view=new TextView(); hook.bindDeviceSourceUi(view,0); view.hideInspectionShape(); hook.bindDeviceSourceUi(view,-1);
+            view.restoreInspectionShape(); view.performClick(); noToast("stale device action revived after reflection recovered");
+        });
+        System.out.println("SUMMARY\t"+failures);
+    }
+}
