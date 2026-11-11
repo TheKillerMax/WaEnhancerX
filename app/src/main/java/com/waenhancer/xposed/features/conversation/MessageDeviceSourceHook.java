@@ -540,19 +540,25 @@ public class MessageDeviceSourceHook extends BaseFeature {
             Class<?> curr = messageObj.getClass();
             while (curr != null && curr != Object.class) {
                 for (Field field : curr.getDeclaredFields()) {
-                    field.setAccessible(true);
-                    Object val = field.get(messageObj);
-                    if (val == null) continue;
-                    String className = val.getClass().getName();
-                    if (className.contains("Key") || val.toString().startsWith("Key(")) {
-                        String id = extractIdFromKeyObj(val);
-                        if (id != null && !id.isEmpty()) return id;
+                    // A class-level constant cannot identify the current message.
+                    if (Modifier.isStatic(field.getModifiers())) continue;
+                    try {
+                        field.setAccessible(true);
+                        Object val = field.get(messageObj);
+                        if (val == null) continue;
+                        String className = val.getClass().getName();
+                        if (className.contains("Key") || val.toString().startsWith("Key(")) {
+                            String id = extractIdFromKeyObj(val);
+                            if (id != null && !id.isEmpty()) return id;
+                        }
+                    } catch (ReflectiveOperationException | RuntimeException ignored) {
+                        // A restricted field must not abort other fields or the text fallback.
                     }
                 }
                 curr = curr.getSuperclass();
             }
 
-            Pattern pattern = Pattern.compile("(?:messageId|messageID|keyId|Key\\(id)=([A-Za-z0-9_-]+)");
+            Pattern pattern = Pattern.compile("(?:messageId|messageID|keyId|Key\\(id\\))=([A-Za-z0-9_-]+)");
             var matcher = pattern.matcher(messageObj.toString());
             if (matcher.find()) return matcher.group(1);
         } catch (Throwable ignored) {}
@@ -564,13 +570,18 @@ public class MessageDeviceSourceHook extends BaseFeature {
             Class<?> curr = keyObj.getClass();
             while (curr != null && curr != Object.class) {
                 for (Field f : curr.getDeclaredFields()) {
-                    f.setAccessible(true);
-                    if (f.getType() == String.class) {
-                        // Message-key member names are obfuscated (often A00/A01). The key has a
-                        // single String payload, so validate its value instead of its field name.
-                        String value = (String) f.get(keyObj);
-                        if (value != null && value.length() >= 8 && !value.contains("@")
-                                && value.indexOf(' ') < 0) return value;
+                    if (Modifier.isStatic(f.getModifiers())) continue;
+                    try {
+                        f.setAccessible(true);
+                        if (f.getType() == String.class) {
+                            // Message-key member names are obfuscated (often A00/A01). The key has a
+                            // single String payload, so validate its value instead of its field name.
+                            String value = (String) f.get(keyObj);
+                            if (value != null && value.length() >= 8 && !value.contains("@")
+                                    && value.indexOf(' ') < 0) return value;
+                        }
+                    } catch (ReflectiveOperationException | RuntimeException ignored) {
+                        // Keep looking for another instance field in this key.
                     }
                 }
                 curr = curr.getSuperclass();
