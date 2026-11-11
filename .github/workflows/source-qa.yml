@@ -125,6 +125,8 @@ jobs:
             qa/test_edit_history_identity.py
             qa/test_edit_history_adapter_binding.py
             qa/test_edit_history_diff_budget.py
+            qa/message_id_fallback/test_message_id_fallback.py
+            qa/message_id_fallback/test_mutations.py
           )
           for test_script in "${tests[@]}"; do
             echo "::group::$test_script"
