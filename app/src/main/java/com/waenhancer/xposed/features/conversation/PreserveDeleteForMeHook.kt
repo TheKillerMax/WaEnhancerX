@@ -18,6 +18,7 @@ import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Field
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 import org.luckypray.dexkit.DexKitBridge
 
 /**
@@ -42,6 +43,7 @@ class PreserveDeleteForMeHook(
         private const val PROVIDER_URI = "content://com.waenhancer.hookprovider"
 
         private val deleteForMeScope = ThreadLocal<Boolean>()
+        private val nextScopeCallbackId = AtomicLong()
         private val preservationWarningLock = Any()
         private var lastPreservationWarningAtElapsed = -1L
         private const val PRESERVATION_WARNING_INTERVAL_MS = 30_000L
@@ -66,7 +68,14 @@ class PreserveDeleteForMeHook(
                 XposedBridge.hookMethod(
                     deleteMethod,
                     object : XC_MethodHook() {
+                        // Distinct callback keys also keep duplicate registrations from
+                        // overwriting each other's snapshot on the same invocation.
+                        private val previousScopeKey = "$TAG.previousScope.${nextScopeCallbackId.incrementAndGet()}"
+
                         override fun beforeHookedMethod(param: MethodHookParam) {
+                            // Record this even when an inner invocation is disabled or has no
+                            // selected messages: its after-callback still runs in the outer scope.
+                            param.setObjectExtra(previousScopeKey, isDeleteForMeInProgress())
                             if (!isEnabled(PREF_KEY, false)) return
                             if (deleteMethod.name == "run") {
                                 // Multiplexed Runnables are shared by unrelated WhatsApp features.
@@ -77,7 +86,10 @@ class PreserveDeleteForMeHook(
                         }
 
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            deleteForMeScope.remove()
+                            when (param.getObjectExtra(previousScopeKey)) {
+                                true -> deleteForMeScope.set(true)
+                                false -> deleteForMeScope.remove()
+                            }
                         }
                     }
                 )

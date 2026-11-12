@@ -526,4 +526,79 @@ public class PreservedDispatchContractTest {
         XposedBridge.fireAfter(param);assertSame(original,param.getThrowable());assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
+    @Test public void nestedEnabledDeleteRestoresTheOuterLocalScope() throws Throwable {
+        registerProvider(); FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam outer=beginRun(owner);
+        Method run=FixtureRunnable.class.getDeclaredMethod("run");
+        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(run,owner,new Object[0]);
+        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        assertFalse(inner.resultWasSet); XposedBridge.fireAfter(inner);
+        assertTrue("Inner cleanup must not reclassify the remaining outer delete as remote",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        assertFalse(outer.resultWasSet); XposedBridge.fireAfter(outer);
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void disabledInnerInvocationCannotClearAnEnabledOuterScope() throws Throwable {
+        registerProvider(); FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam outer=beginRun(owner);
+        context.getSharedPreferences("capture-observation",Context.MODE_PRIVATE).edit().putBoolean("preserve_delete_for_me",false).commit();
+        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(FixtureRunnable.class.getDeclaredMethod("run"),owner,new Object[0]);
+        assertFalse(inner.resultWasSet); XposedBridge.fireAfter(inner);
+        assertTrue("Early-returned before hooks must still restore the previous scope",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        XposedBridge.fireAfter(outer); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void unrecognizedInnerRunnableCannotClearTheOuterLocalScope() throws Throwable {
+        registerProvider(); FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam outer=beginRun(owner);
+        FixtureRunnable unrelated=new FixtureRunnable(context); unrelated.selected.clear();
+        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(FixtureRunnable.class.getDeclaredMethod("run"),unrelated,new Object[0]);
+        assertFalse(inner.resultWasSet); XposedBridge.fireAfter(inner);
+        assertTrue("A shared Runnable with no selected messages must not clear the outer classification",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        XposedBridge.fireAfter(outer); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void nestedOriginalThrowablePreservesItsIdentityAndOuterScope() throws Throwable {
+        registerProvider(); FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam outer=beginRun(owner);
+        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(FixtureRunnable.class.getDeclaredMethod("run"),owner,new Object[0]);
+        IllegalStateException original=new IllegalStateException("synthetic nested original error");
+        inner.setThrowable(original); XposedBridge.fireAfter(inner);
+        assertSame(original,inner.getThrowable());
+        assertTrue("An exceptional inner original still belongs to the outer local-delete scope",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        XposedBridge.fireAfter(outer); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void localDeleteScopeRemainsIsolatedFromAnotherThread() throws Throwable {
+        registerProvider(); FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam outer=beginRun(owner);
+        Method run=FixtureRunnable.class.getDeclaredMethod("run");
+        AtomicReference<Throwable> failure=new AtomicReference<>();
+        Thread other=new Thread(() -> {
+            try {
+                assertFalse("Another thread must not inherit local-delete scope",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+                FixtureRunnable unrelated=new FixtureRunnable(context); unrelated.selected.clear();
+                XC_MethodHook.MethodHookParam call=XposedBridge.fireBefore(run,unrelated,new Object[0]);
+                assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+                XposedBridge.fireAfter(call); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+            } catch(Throwable error){failure.set(error);}
+        },"scope-isolation-fixture");
+        other.setDaemon(true); other.start(); other.join(5000L);
+        assertFalse("Thread-isolation fixture must complete",other.isAlive());
+        if(failure.get()!=null)throw new AssertionError("Other-thread scope failure",failure.get());
+        assertTrue("Other-thread cleanup cannot alter the active caller",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        XposedBridge.fireAfter(outer); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void duplicateRegistrationsRetainIndependentInvocationScopeSnapshots() throws Throwable {
+        registerProvider(); Method run=FixtureRunnable.class.getDeclaredMethod("run");
+        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(),"waex_delete_for_me_method_v7",() -> run);
+        hook.hook(); hook.hook();
+        assertEquals("Control requires two independent production callbacks",2,XposedBridge.hooks.get(run).size());
+        XC_MethodHook.MethodHookParam call=XposedBridge.fireBefore(run,new FixtureRunnable(context),new Object[0]);
+        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertFalse(call.resultWasSet);
+        XposedBridge.fireAfter(call);
+        assertFalse("The last after callback must restore the original unscoped state",PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
 }
