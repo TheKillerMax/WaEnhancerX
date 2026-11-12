@@ -9,7 +9,7 @@ from pathlib import Path
 import argparse,hashlib,json,os,re,shutil,subprocess,zipfile,urllib.request,io
 
 ROOT=Path(__file__).resolve().parents[1]
-EXPECTED_TESTS=99
+EXPECTED_TESTS=117
 PKG=Path('app/src/main/java/com/waenhancer')
 PRODUCTION=[
  PKG/'xposed/features/conversation/PreserveDeleteForMeHook.kt',
@@ -85,10 +85,13 @@ public abstract class XC_MethodHook {
  public static final class MethodHookParam {
   public Object thisObject;public Object[] args;public java.lang.reflect.Member method;
   public boolean resultWasSet;private Object result;private Throwable throwable;
+  private final java.util.Map<String,Object> extras=new java.util.HashMap<>();
   java.util.List<XC_MethodHook> invocationCallbacks;int beforeCount;
   public Object getResult(){return result;}public void setResult(Object value){result=value;throwable=null;resultWasSet=true;}
   public Throwable getThrowable(){return throwable;}public boolean hasThrowable(){return throwable!=null;}
   public void setThrowable(Throwable value){throwable=value;result=null;resultWasSet=true;}
+  public Object getObjectExtra(String key){return extras.get(key);}
+  public void setObjectExtra(String key,Object value){extras.put(key,value);}
  }
 }'''
 
