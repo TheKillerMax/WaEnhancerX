@@ -58,6 +58,12 @@ public final class StatusStyleHookChecks {
     private static void reset() throws Exception {
         PropsOverrideHook.BOOLEANS.clear(); PropsOverrideHook.INTEGERS.clear();
         PropsOverrideHook.FLOATS.clear(); PropsOverrideHook.STRINGS.clear();
+        // Each case models a fresh hooked process. Clearing synthetic Xposed
+        // registrations without resetting production's process-local guard
+        // would create a state that cannot occur after a real process restart.
+        java.lang.reflect.Field installed = PropsOverrideHook.class.getDeclaredField("hookInstalled");
+        installed.setAccessible(true);
+        installed.setBoolean(null, false);
         XposedBridge.hooks.clear(); DexSearchEngine.methods.clear();
         DexSearchEngine.methods.put("waex_status_style_method", styleMethod());
     }
