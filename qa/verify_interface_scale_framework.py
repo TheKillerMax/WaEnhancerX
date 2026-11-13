@@ -8,6 +8,7 @@ This checks logical-to-physical dimensions, not glyph rasterization or an APK.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -122,7 +123,11 @@ tasks.register("writeQaDependencyHashes") {
             continue
         target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(content)
     (evidence / 'source-sha256.json').write_text(json.dumps(identities, indent=2))
-    command = ['bash', str(root / 'gradlew'), '-p', str(project), '--no-daemon',
+    # Use the verified wrapper on each host. Windows' system `bash.exe` can
+    # resolve to an unconfigured WSL launcher, producing a non-UTF-8 diagnostic
+    # before Gradle or any Android test is ever executed.
+    wrapper = ['cmd', '/c', str(root / 'gradlew.bat')] if os.name == 'nt' else ['bash', str(root / 'gradlew')]
+    command = [*wrapper, '-p', str(project), '--no-daemon',
                ':probe:writeQaDependencyHashes', ':probe:testDebugUnitTest']
     (evidence / 'command.json').write_text(json.dumps(command, indent=2))
     returncode = None; failure = None
@@ -144,7 +149,7 @@ tasks.register("writeQaDependencyHashes") {
                    'limits': 'Complete production theme and six design-system files; real Compose, Material3, Android Density and recomposition. Dimension conversion only, no glyph rasterization, full APK or device/LSPosed execution.'})
     (evidence / 'result.json').write_text(json.dumps(result, indent=2))
     if returncode != 0 or counts != [12, 0, 0, 0]:
-        print((evidence / 'framework-build.log').read_text()[-22000:])
+        print((evidence / 'framework-build.log').read_text(encoding='utf-8', errors='replace')[-22000:])
         raise RuntimeError('Interface scale framework failed: ' + json.dumps(result))
     print('PASS: ' + json.dumps(result))
 

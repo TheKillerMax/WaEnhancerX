@@ -4,7 +4,7 @@ Modes allow standalone updater/filter/clock branches without borrowing productio
 code from another PR. Xposed, private Pro behavior and design theme are fixtures.
 """
 from pathlib import Path
-import argparse, hashlib, json, shutil, subprocess, tomllib
+import argparse, hashlib, json, os, shutil, subprocess, tomllib
 import xml.etree.ElementTree as ET
 from framework_localization import stage_localization
 
@@ -127,7 +127,8 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
 ''')
     localized = stage_localization(root, probe, identity)
     (e/'source-sha256.json').write_text(json.dumps(identity,indent=2));(e/'build.gradle.kts').write_text(build)
-    cmd=['bash',str(root/'gradlew'),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
+    wrapper=['cmd','/c',str(root/'gradlew.bat')] if os.name=='nt' else ['bash',str(root/'gradlew')]
+    cmd=[*wrapper,'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
     with (e/'framework-build.log').open('w') as log:
         result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900)
     for f in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(f,e/f.name)
@@ -138,6 +139,6 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     summary={'modes':modes,'tests':counts[0],'failures':counts[1],'errors':counts[2],'skipped':counts[3],'build_returncode':result.returncode,'limits':'Real Android Resources/Views/Handler and real Compose Composition/Recomposer; design theme, BaseFeature, Xposed and private Pro service are controlled fixtures, not full WAEX or LSPosed.'}
     (e/'result.json').write_text(json.dumps(summary,indent=2))
     if result.returncode or counts != [sum(expected[m] for m in modes),0,0,0]:
-        print((e/'framework-build.log').read_text()[-22000:]);raise RuntimeError('Stability framework failed: '+str(summary))
+        print((e/'framework-build.log').read_text(encoding='utf-8',errors='replace')[-22000:]);raise RuntimeError('Stability framework failed: '+str(summary))
     print('PASS: '+json.dumps(summary))
 if __name__=='__main__':main()

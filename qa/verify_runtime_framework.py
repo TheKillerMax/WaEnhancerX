@@ -203,12 +203,13 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  write('src/test/java/com/waenhancer/utils/RuntimeResourcesTest.kt',TEST)
  identities['fixture/RuntimeResourcesTest.kt']=hashlib.sha256(TEST.encode()).hexdigest()
  (e/'source-sha256.json').write_text(json.dumps(identities,indent=2));(e/'RuntimeResourcesTest.kt').write_text(TEST);(e/'build.gradle.kts').write_text(build)
- cmd=['bash',str(root/'gradlew'),'-p',str(project),'--no-daemon',':probe:testDebugUnitTest']
+ wrapper=['cmd','/c',str(root/'gradlew.bat')] if os.name=='nt' else ['bash',str(root/'gradlew')]
+ cmd=[*wrapper,'-p',str(project),'--no-daemon',':probe:testDebugUnitTest']
  with (e/'framework-build.log').open('w') as log:
   result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=720)
  for p in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(p,e/p.name)
  if result.returncode:
-  print((e/'framework-build.log').read_text()[-18000:]);raise RuntimeError('Isolated framework validation failed')
+  print((e/'framework-build.log').read_text(encoding='utf-8',errors='replace')[-18000:]);raise RuntimeError('Isolated framework validation failed')
  results=list(e.glob('TEST-*.xml'))
  assert results,'No JUnit reports'
  tests=failures=errors=skipped=0
