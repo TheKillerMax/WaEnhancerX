@@ -196,13 +196,16 @@ class InterfaceScaleThemeTest {
             for ((size, base, sample) in observations) {
                 near("latest density", base.density * size.scale, sample.density.density)
                 near("latest font scale", base.fontScale, sample.density.fontScale)
-                near("latest page margin", with(base) { 16.dp.toPx() } * size.scale,
+                // The current design token is 24 dp (updated in 36967a9203),
+                // not the 16 dp used when the original scaling fix was tested.
+                // Keep an independent exact token oracle across recompositions.
+                near("latest page margin", with(base) { 24.dp.toPx() } * size.scale,
                     sample.dp(sample.spacing.pageMargin))
                 near("latest body size", with(base) { 14.sp.toPx() } * size.scale,
                     sample.sp(sample.typography.bodyMd.fontSize))
             }
             val reset = probe.measure(InterfaceSize.COMPACT, Density(2.75f, 1f))
-            near("compact reset margin", 44f, reset.dp(reset.spacing.pageMargin))
+            near("compact reset margin", 66f, reset.dp(reset.spacing.pageMargin))
             near("compact reset font", 38.5f, reset.sp(reset.typography.bodyMd.fontSize))
         } finally { probe.close() }
     }

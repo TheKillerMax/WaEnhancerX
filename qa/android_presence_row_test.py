@@ -57,9 +57,13 @@ def harness(source, baseline=False):
     imports = '\n'.join(line for line in source.splitlines() if line.startswith('import ') and
                          (line.startswith('import android.') or line.startswith('import java.') or
                           'PresenceStateStore' in line or 'import com.waenhancer.app.R' in line or 'import com.waenhancer.utils.UiText' in line))
-    names = ['bindRow', 'ensureOverlay', 'render', 'recordIdentityAlias']
-    if not baseline:
-        names += ['queueBindRow', 'queuePresenceRefresh', 'clearRow', 'stateForRow', 'layoutOverlay']
+    # The historical negative control used a separate overlay. Current
+    # production attaches a dot to the avatar container and optional text to
+    # the row, so extract those actual functions instead of a deleted API.
+    names = (['bindRow', 'ensureOverlay', 'render', 'recordIdentityAlias'] if baseline else
+             ['bindRow', 'ensureDotView', 'ensureTextView', 'render',
+              'recordIdentityAlias', 'queueBindRow', 'queuePresenceRefresh',
+              'clearRow', 'stateForRow'])
     methods = '\n\n'.join(extract(source, 'private fun ' + name + '(') for name in names)
     dp = next(line for line in source.splitlines() if 'private fun dp(' in line)
     companion = extract(source, 'companion object {')
@@ -73,14 +77,16 @@ class RendererHarness(private val context: Context, private val showDot: Boolean
 ''' + fields + '\n' + listener + '\n' + methods + '\n' + dp + '\n' + companion + '''
     fun bind(row: View, jid: String) = bindRow(row, jid)
     fun alias(alias: String, canonical: String) = recordIdentityAlias(alias, canonical)
-    fun overlay(row: View): FrameLayout? = ''' + ('rowOverlays[row]' if baseline else 'rowOverlays[row]?.get()') + '''
+''' + ('''    fun overlay(row: View): FrameLayout? = rowOverlays[row]
     fun dot(row: View): View? = overlay(row)?.findViewById<View>(ID_DOT)
     fun text(row: View): TextView? = overlay(row)?.findViewById<TextView>(ID_TEXT)
+''' if baseline else '''    fun dot(row: View): View? = row.findViewById<View>(ID_DOT)
+    fun text(row: View): TextView? = row.findViewById<TextView>(ID_TEXT)
+''') + '''
     fun bound(row: View): Any? = row.getTag(TAG_BOUND_JID)
 ''' + ('' if baseline else '''
     fun queue(row: View, jid: String?) = queueBindRow(row, jid)
     fun refresh() = queuePresenceRefresh()
-    fun weakValues(): Boolean = rowOverlays.values.all { it is java.lang.ref.WeakReference<*> }
 ''') + '\n}\n'
 
 TESTS = (Path(__file__).parent / 'fixtures/PresenceRowRenderingTest.kt').read_text(encoding='utf-8')

@@ -155,8 +155,16 @@ dependencies {
   p=probe/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
  identities={}
  # Compile all of these source files unchanged; unrelated private services are test doubles.
- files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','ui/components/RuntimeObservationClock.kt','xposed/core/VersionGuard.kt']
+ files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt',
+        'utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt',
+        'utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt',
+        'ui/components/RuntimeObservationClock.kt','xposed/core/VersionGuard.kt']
  if (root/'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java').exists():files+=['utils/DeclaredWhatsAppTargets.java']
+ # Compile the actual public IPC adapter when a candidate branch adds it.
+ # The real detector imports this class; omitting it makes an otherwise valid
+ # isolated compile fail before any framework assertion can execute.
+ if (root/'app/src/main/java/com/waenhancer/xposed/bridge/client/HookProviderIpc.java').exists():
+  files+=['xposed/bridge/client/HookProviderIpc.java']
  for name in files:
   p=root/'app/src/main/java/com/waenhancer'/name
   write('src/main/java/com/waenhancer/'+name,p.read_text());identities[name]=hashlib.sha256(p.read_bytes()).hexdigest()

@@ -30,6 +30,7 @@ class PresenceRowRenderingTest {
     private val a = "910001@s.whatsapp.net"
     private val b = "910002@s.whatsapp.net"
     private val lid = "123456@lid"
+    private val rows = mutableListOf<FrameLayout>()
     @Before fun reset() {
         for (name in listOf("STATES", "LISTENERS")) {
             val f = PresenceStateStore::class.java.getDeclaredField(name); f.isAccessible = true
@@ -41,6 +42,7 @@ class PresenceRowRenderingTest {
         // Config.NONE has no manifest: explicitly enable the RTL fixture contract.
         app.applicationInfo.flags = app.applicationInfo.flags or ApplicationInfo.FLAG_SUPPORTS_RTL
         app.applicationInfo.targetSdkVersion = 28
+        rows.clear()
         h = RendererHarness(app)
         val companion = RendererHarness::class.java.getDeclaredField("identityAliases")
         companion.isAccessible = true; (companion.get(null) as MutableMap<*,*>).clear()
@@ -49,8 +51,18 @@ class PresenceRowRenderingTest {
         it.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
         it.layout(0, 0, w, height)
+        rows.add(it)
     }
-    private fun pump() { shadowOf(Looper.getMainLooper()).idle() }
+    private fun pump() {
+        shadowOf(Looper.getMainLooper()).idle()
+        // Emulate ViewRoot's next layout traversal after production addView().
+        // A newly attached Android child is not measured just by idling Looper.
+        rows.forEach { r ->
+            r.measure(View.MeasureSpec.makeMeasureSpec(r.width, View.MeasureSpec.EXACTLY),
+                      View.MeasureSpec.makeMeasureSpec(r.height, View.MeasureSpec.EXACTLY))
+            r.layout(0, 0, r.width, r.height)
+        }
+    }
     private fun visible(r: View) = h.dot(r)?.visibility == View.VISIBLE
     @Test fun exactCachedOnlineMeasuresVisibleDot() {
         val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump()
@@ -119,26 +131,29 @@ class PresenceRowRenderingTest {
         PresenceStateStore.update(a, true); pump(); assertTrue(visible(r)); assertTrue(h.dot(r)!!.width > 0)
         PresenceStateStore.update(a, false); pump(); assertFalse(visible(r)); assertTrue(h.text(r)!!.width > 0)
     }
-    @Test fun resizeRelayoutsOverlayAndChildren() {
+    @Test fun resizeRelayoutsDirectIndicatorChildren() {
         val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump()
         r.layout(0, 0, 600, 110); pump()
-        assertEquals(600, h.overlay(r)!!.width); assertEquals(110, h.overlay(r)!!.height)
-        assertTrue(h.dot(r)!!.width > 0)
+        assertEquals(600, r.width); assertEquals(110, r.height)
+        assertTrue(h.dot(r)!!.width > 0); assertTrue(h.dot(r)!!.right <= r.width)
     }
     @Test fun rtlFollowsHostDirection() {
         val r = row(); r.layoutDirection = View.LAYOUT_DIRECTION_RTL
         assertEquals("fixture host must support RTL", View.LAYOUT_DIRECTION_RTL, r.layoutDirection)
         PresenceStateStore.update(a, true); h.bind(r, a); pump()
-        assertEquals(View.LAYOUT_DIRECTION_RTL, h.overlay(r)!!.layoutDirection)
-        assertTrue("START dot must be on right in RTL", h.dot(r)!!.left > r.width / 2)
+        assertEquals(View.LAYOUT_DIRECTION_RTL, r.layoutDirection)
+        assertTrue("END-aligned dot must follow RTL host", h.dot(r)!!.right < r.width / 2)
     }
     @Test fun initiallyZeroSizedRowRecoversAfterLayout() {
         val r = row(0, 0); PresenceStateStore.update(a, true); h.bind(r, a); pump()
         r.layout(0, 0, 400, 80); pump(); assertTrue(visible(r)); assertTrue(h.dot(r)!!.width > 0)
     }
-    @Test fun repeatedBindDoesNotDuplicateOverlay() {
-        val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump(); val first = h.overlay(r)
-        repeat(50) { h.bind(r, a) }; pump(); assertSame(first, h.overlay(r)); assertTrue(h.weakValues())
+    @Test fun repeatedBindDoesNotDuplicateDirectIndicators() {
+        val r = row(); PresenceStateStore.update(a, true); h.bind(r, a); pump()
+        val firstDot = h.dot(r); val firstText = h.text(r)
+        repeat(50) { h.bind(r, a) }; pump()
+        assertSame(firstDot, h.dot(r)); assertSame(firstText, h.text(r))
+        assertEquals("one dot and one text child", 2, r.childCount)
     }
     @Test fun independentDotAndTextConfiguration() {
         PresenceStateStore.update(a, true)

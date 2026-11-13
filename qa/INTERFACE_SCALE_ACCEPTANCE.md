@@ -72,6 +72,14 @@ The former Large setting applied 1.25 twice to token-based text and gaps,
 producing 1.5625 times their Compact sizes. Fixed dp values grew by 1.25. The
 fix removes that mismatch without replacing Android accessibility scaling.
 
+**Design-token revision after that experiment:** the historical table uses the
+16 dp page margin from the tested source revision. The current UI deliberately
+uses a **24 dp** base page margin, introduced by upstream design-token refactor
+`36967a920352b16114caeb6b5ac624087faf7384` (20 to 24 dp). The live
+reconfiguration fixture therefore asserts 24 dp explicitly (66 px at density
+2.75 in Compact) and still checks every scale and reset. It does not restore
+the obsolete 16 dp design token merely to satisfy an outdated test constant.
+
 ## Scope and device acceptance
 
 These are logical-to-physical dimension checks through the complete composed

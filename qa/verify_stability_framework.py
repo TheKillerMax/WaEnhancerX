@@ -76,6 +76,36 @@ object WaexTheme {
 }
 class FixtureTypography(val t:androidx.compose.material3.Typography){val headlineMd get()=t.headlineMedium;val bodyMd get()=t.bodyMedium}
 ''')
+    if 'update' in modes:
+        # The updater suite verifies parsing, digests, streaming and progress
+        # gating, not release-cache storage, global error UI or sheet drawing.
+        # Keep these external boundaries explicit and fail on unexpected calls.
+        write('src/main/java/com/waenhancer/config/PreferenceStores.java','''package com.waenhancer.config;
+public final class PreferenceStores {
+ public static final String GITHUB_API_CACHE="github_api_cache";
+ public static android.content.SharedPreferences cacheStore(android.content.Context context,String name){
+  throw new AssertionError("Release-cache IO is outside the updater fixture");
+ }
+}''')
+        write('src/main/java/com/waenhancer/ui/components/NetworkErrorCenter.kt','''package com.waenhancer.ui.components
+object NetworkErrorCenter {
+ fun isNetworkError(error:Throwable?):Boolean = kotlin.error("Global network-error UI is outside the updater fixture")
+ fun show(error:Throwable?){kotlin.error("Global network-error UI is outside the updater fixture")}
+}''')
+        write('src/main/java/com/waenhancer/ui/components/UpdateSheetComponents.kt','''package com.waenhancer.ui.components
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material3.SheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+@Composable
+fun WaexModalBottomSheet(onDismissRequest:()->Unit,sheetState:SheetState,
+  containerColor:Color,content:@Composable ColumnScope.()->Unit):Unit =
+  error("Visual sheet composition is outside the updater fixture")
+@Composable
+fun WaexLinearProgressIndicator(progress:()->Float,modifier:Modifier,color:Color,trackColor:Color):Unit =
+  error("Visual progress rendering is outside the updater fixture")
+''')
     if 'filter' in modes:
         write('src/main/res/values/ids.xml','<resources><item name="fixture_target" type="id"/><item name="fixture_other" type="id"/></resources>')
         write('src/main/java/com/waenhancer/xposed/core/BaseFeature.kt','''package com.waenhancer.xposed.core
