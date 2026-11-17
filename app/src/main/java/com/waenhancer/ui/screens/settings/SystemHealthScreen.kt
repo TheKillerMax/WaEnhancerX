@@ -101,6 +101,7 @@ fun SystemHealthScreen() {
     var showRestartSheet by remember {
         mutableStateOf(preferences.getBoolean("show_restart_sheet", true))
     }
+    var settingsSaveFailed by remember { mutableStateOf(false) }
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) TargetAppManager.refresh(context)
     }
@@ -244,8 +245,11 @@ fun SystemHealthScreen() {
                         StitchSwitch(
                             checked = showHookToast,
                             onCheckedChange = { checked ->
-                                showHookToast = checked
-                                preferences.putBoolean("show_hook_toast", checked)
+                                val committed = preferences.putBooleans(mapOf("show_hook_toast" to checked))
+                                // The manager can reject a commit (or fail after persisting it).
+                                // Reflect the stored value, never a speculative toggle state.
+                                showHookToast = preferences.getBoolean("show_hook_toast", true)
+                                settingsSaveFailed = !committed
                             }
                         )
                     }
@@ -277,11 +281,19 @@ fun SystemHealthScreen() {
                         StitchSwitch(
                             checked = showRestartSheet,
                             onCheckedChange = { checked ->
-                                showRestartSheet = checked
-                                preferences.putBoolean("show_restart_sheet", checked)
+                                val committed = preferences.putBooleans(mapOf("show_restart_sheet" to checked))
+                                showRestartSheet = preferences.getBoolean("show_restart_sheet", true)
+                                settingsSaveFailed = !committed
                             }
                         )
                     }
+                }
+                if (settingsSaveFailed) {
+                    Text(
+                        stringResource(R.string.diag_capture_pref_failed),
+                        style = typography.bodySm,
+                        color = colors.error
+                    )
                 }
                 Surface(
                     shape = radius.bentoCardShape,
