@@ -28,6 +28,17 @@ def method(source: str, name: str, optional: bool = False) -> str:
     return source[match.start():cursor]
 
 
+def row_id_predicate(source: str) -> str:
+    """Compile the real predicate with its real callers, not a permissive fixture."""
+    match = re.search(
+        r"(?m)^    private static final Pattern ROW_ID_WHERE = Pattern\.compile\([^\n]*\);",
+        source,
+    )
+    if match is None:
+        raise AssertionError("missing or changed production ROW_ID_WHERE declaration")
+    return match.group(0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=PRIVACY / "AntiRevokeHook.java")
@@ -35,6 +46,7 @@ def main() -> None:
     args = parser.parse_args()
     source = args.source.read_text(encoding="utf-8")
     methods = "\n\n".join([
+        row_id_predicate(source),
         method(source, "hookDatabaseRevocation"),
         method(source, "sanitizePreservedOwnRowId"),
         method(source, "readRemoteStatusKeys", optional=True),
