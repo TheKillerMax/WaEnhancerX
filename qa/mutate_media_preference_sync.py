@@ -35,10 +35,21 @@ def main() -> None:
         "if (definition != null && (definition.type != PreferenceSchema.Type.BOOLEAN\n"
         "                        || definition.store != PreferenceSchema.Store.PUBLIC)) return false;"
     )
+    remove_start = source.index("    public void remove(String key) {")
+    remove_end = source.index("\n    /** Effective values", remove_start)
+    remove_body = source[remove_start:remove_end]
+    remove_restart = "PreferenceRestartTracker.onPreferenceChanged(PreferenceStores.publicStore(context), key(key));"
+    no_remove_restart = source[:remove_start] + replace_exactly_once(
+        remove_body, remove_restart, "/* mutant: no removal restart report */"
+    ) + source[remove_end:]
     candidates = [
         ("missing_restart_reporting",
          replace_exactly_once(source, restart_loop, "/* mutant: no restart reports */"),
          "HD batch did not report all three exact keys in order"),
+        ("missing_diagnostics_reporting",
+         replace_exactly_once(source, 'for (String key : batch.keySet()) recordChanged(key, "PUT");',
+                              "/* mutant: no diagnostic preference events */"),
+         "HD batch did not journal the three committed keys in order"),
         ("ignored_commit_failure",
          replace_exactly_once(source, "if (!editor.commit()) return false;", "editor.commit();"),
          "failed commit reported success"),
@@ -51,16 +62,7 @@ def main() -> None:
               "getStore(key).edit().putBoolean(key(key), value).commit();"),
          "failed legacy commits must not notify the hook provider"),
         ("removed_setting_never_reports_restart",
-         replace_exactly_once(source,
-              "if (isPublicStore(key)) {\n"
-              "            PreferenceRestartTracker.onPreferenceChanged(PreferenceStores.publicStore(context), key(key));\n"
-              "            notifyChange();\n"
-              "        }\n"
-              "    }\n\n    public Map<String, ?> getAll()",
-              "if (isPublicStore(key)) {\n"
-              "            notifyChange();\n"
-              "        }\n"
-              "    }\n\n    public Map<String, ?> getAll()"),
+         no_remove_restart,
          "successful legacy writes and removal did not report exact restart keys"),
     ]
     with tempfile.TemporaryDirectory(prefix="waex-media-negative-") as folder:

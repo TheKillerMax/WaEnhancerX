@@ -30,6 +30,8 @@ with tempfile.TemporaryDirectory(prefix="waex_media_policy_") as output:
 # Compile the production preference manager against minimal Android/Hilt doubles,
 # then exercise commit atomicity, schema validation and failure/notification behavior.
 STUBS = {
+    "androidx/annotation/NonNull.java": "package androidx.annotation; public @interface NonNull {}",
+    "androidx/annotation/Nullable.java": "package androidx.annotation; public @interface Nullable {}",
     "android/net/Uri.java": """package android.net;
 public final class Uri {
  private final String value;
@@ -125,6 +127,24 @@ public final class PreferenceRestartTracker {
  }
 }
 """,
+    # The real journal relies on Android OS services; the production manager's
+    # narrow diagnostic boundary is observed without collecting user data.
+    "com/waenhancer/utils/DiagnosticsRecorder.java": """package com.waenhancer.utils;
+import android.content.Context;
+import java.util.ArrayList;
+import java.util.List;
+public final class DiagnosticsRecorder {
+ public static final List<String> changes = new ArrayList<>();
+ public static void recordPreferenceChange(Context c, String key, boolean scoped, String operation) {
+  if (c == null || key == null || key.isEmpty() || operation == null || operation.isEmpty())
+   throw new AssertionError("Invalid diagnostics preference change contract");
+  changes.add(key + "|" + scoped + "|" + operation);
+ }
+ public static void recordSettingsTransfer(Context c, String operation, int count) {
+  throw new AssertionError("Unexpected settings backup operation in Media Hub fixture");
+ }
+}
+""",
 }
 with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
     stub_paths = []
@@ -135,6 +155,7 @@ with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
         stub_paths.append(str(source))
     sources = stub_paths + [
         str(SRC / "config/PreferenceSchema.java"),
+        str(SRC / "config/ExclusivePreferences.java"),
         str(SRC / "config/PreferenceStores.java"),
         str(manager_source),
         str(POLICY),

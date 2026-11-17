@@ -25,6 +25,8 @@ if len(values) != 1:
 reference = ast.literal_eval(values[0])
 stubs = {name: reference[name] for name in ('android/content/SharedPreferences.java', 'android/net/Uri.java')}
 stubs.update({
+    'androidx/annotation/NonNull.java': reference['androidx/annotation/NonNull.java'],
+    'androidx/annotation/Nullable.java': reference['androidx/annotation/Nullable.java'],
     'android/content/Context.java': '''package android.content;
 public abstract class Context {
     public static final int MODE_PRIVATE = 0;
@@ -62,9 +64,20 @@ public final class SettingsBackupCodec {
     public int encode(android.content.Context c, java.io.OutputStream out) { throw new AssertionError("Unused backup encode"); }
     public int decode(android.content.Context c, java.io.InputStream in) { throw new AssertionError("Unused backup decode"); }
 }''',
+    'com/waenhancer/utils/DiagnosticsRecorder.java': '''package com.waenhancer.utils;
+public final class DiagnosticsRecorder {
+    public static void recordPreferenceChange(android.content.Context context, String key,
+            boolean targetScoped, String operation) {
+        throw new AssertionError("Getter must not record a preference mutation");
+    }
+    public static void recordSettingsTransfer(android.content.Context context, String kind, int count) {
+        throw new AssertionError("Getter must not export/import settings");
+    }
+}''',
 })
 src = root / 'app/src/main/java/com/waenhancer'
-sources = [src / p for p in ('config/PreferenceSchema.java', 'config/PreferenceStores.java',
+sources = [src / p for p in ('config/PreferenceSchema.java', 'config/ExclusivePreferences.java',
+                             'config/PreferenceStores.java',
                              'core/preferences/WaexPreferenceManager.java')]
 with tempfile.TemporaryDirectory(prefix='waex_string_scope_') as temp:
     work = Path(temp)

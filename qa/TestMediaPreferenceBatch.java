@@ -12,6 +12,7 @@ import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import com.waenhancer.config.PreferenceRestartTracker;
 import com.waenhancer.ui.screens.media.MediaQuickSettingPolicy;
+import com.waenhancer.utils.DiagnosticsRecorder;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
@@ -120,6 +121,7 @@ public final class TestMediaPreferenceBatch {
         FakeContext c = new FakeContext();
         WaexPreferenceManager m = new WaexPreferenceManager(c);
         int restartBefore = PreferenceRestartTracker.changes.size();
+        int diagnosticsBefore = DiagnosticsRecorder.changes.size();
         String[][] inputs = {{"css_theme", "#title {color: #112233;}"},
                 {"change_dpi", "320"}, {"chatfilter", "1"}, {"waex_menu_style", "icons"}};
         for (String[] input : inputs) {
@@ -142,6 +144,8 @@ public final class TestMediaPreferenceBatch {
         int commits = c.publicStore.commits, notifications = c.resolver.notifications;
         check(PreferenceRestartTracker.changes.size() == restartBefore + 7,
                 "typed successful writes did not report every changed key");
+        check(DiagnosticsRecorder.changes.size() == diagnosticsBefore + 7,
+                "typed successful writes did not record every diagnostic event");
         for (String key : new String[]{null, "", "unknown_typed_setting", "imagequality", "hidetabs", "app_theme_mode"}) {
             check(!m.putPublicString(key, "invalid"), "unknown, private or wrong-type string accepted: " + key);
         }
@@ -174,12 +178,16 @@ public final class TestMediaPreferenceBatch {
         check(c.resolver.notifications == notifications, "exception triggered notification");
         check(PreferenceRestartTracker.changes.size() == restartBefore + 7,
                 "rejected, failed or exceptional typed writes were reported as changes");
+        check(DiagnosticsRecorder.changes.size() == diagnosticsBefore + 7,
+                "rejected, failed or exceptional typed writes generated diagnostic events");
         c.publicStore.throwEdit = false;
         check(m.putPublicString("css_theme", "retry"), "string retry failed");
         check(m.putPublicStringSet("hidetabs", tabs), "set retry failed");
         check(c.resolver.notifications == notifications + 2, "successful retries not notified");
         check(PreferenceRestartTracker.changes.size() == restartBefore + 9,
                 "successful retries were not reported as changes");
+        check(DiagnosticsRecorder.changes.size() == diagnosticsBefore + 9,
+                "successful retries did not record diagnostic events");
     }
 
     private static void writeViaLegacyVoidSetters(WaexPreferenceManager manager) {
@@ -197,6 +205,7 @@ public final class TestMediaPreferenceBatch {
             FakeContext c = new FakeContext();
             WaexPreferenceManager manager = new WaexPreferenceManager(c);
             int restartBefore = PreferenceRestartTracker.changes.size();
+            int diagnosticsBefore = DiagnosticsRecorder.changes.size();
             c.publicStore.failCommit = true;
             c.publicStore.applyBeforeFailure = memoryUpdatedBeforeDiskFailure;
             writeViaLegacyVoidSetters(manager);
@@ -210,6 +219,8 @@ public final class TestMediaPreferenceBatch {
             check(c.resolver.notifications == 0, "failed legacy commits must not notify the hook provider");
             check(PreferenceRestartTracker.changes.size() == restartBefore,
                     "failed legacy commits must not queue restart changes");
+            check(DiagnosticsRecorder.changes.size() == diagnosticsBefore,
+                    "failed legacy commits must not create diagnostic events");
 
             c.publicStore.failCommit = false;
             c.publicStore.applyBeforeFailure = false;
@@ -221,6 +232,12 @@ public final class TestMediaPreferenceBatch {
                     "imagequality", "css_theme", "hidetabs", "legacy_media_counter",
                     "legacy_media_ratio", "imagequality")),
                     "successful legacy writes and removal did not report exact restart keys");
+            check(DiagnosticsRecorder.changes.subList(diagnosticsBefore,
+                    DiagnosticsRecorder.changes.size()).equals(Arrays.asList(
+                    "imagequality|false|PUT", "css_theme|false|PUT", "hidetabs|false|PUT",
+                    "legacy_media_counter|false|PUT", "legacy_media_ratio|false|PUT",
+                    "imagequality|false|REMOVE")),
+                    "successful legacy writes and removal must journal their exact operations");
             check(!c.publicStore.values.containsKey("imagequality"), "successful removal did not clear the key");
             check(".x {color:red;}".equals(manager.getString("css_theme", "")),
                     "successful legacy string write not persisted");
@@ -232,12 +249,16 @@ public final class TestMediaPreferenceBatch {
             check(c.resolver.notifications == beforePrivate, "private key notified public process");
             check(PreferenceRestartTracker.changes.size() == restartsBeforePrivate,
                     "private key queued a public restart");
+            check(DiagnosticsRecorder.changes.size() == diagnosticsBefore + 7
+                    && DiagnosticsRecorder.changes.get(diagnosticsBefore + 6).equals("update_auto_check|false|PUT"),
+                    "successful private preference must be journaled without notifying public hooks");
         }
     }
 
     public static void main(String[] args) {
         FakeContext context = new FakeContext();
         PreferenceRestartTracker.changes.clear();
+        DiagnosticsRecorder.changes.clear();
         WaexPreferenceManager manager = new WaexPreferenceManager(context);
         check(manager.putBooleans(MediaQuickSettingPolicy.changesFor("media_upload_quality", true)),
                 "bulk HD update failed");
@@ -246,6 +267,9 @@ public final class TestMediaPreferenceBatch {
         check(PreferenceRestartTracker.changes.equals(Arrays.asList(
                 "imagequality", "video_maxfps", "media_upload_quality")),
                 "HD batch did not report all three exact keys in order");
+        check(DiagnosticsRecorder.changes.equals(Arrays.asList(
+                "imagequality|false|PUT", "video_maxfps|false|PUT", "media_upload_quality|false|PUT")),
+                "HD batch did not journal the three committed keys in order");
         check(manager.getBoolean("imagequality", false), "image hook flag");
         check(manager.getBoolean("video_maxfps", false), "fps hook flag");
         check(manager.getBoolean("media_upload_quality", false), "legacy UI alias retained");
@@ -258,6 +282,10 @@ public final class TestMediaPreferenceBatch {
                 "imagequality", "video_maxfps", "media_upload_quality",
                 "call_recording_enabled", "call_recording")),
                 "recorder batch restart reporting missing or duplicated");
+        check(DiagnosticsRecorder.changes.size() == 5
+                && DiagnosticsRecorder.changes.get(3).equals("call_recording_enabled|false|PUT")
+                && DiagnosticsRecorder.changes.get(4).equals("call_recording|false|PUT"),
+                "recorder batch did not journal both committed keys");
         check(manager.getBoolean("call_recording_enabled", false), "canonical recorder not set");
         check(manager.getBoolean("call_recording", false), "legacy recorder flag absent");
 
@@ -294,6 +322,8 @@ public final class TestMediaPreferenceBatch {
         check(context.resolver.notifications == 2, "storage exception notified observers");
         check(PreferenceRestartTracker.changes.size() == 5,
                 "rejected or failed batch reported restart changes");
+        check(DiagnosticsRecorder.changes.size() == 5,
+                "rejected or failed batch generated diagnostic preference events");
         context.publicStore.throwCommit = false;
 
         check(manager.putBooleans(MediaQuickSettingPolicy.changesFor("media_upload_quality", false)),
@@ -303,6 +333,8 @@ public final class TestMediaPreferenceBatch {
         check(context.resolver.notifications == 3, "valid update not notified");
         check(PreferenceRestartTracker.changes.size() == 8,
                 "successful HD disable did not report all three restart keys");
+        check(DiagnosticsRecorder.changes.size() == 8,
+                "successful HD disable did not journal all three committed keys");
         testTypedWrites();
         testLegacyVoidWriteFailures();
         System.out.println("PASS: " + checks + " production manager/schema/failure checks (Android doubles)");
