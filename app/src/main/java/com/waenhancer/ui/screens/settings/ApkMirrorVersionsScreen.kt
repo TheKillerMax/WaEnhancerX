@@ -192,7 +192,6 @@ private fun FeedLoader(packageName: String, onLoaded: (List<ApkMirrorRelease>) -
                 ) {
                     // Cloudflare answers its check page with 403/503.
                     if (request.isForMainFrame) {
-                        Log.d(TAG, "http ${errorResponse.statusCode} for ${request.url}")
                         pageSettled = true
                         // Cloudflare's check page: open the WebView for the user right away.
                         needsVerification = true
@@ -210,7 +209,9 @@ private fun FeedLoader(packageName: String, onLoaded: (List<ApkMirrorRelease>) -
                 override fun onReceivedError(webView: WebView, request: WebResourceRequest, error: WebResourceError) {
                     if (request.isForMainFrame) {
                         errorDetail = "${error.errorCode}: ${error.description}"
-                        Log.w(TAG, "main frame error ${request.url} -> $errorDetail")
+                        // WebResourceError descriptions and redirect URLs may contain
+                        // sensitive query strings. Only log the stable error code.
+                        Log.w(TAG, "main frame error code=${error.errorCode}")
                         loadFailed = true
                     }
                 }
@@ -260,7 +261,7 @@ private fun FeedLoader(packageName: String, onLoaded: (List<ApkMirrorRelease>) -
             // Once the site has answered (even with a 403) the WebView is kept for the check.
             val dead = rendererGone || (!pageResponded && !pageSettled && elapsed > NO_RESPONSE_GIVE_UP_MS)
             if (loadFailed || dead || elapsed > GIVE_UP_AFTER_MS) {
-                Log.w(TAG, "feed load gave up (loadFailed=$loadFailed, responded=$pageResponded, url=${webView.url})")
+                Log.w(TAG, "feed load gave up (loadFailed=$loadFailed, responded=$pageResponded)")
                 phase = FeedPhase.Failed(browserUnavailable = dead)
                 return@LaunchedEffect
             }
@@ -785,7 +786,6 @@ private suspend fun WebView.readFeedPages(): FeedRead {
     } ?: return FeedRead.NoResponse
     val text = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull() ?: return FeedRead.NotFeed
     if (text.startsWith("NOT_FEED")) {
-        Log.d(TAG, "not the feed yet: ${text.take(160)}")
         return FeedRead.NotFeed
     }
     val xml = runCatching {

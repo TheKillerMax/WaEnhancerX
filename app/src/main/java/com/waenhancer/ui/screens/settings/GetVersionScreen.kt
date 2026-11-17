@@ -3,7 +3,6 @@ package com.waenhancer.ui.screens.settings
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -67,7 +66,6 @@ import com.waenhancer.utils.TargetAppManager
 import com.waenhancer.utils.UiText
 import com.waenhancer.utils.UniversalVersionValidator
 
-private const val TAG = "GetVersion"
 
 /** The steps of getting a supported build. Install happens on the install screen afterwards. */
 private sealed interface Step {
@@ -423,7 +421,6 @@ private fun ReleaseStep(
             // One path for every way a file can arrive: the WebView's own download event, or the
             // redirect to the file itself (which is handled here before the WebView would load it).
             fun beginDownload(url: String, userAgent: String?, contentDisposition: String?, mimeType: String?) {
-                Log.d(TAG, "download offered url=$url mime=$mimeType cd=$contentDisposition")
                 if (ApkDownloads.isAcceptable(url, contentDisposition, mimeType)) {
                     ApkDownloads.start(
                         context = context,
@@ -466,7 +463,6 @@ private fun ReleaseStep(
                     // Ads and redirects to other sites are blocked; only APKMirror pages open here.
                     val host = request.url.host.orEmpty()
                     val blocked = !(host == "apkmirror.com" || host.endsWith(".apkmirror.com"))
-                    Log.d(TAG, "navigate $url blocked=$blocked")
                     return blocked
                 }
 
@@ -474,9 +470,7 @@ private fun ReleaseStep(
                     // Pages fill in after loading, so the scroll is repeated shortly after.
                     listOf(0L, 700L, 2_000L).forEach { delayMs ->
                         webView.postDelayed({
-                            webView.evaluateJavascript(SCROLL_TO_DOWNLOAD_SCRIPT) { result ->
-                                Log.d(TAG, "${webView.url} -> $result")
-                            }
+                            webView.evaluateJavascript(SCROLL_TO_DOWNLOAD_SCRIPT, null)
                         }, delayMs)
                     }
                 }

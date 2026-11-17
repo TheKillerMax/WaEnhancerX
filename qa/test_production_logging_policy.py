@@ -34,7 +34,39 @@ for source_root in SOURCE_ROOTS:
                 line = text.count("\n", 0, match.start()) + 1
                 violations.append(f"{source.relative_to(ROOT)}:{line}: {label}")
 
+# The embedded APKMirror WebViews may encounter signed download URLs, cookies
+# and page-derived text. Keep only the three reviewed, metadata-only warnings;
+# dynamic URL/content logging must require another explicit privacy review.
+apk_mirror = (ROOT / "app/src/main/java/com/waenhancer/ui/screens/settings/ApkMirrorVersionsScreen.kt").read_text(encoding="utf-8")
+get_version = (ROOT / "app/src/main/java/com/waenhancer/ui/screens/settings/GetVersionScreen.kt").read_text(encoding="utf-8")
+reviewed_warnings = [
+    'Log.w(TAG, "renderer gone (crashed=${detail.didCrash()})")',
+    'Log.w(TAG, "main frame error code=${error.errorCode}")',
+    'Log.w(TAG, "feed load gave up (loadFailed=$loadFailed, responded=$pageResponded)")',
+]
+
+
+def warning_expressions(source):
+    return [line.strip() for line in source.splitlines() if "Log.w(" in line or "Log.e(" in line]
+
+
+assert warning_expressions(apk_mirror) == reviewed_warnings, (
+    "APKMirror warning payloads or callsites changed; re-review WebView log privacy"
+)
+assert not re.search(r"\bLog\.[a-z]+\s*\(", get_version), (
+    "GetVersion WebView must not log redirect, download or JavaScript payloads"
+)
+for unsafe_change in (
+    apk_mirror.replace("error code=${error.errorCode}", "error for ${request.url}"),
+    apk_mirror + '\nLog.w(TAG, "unexpected download URL: $url")\n',
+    apk_mirror.replace(reviewed_warnings[2], ""),
+):
+    assert warning_expressions(unsafe_change) != reviewed_warnings, (
+        "WebView privacy negative control accepted a changed warning"
+    )
+
 if violations:
     raise SystemExit("Production logging policy violations:\n- " + "\n- ".join(violations))
 
-print(f"PASS: {files_checked} production source files contain no informational/debug logs")
+print(f"PASS: {files_checked} production source files contain no informational/debug logs; "
+      "APKMirror WebView warning payloads reviewed with 3 negative controls")
