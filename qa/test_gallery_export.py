@@ -122,8 +122,13 @@ def main():
             f=d/rel;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(s)
         (d/'TestGalleryExport.java').write_text(TEST)
         (d/'LegacyGalleryExporter.java').write_text(legacy_source(a.legacy_hook) if a.legacy_hook else 'package com.waenhancer.xposed.features.media;class LegacyGalleryExporter {static void export(android.content.Context c,java.io.File f){throw new AssertionError("Unused legacy adapter");}}')
-        production=ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java'
-        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(production),*map(str,d.rglob('*.java'))],check=True,timeout=60)
+        production=[ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java',
+                    ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java']
+        compile_doubles=[ROOT/'qa/java/de/robv/android/xposed/XposedBridge.java',
+                         ROOT/'qa/java/androidx/annotation/NonNull.java',
+                         ROOT/'qa/java/androidx/annotation/VisibleForTesting.java']
+        subprocess.run(['javac','--release','17','-d',str(d/'classes'),
+                        *map(str,production),*map(str,compile_doubles),*map(str,d.rglob('*.java'))],check=True,timeout=60)
         print('COMPILE_OK: production and explicit test adapters', flush=True)
         subprocess.run(['java','-cp',str(d/'classes'),'com.waenhancer.xposed.features.media.TestGalleryExport',*(['legacy'] if a.legacy_hook else [])],check=True,timeout=60)
     hook=(ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java').read_text()

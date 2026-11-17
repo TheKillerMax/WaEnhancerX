@@ -22,8 +22,11 @@ scope = [item.text.strip() for arr in xml.findall('string-array')
 assert len(scope) > 10 and 'com.whatsapp' in scope and 'com.whatsapp.w4b' in scope
 
 with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
-    sources = [SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java',
-               QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java']
+    sources = [SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java', SRC/'HookErrors.java',
+               QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java',
+               QA/'java/de/robv/android/xposed/XposedBridge.java',
+               QA/'java/androidx/annotation/NonNull.java',
+               QA/'java/androidx/annotation/VisibleForTesting.java']
     subprocess.run(['javac', '--release', '17', '-d', output, *map(str, sources)], check=True)
     for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', [])]:
         subprocess.run(['java', '-cp', output,

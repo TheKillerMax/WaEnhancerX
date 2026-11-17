@@ -169,8 +169,13 @@ def main():
             path = root/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text(source)
         (root/'TestStatusExport.java').write_text(TEST)
         (root/'LegacyStatusExporter.java').write_text(legacy_source(args.baseline_hook) if args.baseline_hook else 'package com.waenhancer.xposed.features.media;class LegacyStatusExporter {static void export(android.content.Context c,java.io.File f){throw new AssertionError("Unused adapter");}}')
-        production = [source_root/MEDIA/'StatusMediaExporter.java', source_root/MEDIA/'GalleryMediaExporter.java', source_root/MEDIA/'StatusDownloadIdentity.java']
-        compile_result = subprocess.run(['javac', '--release', '17', '-d', str(root/'classes'), *map(str, production), *map(str, root.rglob('*.java'))], capture_output=True, text=True, timeout=60)
+        production = [source_root/MEDIA/'StatusMediaExporter.java', source_root/MEDIA/'GalleryMediaExporter.java', source_root/MEDIA/'StatusDownloadIdentity.java',
+                      source_root/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java']
+        compile_doubles = [source_root/'qa/java/de/robv/android/xposed/XposedBridge.java',
+                           source_root/'qa/java/androidx/annotation/NonNull.java',
+                           source_root/'qa/java/androidx/annotation/VisibleForTesting.java']
+        compile_result = subprocess.run(['javac', '--release', '17', '-d', str(root/'classes'), *map(str, production),
+                                         *map(str, compile_doubles), *map(str, root.rglob('*.java'))], capture_output=True, text=True, timeout=60)
         if out: (out/'compile.log').write_text(compile_result.stdout+compile_result.stderr)
         if compile_result.returncode:
             print(compile_result.stdout+compile_result.stderr); raise SystemExit(compile_result.returncode)
@@ -179,14 +184,19 @@ def main():
         print(result.stdout+result.stderr)
         if out:
             (out/'execution.log').write_text(result.stdout+result.stderr)
-            (out/'result.json').write_text(json.dumps({'scope':'production Java plus Android storage doubles and real file IO','baseline_hook':str(args.baseline_hook) if args.baseline_hook else None,'baseline_hook_sha256':hashlib.sha256(args.baseline_hook.read_bytes()).hexdigest() if args.baseline_hook else None,'returncode':result.returncode,'production_sha256':{str(p.relative_to(source_root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in production},'fixture_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},indent=2)+'\n')
+            (out/'result.json').write_text(json.dumps({'scope':'production Java plus Android storage doubles and real file IO','baseline_hook':str(args.baseline_hook) if args.baseline_hook else None,'baseline_hook_sha256':hashlib.sha256(args.baseline_hook.read_bytes()).hexdigest() if args.baseline_hook else None,'returncode':result.returncode,'production_sha256':{str(p.relative_to(source_root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in production},'compile_doubles_sha256':{str(p.relative_to(source_root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in compile_doubles},'fixture_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},indent=2)+'\n')
         if result.returncode: raise SystemExit(result.returncode)
     hook = (source_root/MEDIA/'StatusDownloadHook.java').read_text()
-    start = hook.index('    private void saveMediaFile('); end = hook.index('    private void copyToClipboard(',start)
-    body = hook[start:end]
-    assert body.index('StatusMediaExporter.export(ctx, srcFile);') < body.index('waex_ui_status_saved_to_gallery_waex_9f345669')
-    assert 'FileOutputStream' not in body and 'openOutputStream' not in body
-    assert 'getMessage()' not in body
+    start = hook.index('    private void saveMediaFile(')
+    export_start = hook.index('    private boolean exportStatus(', start)
+    end = hook.index('    private boolean hasSavedStatus(', export_start)
+    save_body, export_body = hook[start:export_start], hook[export_start:end]
+    assert 'if (hasSavedStatus(identity))' in save_body
+    assert 'if (exportStatus(ctx, srcFile)) markStatusSaved(identity);' in save_body
+    assert export_body.index('StatusMediaExporter.export(ctx, srcFile);') < export_body.index(
+        'R.string.waex_ui_status_saved_to_gallery_waex,') < export_body.index('return true;')
+    assert 'FileOutputStream' not in save_body+export_body and 'openOutputStream' not in save_body+export_body
+    assert 'getMessage()' not in save_body+export_body
     assert 'MenuItem item = menu.findItem(MENU_ID_STATUS_DOWNLOAD);' in hook
     assert 'configureStatusMenuItem(item, sourceObject);' in hook
     assert 'item.setTitle(isTextStatus' in hook

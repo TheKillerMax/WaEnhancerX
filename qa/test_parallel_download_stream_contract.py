@@ -12,8 +12,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
     ROOT / "app/src/main/java/com/waenhancer/xposed/features/media/ParallelDownloadingInputStream.java",
+    ROOT / "app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java",
     ROOT / "qa/java/ParallelDownloadingStreamContractChecks.java",
     ROOT / "qa/java/de/robv/android/xposed/XposedBridge.java",
+    ROOT / "qa/java/androidx/annotation/NonNull.java",
+    ROOT / "qa/java/androidx/annotation/VisibleForTesting.java",
 ]
 
 
