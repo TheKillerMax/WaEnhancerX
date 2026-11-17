@@ -89,9 +89,15 @@ class CatalogSourceTest(unittest.TestCase):
         self.write(source=SOURCE.replace('"preference_catalog.json"','"../private.json"'));self.rejects()
     def test_unsupported_routing_rejected(self):
         self.write(source=SOURCE.replace('.distinctBy { it.key }','.distinctBy { it.groupId }'));self.rejects()
-    def test_current_tree_uses_asset_and_92_canonical_features(self):
+    def test_current_tree_matches_reviewed_canonical_feature_keys(self):
         rows=catalog_features(ROOT)
-        self.assertEqual(92,len(rows));self.assertEqual(92,len({r['key'] for r in rows}))
+        expected=(ROOT/'qa/fixtures/catalog_expected_keys.txt').read_text(encoding='utf-8').splitlines()
+        self.assertEqual(97,len(expected),"reviewed 2026-11-17 key fixture must remain explicit")
+        self.assertEqual(len(expected),len(set(expected)),"duplicate key in reviewed fixture")
+        actual={r['key'] for r in rows}
+        self.assertEqual(len(expected),len(rows),"catalog cardinality changed without updating reviewed fixture")
+        self.assertEqual(set(expected),actual,
+                         f"missing={sorted(set(expected)-actual)} unexpected={sorted(actual-set(expected))}")
         by_key={r['key']:r for r in rows}
         self.assertNotIn('call_privacy',by_key)
         self.assertNotIn('always_typing',by_key)
@@ -123,6 +129,9 @@ class CatalogSourceTest(unittest.TestCase):
             tree=ET.parse(ROOT/f'app/src/main/res/{folder}/meta_ai_control.xml')
             values.append({n.attrib['name']:n.text for n in tree.getroot()})
         self.assertEqual(values[0],values[1])
-        self.assertEqual({'feat_metaai_title','feat_metaai_desc'},set(values[0]))
+        self.assertEqual({'feat_metaai_title','feat_metaai_desc',
+                          'meta_ai_remove_home_fab','meta_ai_remove_entry_points',
+                          'meta_ai_block_chat'},set(values[0]))
+        self.assertTrue(all(text and text.strip() for text in values[0].values()))
 
 if __name__=='__main__': unittest.main()

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """JDK regression for actual DND decision policy; caller checks are structural."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -38,7 +39,30 @@ sheet = (src / "xposed/features/homescreen/WaexQuickActionsSheet.java").read_tex
 privacy = (src / "ui/screens/privacy/GlobalPrivacySettingsScreen.kt").read_text()
 for name, text in [("hook", hook), ("header", header), ("sheet", sheet), ("privacy", privacy)]:
     assert "DndPreferencePolicy.isEnabled(" in text, f"{name} bypasses tested DND policy"
-assert header.count("promptDndModeSheet(") == 4, "all DND menu paths must defer to confirmation"
+def verify_dnd_menu_routes(source):
+    # Two current entry points: the WAEX toolbar quick sheet and the DND menu item.
+    # The third occurrence is the actual confirmation-dialog declaration.
+    assert source.count("promptDndModeSheet(") == 3, "Unexpected DND route or missing confirmation handler"
+    assert '/* onDndToggle    */ () -> promptDndModeSheet(activity)' in source, "Toolbar bypasses DND confirmation"
+    assert re.search(
+        r'if \(id == MENU_ID_DND\)\s*\{\s*if \(activityObj instanceof Activity\)\s*\{\s*promptDndModeSheet\(\(Activity\) activityObj\);',
+        source,
+    ), "DND menu item bypasses the confirmation sheet"
+
+
+verify_dnd_menu_routes(header)
+for direct_mutation in (
+    header.replace('/* onDndToggle    */ () -> promptDndModeSheet(activity)',
+                   '/* onDndToggle    */ () -> forceRestartWhatsApp(activity)', 1),
+    header.replace('promptDndModeSheet((Activity) activityObj);',
+                   'forceRestartWhatsApp((Activity) activityObj);', 1),
+):
+    try:
+        verify_dnd_menu_routes(direct_mutation)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("DND route bypass was not detected by the negative control")
 assert 'isEnabled(PREF_KEY, false) || isEnabled("dndmode", false)' not in hook
 assert header.count('putBoolean("dnd_mode", !active)') == 1
 assert 'putBoolean("dnd_mode"' not in sheet, "quick sheet must not mutate DND before confirmation"
