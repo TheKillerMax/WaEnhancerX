@@ -66,12 +66,15 @@ def main():
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)
-    assert count == 93, 'Catalog size changed; review and update feature acceptance matrix'
+    # The asset-backed catalog contains 97 distinct, reviewed entries as of
+    # nightly 0aaffab; the previous 93-entry baseline predates those controls.
+    assert count == 97, (f'Catalog contains {count} entries instead of 97; '
+                         'review the feature acceptance matrix before changing this baseline')
     assert schema['parallel_downloading'] == 'BOOLEAN', 'Parallel downloader toggle is not a typed Boolean'
     assert schema['parallel_downloading_connections'] == 'INT', 'Parallel downloader connection count is not a typed integer'
     assert schema['app_interface_size'] == 'STRING', 'Interface size must remain a typed choice'
     assert schema['status_style'] == 'STRING', 'Status style must remain a typed choice'
-    assert missing in (13, 14), f'Unexpected intentionally non-schema keys: {missing}'
+    assert missing == 13, f'Unexpected intentionally non-schema keys: {missing} (expected 13)'
     # Negative fixtures: an unknown catalog entry, wrong alias, or promotion
     # of license/navigation keys to writable preferences must be rejected.
     for invalid_catalog, invalid_schema, invalid_aliases in [
