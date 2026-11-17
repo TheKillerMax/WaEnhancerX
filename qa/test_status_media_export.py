@@ -104,8 +104,16 @@ public class TestStatusExport {
   });
   for(String change:new String[]{"grow","shrink","replace"})test("source "+change,()->{
    Build.VERSION.SDK_INT=34;ContentResolver r=new ContentResolver();File src=source(root,"changing.jpg","jpg");
-   r.onOpen=()->{try{if(change.equals("replace")){Files.move(src.toPath(),new File(root,"old.jpg").toPath(),StandardCopyOption.REPLACE_EXISTING);Files.write(src.toPath(),new byte[]{1,2,3});}else if(change.equals("grow"))Files.write(src.toPath(),new byte[]{1},StandardOpenOption.APPEND);else Files.write(src.toPath(),new byte[]{1});}catch(IOException e){throw new UncheckedIOException(e);}};
-   if(change.equals("replace")){export(r,src);ck(Arrays.equals(data("jpg"),r.copied),"same opened descriptor");}
+   boolean[] windowsRenameDenied={false};
+   r.onOpen=()->{try{if(change.equals("replace")){Files.move(src.toPath(),new File(root,"old.jpg").toPath(),StandardCopyOption.REPLACE_EXISTING);Files.write(src.toPath(),new byte[]{1,2,3});}else if(change.equals("grow"))Files.write(src.toPath(),new byte[]{1},StandardOpenOption.APPEND);else Files.write(src.toPath(),new byte[]{1});}catch(IOException e){if(change.equals("replace")&&e instanceof FileSystemException&&System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows"))windowsRenameDenied[0]=true;throw new UncheckedIOException(e);}};
+   if(change.equals("replace")){
+    try{export(r,src);ck(!windowsRenameDenied[0]&&Arrays.equals(data("jpg"),r.copied),"same opened descriptor");}
+    catch(UncheckedIOException unavailable){
+     ck(windowsRenameDenied[0],"only a Windows open-handle rename denial is expected");
+     ck(r.successReports==0&&r.deleted.size()==1,"denied rename must not announce success or retain a partial row");
+     ck(Arrays.equals(data("jpg"),Files.readAllBytes(src.toPath())),"denied rename must leave original source intact");
+    }
+   }
    else rejects(r,src);
   });
   test("oversize before destination",()->{
