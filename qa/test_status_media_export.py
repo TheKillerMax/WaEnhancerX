@@ -175,12 +175,17 @@ def main():
                            source_root/'qa/java/androidx/annotation/NonNull.java',
                            source_root/'qa/java/androidx/annotation/VisibleForTesting.java']
         compile_result = subprocess.run(['javac', '--release', '17', '-d', str(root/'classes'), *map(str, production),
-                                         *map(str, compile_doubles), *map(str, root.rglob('*.java'))], capture_output=True, text=True, timeout=60)
+                                         *map(str, compile_doubles), *map(str, root.rglob('*.java'))],
+                                        capture_output=True, text=True, errors='replace', timeout=60)
         if out: (out/'compile.log').write_text(compile_result.stdout+compile_result.stderr)
         if compile_result.returncode:
             print(compile_result.stdout+compile_result.stderr); raise SystemExit(compile_result.returncode)
         print('COMPILE_OK production exporter and explicit storage doubles')
-        result = subprocess.run(['java', '-cp', str(root/'classes'), 'com.waenhancer.xposed.features.media.TestStatusExport', *(['legacy'] if args.baseline_hook else [])], capture_output=True, text=True, timeout=60)
+        # A Windows JDK can emit locale-encoded bytes even with Python's UTF-8
+        # mode. Decoding diagnostics must not turn a completed Java test into a
+        # reader-thread exception; the nonzero process status still fails QA.
+        result = subprocess.run(['java', '-cp', str(root/'classes'), 'com.waenhancer.xposed.features.media.TestStatusExport', *(['legacy'] if args.baseline_hook else [])],
+                                capture_output=True, text=True, errors='replace', timeout=60)
         print(result.stdout+result.stderr)
         if out:
             (out/'execution.log').write_text(result.stdout+result.stderr)

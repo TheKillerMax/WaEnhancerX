@@ -5,6 +5,7 @@ Compiles production helper classes with small Android/Xposed substitutes; requir
 Python 3, JDK 17+, and a POSIX shell (sh, yes, head, sleep). It does not execute
 su, restart WhatsApp, install an APK, or test a real Android/LSPosed device.
 """
+import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -21,6 +22,18 @@ scope = [item.text.strip() for arr in xml.findall('string-array')
          for item in arr.findall('item') if item.text and item.text.strip()]
 assert len(scope) > 10 and 'com.whatsapp' in scope and 'com.whatsapp.w4b' in scope
 
+# The process-runner fixture deliberately uses real POSIX utilities (sh, yes,
+# head, sleep). Windows CI hosts have no sh on PATH by default; Git for Windows
+# supplies those same utilities. Require it explicitly instead of silently
+# accepting a missing shell as a successful timeout/error scenario.
+process_env = os.environ.copy()
+if os.name == 'nt':
+    program_files = Path(os.environ.get('ProgramFiles', r'C:\Program Files'))
+    git_shell = program_files / 'Git' / 'bin' / 'sh.exe'
+    if not git_shell.is_file():
+        raise SystemExit('BLOCKED: Git for Windows POSIX shell is required for process-runner QA')
+    process_env['PATH'] = str(git_shell.parent) + os.pathsep + process_env.get('PATH', '')
+
 with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
     sources = [SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java', SRC/'HookErrors.java',
                QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java',
@@ -30,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
     subprocess.run(['javac', '--release', '17', '-d', output, *map(str, sources)], check=True)
     for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', [])]:
         subprocess.run(['java', '-cp', output,
-                        'com.waenhancer.xposed.utils.'+name, *argv], check=True)
+                        'com.waenhancer.xposed.utils.'+name, *argv], check=True, env=process_env)
 
 # This second compilation exercises production AppRestartHelper but substitutes only the
 # Android framework, Kotlin package detector, and the external su process starter.
