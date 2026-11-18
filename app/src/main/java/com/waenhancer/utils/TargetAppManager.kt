@@ -62,7 +62,9 @@ internal object RootProbe {
     internal fun processListCommand(): String {
         val names = (DeclaredWhatsAppTargets.packages() + MODULE_PACKAGE_NAME)
             .joinToString("|") { it.replace(".", "\\.") }
-        return "(ps -A -o PID,NAME 2>/dev/null || ps 2>/dev/null) | grep -E ' ($names)[[:space:]]*$'"
+        // Numeric UID disambiguates personal and work-profile processes with identical names.
+        // An older ps fallback stays visible for diagnostics, but cannot confirm injection.
+        return "(ps -A -o UID,PID,NAME 2>/dev/null || ps 2>/dev/null) | grep -E ' ($names)[[:space:]]*$'"
     }
 
     fun run(context: Context): RootProbeResult {

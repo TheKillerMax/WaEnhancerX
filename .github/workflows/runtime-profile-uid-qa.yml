@@ -1,0 +1,55 @@
+name: Runtime profile UID evidence
+
+on:
+  pull_request:
+    branches: [main, nightly]
+    paths:
+      - 'app/src/main/java/com/waenhancer/utils/XposedRuntimeInspector.kt'
+      - 'app/src/main/java/com/waenhancer/utils/TargetAppManager.kt'
+      - 'app/src/main/java/com/waenhancer/utils/WhatsAppPackageDetector.kt'
+      - 'app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt'
+      - 'qa/test_profile_pid_evidence.py'
+      - 'qa/fixtures/RuntimeProfilePidChecks.kt'
+      - '.github/workflows/runtime-profile-uid-qa.yml'
+  push:
+    branches: [main, nightly]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pid-uid-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check real Kotlin compiler
+        run: kotlinc -version
+      - name: Verify PID and Android UID separation with a negative mutant
+        run: python3 qa/test_profile_pid_evidence.py --out "$RUNNER_TEMP/waex-profile-uid"
+      - name: Save source identities and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-profile-uid-contract
+          path: |
+            ${{ runner.temp }}/waex-profile-uid/result.json
+            ${{ runner.temp }}/waex-profile-uid/*-compile.log
+            ${{ runner.temp }}/waex-profile-uid/*-run.log
+          retention-days: 14
+          if-no-files-found: warn

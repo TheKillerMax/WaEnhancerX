@@ -290,7 +290,9 @@ object WhatsAppPackageDetector {
                 recordedBoot = prefs.getInt("runtime_boot_$pkg", Int.MIN_VALUE),
                 currentBoot = currentBoot,
                 reportedPid = prefs.getInt("runtime_pid_$pkg", -1),
-                runningPids = runtimeSnapshot?.pidsFor(pkg),
+                // The package manager resolves the UID in this Context's Android user.
+                // Never admit a same-name process observed in another personal/work profile.
+                runningPids = runtimeSnapshot?.pidsForUid(pkg, pInfo.applicationInfo?.uid),
                 lastActiveTime = lastActiveTime
             )
             val isInjected = evidence == InjectionEvidence.CURRENT
