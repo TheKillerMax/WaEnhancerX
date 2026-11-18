@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
     Path('app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java'),
     Path('app/src/main/java/com/waenhancer/xposed/core/db/PreservedMessageStore.kt'),
+    Path('app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'),
 ]
 EXPECTED_TESTS = 33
 POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
@@ -82,6 +83,13 @@ def main():
     kotlin_runtime = kotlin_lib / 'kotlin-stdlib.jar'
     if not kotlin_runtime.is_file():
         raise RuntimeError('Kotlin standard library was not found beside the compiler')
+    # Windows kotlinc.bat can split a semicolon-separated -classpath into sources
+    # when invoked from Python. Launch the exact bundled Kotlin compiler via JDK
+    # to preserve the argument list; Linux/macOS keep the regular launcher.
+    compiler_command = [compiler]
+    if os.name == 'nt' and Path(compiler).suffix.lower() in {'.bat', '.cmd'}:
+        compiler_command = ['java', '-cp', str(kotlin_lib / '*'),
+                            'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler']
     stage, classes = out / 'sources', out / 'classes'
     classes.mkdir()
     identities, staged = {}, []
@@ -91,6 +99,35 @@ def main():
         shutil.copyfile(source, dest)
         staged.append(dest)
         identities[str(relative)] = hashlib.sha256(source.read_bytes()).hexdigest()
+    # Compile the real HookErrors.java, not a permissive fake. These narrow source
+    # adapters supply only AndroidX annotation metadata and XposedBridge.log; no
+    # hook registration, injections, or error-handling behavior is substituted.
+    adapters = {
+        'androidx/annotation/NonNull.java': '''package androidx.annotation;
+public @interface NonNull {}
+''',
+        'androidx/annotation/VisibleForTesting.java': '''package androidx.annotation;
+public @interface VisibleForTesting {}
+''',
+        'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+public final class XposedBridge {
+    public static final List<String> logs = new CopyOnWriteArrayList<>();
+    public static void log(String message) {
+        if (message == null) throw new AssertionError("Unexpected null diagnostic");
+        logs.add(message);
+    }
+}
+'''
+    }
+    adapter_files = []
+    for relative, code in adapters.items():
+        dest = stage / relative
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(code, encoding='utf-8')
+        adapter_files.append(dest)
+        identities['qa-only-adapter/' + relative] = hashlib.sha256(dest.read_bytes()).hexdigest()
     # Compile the exact single expression used by the production Compose mapper.
     # This executes its row-key semantics without pretending to render Compose.
     screen = Path('app/src/main/java/com/waenhancer/ui/screens/privacy/DeletedMessagesVaultScreen.kt')
@@ -119,8 +156,9 @@ object VaultRowKey {
     # Compile production only against its own API dependencies. Robolectric test
     # internals may use a newer Kotlin metadata version than the app compiler.
     production_cp = os.pathsep.join([str(classes), str(android), str(kotlin_runtime)])
-    run(['javac', '--release', '17', '-cp', cp, '-d', str(classes), str(staged[0])], out / 'javac-production.log')
-    run([compiler, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes), str(staged[1]), str(row_key)], out / 'kotlinc-production.log')
+    run(['javac', '--release', '17', '-cp', cp, '-d', str(classes), str(staged[0]), str(staged[2]),
+         *map(str, adapter_files)], out / 'javac-production.log')
+    run([*compiler_command, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes), str(staged[1]), str(row_key)], out / 'kotlinc-production.log')
     run(['javac', '--release', '17', '-cp', classpath, '-d', str(classes), str(test_dest)], out / 'javac-tests.log')
     opens = ['java.base/java.lang', 'java.base/java.util', 'java.base/java.io', 'java.base/java.net',
              'java.base/java.security', 'java.base/java.text', 'java.base/jdk.internal.access',
