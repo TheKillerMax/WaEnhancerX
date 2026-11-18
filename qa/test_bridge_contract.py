@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """JDK-only contract regression test for PreferenceBridgeClient.
 
-Runs without Android SDK / Gradle. Compiles the *actual current-upstream* bridge source against
-minimal fake platform types, then executes persistence, caching and observer tests.
+Runs without Android SDK / Gradle. Compiles the production bridge, preference schema
+and hook-error recorder against minimal fake platform types, then exercises the bridge
+contract. This prevents fixture-only copies of cross-package rules or logging behavior.
 This is not a device or LSPosed integration test.
 """
 from pathlib import Path
@@ -11,9 +12,12 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE = ROOT / 'app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java'
+SCHEMA = ROOT / 'app/src/main/java/com/waenhancer/config/PreferenceSchema.java'
+HOOK_ERRORS = ROOT / 'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'
 STUBS = {
     'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
     'androidx/annotation/Nullable.java': 'package androidx.annotation; public @interface Nullable {}',
+    'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
     'android/net/Uri.java': '''package android.net; public class Uri {
         public final String path; private Uri(String p) { path = p; }
         public static Uri parse(String p) { return new Uri(p); }
@@ -116,6 +120,7 @@ STUBS = {
         import android.os.Bundle;
         import android.database.ContentObserver;
         import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
+        import com.waenhancer.xposed.utils.HookErrors;
         import java.util.*;
         import java.util.concurrent.atomic.AtomicInteger;
         public final class BridgeContract {
@@ -193,10 +198,18 @@ STUBS = {
                 Ctx ctx = new Ctx();
                 ctx.resolver.db.put("enabled", false);
                 ctx.resolver.db.put("int_as_string", "42");
+                ctx.resolver.db.put("bad_int", "invalid");
+                ctx.resolver.db.put("bad_long", "invalid");
+                ctx.resolver.db.put("bad_float", "invalid");
                 ctx.resolver.db.put("choices", new HashSet<>(List.of("a", "b")));
                 PreferenceBridgeClient prefs = new PreferenceBridgeClient(ctx, null);
                 check(!prefs.getBoolean("enabled", true), "startup hydration");
                 check(prefs.getInt("int_as_string", 0)==42, "numeric compatibility");
+                check(prefs.getInt("bad_int", -7)==-7, "invalid integer fallback");
+                check(prefs.getLong("bad_long", -9)==-9, "invalid long fallback");
+                check(prefs.getFloat("bad_float", -1.5f)==-1.5f, "invalid float fallback");
+                check(HookErrors.count("PreferenceBridgeClient", NumberFormatException.class)==3,
+                    "invalid numeric values must pass through the production error recorder");
                 prefs.getStringSet("choices", null).clear();
                 check(prefs.getStringSet("choices", null).size()==2, "defensive string sets");
                 try {
@@ -232,12 +245,17 @@ STUBS = {
                 normal.resolver.db.put("imagequality", false);
                 normal.resolver.db.put("com.whatsapp:imagequality", true);
                 normal.resolver.db.put("com.whatsapp.w4b:imagequality", false);
+                normal.resolver.db.put("bypass_version_check", true);
+                normal.resolver.db.put("com.whatsapp:bypass_version_check", false);
+                normal.resolver.db.put("com.whatsapp.w4b:bypass_version_check", false);
                 normal.resolver.db.put("need_restart", true);
                 normal.resolver.db.put("com.whatsapp:need_restart", true);
                 normal.resolver.db.put("com.whatsapp:pending_restart_changes", Set.of("imagequality"));
                 normal.resolver.db.put("com.whatsapp.w4b:need_restart", false);
                 PreferenceBridgeClient normalBridge = new PreferenceBridgeClient(normal, null);
                 check(normalBridge.getBoolean("imagequality", false), "personal package override not applied");
+                check(normalBridge.getBoolean("bypass_version_check", false),
+                    "global-only version flag was overridden by personal package");
                 check(normalBridge.getBoolean("need_restart", false), "personal restart state not scoped");
                 check(normalBridge.getStringSet("pending_restart_changes", null).equals(Set.of("imagequality")),
                     "personal pending restart set not scoped");
@@ -245,6 +263,8 @@ STUBS = {
                 business.resolver.db.putAll(normal.resolver.db);
                 PreferenceBridgeClient businessBridge = new PreferenceBridgeClient(business, null);
                 check(!businessBridge.getBoolean("imagequality", true), "Business package value crossed personal boundary");
+                check(businessBridge.getBoolean("bypass_version_check", false),
+                    "global-only version flag was overridden by Business package");
                 check(!businessBridge.getBoolean("need_restart", true), "Business package inherited personal restart");
                 check(!businessBridge.contains("pending_restart_changes"),
                     "Business package inherited personal pending restart set");
@@ -276,5 +296,7 @@ with tempfile.TemporaryDirectory(prefix='waex_test_') as path:
         dest.write_text(content, encoding='utf-8')
     dest_classes = out / 'classes'
     dest_classes.mkdir()
-    subprocess.run(['javac', '-Xlint:unchecked', '-d', str(dest_classes), *map(str, out.rglob('*.java')), str(BRIDGE)], check=True)
+    subprocess.run(['javac', '--release', '17', '-Xlint:unchecked', '-d', str(dest_classes),
+                    *map(str, sorted(out.rglob('*.java'))), str(BRIDGE), str(SCHEMA),
+                    str(HOOK_ERRORS)], check=True)
     subprocess.run(['java', '-cp', str(dest_classes), 'test.BridgeContract'], check=True)

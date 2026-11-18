@@ -13,6 +13,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE = Path('app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java')
+SCHEMA = Path('app/src/main/java/com/waenhancer/config/PreferenceSchema.java')
+HOOK_ERRORS = Path('app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java')
 MUTANTS = {
     'ignore_clear_flag': ('new PendingEdit(clear, values, optimistic)', 'new PendingEdit(false, values, optimistic)'),
     'newest_read_guard': (' || syncId != latestSyncId', ''),
@@ -32,7 +34,8 @@ def main():
             raise RuntimeError(f'Mutation {name} has an ambiguous/missing target')
         with tempfile.TemporaryDirectory(prefix='waex_bridge_mutant_') as temp:
             work = Path(temp)
-            for relative in [BRIDGE, Path('qa/test_bridge_ordering.py'), Path('qa/test_bridge_contract.py'), Path('qa/java/BridgeOrderingChecks.java')]:
+            for relative in [BRIDGE, SCHEMA, HOOK_ERRORS, Path('qa/test_bridge_ordering.py'),
+                             Path('qa/test_bridge_contract.py'), Path('qa/java/BridgeOrderingChecks.java')]:
                 dest = work/relative
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT/relative, dest)
