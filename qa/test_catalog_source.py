@@ -7,6 +7,9 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from catalog_source import catalog_features
+from catalog_expectations import (META_AI_SUBCONTROLS, REVIEWED_META_AI_RESOURCES,
+                                  require_meta_ai_subcontrol_contract,
+                                  require_reviewed_catalog_rows)
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = '''private const val ASSET_NAME = "preference_catalog.json"
@@ -89,15 +92,16 @@ class CatalogSourceTest(unittest.TestCase):
         self.write(source=SOURCE.replace('"preference_catalog.json"','"../private.json"'));self.rejects()
     def test_unsupported_routing_rejected(self):
         self.write(source=SOURCE.replace('.distinctBy { it.key }','.distinctBy { it.groupId }'));self.rejects()
-    def test_current_tree_uses_asset_and_92_canonical_features(self):
+    def test_current_tree_uses_asset_and_reviewed_canonical_features(self):
         rows=catalog_features(ROOT)
-        self.assertEqual(92,len(rows));self.assertEqual(92,len({r['key'] for r in rows}))
+        require_reviewed_catalog_rows(rows)
         by_key={r['key']:r for r in rows}
         self.assertNotIn('call_privacy',by_key)
         self.assertNotIn('always_typing',by_key)
         self.assertNotIn('call_recording',by_key)
         self.assertNotIn('preserve_delete_for_me',by_key)
         self.assertNotIn('doubletap2like_emoji',by_key)
+        self.assertNotIn('hide_anti_revoke',by_key)
         self.assertEqual('system_compatibility',by_key['app_interface_size']['group_id'])
         self.assertEqual('home_layout_navigation',by_key['status_style']['group_id'])
         self.assertEqual('media_utility_downloader',by_key['download_view_once']['group_id'])
@@ -107,6 +111,23 @@ class CatalogSourceTest(unittest.TestCase):
                          (by_key['metaai']['group_id'], by_key['metaai']['tab_index'],
                           by_key['metaai']['sub_tab_id'], by_key['metaai']['is_pro']))
         self.assertTrue(all(r['label'].strip() for r in rows))
+
+    def test_reviewed_contract_rejects_missing_feature(self):
+        rows=[r for r in catalog_features(ROOT) if r['key']!='custom_emojis']
+        with self.assertRaisesRegex(AssertionError,'missing='):
+            require_reviewed_catalog_rows(rows)
+
+    def test_reviewed_contract_rejects_same_size_typed_substitution(self):
+        rows=copy.deepcopy(catalog_features(ROOT))
+        next(r for r in rows if r['key']=='custom_emojis')['key']='parallel_downloading_connections'
+        with self.assertRaisesRegex(AssertionError,'unexpected='):
+            require_reviewed_catalog_rows(rows)
+
+    def test_reviewed_contract_rejects_changed_new_feature_destination(self):
+        rows=copy.deepcopy(catalog_features(ROOT))
+        next(r for r in rows if r['key']=='locked_chats_message_notifications')['tab_index']=4
+        with self.assertRaisesRegex(AssertionError,'route changed'):
+            require_reviewed_catalog_rows(rows)
 
     def test_meta_ai_control_retains_existing_storage_and_hook_contract(self):
         source=ROOT/'app/src/main/java/com/waenhancer'
@@ -118,11 +139,76 @@ class CatalogSourceTest(unittest.TestCase):
         self.assertIn('return isEnabled("metaai", false);',hook)
         schema=(source/'config/PreferenceSchema.java').read_text()
         self.assertIn('"metaai", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC',schema)
+        require_meta_ai_subcontrol_contract(styles, hook)
+        for resource,key in META_AI_SUBCONTROLS.items():
+            self.assertIn(f'"{key}", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC',schema)
         values=[]
         for folder in ('values-es','values-b+es+419'):
             tree=ET.parse(ROOT/f'app/src/main/res/{folder}/meta_ai_control.xml')
             values.append({n.attrib['name']:n.text for n in tree.getroot()})
         self.assertEqual(values[0],values[1])
-        self.assertEqual({'feat_metaai_title','feat_metaai_desc'},set(values[0]))
+        self.assertEqual(REVIEWED_META_AI_RESOURCES,set(values[0]))
+        self.assertTrue(all(text and text.strip() for text in values[0].values()))
+
+    def meta_ai_sources(self):
+        source=ROOT/'app/src/main/java/com/waenhancer'
+        return ((source/'ui/screens/settings/StylesSettingsScreen.kt').read_text(),
+                (source/'xposed/features/homescreen/ChatListCustomizationsHook.java').read_text())
+
+    def exchange_once(self, source, left, right):
+        """Mutate actual reviewed source; never write the production files."""
+        self.assertEqual(1, source.count(left), left)
+        self.assertEqual(1, source.count(right), right)
+        marker='__WAEX_NEGATIVE_BINDING_PERMUTATION__'
+        self.assertNotIn(marker, source)
+        changed=source.replace(left,marker).replace(right,left).replace(marker,right)
+        self.assertNotEqual(source, changed)
+        self.assertEqual(1, changed.count(left))
+        self.assertEqual(1, changed.count(right))
+        return changed
+
+    def test_meta_ai_contract_rejects_source_binding_permutations(self):
+        styles,hook=self.meta_ai_sources()
+        # Both keys/resources remain present once: only their ownership changes.
+        permutations = (
+            ('setter', 'styles',
+             'mapOf("metaai_remove_home_fab" to enabled)',
+             'mapOf("metaai_block_chat" to enabled)'),
+            ('initial getter', 'styles',
+             'mutableStateOf(preferenceManager.getBoolean("metaai_remove_home_fab", true))',
+             'mutableStateOf(preferenceManager.getBoolean("metaai_block_chat", true))'),
+            ('checked state', 'styles',
+             'checked = removeMetaAiHomeFab,', 'checked = blockMetaAiChat,'),
+            ('post-write state', 'styles',
+             'removeMetaAiHomeFab = enabled', 'blockMetaAiChat = enabled'),
+            ('title resource', 'styles',
+             'R.string.meta_ai_remove_home_fab', 'R.string.meta_ai_block_chat'),
+            ('semantic hook reader', 'hook',
+             'return prefs.getBoolean("metaai_remove_home_fab", true);',
+             'return prefs.getBoolean("metaai_block_chat", true);'),
+        )
+        for label,which,left,right in permutations:
+            with self.subTest(binding=label):
+                changed=self.exchange_once(styles if which=='styles' else hook,left,right)
+                with self.assertRaisesRegex(AssertionError,'Meta AI'):
+                    require_meta_ai_subcontrol_contract(
+                        changed if which=='styles' else styles,
+                        changed if which=='hook' else hook)
+
+    def test_meta_ai_contract_rejects_changed_guard_and_default(self):
+        styles,hook=self.meta_ai_sources()
+        mutations = (
+            ('write result guard',
+             'if (preferenceManager.putBooleans(mapOf("metaai_remove_home_fab" to enabled))) {',
+             'if (true) { preferenceManager.putBooleans(mapOf("metaai_remove_home_fab" to enabled))'),
+            ('initial default',
+             'mutableStateOf(preferenceManager.getBoolean("metaai_remove_home_fab", true))',
+             'mutableStateOf(preferenceManager.getBoolean("metaai_remove_home_fab", false))'),
+        )
+        for label,before,after in mutations:
+            with self.subTest(binding=label):
+                self.assertEqual(1, styles.count(before))
+                with self.assertRaisesRegex(AssertionError,'Meta AI'):
+                    require_meta_ai_subcontrol_contract(styles.replace(before,after),hook)
 
 if __name__=='__main__': unittest.main()

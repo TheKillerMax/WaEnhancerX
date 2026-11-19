@@ -7,6 +7,7 @@ navigation-only entries. Do not infer that an alias is a working UI switch.
 from pathlib import Path
 import re
 from catalog_source import catalog_features
+from catalog_expectations import REVIEWED_ADDITION_ROUTES, require_reviewed_catalog_keys
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'app/src/main/java/com/waenhancer'
@@ -66,7 +67,9 @@ def main():
     schema = parse_schema((SRC / 'config/PreferenceSchema.java').read_text(encoding='utf-8'))
     aliases = parse_aliases((SRC / 'core/preferences/SettingsBackupCodec.kt').read_text(encoding='utf-8'))
     count, missing = validate(cat, schema, aliases)
-    assert count == 93, 'Catalog size changed; review and update feature acceptance matrix'
+    require_reviewed_catalog_keys(cat)
+    for key in REVIEWED_ADDITION_ROUTES:
+        assert schema[key] == 'BOOLEAN', f'Reviewed catalog toggle is not a typed Boolean: {key}'
     assert schema['parallel_downloading'] == 'BOOLEAN', 'Parallel downloader toggle is not a typed Boolean'
     assert schema['parallel_downloading_connections'] == 'INT', 'Parallel downloader connection count is not a typed integer'
     assert schema['app_interface_size'] == 'STRING', 'Interface size must remain a typed choice'
@@ -79,9 +82,12 @@ def main():
         (cat, schema, {**aliases, 'hide_ui_tabs': 'hideread'}),
         (cat, {**schema, 'license_verification': 'BOOLEAN'}, aliases),
         (cat, {k: v for k, v in schema.items() if k != 'parallel_downloading'}, aliases),
+        ([key for key in cat if key != 'custom_emojis'], schema, aliases),
+        ([key if key != 'custom_emojis' else 'parallel_downloading_connections' for key in cat], schema, aliases),
     ]:
         try:
             validate(invalid_catalog, invalid_schema, invalid_aliases)
+            require_reviewed_catalog_keys(invalid_catalog)
         except AssertionError:
             pass
         else:
