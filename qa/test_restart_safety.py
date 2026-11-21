@@ -22,7 +22,25 @@ scope = [item.text.strip() for arr in xml.findall('string-array')
 assert len(scope) > 10 and 'com.whatsapp' in scope and 'com.whatsapp.w4b' in scope
 
 with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
+    # Compile the real failure-reporting helper referenced by RootCommandRunner,
+    # not a permissive stand-in. Only AndroidX annotation/Xposed logging boundaries
+    # are provided in this JDK-only subprocess fixture.
+    boundaries = {
+        'androidx/annotation/NonNull.java':
+            'package androidx.annotation; public @interface NonNull {}',
+        'androidx/annotation/VisibleForTesting.java':
+            'package androidx.annotation; public @interface VisibleForTesting {}',
+        'de/robv/android/xposed/XposedBridge.java':
+            'package de.robv.android.xposed; public final class XposedBridge { public static void log(String message) { System.err.println(message); } }',
+    }
+    support = []
+    for relative, content in boundaries.items():
+        path = Path(output)/relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding='utf-8')
+        support.append(path)
     sources = [SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java',
+               SRC/'HookErrors.java', *support,
                QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java']
     subprocess.run(['javac', '--release', '17', '-d', output, *map(str, sources)], check=True)
     for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', [])]:
