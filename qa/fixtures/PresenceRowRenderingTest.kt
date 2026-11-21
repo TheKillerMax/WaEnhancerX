@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import com.waenhancer.xposed.features.automation.PresenceStateStore
+import com.waenhancer.xposed.utils.HostResourceIds
 import java.util.WeakHashMap
 import org.junit.Assert.*
 import org.junit.Before
@@ -43,6 +44,10 @@ class PresenceRowRenderingTest {
     private val b = "910002@s.whatsapp.net"
     private val lid = "123456@lid"
     @Before fun reset() {
+        // Separate each scenario from the process-wide resource-name cache.
+        val cacheField = HostResourceIds::class.java.getDeclaredField("CACHE")
+        cacheField.isAccessible = true
+        (cacheField.get(null) as MutableMap<*, *>).clear()
         for (name in listOf("STATES", "LISTENERS")) {
             val f = PresenceStateStore::class.java.getDeclaredField(name); f.isAccessible = true
             val value = f.get(null)
@@ -228,6 +233,18 @@ class PresenceRowRenderingTest {
                 assertEquals("END is the avatar's left edge in RTL", px(4), dot.left)
             }
         }
+    }
+    @Test fun resourceLookupDoesNotCacheManagerMissForHostPackage() {
+        assertEquals(0, HostResourceIds.id(app, "contact_photo"))
+        assertEquals(photoId, HostResourceIds.id(host, "contact_photo"))
+        assertEquals(0, HostResourceIds.id(app, "contact_selector"))
+        assertEquals(avatarId, HostResourceIds.id(host, "contact_selector"))
+        val r = row(withPhoto = true)
+        PresenceStateStore.update(a, true)
+        h.bind(r, a)
+        pump()
+        assertEquals(Gravity.TOP or Gravity.LEFT,
+            (dot(r).layoutParams as FrameLayout.LayoutParams).gravity)
     }
     @Test fun measuredPhotoUsesAbsoluteBottomRightRimInLtrAndRtl() {
         for (direction in listOf(View.LAYOUT_DIRECTION_LTR, View.LAYOUT_DIRECTION_RTL)) {

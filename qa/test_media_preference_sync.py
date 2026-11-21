@@ -30,6 +30,22 @@ with tempfile.TemporaryDirectory(prefix="waex_media_policy_") as output:
 # Compile the production preference manager against minimal Android/Hilt doubles,
 # then exercise commit atomicity, schema validation and failure/notification behavior.
 STUBS = {
+    "androidx/annotation/NonNull.java": "package androidx.annotation; public @interface NonNull {}",
+    "androidx/annotation/Nullable.java": "package androidx.annotation; public @interface Nullable {}",
+    "com/waenhancer/utils/DiagnosticsRecorder.java": """package com.waenhancer.utils;
+import android.content.Context;
+public final class DiagnosticsRecorder {
+    public static void recordSettingsTransfer(Context context, String kind, int count) {
+        if (context == null || kind == null || count < 0)
+            throw new AssertionError("Unexpected settings transfer diagnostics");
+    }
+    public static void recordPreferenceChange(Context context, String key, boolean targetScoped,
+                                              String operation) {
+        if (context == null || key == null || key.isEmpty() || operation == null)
+            throw new AssertionError("Unexpected preference change diagnostics");
+    }
+}
+""",
     "android/net/Uri.java": """package android.net;
 public final class Uri {
  private final String value;
@@ -133,7 +149,17 @@ with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
         source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(content)
         stub_paths.append(str(source))
+    # Diagnostic persistence is outside this fixture, but its public entrypoints
+    # must retain the actual production signatures consumed by the manager.
+    recorder = (SRC / "utils/DiagnosticsRecorder.java").read_text(encoding="utf-8")
+    for signature in (
+        r"public\s+static\s+void\s+recordSettingsTransfer\s*\(\s*Context\s+context\s*,\s*String\s+kind\s*,\s*int\s+count\s*\)",
+        r"public\s+static\s+void\s+recordPreferenceChange\s*\(\s*Context\s+context\s*,\s*String\s+key\s*,\s*boolean\s+targetScoped\s*,\s*String\s+operation\s*\)",
+    ):
+        if re.search(signature, recorder) is None:
+            raise AssertionError("Diagnostics recorder production contract changed: " + signature)
     sources = stub_paths + [
+        str(SRC / "config/ExclusivePreferences.java"),
         str(SRC / "config/PreferenceSchema.java"),
         str(SRC / "config/PreferenceStores.java"),
         str(manager_source),
