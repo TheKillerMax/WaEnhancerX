@@ -100,8 +100,14 @@ public static void hookAllMethods(Class<?> c,String name,XC_MethodHook hook){} p
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def dexkit(out):
-    with urllib.request.urlopen(DEXKIT_URL, timeout=30) as response:
-        data = response.read(4 * 1024 * 1024 + 1)
+    # Source CI may already have resolved this exact artifact with Maven.
+    # Reuse it only after the same pinned digest/size verification below.
+    cached = Path.home() / '.m2/repository/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
+    if cached.is_file():
+        data = cached.read_bytes()
+    else:
+        with urllib.request.urlopen(DEXKIT_URL, timeout=30) as response:
+            data = response.read(4 * 1024 * 1024 + 1)
     if len(data) > 4 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != DEXKIT_AAR_SHA256:
         raise RuntimeError('DexKit AAR size or identity mismatch')
     aar = out / 'dexkit-2.2.0.aar'; aar.write_bytes(data)

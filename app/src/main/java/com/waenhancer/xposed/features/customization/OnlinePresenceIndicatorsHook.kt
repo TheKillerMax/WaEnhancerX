@@ -322,6 +322,17 @@ class OnlinePresenceIndicatorsHook(
                 targetGroup.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                     targetGroup.findViewById<View>(ID_DOT)?.let { placeDotOnAvatarRim(targetGroup, it) }
                 }
+                // A host row can retain identical container bounds while its photo
+                // child is measured later. Observe the child as well as the parent.
+                val photoId = HostResourceIds.id(targetGroup.context, "contact_photo")
+                if (photoId != 0) {
+                    targetGroup.findViewById<View>(photoId)?.addOnLayoutChangeListener {
+                        _, _, _, _, _, _, _, _, _ ->
+                        targetGroup.findViewById<View>(ID_DOT)?.let {
+                            placeDotOnAvatarRim(targetGroup, it)
+                        }
+                    }
+                }
                 placeDotOnAvatarRim(targetGroup, dot)
             } else {
                 targetGroup.addView(dot, ViewGroup.LayoutParams(size, size))
