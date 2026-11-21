@@ -56,7 +56,9 @@ def main() -> None:
               "            PreferenceRestartTracker.onPreferenceChanged(PreferenceStores.publicStore(context), key(key));\n"
               "            notifyChange();\n"
               "        }\n"
-              "    }\n\n    public Map<String, ?> getAll()",
+              "    }\n\n"
+              "    /** Effective values for the selected target: its overrides win over universal values. */\n"
+              "    public Map<String, ?> getAll()",
               "if (isPublicStore(key)) {\n"
               "            notifyChange();\n"
               "        }\n"

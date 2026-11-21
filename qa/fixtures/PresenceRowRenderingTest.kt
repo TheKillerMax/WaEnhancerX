@@ -9,7 +9,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
-import android.os.Build
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
@@ -257,15 +256,8 @@ class PresenceRowRenderingTest {
             val (px, py) = centerInRow(r, photo)
             val (dx, dy) = centerInRow(r, dot(r))
             val params = dot(r).layoutParams as FrameLayout.LayoutParams
-            println("WAEX_QA_RIM_PROBE sdk=" + Build.VERSION.SDK_INT +
-                " dir=" + direction + " photo=" + photo.width + "x" + photo.height +
-                " avatar=" + avatar(r).width + "x" + avatar(r).height +
-                " dot=" + dot(r).width + "x" + dot(r).height +
-                " center=" + dx + "," + dy + " gravity=" + params.gravity +
-                " margins=" + params.leftMargin + "," + params.topMargin +
-                "," + params.rightMargin + "," + params.bottomMargin +
-                " end=" + params.marginEnd +
-                " hostId=" + HostResourceIds.id(host, "contact_photo"))
+            assertFalse("absolute avatar position must not retain relative margins",
+                        params.isMarginRelative())
             val expected = minOf(photo.width, photo.height) * 0.5f * 0.7071f
             assertEquals("right-hand avatar rim, independent of text direction",
                          px + expected, dx.toFloat(), 2f)

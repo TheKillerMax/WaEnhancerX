@@ -65,8 +65,8 @@ dependencies {
     sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java',
                        'config/PreferenceStores.java','config/PreferenceSchema.java','ui/components/NetworkErrorSheet.kt','ui/components/WaexModalBottomSheet.kt','ui/components/WaexProgressIndicator.kt',
                        'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt','ui/designsystem/WaexColors.kt','xposed/utils/HookErrors.java'],
-             'filter':['xposed/features/customization/FilterItemsHook.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java'],
-             'clock':['ui/components/RuntimeObservationClock.kt','utils/InjectionEvidence.kt']}
+             'filter':['xposed/features/customization/FilterItemsHook.kt','xposed/features/customization/LayoutPassThrottle.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java','xposed/utils/HostResourceIds.java','xposed/utils/HookErrors.java','ui/designsystem/WaexColors.kt'],
+             'clock':['ui/components/RuntimeObservationClock.kt','utils/InjectionEvidence.kt','ui/designsystem/WaexColors.kt']}
     expected={'update':12,'filter':3,'clock':1}
     for mode in modes:
         for rel in sources[mode]:

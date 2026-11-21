@@ -379,16 +379,16 @@ class OnlinePresenceIndicatorsHook(
         if (params.width == size && params.height == size &&
             params.leftMargin == left && params.topMargin == top &&
             params.gravity == (Gravity.TOP or Gravity.LEFT) &&
-            params.marginEnd == 0 && params.bottomMargin == 0) return
-        params.width = size
-        params.height = size
-        params.marginEnd = 0
-        params.rightMargin = 0
-        params.bottomMargin = 0
-        params.leftMargin = left
-        params.topMargin = top
-        params.gravity = Gravity.TOP or Gravity.LEFT
-        dot.layoutParams = params
+            !params.isMarginRelative()) return
+        // Android re-resolves start/end margins over absolute left/right margins.
+        // A prior BOTTOM|END fallback leaves relative margin flags set even after
+        // marginEnd=0. Use fresh absolute params when the photo becomes measured.
+        dot.layoutParams = FrameLayout.LayoutParams(
+            size, size, Gravity.TOP or Gravity.LEFT
+        ).apply {
+            leftMargin = left
+            topMargin = top
+        }
     }
 
     private fun ensureTextView(row: View): TextView? {
