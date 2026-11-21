@@ -534,7 +534,9 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues ready = new ContentValues();
                 ready.put(MediaStore.Images.Media.IS_PENDING, 0);
-                resolver.update(output, ready, null, null);
+                if (resolver.update(output, ready, null, null) != 1) {
+                    throw new IllegalStateException("MediaStore did not publish profile photo");
+                }
             } else {
                 MediaScannerConnection.scanFile(ctx, new String[]{output.getPath()}, new String[]{"image/jpeg"}, null);
             }
@@ -577,7 +579,9 @@ public final class ProfilePhotoDownloadHook extends BaseFeature {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues ready = new ContentValues();
                 ready.put(MediaStore.Images.Media.IS_PENDING, 0);
-                resolver.update(output, ready, null, null);
+                if (resolver.update(output, ready, null, null) != 1) {
+                    throw new IllegalStateException("MediaStore did not publish profile photo");
+                }
             } else {
                 MediaScannerConnection.scanFile(ctx, new String[]{output.getPath()}, new String[]{"image/jpeg"}, null);
             }

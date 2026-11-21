@@ -1,0 +1,3 @@
+[Fixes]
+- Confirm profile-photo exports only after MediaStore acknowledges publication,
+  and remove the newly created row when publication fails.
