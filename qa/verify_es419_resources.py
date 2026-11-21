@@ -58,7 +58,9 @@ def main():
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=180)
         (out/name).write_text(result.stdout, encoding='utf-8')
         commands.append({'command':[str(a) for a in argv], 'exit':result.returncode})
-        if result.returncode: raise RuntimeError(f'{name} failed: {result.returncode}')
+        if result.returncode:
+            print(result.stdout[-8000:], file=sys.stderr)
+            raise RuntimeError(f'{name} failed: {result.returncode}')
         return result.stdout
     run([aapt2, 'version'], 'aapt2-version.txt')
     run([aapt2, 'compile', '--dir', ROOT/'app/src/main/res', '-o', out/'all-resources.zip'], 'compile-all.log')

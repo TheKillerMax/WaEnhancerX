@@ -57,7 +57,7 @@ POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0<
 <dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>4.13.2</version></dependency>
 </dependencies></project>'''
 
-RENDER_METHODS = ('bindRow', 'ensureDotView', 'ensureTextView', 'render',
+RENDER_METHODS = ('bindRow', 'ensureDotView', 'placeDotOnAvatarRim', 'ensureTextView', 'render',
                   'recordIdentityAlias', 'queueBindRow', 'queuePresenceRefresh',
                   'clearRow', 'stateForRow')
 RENDER_FIELDS = ('mainHandler', 'visibleRows', 'pendingBindings', 'refreshPending')
@@ -71,7 +71,8 @@ COMPILE_JARS = (
 def harness(source, baseline=False):
     imports = '\n'.join(line for line in source.splitlines() if line.startswith('import ') and
                          (line.startswith('import android.') or line.startswith('import java.') or
-                          'PresenceStateStore' in line or 'import com.waenhancer.app.R' in line or 'import com.waenhancer.utils.UiText' in line))
+                          'PresenceStateStore' in line or 'HostResourceIds' in line or
+                          'import com.waenhancer.app.R' in line or 'import com.waenhancer.utils.UiText' in line))
     # Baseline and candidate must execute the same methods and expectations.
     # These bodies are copied verbatim; accessors below cannot create/size/render views.
     methods = '\n\n'.join(extract(source, 'private fun ' + name + '(') for name in RENDER_METHODS)
@@ -239,7 +240,13 @@ def execute(root, out, deps, baseline, host_resources, runtime_jars, sdk_dir=Non
     for dependency in compile_paths:
         if not dependency.is_file(): raise RuntimeError('Required compile API missing: '+str(dependency))
     compile_cp=os.pathsep.join(str(p) for p in compile_paths)
-    java_sources=[root/STORE]
+    java_sources=[root/STORE, root/'app/src/main/java/com/waenhancer/xposed/utils/HostResourceIds.java']
+    # The production resource resolver depends only on the AndroidX NonNull annotation.
+    # Supply its compile-time marker; the actual resolver and Android Resources run unmodified.
+    nonnull = out/'generated/androidx/annotation/NonNull.java'
+    nonnull.parent.mkdir(parents=True, exist_ok=True)
+    nonnull.write_text('package androidx.annotation; public @interface NonNull {}', encoding='utf-8')
+    java_sources.append(nonnull)
     if 'UiText.' in source:
         # Numeric R IDs are compile bindings only. Actual UiText selects its
         # explicit English fallback here; resource localization is another gate.
