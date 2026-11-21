@@ -339,7 +339,21 @@ class OnlinePresenceIndicatorsHook(
         val photoId = HostResourceIds.id(group.context, "contact_photo")
         val photo = if (photoId != 0) group.findViewById<View>(photoId) else null
         val params = dot.layoutParams as? FrameLayout.LayoutParams ?: return
-        if (photo == null || photo.width <= 0 || photo.height <= 0) return
+        // Keep the older, measured bottom-end placement when this host layout
+        // exposes an avatar container but no separate (or measured) photo view.
+        // The layout listener retries the precise rim placement after measurement.
+        if (photo == null || photo.width <= 0 || photo.height <= 0) {
+            val inset = dp(4)
+            if (params.gravity == (Gravity.BOTTOM or Gravity.END) &&
+                params.marginEnd == inset && params.bottomMargin == inset) return
+            params.gravity = Gravity.BOTTOM or Gravity.END
+            params.leftMargin = 0
+            params.topMargin = 0
+            params.marginEnd = inset
+            params.bottomMargin = inset
+            dot.layoutParams = params
+            return
+        }
         val bounds = Rect(0, 0, photo.width, photo.height)
         try {
             group.offsetDescendantRectToMyCoords(photo, bounds)
@@ -352,9 +366,14 @@ class OnlinePresenceIndicatorsHook(
         val left = (bounds.exactCenterX() + rim - size / 2f).toInt()
         val top = (bounds.exactCenterY() + rim - size / 2f).toInt()
         if (params.width == size && params.height == size &&
-            params.leftMargin == left && params.topMargin == top) return
+            params.leftMargin == left && params.topMargin == top &&
+            params.gravity == (Gravity.TOP or Gravity.LEFT) &&
+            params.marginEnd == 0 && params.bottomMargin == 0) return
         params.width = size
         params.height = size
+        params.marginEnd = 0
+        params.rightMargin = 0
+        params.bottomMargin = 0
         params.leftMargin = left
         params.topMargin = top
         params.gravity = Gravity.TOP or Gravity.LEFT

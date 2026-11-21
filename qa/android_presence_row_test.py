@@ -203,7 +203,7 @@ def prepare_runtime_dependencies(deps, out):
 def build_host_resources(out, aapt2):
     out = fresh_output(out)
     resources = out/'res/values'; resources.mkdir(parents=True, exist_ok=True)
-    (resources/'ids.xml').write_text('<resources><item name="contact_selector" type="id"/></resources>', encoding='utf-8')
+    (resources/'ids.xml').write_text('<resources><item name="contact_selector" type="id"/><item name="contact_photo" type="id"/></resources>', encoding='utf-8')
     manifest = out/'AndroidManifest.xml'
     manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.waex.qa.presence.host"/>', encoding='utf-8')
     run([str(aapt2), 'version'], out/'aapt2-version.log')
@@ -296,9 +296,10 @@ def execute(root, out, deps, baseline, host_resources, runtime_jars, sdk_dir=Non
             'test_fixture_sha256':hashlib.sha256(TESTS.encode()).hexdigest()}
 
 MUTATIONS = {
-    'wrong_dot_gravity': ('Gravity.BOTTOM or Gravity.END','Gravity.BOTTOM or Gravity.START'),
+    'wrong_dot_gravity': ('params.gravity = Gravity.BOTTOM or Gravity.END','params.gravity = Gravity.BOTTOM or Gravity.START'),
     'ignore_known_state': ('state == null || !state.known ->','state == null ->'),
-    'omit_dot_attachment': ('targetGroup.addView(dot, params)','Unit // negative control: omit normal child attachment'),
+    'omit_dot_attachment': ('targetGroup.addView(\n                    dot,\n                    FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.LEFT)\n                )'.replace('\n', '\n'),
+                            'Unit // negative control: omit normal child attachment'),
 }
 MUTATION_ORACLES = {
     'wrong_dot_gravity':'rtlFollowsHostDirection',

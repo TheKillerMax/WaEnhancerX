@@ -37,6 +37,7 @@ class PresenceRowRenderingTest {
     private lateinit var host: Context
     private lateinit var h: RendererHarness
     private var avatarId = 0
+    private var photoId = 0
     private val hostRows = linkedMapOf<FrameLayout, Pair<Int, Int>>()
     private val a = "910001@s.whatsapp.net"
     private val b = "910002@s.whatsapp.net"
@@ -66,17 +67,23 @@ class PresenceRowRenderingTest {
             override fun getPackageName() = "org.waex.qa.presence.host"
         }
         avatarId = resources.getIdentifier("contact_selector", "id", host.packageName)
-        assertTrue("real compiled host ID must resolve", avatarId != 0)
+        photoId = resources.getIdentifier("contact_photo", "id", host.packageName)
+        assertTrue("real compiled host IDs must resolve", avatarId != 0 && photoId != 0)
         h = RendererHarness(host)
         hostRows.clear()
         val companion = RendererHarness::class.java.getDeclaredField("identityAliases")
         companion.isAccessible = true; (companion.get(null) as MutableMap<*,*>).clear()
     }
     private fun px(dp: Int) = (dp * host.resources.displayMetrics.density + 0.5f).toInt()
-    private fun row(w: Int = 400, height: Int = 80, withAvatar: Boolean = true): FrameLayout =
+    private fun row(w: Int = 400, height: Int = 80, withAvatar: Boolean = true,
+                    withPhoto: Boolean = false): FrameLayout =
         FrameLayout(if (withAvatar) host else app).also { r ->
         if (withAvatar) {
             val avatar = FrameLayout(host).apply { id = avatarId }
+            if (withPhoto) {
+                avatar.addView(View(host).apply { id = photoId },
+                    FrameLayout.LayoutParams(px(48), px(48), Gravity.TOP or Gravity.LEFT))
+            }
             val params = FrameLayout.LayoutParams(px(48), px(48), Gravity.START or Gravity.TOP)
             params.marginStart = px(16); params.topMargin = px(8)
             r.addView(avatar, params)
@@ -220,6 +227,23 @@ class PresenceRowRenderingTest {
             } else {
                 assertEquals("END is the avatar's left edge in RTL", px(4), dot.left)
             }
+        }
+    }
+    @Test fun measuredPhotoUsesAbsoluteBottomRightRimInLtrAndRtl() {
+        for (direction in listOf(View.LAYOUT_DIRECTION_LTR, View.LAYOUT_DIRECTION_RTL)) {
+            val r = row(withPhoto = true)
+            r.layoutDirection = direction
+            PresenceStateStore.update(a, true); h.bind(r, a); pump()
+            val photo = r.findViewById<View>(photoId)
+            assertNotNull("the actual host photo child is present", photo)
+            val (px, py) = centerInRow(r, photo)
+            val (dx, dy) = centerInRow(r, dot(r))
+            val expected = minOf(photo.width, photo.height) * 0.5f * 0.7071f
+            assertEquals("right-hand avatar rim, independent of text direction",
+                         px + expected, dx.toFloat(), 2f)
+            assertEquals("bottom avatar rim", py + expected, dy.toFloat(), 2f)
+            assertEquals(Gravity.TOP or Gravity.LEFT,
+                         (dot(r).layoutParams as FrameLayout.LayoutParams).gravity)
         }
     }
     @Test fun initiallyZeroSizedRowRecoversAfterLayout() {
