@@ -101,6 +101,11 @@ EXTRA_UPDATE_TOKENS
 class FixtureTypography(val t:androidx.compose.material3.Typography){val headlineMd get()=t.headlineMedium;val bodyMd get()=t.bodyMedium}
 '''
     write('src/main/java/com/waenhancer/ui/designsystem/WaexTheme.kt',theme.replace('EXTRA_UPDATE_TOKENS',update_theme))
+    if 'update' in modes and 'filter' not in modes:
+        # The update fixture compiles real RootCommandRunner/HookErrors; use an
+        # explicit platform logger, not a substitute for production HookErrors.
+        write('src/main/java/de/robv/android/xposed/XposedBridge.java',
+              'package de.robv.android.xposed; public final class XposedBridge { public static void log(String message) { System.err.println(message); } }')
     if 'filter' in modes:
         write('src/main/res/values/ids.xml','<resources><item name="fixture_target" type="id"/><item name="fixture_other" type="id"/></resources>')
         write('src/main/java/com/waenhancer/xposed/core/BaseFeature.kt','''package com.waenhancer.xposed.core
