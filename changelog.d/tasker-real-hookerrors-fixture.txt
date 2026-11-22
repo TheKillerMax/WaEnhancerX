@@ -1,0 +1,3 @@
+[Improvements]
+- Compile the real Tasker error-reporting dependency in standalone lifecycle
+  regression tests without replacing the production implementation.
