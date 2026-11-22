@@ -21,7 +21,7 @@ documentation explicitly says it disables the mechanism that also cleans up
 processes depending on a dead provider. Consequently, hook-side calls to the
 WAEX manager must not keep **stable** provider dependencies on WhatsApp.
 
-All 14 source call sites now use `HookProviderIpc.call`. Each call:
+All 16 current source call sites now use `HookProviderIpc.call`. Each call:
 
 1. Acquires a fresh **unstable** provider client for the same WAEX authority.
 2. Sends the original method, argument and Bundle without altering identity,
@@ -54,7 +54,7 @@ Android API stubs. If the `javac` binary is missing but a full JDK `java`
 module exists, it uses `java com.sun.tools.javac.Main`. It verifies single
 unstable acquisition, no stable/legacy calls, exact arguments/reply, closure
 on all paths, Binder death handling without replay, security exceptions, URI
-and null contracts, separate calling contexts, all 14 migrated sites. Five
+and null contracts, separate calling contexts, all 16 current migrated sites. Five
 negative mutations must be rejected by the unchanged oracle.
 
 The stubs only exercise client code; they do not simulate Android's real
@@ -65,3 +65,16 @@ observed frozen, with `dumpsys activity providers` stable/unstable counts and
 ActivityManager process exit causes. Do not send messages/calls/receipts.
 Confirm that retries do not duplicate provider writes and that runtime health
 still reaches the manager when unfrozen. Use isolated data and recovery.
+
+## Current nightly source-only coverage ? 2026-11-22
+
+The earlier helper fixture covered 14 source callers, but current nightly uses
+one more unstable call from TargetExitReporter.java for optional exit history
+and one from CssThemeHook.kt for theme assets. Both now appear in the exact
+16-call inventory. The QA script enumerates all Java/Kotlin source callers,
+rejecting new unreviewed call sites instead of ignoring them.
+
+Five compiled helper mutations remain rejected, along with three separate
+inventory negatives (unknown path, missing theme call and duplicated exit
+history). Neither a source-only inventory nor a JVM API fixture proves hook
+installation, actual provider death survival or WhatsApp compatibility.

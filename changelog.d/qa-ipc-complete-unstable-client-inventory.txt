@@ -1,0 +1,3 @@
+[Improvements]
+- Cover current provider IPC call sites including theme assets and exit history
+  in source/JVM checks with strict negative controls.
