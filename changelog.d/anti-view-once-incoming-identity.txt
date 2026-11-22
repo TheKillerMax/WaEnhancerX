@@ -1,0 +1,3 @@
+[Fixes]
+- Apply view-once state changes only to verified incoming messages, preserving
+  outgoing media and unknown ownership.
