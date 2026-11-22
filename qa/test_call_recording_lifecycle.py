@@ -11,6 +11,7 @@ import argparse, hashlib, json, os, subprocess, tempfile
 ROOT = Path(__file__).resolve().parents[1]
 STUBS = {
     'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
+    'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
     'android/net/Uri.java': 'package android.net; public class Uri {public static Uri parse(String value){return new Uri();}}',
     'android/os/Build.java': '''package android.os; public final class Build {
       public static class VERSION {public static int SDK_INT=34;}
@@ -34,19 +35,33 @@ STUBS = {
       void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener);
     }''',
     'android/content/Context.java': '''package android.content; import android.os.*; import android.net.Uri; import java.util.*;
-    public class Context {public final ContentResolver resolver=new ContentResolver();
+    public class Context {public String getPackageName(){return "com.whatsapp";} public final ContentResolver resolver=new ContentResolver();
       public ContentResolver getContentResolver(){return resolver;} public Context getApplicationContext(){return this;}
-      public String getPackageName(){return "com.whatsapp";}
-      public static class ContentResolver {public final List<ParcelFileDescriptor> files=new ArrayList<>(); public int deletes,creates; public boolean fail;
+      public static class ContentResolver {public final List<ParcelFileDescriptor> files=new ArrayList<>(); public int deletes,creates,finishes,unstableAcquires,unstableCloses; public final List<Bundle> finished=new ArrayList<>(); public boolean fail;
+        public ContentProviderClient acquireUnstableContentProviderClient(Uri uri){
+          unstableAcquires++; return new ContentProviderClient(this);
+        }
         public Bundle call(Uri uri,String method,String argument,Bundle request){
           if(method.equals("create_call_recording")){creates++;if(fail)return null;
             Bundle result=new Bundle(); ParcelFileDescriptor fd=new ParcelFileDescriptor();files.add(fd);
             result.values.put("descriptor",fd);result.putString("path","private/"+request.getString("name"));return result;}
+          if(method.equals("finish_call_recording")){finishes++;finished.add(request);return new Bundle();}
           if(method.equals("delete_call_recording")){deletes++;return new Bundle();}
           throw new AssertionError("Unexpected IPC operation: "+method);
         }
       }
     }''',
+    'android/os/RemoteException.java': 'package android.os; public class RemoteException extends Exception {}',
+    'android/content/ContentProviderClient.java': """package android.content;
+      import android.net.Uri; import android.os.Bundle; import android.os.RemoteException;
+      public final class ContentProviderClient implements AutoCloseable {
+        private final Context.ContentResolver resolver;
+        public ContentProviderClient(Context.ContentResolver resolver){this.resolver=resolver;}
+        public Bundle call(String method,String arg,Bundle extras) throws RemoteException {
+          return resolver.call(Uri.parse("content://com.waenhancer.hookprovider"),method,arg,extras);
+        }
+        @Override public void close(){resolver.unstableCloses++;}
+      }""",
     'android/media/MediaRecorder.java': '''package android.media; import android.content.Context; import java.io.*; import java.util.*; import java.util.concurrent.*;
     public class MediaRecorder {
       public static final List<MediaRecorder> instances=new CopyOnWriteArrayList<>();
@@ -66,6 +81,7 @@ STUBS = {
       public static final class OutputFormat {public static final int MPEG_4=2,OGG=11;}
       public static final class AudioEncoder {public static final int AAC=3,OPUS=7;}
     }''',
+    'com/waenhancer/utils/ContactNameResolver.java': '''package com.waenhancer.utils; public final class ContactNameResolver { public static final ContactNameResolver INSTANCE=new ContactNameResolver(); public static int calls; public String resolveName(android.content.Context c,String jid,String fallback,String unused){calls++;throw new AssertionError("Contact resolution is outside this lifecycle fixture");} }''',
     'com/waenhancer/xposed/core/BaseFeature.java': '''package com.waenhancer.xposed.core; import android.content.*;
     public abstract class BaseFeature {protected final Context context;protected final ClassLoader classLoader;protected final SharedPreferences prefs;
       protected BaseFeature(Context c,ClassLoader l,SharedPreferences p){context=c;classLoader=l;prefs=p;}
@@ -73,12 +89,6 @@ STUBS = {
       public abstract void hook() throws Throwable;public abstract String getName();}
     ''',
     'com/waenhancer/xposed/bridge/HookProvider.java': 'package com.waenhancer.xposed.bridge; public class HookProvider {public static final String AUTHORITY="com.waenhancer.hook";}',
-    'com/waenhancer/utils/ContactNameResolver.java': '''package com.waenhancer.utils; import android.content.Context;
-    public final class ContactNameResolver {public static final ContactNameResolver INSTANCE=new ContactNameResolver();
-      public String resolveName(Context context,String jid,Object caller,Object group){
-        if(jid==null || jid.isEmpty())throw new AssertionError("Invalid fixture contact identity");
-        return "Fixture contact";
-      }}''',
     'com/waenhancer/xposed/core/devkit/DexSearchEngine.java': '''package com.waenhancer.xposed.core.devkit; import android.content.Context; import org.luckypray.dexkit.DexKitBridge;
     public final class DexSearchEngine {public interface Resolver {Class<?> find(DexKitBridge b,ClassLoader l) throws ReflectiveOperationException;}
       public static DexSearchEngine getInstance(){return new DexSearchEngine();}
@@ -146,6 +156,7 @@ STUBS = {
       public void soundPortCreated(int engine){original();}
       public void callStateChanged(CallState oldState,CallInfo info){original();}
       public void callEnding(CallLogInfo info,int interval,String timeSeries,String log){original();if(clearAtEnd)current=null;}
+      public void callEnding(String decoy) {original();}
       public void fieldstatsReady(WamCall info,UserJid user,boolean lastReport,boolean realtime){original();}
     }''',
     'com/whatsapp/voipcalling/VoipActivityV2.java': 'package com.whatsapp.voipcalling; public class VoipActivityV2 {public void onDestroy(){}}',
@@ -160,7 +171,7 @@ def main():
     p.add_argument('--scenario',default='all')
     p.add_argument('--dexkit-jar',type=Path)
     p.add_argument('--kotlin-stdlib',type=Path)
-    p.add_argument('--host-variant',choices=['valid','mutable-info','sound-return','sound-static','info-return','missing-end'],default='valid')
+    p.add_argument('--host-variant',choices=['valid','typed-ending','mutable-info','sound-return','sound-static','info-return','missing-end'],default='valid')
     args=p.parse_args()
     if args.dexkit_jar and not args.kotlin_stdlib:
         p.error('--dexkit-jar requires --kotlin-stdlib for the real Kotlin API signatures')
@@ -173,6 +184,8 @@ def main():
             content=content.replace('public final String callId','public String callId')
         if path.endswith('/VoiceServiceEventCallback.java'):
             replacements={
+                'typed-ending':('public void callEnding(CallLogInfo info,int interval,String timeSeries,String log)',
+                                'public void callEnding(CallLogInfo info,long interval,boolean finalEvent)'),
                 'sound-return':('public void soundPortCreated(int engine){original();}', 'public boolean soundPortCreated(int engine){original();return true;}'),
                 'sound-static':('public void soundPortCreated(int engine){original();}', 'public static void soundPortCreated(int engine){}'),
                 'info-return':('private CallInfo getCallInfo()', 'private Object getCallInfo()'),
@@ -188,6 +201,10 @@ def main():
     if contract.exists():production.append(contract)
     recording_files=args.root/'app/src/main/java/com/waenhancer/calls/RecordingOutputFiles.java'
     if recording_files.exists():production.append(recording_files)
+    # Compile the real unstable provider client used by the current recording hook.
+    # Android Binder and ContentResolver operations remain explicit test boundaries.
+    production.append(args.root/'app/src/main/java/com/waenhancer/xposed/bridge/client/HookProviderIpc.java')
+    production.append(args.root/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java')
     sources += [str(s) for s in production]
     sources.append(str(args.root/'qa/fixtures/CallRecordingLifecycleChecks.java'))
     classpath=str(directory/'classes')
@@ -209,7 +226,7 @@ def main():
         print('PASS: complete recorder hook compiles against the real DexKit API; native matching is not executed')
     else:
         with (directory/'behavior.log').open('w') as f:
-            result=subprocess.run(['java','-Xmx64m','-cp',classpath,'CallRecordingLifecycleChecks',args.scenario],stdout=f,stderr=subprocess.STDOUT,timeout=60)
+            result=subprocess.run(['java','-Xmx64m','-Dwaex.fixture.ending='+args.host_variant,'-cp',classpath,'CallRecordingLifecycleChecks',args.scenario],stdout=f,stderr=subprocess.STDOUT,timeout=60)
         print((directory/'behavior.log').read_text());result.check_returncode()
 
 if __name__=='__main__':main()
