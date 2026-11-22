@@ -20,14 +20,14 @@ STUBS = {}
 def stub(path, text):
     STUBS[path] = text
 
-for n in ("NonNull", "Nullable"):
+for n in ("NonNull", "Nullable", "VisibleForTesting"):
     stub("androidx/annotation/"+n+".java", "package androidx.annotation; public @interface "+n+" {}")
 stub("android/content/SharedPreferences.java", """package android.content;
 public interface SharedPreferences {boolean getBoolean(String k,boolean d);String getString(String k,String d);}""")
 stub("android/content/Context.java", """package android.content;
 public class Context {public android.content.res.Resources getResources(){return new android.content.res.Resources();}public String getPackageName(){return "com.whatsapp";}}""")
 stub("android/content/res/Resources.java", """package android.content.res;
-public class Resources {public int getIdentifier(String name,String type,String pkg){return 0;}}""")
+public class Resources {public int getIdentifier(String name,String type,String pkg){return 0;}public String getResourceEntryName(int id){throw new NotFoundException("unknown resource "+id);}public static class NotFoundException extends RuntimeException{public NotFoundException(String s){super(s);}}}""")
 stub("android/icu/text/BreakIterator.java", """package android.icu.text;
 public final class BreakIterator {private final java.text.BreakIterator delegate;public static final int DONE=java.text.BreakIterator.DONE;
  private BreakIterator(java.text.BreakIterator value){delegate=value;}public static BreakIterator getCharacterInstance(java.util.Locale locale){return new BreakIterator(java.text.BreakIterator.getCharacterInstance(locale));}
@@ -41,7 +41,11 @@ import android.content.Context;
 public class View {
  public static final int VISIBLE=0; public int id=1; public Context context=new Context();
  public ListenerInfo mListenerInfo=new ListenerInfo();
+ private final java.util.Map<Integer,Object> tags=new java.util.HashMap<>();
  public int getId(){return id;}public Context getContext(){return context;}public int getVisibility(){return VISIBLE;}
+ public android.content.res.Resources getResources(){return context.getResources();}
+ public Object getTag(int key){return tags.get(key);}
+ public void setTag(int key,Object value){if(value==null)tags.remove(key);else tags.put(key,value);}
  public <T extends View>T findViewById(int id){return null;}
  public void setOnTouchListener(OnTouchListener l){mListenerInfo.mOnTouchListener=l;}
  public boolean touch(MotionEvent e){return mListenerInfo.mOnTouchListener!=null&&mListenerInfo.mOnTouchListener.onTouch(this,e);}
@@ -51,7 +55,7 @@ public class View {
 stub("android/view/ViewGroup.java", """package android.view;
 public class ViewGroup extends View {public int getChildCount(){return 0;}public View getChildAt(int i){throw new IndexOutOfBoundsException();}}""")
 stub("android/view/MotionEvent.java", """package android.view;
-public class MotionEvent {public static final int ACTION_DOWN=0,ACTION_UP=1,ACTION_MOVE=2,ACTION_CANCEL=3;
+public class MotionEvent {public static final int ACTION_DOWN=0,ACTION_UP=1,ACTION_MOVE=2,ACTION_CANCEL=3,ACTION_POINTER_DOWN=5;
 private final int action;public MotionEvent(int a){action=a;}public int getActionMasked(){return action;}
 public float getX(){return 1;}public float getY(){return 1;}}""")
 stub("android/view/ViewConfiguration.java", """package android.view;
@@ -120,6 +124,33 @@ public Class<?> findClassWithCache(Context c,ClassLoader l,String key,Finder<Cla
 public static class Results<T> extends java.util.ArrayList<T>{public T firstOrNull(){return isEmpty()?null:get(0);}}
 public static class Bridge {public Results<MethodData> findMethod(Object o){return new Results<>();}}}""")
 
+
+# The current hook and shared helpers are compiled from production. Only the
+# unavailable native reaction resolver and external message DB are isolated.
+stub("com/waenhancer/xposed/features/conversation/ReactionSenderResolver.java", """package com.waenhancer.xposed.features.conversation;
+import android.content.Context;import java.lang.reflect.Method;
+final class ReactionSenderResolver {
+ static Class<?> resolveMessageClass(Context c,ClassLoader loader){return null;}
+ static Method resolveSender(Context c,ClassLoader loader,Class<?> message){return null;}
+ static Class<?> messageParameter(Method m){throw new AssertionError("Unexpected resolver inference");}
+}""")
+stub("android/database/Cursor.java", """package android.database;
+public interface Cursor extends java.lang.AutoCloseable {
+ boolean moveToFirst();String getString(int column);void close();
+}""")
+stub("android/database/sqlite/SQLiteDatabase.java", """package android.database.sqlite;
+public class SQLiteDatabase {
+ public android.database.Cursor rawQuery(String sql,String[] args){throw new AssertionError("Unexpected database query");}
+}""")
+stub("com/waenhancer/xposed/core/db/MessageStore.java", """package com.waenhancer.xposed.core.db;
+import android.content.Context;import android.database.sqlite.SQLiteDatabase;
+public class MessageStore {
+ public static int accessed;
+ public static MessageStore getInstance(Context c){accessed++;throw new AssertionError("Unexpected MessageStore access");}
+ public long getIdFromKey(String k){throw new AssertionError("Unexpected key lookup");}
+ public SQLiteDatabase getDatabase(){throw new AssertionError("Unexpected database open");}
+}""")
+
 TEST = r'''package fixture;
 import android.content.*;import android.view.*;import android.widget.*;import android.os.SystemClock;
 import com.waenhancer.xposed.features.conversation.DoubleTapReactionHook;
@@ -179,6 +210,7 @@ public class DoubleTapChecks {
   test("registration failure permits a later adapter retry",()->{Env e=new Env();Adapter x=new Adapter(new Message("first"));Message b=new Message("second");Adapter y=new Adapter(b);ViewGroup r=new ViewGroup();XposedBridge.failGetViewOnce=true;e.install(x);e.install(y);e.bind(y,r);doubleTap(r);check(e.action.sent.size()==1&&e.action.sent.get(0)==b,"failed registration retained reservation");});
   test("unsupported recycled item clears reaction target",()->{Env e=new Env();Adapter x=new Adapter(new Message("first"));ViewGroup r=new ViewGroup();e.install(x);e.bind(x,r);x.item=new Object();e.bind(x,r);doubleTap(r);check(e.action.sent.isEmpty(),"unsupported item retained predecessor");});
   test("a tap before row recycling cannot complete a later reaction",()->{Env e=new Env();Adapter x=new Adapter(new Message("first"));ViewGroup r=new ViewGroup();e.install(x);e.bind(x,r);SystemClock.now+=30;r.touch(new MotionEvent(MotionEvent.ACTION_DOWN));SystemClock.now+=30;r.touch(new MotionEvent(MotionEvent.ACTION_UP));x.item=new Message("second");e.bind(x,r);SystemClock.now+=30;r.touch(new MotionEvent(MotionEvent.ACTION_DOWN));SystemClock.now+=30;r.touch(new MotionEvent(MotionEvent.ACTION_UP));check(e.action.sent.isEmpty(),"gesture crossed recycled messages");});
+  check(com.waenhancer.xposed.core.db.MessageStore.accessed==0,"unexpected database access");
   System.out.println("RESULT|"+tests+"|"+failed);check(tests==11,"missing scenarios");check(failed==0,"reaction binding regressions");
  }
 }'''
@@ -189,7 +221,9 @@ def run(source, out, allow_failure):
     classes=out/"classes";classes.mkdir()
     for path,text in {**STUBS,"fixture/DoubleTapChecks.java":TEST}.items():
         p=src/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
-    result=subprocess.run(["javac","--release","17","-d",str(classes),str(source),str(ROOT/EMOJI_POLICY),*map(str,src.rglob("*.java"))],capture_output=True,text=True,timeout=60)
+    production=ROOT/"app/src/main/java/com/waenhancer"
+    actual=["xposed/utils/HookErrors.java","xposed/utils/HostClassNames.java","xposed/utils/HostResourceIds.java","xposed/utils/HostFields.java","xposed/features/conversation/OwnReactionLookup.java"]
+    result=subprocess.run(["javac","--release","17","-d",str(classes),str(source),str(ROOT/EMOJI_POLICY),*(str(production/n) for n in actual),*map(str,src.rglob("*.java"))],capture_output=True,text=True,timeout=60)
     (out/"compile.log").write_text(result.stdout+result.stderr)
     if result.returncode:raise AssertionError("Complete production compile failed: "+str(out/"compile.log"))
     result=subprocess.run(["java","-cp",str(classes),"fixture.DoubleTapChecks"],capture_output=True,text=True,timeout=15)

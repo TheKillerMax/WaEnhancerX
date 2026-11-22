@@ -1,0 +1,3 @@
+[Improvements]
+- Keep double-tap adapter regression fixtures aligned with current Android
+  view-tag and production helper contracts, with two behavioral negative checks.
