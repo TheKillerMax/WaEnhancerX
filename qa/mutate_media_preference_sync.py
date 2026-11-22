@@ -52,15 +52,21 @@ def main() -> None:
          "failed legacy commits must not notify the hook provider"),
         ("removed_setting_never_reports_restart",
          replace_exactly_once(source,
-              "if (isPublicStore(key)) {\n"
+              "public void remove(String key) {\n"
+              "        if (!getStore(key).edit().remove(key(key)).commit()) return;\n"
+              "        recordChanged(key, \"REMOVE\");\n"
+              "        if (isPublicStore(key)) {\n"
               "            PreferenceRestartTracker.onPreferenceChanged(PreferenceStores.publicStore(context), key(key));\n"
               "            notifyChange();\n"
               "        }\n"
-              "    }\n\n    public Map<String, ?> getAll()",
-              "if (isPublicStore(key)) {\n"
+              "    }",
+              "public void remove(String key) {\n"
+              "        if (!getStore(key).edit().remove(key(key)).commit()) return;\n"
+              "        recordChanged(key, \"REMOVE\");\n"
+              "        if (isPublicStore(key)) {\n"
               "            notifyChange();\n"
               "        }\n"
-              "    }\n\n    public Map<String, ?> getAll()"),
+              "    }"),
          "successful legacy writes and removal did not report exact restart keys"),
     ]
     with tempfile.TemporaryDirectory(prefix="waex-media-negative-") as folder:
