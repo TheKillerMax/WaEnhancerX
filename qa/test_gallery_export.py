@@ -4,7 +4,7 @@ Not a MediaProvider, Android permission, decoder, host selector or LSPosed test.
 --legacy-hook runs the same storage invariants against an extracted old save body.
 """
 from pathlib import Path
-import argparse, subprocess, tempfile
+import argparse, hashlib, subprocess, tempfile
 ROOT = Path(__file__).resolve().parents[1]
 STUBS = {
 'android/content/ContentValues.java': '''package android.content;
@@ -40,6 +40,25 @@ public class ContentResolver {
  public int delete(Uri row,String selection,String[] args){deleted=true;if(failDelete)throw new IllegalStateException("delete fixture");return 1;}
 }'''
 }
+
+# Only annotation declarations and the Xposed log boundary are doubled.
+# Compile the real HookErrors source, not a permissive substitute.
+STUBS.update({
+'androidx/annotation/NonNull.java':
+    'package androidx.annotation;public @interface NonNull {}',
+'androidx/annotation/VisibleForTesting.java':
+    'package androidx.annotation;public @interface VisibleForTesting {}',
+'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;
+import java.util.List;import java.util.concurrent.CopyOnWriteArrayList;
+public final class XposedBridge {
+ public static final List<String> logs=new CopyOnWriteArrayList<>();
+ public static void log(String line){
+  if(line==null)throw new AssertionError("Null diagnostic line");
+  logs.add(line);
+ }
+}''',
+})
+
 TEST = r'''package com.waenhancer.xposed.features.media;
 import android.content.*;import android.os.*;import android.media.*;
 import java.io.*;import java.nio.file.*;import java.util.*;
@@ -123,8 +142,11 @@ def main():
         (d/'TestGalleryExport.java').write_text(TEST)
         (d/'LegacyGalleryExporter.java').write_text(legacy_source(a.legacy_hook) if a.legacy_hook else 'package com.waenhancer.xposed.features.media;class LegacyGalleryExporter {static void export(android.content.Context c,java.io.File f){throw new AssertionError("Unused legacy adapter");}}')
         production=ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java'
-        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(production),*map(str,d.rglob('*.java'))],check=True,timeout=60)
+        errors=ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'
+        assert 'import com.waenhancer.xposed.utils.HookErrors;' in production.read_text(encoding='utf-8')
+        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(production),str(errors),*map(str,d.rglob('*.java'))],check=True,timeout=60)
         print('COMPILE_OK: production and explicit test adapters', flush=True)
+        print('SOURCE_SHA256',hashlib.sha256(production.read_bytes()).hexdigest(),'HOOKERRORS_SHA256',hashlib.sha256(errors.read_bytes()).hexdigest(),flush=True)
         subprocess.run(['java','-cp',str(d/'classes'),'com.waenhancer.xposed.features.media.TestGalleryExport',*(['legacy'] if a.legacy_hook else [])],check=True,timeout=60)
     hook=(ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java').read_text()
     assert 'GalleryMediaExporter.export(ctx, srcFile);' in hook

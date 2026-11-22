@@ -1,0 +1,3 @@
+[Improvements]
+- Compile the production HookErrors dependency during the standalone gallery
+  export regression test instead of failing before storage assertions.
