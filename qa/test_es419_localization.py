@@ -67,8 +67,13 @@ assert 'UiText' not in schema
 catalog=(ROOT/'app/src/main/assets/preference_catalog.json').read_text(encoding="utf-8")
 assert 'disable_sensor_proximity' in catalog
 dashboard=(SRC/'com/waenhancer/ui/screens/dashboard/MainDashboardScreen.kt').read_text(encoding="utf-8")
-assert 'text = InternalLabels.hmaReason(item.reason)' in dashboard
-assert 'text = item.reason,' not in dashboard, 'HMA reason must be localized at its display boundary'
+# The current dashboard passes this reason through DiagnosticsTargetCard.status,
+# rather than constructing a Text composable directly. Require that exact consumer.
+assert re.search(
+    r'DiagnosticsTargetCard\(\s*appName = item\.appName,\s*packageName = item\.packageName,'
+    r'\s*status = InternalLabels\.hmaReason\(item\.reason\)', dashboard
+), 'HMA reason must be localized at the current DiagnosticsTargetCard boundary'
+assert 'status = item.reason' not in dashboard, 'HMA reason must not bypass localization'
 # Negative controls: a missing slot, malformed token and bidi marker must be recognized.
 for wrong in ['Sin variable', '%2$s', '%1$d']:
     assert slots('Count: %1$s') != slots(wrong)
