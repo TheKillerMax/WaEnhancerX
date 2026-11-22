@@ -1,0 +1,3 @@
+[Improvements]
+- Keep the standalone restart safety regression checks aligned with current
+  Android user scope and production hook error-reporting dependencies.

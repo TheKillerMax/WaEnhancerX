@@ -21,30 +21,24 @@ scope = [item.text.strip() for arr in xml.findall('string-array')
          for item in arr.findall('item') if item.text and item.text.strip()]
 assert len(scope) > 10 and 'com.whatsapp' in scope and 'com.whatsapp.w4b' in scope
 
-with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
-    # Current production cleanup records swallowed failures through HookErrors.
-    # Compile that implementation, not a permissive replacement logger.
-    boundaries = {
-        'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
-        'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
-        'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;
-public final class XposedBridge {
- public static void log(String message) {
-  System.err.println("[QA diagnostic sink] " + message);
- }
+DIAGNOSTICS_STUBS = {
+    'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
+    'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
+    'de/robv/android/xposed/XposedBridge.java': '''package de.robv.android.xposed;
+public final class XposedBridge { public static void log(String message) { System.err.println(message); } }''',
 }
-''',
-    }
-    boundary_sources = []
-    for name, content in boundaries.items():
+
+with tempfile.TemporaryDirectory(prefix='waex_root_runner_') as output:
+    # Compile the current Android user/profile contract and the real HookErrors.
+    sources = [ROOT/'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
+               SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java',
+               SRC/'HookErrors.java', QA/'TestRestartTargetPolicy.java',
+               QA/'TestRootCommandRunner.java']
+    for name, content in DIAGNOSTICS_STUBS.items():
         path = Path(output) / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding='utf-8')
-        boundary_sources.append(path)
-    sources = [ROOT/'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
-               SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java', SRC/'HookErrors.java',
-               *boundary_sources,
-               QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java']
+        sources.append(path)
     subprocess.run(['javac', '--release', '17', '-d', output, *map(str, sources)], check=True)
     for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', [])]:
         subprocess.run(['java', '-cp', output,
@@ -53,6 +47,7 @@ public final class XposedBridge {
 # This second compilation exercises production AppRestartHelper but substitutes only the
 # Android framework, Kotlin package detector, and the external su process starter.
 STUBS = {
+ **DIAGNOSTICS_STUBS,
  'android/app/AlarmManager.java': '''package android.app;
 public class AlarmManager {
  public static final int ELAPSED_REALTIME=3;
@@ -205,8 +200,9 @@ with tempfile.TemporaryDirectory(prefix='waex_restart_integration_') as output:
     # Explicit English display adapter; actual resource routing has its own runtime test.
     from localization_support import write_display_adapter
     stub_sources.extend(write_display_adapter(ROOT, base))
-    compiled = [*stub_sources, ROOT/'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
-                SRC/'RestartTargetPolicy.java',
+    compiled = [*stub_sources,
+                ROOT/'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
+                SRC/'RestartTargetPolicy.java', SRC/'HookErrors.java',
                 SRC/'AppRestartHelper.java', QA/'TestAppRestartHelper.java']
     subprocess.run(['javac','--release','17','-d',output,*map(str,compiled)],check=True)
     subprocess.run(['java','-cp',output,
