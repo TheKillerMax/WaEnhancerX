@@ -7,6 +7,7 @@ bootstrap, callback registration, stanza transformations, predicates and receipt
 allowance/job policies are compiled unchanged. No host APK, native DEX matching,
 network connection or Android injection is exercised.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -301,7 +302,7 @@ def run_contracts(source_root, out, kotlinc):
     cached=os.environ.get('WAEX_QA_DEXKIT_JAR')
     if cached: shutil.copyfile(cached,dexkit)
     else:
-        url='https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
+        url=repository_url().rstrip('/') + '/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
         with urllib.request.urlopen(url,timeout=45) as response:body=response.read(8*1024*1024+1)
         if hashlib.sha256(body).hexdigest()!='cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6':raise RuntimeError('DexKit AAR mismatch')
         with zipfile.ZipFile(io.BytesIO(body)) as archive:dexkit.write_bytes(archive.read('classes.jar'))

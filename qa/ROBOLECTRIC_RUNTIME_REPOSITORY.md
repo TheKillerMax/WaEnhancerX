@@ -40,6 +40,18 @@ an independently downloaded and byte-hashed JAR or runtime pass.
 SHA-1 is used here only as an existing artifact publication checksum;
 stronger byte-level evidence is recommended before any release.
 
+The protected workflow previously reached successful Maven dependency-copy
+with this mirror, but preserved dispatch then hit HTTP 429 while fetching the
+public DexKit AAR directly from Maven Central. Three public AAR fetch sites now
+use the same allowlisted source URL, preserving their pinned versions and
+SHA-256 checks. On 2026-11-22 the GCS response for
+org.luckypray:dexkit:2.2.0 was exactly 1,447,011 bytes with AAR SHA-256
+cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6
+and extracted classes.jar SHA-256
+195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1,
+both matching the original pinned source contracts. This is verified byte
+identity for DexKit only; not a passing full CI matrix.
+
 This changes a protected GitHub Actions workflow and introduces a public
 external mirror. It therefore requires maintainer review under R5 and the
 project's R6 network destination policy; do not auto-merge or weaken the gate.

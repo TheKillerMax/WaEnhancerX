@@ -4,6 +4,7 @@
 Android, preference storage, DexSearchEngine cache transport and Xposed dispatch are
 explicit fixtures. The native DexKit bridge and WhatsApp/LSPosed are not executed.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -23,7 +24,7 @@ SOURCES = [BASE / name for name in ('PropsOverrideHook.java', 'StatusStyleHook.j
 FIXTURE = Path('qa/fixtures/status_style/StatusStyleHookChecks.java')
 DEXKIT_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
 DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
-DEXKIT_URL = 'https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
+DEXKIT_URL = repository_url().rstrip('/') + '/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
 EXPECTED_CHECKS = 83
 
 STUBS = {

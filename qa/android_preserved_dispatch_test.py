@@ -224,7 +224,7 @@ def main():
                           'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-kotlin-home',str(kotlin_lib.parent)]
     dexkit=args.dexkit.resolve() if args.dexkit else out/'dexkit-2.2.0.jar'
     if not args.dexkit:
-        url='https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
+        url=repository_url().rstrip('/')+'/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
         with urllib.request.urlopen(url,timeout=30) as response:body=response.read(8*1024*1024+1)
         if len(body)>8*1024*1024 or hashlib.sha256(body).hexdigest()!='cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6':
             raise RuntimeError('DexKit public AAR identity mismatch')

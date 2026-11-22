@@ -43,6 +43,15 @@ for name in generated:
     assert "from robolectric_runtime_repo import repository_url" in source
     assert 'it.systemProperty("robolectric.dependency.repo.url", ' in source
     assert "repository_url()" in source
+# Public DexKit AAR fallback is still the same pinned 2.2.0 byte contract;
+# only the allowlisted repository host is selectable, never its hash or version.
+for name in ("android_preserved_dispatch_test.py", "test_receipt_stanza_runtime.py",
+             "test_status_style_hook_contract.py"):
+    script = (ROOT / "qa" / name).read_text(encoding="utf-8")
+    assert "from robolectric_runtime_repo import repository_url" in script
+    assert "repository_url().rstrip('/')" in script
+    assert "https://repo.maven.apache.org/maven2/org/luckypray/dexkit" not in script
+    assert "2.2.0/dexkit-2.2.0.aar" in script
 ci = (ROOT / ".github/workflows/source-qa.yml").read_text(encoding="utf-8")
 assert "WAEX_ROBOLECTRIC_RUNTIME_REPO: " + GOOGLE_PUBLIC_MIRROR in ci
 assert "robolectric.offline=true" not in ci, "Do not bypass runtime dependency checks"
