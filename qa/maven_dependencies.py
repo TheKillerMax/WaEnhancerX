@@ -7,6 +7,7 @@ release/snapshot checks. Full attempt output and a machine-readable summary are
 retained beside the aggregate log. This never wraps compilation or test runs.
 """
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -15,6 +16,8 @@ import shutil
 import signal
 import subprocess
 import time
+
+from robolectric_runtime_repo import MAVEN_CENTRAL, repository_url
 
 DEPENDENCY_GOAL = 'org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies'
 MAX_ATTEMPTS = 3
@@ -88,11 +91,30 @@ def resolve_dependencies(command, log, timeout=600, max_attempts=3):
         argv.insert(1, '-U')
     log = Path(log)
     log.parent.mkdir(parents=True, exist_ok=True)
+    mirror = repository_url()
+    mirror_settings = None
+    if mirror != MAVEN_CENTRAL:
+        if any(arg in ('-s', '--settings', '--global-settings', '-gs') or arg.startswith(('--settings=', '--global-settings=', '-s=', '-gs=')) for arg in argv):
+            raise ValueError('Cannot replace caller-provided Maven settings')
+        # Pinned dependencies and compiler/test acceptance remain unchanged.
+        # Only approved public central repository location is selected.
+        mirror_settings = log.with_name(log.stem + '-maven-settings.xml')
+        contents = (
+            '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">\n'
+            '<mirrors><mirror><id>waex-qa-public-central</id>\n'
+            '<name>Read-only Google Cloud Maven Central mirror</name>\n'
+            '<url>' + mirror + '</url><mirrorOf>central</mirrorOf>\n'
+            '</mirror></mirrors></settings>\n'
+        )
+        mirror_settings.write_text(contents, encoding='utf-8')
+        argv[1:1] = ['--settings', str(mirror_settings)]
     metadata = log.with_name(log.stem + '-retry.json')
     start = time.monotonic()
     deadline = start + timeout
     summary = {'goal': DEPENDENCY_GOAL, 'command': argv, 'timeout_seconds': timeout,
-               'max_attempts': max_attempts, 'attempts': [], 'status': 'pending'}
+               'max_attempts': max_attempts, 'attempts': [], 'status': 'pending',
+               'runtime_maven_repo': mirror,
+               'settings_sha256': hashlib.sha256(mirror_settings.read_bytes()).hexdigest() if mirror_settings else None}
 
     def save(status):
         summary['status'] = status

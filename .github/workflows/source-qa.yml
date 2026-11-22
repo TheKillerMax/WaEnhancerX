@@ -124,10 +124,11 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: Verify bounded Maven dependency recovery
+      - name: Verify bounded Maven dependency recovery and allowlisted repository
         shell: bash
         run: |
           set -euo pipefail
+          python3 qa/test_robolectric_runtime_repo.py
           python3 qa/test_maven_dependencies.py --out "$RUNNER_TEMP/waex-maven-recovery"
 
       - name: Upload Maven dependency recovery evidence
@@ -139,6 +140,7 @@ jobs:
             ${{ runner.temp }}/waex-maven-recovery/result.json
             ${{ runner.temp }}/waex-maven-recovery/test_*/*.log
             ${{ runner.temp }}/waex-maven-recovery/test_*/*retry.json
+            ${{ runner.temp }}/waex-maven-recovery/test_*/*-maven-settings.xml
             ${{ runner.temp }}/waex-maven-recovery/test_*/calls.jsonl
             ${{ runner.temp }}/waex-maven-recovery/test_*/config.json
           retention-days: 14

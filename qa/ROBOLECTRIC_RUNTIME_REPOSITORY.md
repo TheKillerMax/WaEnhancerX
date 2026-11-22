@@ -10,6 +10,16 @@ Google Cloud-hosted public mirror of Maven Central for Robolectric runtime
 artifacts. Local runs default to the existing Maven Central URL. A strict
 two-source allowlist rejects unreviewed URLs and credentials. The generated
 Gradle probe receives this through testOptions.unitTests.all system properties.
+The same opt-in public URL also configures Maven dependency-copy through a
+per-run generated settings.xml with mirrorOf=central. An explicit caller-supplied
+Maven settings file is rejected instead of being silently overwritten; when the
+environment is unset, no settings are generated and the original Maven command
+is preserved. Pinned Maven goal, coordinates, recovery timeouts, fail-closed
+behavior and exact downstream tests are unchanged. Every generated settings
+file is SHA-256 recorded. The 20-case controlled Maven subprocess suite
+includes allowlisting, pinned retries, denial of unreviewed URLs and settings
+provenance; a full Linux CI PASS is still required for this experimental revision.
+
 All full Android/JVM QA suites and the native WAEX sources retain their
 original dependencies, tests, expected results and failure behavior.
 

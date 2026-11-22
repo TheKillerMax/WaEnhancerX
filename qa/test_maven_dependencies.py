@@ -10,6 +10,9 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest.mock import patch
+from xml.etree import ElementTree as ET
+from robolectric_runtime_repo import ENV_KEY, MAVEN_CENTRAL, GOOGLE_PUBLIC_MIRROR
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = None
@@ -40,6 +43,11 @@ raise SystemExit(step.get('exit', 0))
 
 class MavenDependencyChecks(unittest.TestCase):
     def setUp(self):
+        # Existing recovery controls use the historic/default Maven Central path;
+        # a separate test covers the explicitly enabled public mirror.
+        self._default_repo = patch.dict(os.environ, {ENV_KEY: MAVEN_CENTRAL})
+        self._default_repo.start()
+        self.addCleanup(self._default_repo.stop)
         self.directory = EVIDENCE / self._testMethodName
         self.directory.mkdir()
         self.executable = self.directory / 'mvn-fixture'
@@ -203,6 +211,43 @@ class MavenDependencyChecks(unittest.TestCase):
         self.assertIn('Could not transfer artifact', first)
         self.assertIn('recovered', self.log.read_text())
 
+    def test_allowlisted_public_maven_mirror_preserves_goal_and_logs_settings_hash(self):
+        self.configure([{'stdout': '[ERROR] Could not transfer artifact pinned:jar:1 Connection reset', 'exit': 1},
+                        {'stdout': 'BUILD SUCCESS', 'exit': 0}])
+        with patch.dict(os.environ, {ENV_KEY: GOOGLE_PUBLIC_MIRROR}):
+            self.assertEqual(0, HELPER.resolve_dependencies(self.command, self.log))
+        invocation = self.calls()
+        self.assertEqual(2, len(invocation))
+        self.assertEqual(invocation[0], invocation[1], 'Mirror retries must not change coordinates or destination')
+        self.assertIn('--settings', invocation[0])
+        index = invocation[0].index('--settings')
+        settings = Path(invocation[0][index + 1])
+        self.assertEqual(self.directory, settings.parent)
+        self.assertTrue(settings.exists())
+        body = settings.read_bytes()
+        self.assertEqual(hashlib.sha256(body).hexdigest(), self.metadata()['settings_sha256'])
+        self.assertEqual(GOOGLE_PUBLIC_MIRROR, self.metadata()['runtime_maven_repo'])
+        self.assertEqual(1, invocation[0].count(HELPER.DEPENDENCY_GOAL))
+        ns = {'m': 'http://maven.apache.org/SETTINGS/1.0.0'}
+        tree = ET.fromstring(body)
+        self.assertEqual('central', tree.findtext('m:mirrors/m:mirror/m:mirrorOf', namespaces=ns))
+        self.assertEqual(GOOGLE_PUBLIC_MIRROR,
+                         tree.findtext('m:mirrors/m:mirror/m:url', namespaces=ns))
+        self.assertNotIn(b'<password>', body)
+        self.assertEqual('success', self.metadata()['status'])
+        self.assertTrue(self.metadata()['attempts'][0]['retryable'])
+
+    def test_reject_disallowed_mirror_and_preconfigured_settings_without_starting_process(self):
+        self.configure([{'exit': 0}])
+        with patch.dict(os.environ, {ENV_KEY: 'https://unreviewed.invalid/maven2'}):
+            with self.assertRaises(ValueError):
+                HELPER.resolve_dependencies(self.command, self.log)
+        self.assertEqual([], self.calls())
+        with patch.dict(os.environ, {ENV_KEY: GOOGLE_PUBLIC_MIRROR}):
+            with self.assertRaises(ValueError):
+                HELPER.resolve_dependencies([*self.command, '--settings', 'untrusted.xml'], self.log)
+        self.assertEqual([], self.calls())
+
     def test_invalid_limits_goals_and_fail_never_never_launch(self):
         self.configure([{'exit': 0}])
         for value in (0, -1, 600.1, float('inf'), float('nan')):
@@ -241,7 +286,7 @@ def main():
                'boundaries': 'Real controlled local processes; Maven output simulated; no network or application tests.'}
     (EVIDENCE / 'result.json').write_text(json.dumps(summary, indent=2) + '\n')
     print(json.dumps(summary))
-    if not result.wasSuccessful() or result.testsRun != 18 or result.skipped:
+    if not result.wasSuccessful() or result.testsRun != 20 or result.skipped:
         raise SystemExit(1)
 
 
