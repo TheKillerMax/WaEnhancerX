@@ -7,6 +7,7 @@ Activity/View/Handler/ContentResolver APIs are real framework classes; host look
 menu sheets/resources and the process termination endpoint are explicit fixtures.
 No process is restarted or killed. JDK 17+, Kotlin and Maven are required.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -333,7 +334,7 @@ def main():
              'java.base/java.security', 'java.base/java.text', 'java.base/jdk.internal.access',
              'java.desktop/java.awt.font', 'jdk.compiler/com.sun.tools.javac.api']
     command = ['java', '-Xmx1g', *['--add-opens=' + p + '=ALL-UNNAMED' for p in opens],
-               '-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2',
+               '-Drobolectric.dependency.repo.url=' + repository_url(),
                '-cp', str(classes) + os.pathsep + cp, 'org.junit.runner.JUnitCore',
                'com.waenhancer.xposed.features.homescreen.HomeRestartLifecycleTest']
     if args.maven_repo:

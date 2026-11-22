@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
 
+# Maintainer-reviewed CI experiment: Robolectric's pinned, public Android SDK
+# dependencies are retrieved from the documented read-only GCS Maven Central
+# mirror. The standalone runners allow only this mirror or Maven Central and
+# retain exact artifact coordinates and all behavioral assertions.
+env:
+  WAEX_ROBOLECTRIC_RUNTIME_REPO: https://maven-central.storage-download.googleapis.com/maven2/
+
 concurrency:
   group: source-qa-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

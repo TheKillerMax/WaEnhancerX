@@ -5,6 +5,7 @@ Requires JDK 21, the Android SDK and network on first use. The isolated Android
 library takes dependency versions from this checkout and never loads :licensing.
 This checks logical-to-physical dimensions, not glyph rasterization or an APK.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -55,7 +56,7 @@ android {
     buildFeatures { compose = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions { unitTests.isIncludeAndroidResources = true; unitTests.all { it.systemProperty("robolectric.dependency.repo.url", "@WAEX_ROBO_RUNTIME_REPO@") } }
 }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:@BOM@"))
@@ -99,6 +100,7 @@ tasks.register("writeQaDependencyHashes") {
     }
 }
 '''
+    build = build.replace('@WAEX_ROBO_RUNTIME_REPO@', repository_url())
     for key, value in {'AGP': v['androidGradlePlugin'], 'KOTLIN': v['kotlin'],
                        'BOM': v['androidxComposeBom'], 'CORE': v['androidxCore'],
                        'ACTIVITY': v['androidxActivity'], 'LIFECYCLE': v['androidxLifecycle'],

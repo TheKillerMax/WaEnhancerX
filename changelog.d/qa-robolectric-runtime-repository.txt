@@ -1,0 +1,3 @@
+[Improvements]
+- Add a maintainer-gated, allowlisted Maven Central mirror option for pinned
+  Robolectric runtime dependencies without skipping regression tests.

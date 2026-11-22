@@ -5,6 +5,7 @@ No private licensing sources, actual WhatsApp, native DexKit scan or LSPosed are
 used. The Xposed dispatcher, host message graph and unrelated service boundaries
 are explicit fixtures. Cached dependencies can be supplied for offline checks.
 """
+from robolectric_runtime_repo import repository_url
 from pathlib import Path
 import argparse,hashlib,json,os,re,shutil,subprocess,zipfile,urllib.request,io
 
@@ -423,7 +424,7 @@ public final class WaexPreferenceManager {
     identities['qa/fixtures/'+test.name]=hashlib.sha256(test.read_bytes()).hexdigest()
     execute(['javac','--release','17','-cp',cp,'-d',classes,stage/PKG/'xposed/bridge/HookProvider.java',test],out/'javac-provider-tests.log')
     opens=['java.base/java.lang','java.base/java.util','java.base/java.io','java.base/java.net','java.base/java.security','java.base/java.text','java.base/jdk.internal.access','java.desktop/java.awt.font','jdk.compiler/com.sun.tools.javac.api']
-    command=['java',*['--add-opens='+part+'=ALL-UNNAMED' for part in opens],'-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2','-cp',cp,'org.junit.runner.JUnitCore','com.waenhancer.audit.PreservedDispatchContractTest']
+    command=['java',*['--add-opens='+part+'=ALL-UNNAMED' for part in opens],'-Drobolectric.dependency.repo.url=' + repository_url(),'-cp',cp,'org.junit.runner.JUnitCore','com.waenhancer.audit.PreservedDispatchContractTest']
     if args.sdk_jars:command[1:1]=['-Drobolectric.offline=true','-Drobolectric.dependency.dir='+str(args.sdk_jars.resolve())]
     elif args.maven_repo:command.insert(1,'-Dmaven.repo.local='+str(args.maven_repo.resolve()))
     result=execute(command,out/'junit.log',allow=True)

@@ -6,6 +6,7 @@ Compiles complete production restart helpers and UpdateDownloader on Robolectric
 Context UID and package/archive metadata are explicit fixtures; no work profile
 is created, no APK is installed, and no su/am/pm command or LSPosed hook is run.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -167,7 +168,7 @@ public class FileProvider {
              'java.base/java.security', 'java.base/java.text', 'java.base/jdk.internal.access',
              'java.desktop/java.awt.font', 'jdk.compiler/com.sun.tools.javac.api']
     command = ['java', '-Xmx1g', *['--add-opens=' + item + '=ALL-UNNAMED' for item in opens],
-               '-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2',
+               '-Drobolectric.dependency.repo.url=' + repository_url(),
                '-cp', runtime_cp, 'org.junit.runner.JUnitCore',
                'com.waenhancer.xposed.utils.WorkProfileRuntimeTest']
     if args.maven_repo:

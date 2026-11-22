@@ -3,6 +3,7 @@
 Execute version decisions using public, hash-pinned module APK resource tables on API 34.
 Isolated test library only: no private licensing, signing, host APK or LSPosed execution.
 """
+from robolectric_runtime_repo import repository_url
 from pathlib import Path
 import argparse,hashlib,json,os,shutil,subprocess,tomllib,urllib.request
 import xml.etree.ElementTree as ET
@@ -149,7 +150,7 @@ android {
  buildFeatures {compose=true}
  compileOptions {sourceCompatibility=JavaVersion.VERSION_17;targetCompatibility=JavaVersion.VERSION_17}
  kotlinOptions {jvmTarget="17"}
- testOptions {unitTests.isIncludeAndroidResources=true;unitTests.all {it.systemProperty("waex.apks", "APKS")}}
+ testOptions {unitTests.isIncludeAndroidResources=true;unitTests.all {it.systemProperty("waex.apks", "APKS");it.systemProperty("robolectric.dependency.repo.url", "WAEX_ROBO_RUNTIME_REPO")}}
 }
 dependencies {
  implementation(platform("androidx.compose:compose-bom:BOM"))
@@ -217,6 +218,7 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  if localized:
   locale_apk = build_localization_table(root, out/'locale-table')
   build += '\ntasks.withType<Test>().configureEach { systemProperty("waex.locale.apk", "'+locale_apk.as_posix()+'") }\n'
+  build=build.replace('WAEX_ROBO_RUNTIME_REPO', repository_url())
   (probe/'build.gradle.kts').write_text(build)
   fixture=root/'qa/fixtures/LocalizationResourcesTest.kt'
   dest=probe/'src/test/java/com/waenhancer/utils/LocalizationResourcesTest.kt'

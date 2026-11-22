@@ -7,6 +7,7 @@ no application APK, private licensing module, signing or account is used.
 Use --baseline-root only for a source with the same extracted renderer contract;
 it must fail behaviorally, not fail extraction, compilation or framework setup.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -275,7 +276,7 @@ def execute(root, out, deps, baseline, host_resources, runtime_jars, sdk_dir=Non
     sdk_args = ['-Drobolectric.offline=true', '-Drobolectric.dependency.dir='+str(sdk_dir)] if sdk_dir else []
     cmd=['java',*[f'--add-opens={p}=ALL-UNNAMED' for p in opens],*sdk_args,
          '-Dwaex.presence.hostResources='+str(host_resources),
-         '-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2',
+         '-Drobolectric.dependency.repo.url=' + repository_url(),
          '-cp',str(out/'tests.jar')+os.pathsep+str(classes)+os.pathsep+cp,
          'org.junit.runner.JUnitCore','PresenceRowRenderingTest']
     rejection=baseline or mutation is not None

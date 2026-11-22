@@ -5,6 +5,7 @@ production code from another PR. The legacy 'clock' CLI name aliases evidence;
 there is no longer a runtime observation clock in WAEX. Xposed, private Pro behavior
 and the theme provider are fixtures; the custom color model is real source.
 """
+from robolectric_runtime_repo import repository_url
 from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tomllib
 import xml.etree.ElementTree as ET
@@ -53,7 +54,7 @@ android {
  buildFeatures {compose=true}
  compileOptions {sourceCompatibility=JavaVersion.VERSION_17;targetCompatibility=JavaVersion.VERSION_17}
  kotlinOptions {jvmTarget="17"}
- testOptions {unitTests.isIncludeAndroidResources=true}
+ testOptions {unitTests.isIncludeAndroidResources=true;unitTests.all { it.systemProperty("robolectric.dependency.repo.url", "WAEX_ROBO_RUNTIME_REPO") }}
 }
 dependencies {
  implementation(platform("androidx.compose:compose-bom:BOM"))
@@ -71,6 +72,7 @@ dependencies {
 }
 '''
     for key,val in {'AGP':v['androidGradlePlugin'],'KOTLIN':v['kotlin'],'BOM':v['androidxComposeBom'],'MATERIAL3':expressive_pins[0],'LIFE':v['androidxLifecycle'],'CORO':v['coroutines'],'CORE':v['androidxCore'],'OKHTTP':v['okhttp']}.items():build=build.replace(key,val)
+    build=build.replace('WAEX_ROBO_RUNTIME_REPO', repository_url())
     write('build.gradle.kts',build)
     write('src/main/AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
     identity={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')}

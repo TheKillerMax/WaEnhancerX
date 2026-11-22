@@ -5,6 +5,7 @@ Pinned Robolectric 4.17, Android API 24/28/34 and real SQLite files; no WhatsApp
 Xposed, private licensing checkout or Android SDK is required. Maven and network
 are needed for the first dependency download, plus a Kotlin compiler and JDK 17+.
 """
+from robolectric_runtime_repo import repository_url
 import argparse
 import hashlib
 import json
@@ -141,7 +142,7 @@ object VaultRowKey {
              'java.base/java.security', 'java.base/java.text', 'java.base/jdk.internal.access',
              'java.desktop/java.awt.font', 'jdk.compiler/com.sun.tools.javac.api']
     command = ['java', *['--add-opens=' + p + '=ALL-UNNAMED' for p in opens],
-               '-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2',
+               '-Drobolectric.dependency.repo.url=' + repository_url(),
                '-cp', classpath, 'org.junit.runner.JUnitCore',
                'com.waenhancer.xposed.core.db.PreservedStoreCompatibilityTest']
     if args.maven_repo:
