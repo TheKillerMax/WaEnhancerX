@@ -30,6 +30,26 @@ with tempfile.TemporaryDirectory(prefix="waex_media_policy_") as output:
 # Compile the production preference manager against minimal Android/Hilt doubles,
 # then exercise commit atomicity, schema validation and failure/notification behavior.
 STUBS = {
+    # Only annotation types and the out-of-scope, opt-in telemetry sink are
+    # doubles. Preference exclusivity is compiled from actual production code.
+    "androidx/annotation/NonNull.java": "package androidx.annotation; public @interface NonNull {}",
+    "androidx/annotation/Nullable.java": "package androidx.annotation; public @interface Nullable {}",
+    "com/waenhancer/utils/DiagnosticsRecorder.java": """package com.waenhancer.utils;
+import android.content.Context;
+public final class DiagnosticsRecorder {
+ public static int changes;
+ public static void recordPreferenceChange(Context context, String key, boolean alias, String operation) {
+  if (context == null || key == null || key.isEmpty() ||
+      !("PUT".equals(operation) || "REMOVE".equals(operation))) {
+   throw new AssertionError("Unexpected diagnostic preference event");
+  }
+  changes++;
+ }
+ public static void recordSettingsTransfer(Context context, String operation, int count) {
+  throw new AssertionError("Backup operations are out of scope of this media fixture");
+ }
+}
+""",
     "android/net/Uri.java": """package android.net;
 public final class Uri {
  private final String value;
@@ -136,6 +156,7 @@ with tempfile.TemporaryDirectory(prefix="waex_media_manager_") as output:
     sources = stub_paths + [
         str(SRC / "config/PreferenceSchema.java"),
         str(SRC / "config/PreferenceStores.java"),
+        str(SRC / "config/ExclusivePreferences.java"),
         str(manager_source),
         str(POLICY),
         str(ROOT / "qa/TestMediaPreferenceBatch.java"),

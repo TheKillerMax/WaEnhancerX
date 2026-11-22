@@ -1,0 +1,3 @@
+[Improvements]
+- Compile current WAEX provider IPC and media preference exclusivity dependencies
+  in isolated regression fixtures, retaining strict diagnostics boundaries.

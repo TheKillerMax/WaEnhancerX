@@ -180,7 +180,7 @@ dependencies {
  # The real detector's signature and fail-closed scope path reference both
  # LsposedScopeReader and LsposedScopeSnapshot. Compile their production source
  # instead of substituting a scope-always-true test double.
- files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','xposed/core/VersionGuard.kt']
+ files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','xposed/core/VersionGuard.kt','xposed/bridge/client/HookProviderIpc.java']
  if (root/'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java').exists():files+=['utils/DeclaredWhatsAppTargets.java']
  for name in files:
   p=root/'app/src/main/java/com/waenhancer'/name
