@@ -43,18 +43,20 @@ def pattern_constant(source: str, name: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=PRIVACY / "AntiRevokeHook.java")
-    parser.add_argument("--scenario", choices=("all", "fallback_key", "ownership", "batch", "placeholder_scope", "message_predicate", "compatibility"), default="all")
+    parser.add_argument("--scenario", choices=("all", "fallback_key", "ownership", "batch", "placeholder_scope", "message_predicate", "compatibility", "admin_revoke"), default="all")
     args = parser.parse_args()
     source = args.source.read_text(encoding="utf-8")
     methods = "\n\n".join([
         pattern_constant(source, "ROW_ID_WHERE"),
         method(source, "hookDatabaseRevocation"),
         method(source, "sanitizePreservedOwnRowId"),
+        method(source, "reconcileAdminRevokeInsert"),
         method(source, "readRemoteStatusKeys", optional=True),
         method(source, "isSingleRowIdDelete", optional=True),
     ])
     template = (ROOT / "qa/fixtures/RevokeSqliteBindingChecks.java").read_text(encoding="utf-8")
-    assert template.count("/* PRODUCTION_METHODS */") == 1
+    if template.count("/* PRODUCTION_METHODS */") != 1:
+        raise AssertionError("expected exactly one fixture injection marker")
     harness = template.replace("/* PRODUCTION_METHODS */", methods)
     with tempfile.TemporaryDirectory(prefix="waex-revoke-sqlite-") as directory:
         temp = Path(directory)

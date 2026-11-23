@@ -553,6 +553,7 @@ public class AntiRevokeHook extends BaseFeature {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     sanitizePreservedOwnRowId(param);
+                    reconcileAdminRevokeInsert(param);
                 }
             });
 
@@ -794,6 +795,64 @@ public class AntiRevokeHook extends BaseFeature {
         if (PreservedOwnRowIdPolicy.shouldStripPlaceholderId(
                 messageType, rowId, PRESERVED_OWN_ROW_IDS)) {
             values.remove("_id");
+        }
+    }
+
+    /**
+     * An administrator may revoke another member's message. Its from_me=0 means
+     * "authored by another member", not "this deletion was received remotely".
+     * In the reported host path a type-64 admin placeholder reuses the original
+     * primary key after the ordinary DELETE was blocked by Anti-Revoke. Restore
+     * that DELETE only for the exact, still-present row inside the host transaction,
+     * and let the host INSERT and its original return value execute normally.
+     *
+     * No inference from a stale key or a similarly named table is sufficient:
+     * unknown variants stay with WhatsApp, rather than replacing arbitrary rows.
+     */
+    private void reconcileAdminRevokeInsert(@NonNull XC_MethodHook.MethodHookParam param) {
+        if (param.args == null || param.args.length < 3
+                || !(param.thisObject instanceof SQLiteDatabase)
+                || !(param.args[0] instanceof String)
+                || !(param.args[2] instanceof ContentValues)) return;
+        String table = (String) param.args[0];
+        if (!"message".equals(table) && !"messages".equals(table)) return;
+
+        ContentValues values = (ContentValues) param.args[2];
+        try {
+            Integer messageType = values.getAsInteger("message_type");
+            if (messageType == null || messageType != 64) return;
+            Long rowId = values.getAsLong("_id");
+            String keyId = values.getAsString("key_id");
+            if (rowId == null || rowId <= 0L || keyId == null || keyId.trim().isEmpty()
+                    || !REVOKED_MESSAGES.containsKey(keyId)) return;
+
+            SQLiteDatabase db = (SQLiteDatabase) param.thisObject;
+            // This is destructive only as part of WhatsApp's own revocation transaction.
+            if (!db.inTransaction()) return;
+
+            boolean sameOriginalRow = false;
+            try (Cursor cursor = db.rawQuery(
+                    "SELECT key_id, from_me, message_type FROM " + table + " WHERE _id=?",
+                    new String[]{Long.toString(rowId)})) {
+                if (cursor != null && cursor.getCount() == 1 && cursor.moveToFirst()
+                        && cursor.getType(0) == Cursor.FIELD_TYPE_STRING
+                        && cursor.getType(1) == Cursor.FIELD_TYPE_INTEGER
+                        && cursor.getType(2) == Cursor.FIELD_TYPE_INTEGER
+                        && keyId.equals(cursor.getString(0))
+                        && cursor.getLong(1) == 0L
+                        && cursor.getInt(2) != 15 && cursor.getInt(2) != 64) {
+                    sameOriginalRow = true;
+                }
+            }
+            if (!sameOriginalRow) return;
+
+            // The exact multi-column predicate is deliberately outside the
+            // single-row _id=? interception contract, so the host DELETE executes.
+            db.delete(table, "_id=? AND key_id=? AND from_me=0",
+                    new String[]{Long.toString(rowId), keyId});
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + " Admin revoke SQLite reconciliation failed: "
+                    + t.getClass().getSimpleName());
         }
     }
 

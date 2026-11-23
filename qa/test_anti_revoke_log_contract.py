@@ -18,7 +18,7 @@ DEFAULT_SOURCE = (
     ROOT
     / "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java"
 )
-EXPECTED_LOG_SITES = 31  # Reviewed on nightly 0aaffab (2026-11-18).
+EXPECTED_LOG_SITES = 32  # Reviewed with type-64 admin-revoke reconciliation (nightly 1b42d24).
 LOG_PREFIX = re.compile(
     r"catch\s*\(\s*Throwable\s+renderFailure\s*\)\s*\{\s*XposedBridge\.log\("
 )

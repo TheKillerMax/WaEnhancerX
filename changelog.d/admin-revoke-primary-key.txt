@@ -1,0 +1,3 @@
+[Fixes]
+- Avoid a WhatsApp database primary-key collision when a group admin revokes
+  another member's message while Anti-Revoke is enabled.

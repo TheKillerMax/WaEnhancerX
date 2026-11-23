@@ -131,6 +131,17 @@ public final class RevokeSqliteBindingChecks {
         Cursor result;
         boolean queryFailure;
         int originalCalls;
+        boolean transaction = true;
+        final Map<Long, String> rowKeys = new HashMap<>();
+        boolean inTransaction() { return transaction; }
+        int delete(String table, String where, String[] args) {
+            XC_MethodHook.MethodHookParam result = invoke("delete", this, table, where, args);
+            if (!result.handled && args != null && args.length == 2
+                    && "_id=? AND key_id=? AND from_me=0".equals(where)) {
+                return rowKeys.remove(Long.parseLong(args[0]), args[1]) ? 1 : 0;
+            }
+            return ((Number) result.result).intValue();
+        }
         final List<String> queries = new ArrayList<>();
         final List<List<String>> arguments = new ArrayList<>();
         Cursor rawQuery(String query, String[] args) {
@@ -190,6 +201,14 @@ public final class RevokeSqliteBindingChecks {
         XposedBridge.hooks.get(method).beforeHookedMethod(param);
         if (!param.handled) {
             db.originalCalls++;
+            if (method.equals("insertOrThrow")) {
+                ContentValues values = (ContentValues) args[2];
+                Long rowId = values.getAsLong("_id");
+                if (rowId != null && db.rowKeys.containsKey(rowId)) {
+                    throw new IllegalStateException("SQLITE_CONSTRAINT_PRIMARYKEY");
+                }
+                if (rowId != null) db.rowKeys.put(rowId, values.getAsString("key_id"));
+            }
             if (method.equals("delete")) param.result = Integer.valueOf(1);
             else param.result = Long.valueOf(901L);
         }
@@ -402,6 +421,63 @@ public final class RevokeSqliteBindingChecks {
         untouched(delete(disabled, "status", "key_id=?", "story"), disabled, "disabled preservation");
         check(disabled.queries.isEmpty(), "disabled option avoids query work");
     }
+    /** Type-64 admin revoke must commit on the original SQLite primary key. */
+    static void adminRevokeTransaction() {
+        setup(true, false, false);
+        SQLiteDatabase db = message(0, "admin-target");
+        db.rowKeys.put(71L, "admin-target");
+        XC_MethodHook.MethodHookParam deletion = delete(db, "message", "_id=?", "71");
+        check(deletion.handled && db.originalCalls == 0
+                        && db.rowKeys.containsKey(71L),
+                "reference anti-revoke suppressed the SQL delete of an incoming-authored row");
+        db.result = database(new String[]{"key_id", "from_me", "message_type"},
+                new Object[]{"admin-target", 0L, 0}).result;
+        ContentValues adminPlaceholder = placeholder(0, "admin-target", 71L);
+        adminPlaceholder.put("message_type", 64);
+        XC_MethodHook.MethodHookParam committed = invoke("insertOrThrow",
+                db, "message", null, adminPlaceholder);
+        check(!committed.handled && db.originalCalls == 2
+                        && db.rowKeys.get(71L).equals("admin-target"),
+                "admin revoke must execute a real matching delete and host insert without PK collision");
+        check(db.queries.equals(List.of(
+                        "SELECT from_me, message_type, key_id, chat_row_id, sender_jid_row_id FROM message WHERE _id=?",
+                        "SELECT key_id, from_me, message_type FROM message WHERE _id=?")),
+                "admin reconciliation must read verified message identity");
+        check(db.arguments.equals(List.of(List.of("71"), List.of("71")))
+                        && db.result.closed,
+                "admin reconciliation must use bound row ID and close the cursor");
+        check(REVOKED_MESSAGES.containsKey("admin-target"),
+                "other incoming revoke state must not be globally cleared");
+        db.result = message(0, "later-revocation").result;
+        check(delete(db, "message", "_id=?", "72").handled,
+                "internal admin bypass must be removed before the next host DELETE");
+
+        for (String reason : new String[]{"unmarked", "other-type", "wrong-key",
+                "own-author", "outside-transaction", "already-placeholder"}) {
+            setup(true, false, false);
+            SQLiteDatabase other = new SQLiteDatabase();
+            other.rowKeys.put(71L, "kept");
+            other.result = database(new String[]{"key_id", "from_me", "message_type"},
+                    new Object[]{"kept", "own-author".equals(reason) ? 1L : 0L,
+                            "already-placeholder".equals(reason) ? 64 : 0}).result;
+            ContentValues insert = placeholder(0,
+                    "wrong-key".equals(reason) ? "unrelated" : "kept", 71L);
+            insert.put("message_type", "other-type".equals(reason) ? 65 : 64);
+            if (!"unmarked".equals(reason)) REVOKED_MESSAGES.put(
+                    insert.getAsString("key_id"), 123L);
+            if ("outside-transaction".equals(reason)) other.transaction = false;
+            try {
+                invoke("insertOrThrow", other, "message", null, insert);
+                throw new AssertionError(reason + ": unverified row was overwritten");
+            } catch (IllegalStateException expected) {
+                check("SQLITE_CONSTRAINT_PRIMARYKEY".equals(expected.getMessage()),
+                        reason + ": must fall through to host without deleting unrelated row");
+            }
+            check("kept".equals(other.rowKeys.get(71L)), reason + ": original must remain");
+            check(other.originalCalls == 1, reason + ": no additional SQL delete permitted");
+        }
+    }
+
     public static void main(String[] args) {
         String scenario = args.length == 0 ? "all" : args[0];
         if (scenario.equals("all") || scenario.equals("fallback_key")) fallbackKey();
@@ -410,6 +486,7 @@ public final class RevokeSqliteBindingChecks {
         if (scenario.equals("all") || scenario.equals("placeholder_scope")) placeholderScope();
         if (scenario.equals("all") || scenario.equals("message_predicate")) messagePredicate();
         if (scenario.equals("all") || scenario.equals("compatibility")) compatibility();
+        if (scenario.equals("all") || scenario.equals("admin_revoke")) adminRevokeTransaction();
         System.out.println(checks + " verbatim SQLite revoke callback checks passed (" + scenario + ")");
     }
 }
