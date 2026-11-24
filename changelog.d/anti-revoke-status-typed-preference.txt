@@ -1,0 +1,2 @@
+[Fixes]
+- Honor the STRING status Anti-Revoke toggle when installing and running the hook, retaining binary legacy values and package isolation while rejecting invalid settings.
