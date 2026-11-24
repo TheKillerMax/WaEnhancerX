@@ -1,0 +1,2 @@
+[Fixes]
+- Avoid database reads while binding edited message rows, preserving original-message history resolution when opening history or recording snapshots. Retry unresolved aliases on a later identical binding without discarding newer snapshot reservations.

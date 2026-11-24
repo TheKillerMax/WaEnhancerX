@@ -150,8 +150,12 @@ class SQLiteDatabase : AutoCloseable {
     override fun close() { closeCount++ }
 }
 """,
-    "XposedBridge.kt": """package de.robv.android.xposed
-object XposedBridge { fun log(message: String) { System.err.println(message) } }
+    "NonNull.java": "package androidx.annotation; public @interface NonNull {}",
+    "VisibleForTesting.java": "package androidx.annotation; public @interface VisibleForTesting {}",
+    "XposedBridge.java": """package de.robv.android.xposed;
+public final class XposedBridge {
+ public static void log(String message) { System.err.println(message); }
+}
 """,
     "MessageStore.kt": """package com.waenhancer.xposed.core.db
 import android.content.Context
@@ -168,6 +172,9 @@ with tempfile.TemporaryDirectory() as folder:
         path = temp / name
         path.write_text(content)
         (java_sources if path.suffix == ".java" else sources).append(str(path))
+    # Exercise the actual production failure handler; only the Xposed logger
+    # and annotations are fixture boundaries.
+    java_sources.append(str(root / "app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java"))
     classes = temp / "classes"
     classes.mkdir()
     subprocess.run(["javac", "--release", "17", "-d", str(classes), *java_sources], check=True)

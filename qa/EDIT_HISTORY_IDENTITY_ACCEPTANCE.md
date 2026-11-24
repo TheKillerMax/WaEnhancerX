@@ -133,3 +133,55 @@ establish uniqueness by chat, sender or account, verify a reflected numeric ID,
 or detect another process changing a history while a positive cache is retained.
 The ambiguous legacy history remains unavailable through key-based UI until a
 separate identity-aware migration or repair can establish its correct ownership.
+
+
+## Follow-up: original-message aliases without database reads during binding
+
+Commit `b4a461a87d1e35028ed9d391e89fcfdb69e26394` added original-key
+resolution for edited rows. Its call from `getView` reopened the host database on
+a cold key. Compiling that current resolver body with a counted SQLite boundary
+reproduces one query during 10,000 bindings, violating the existing zero-query
+binding contract. The earlier fixture failed to compile the new collaborators;
+returning its input key from a replacement resolver would have hidden the regression.
+
+Binding now retains the host key. A dedicated `recordBoundSnapshotAsync` method
+uses the existing writer to resolve an alias before persisting the snapshot, and
+only requests resolution when the bound row has an edit label. Unedited/row-only
+snapshots retain their previous identity and do not trigger alias lookups. The
+existing five-argument `recordTransitionAsync` API and its other callers remain
+unchanged. A confirmed alias clears the edit's numeric row ID; that number cannot
+identify the original message's history.
+
+The history loader resolves the alias when the user opens history, before querying
+stored versions or appending current visible text. Opening this dialog already
+performs synchronous history reads; this change preserves that existing boundary.
+It does not claim to move all dialog work off the main thread. Failed alias reads
+retain the supplied identity and are not cached as definitive misses.
+
+`test_edit_history_adapter_binding.py` now compiles the unchanged production
+bodies of the alias resolver, bound-snapshot worker and history loader alongside
+the existing adapter/click methods. Its 42 checks retain the 10,000-binding,
+zero-query contract and cover deferred dispatch, canonical key/row identity,
+original/current text, cached lookup, row-only/unedited compatibility and retry
+after a failed alias query. SQLite, resource lookup, queue scheduling and the
+persistence callback are explicit counted/recorded boundaries. The queue is
+manually drained; these checks do not execute Android SQLite or prove real thread
+scheduling. The separate identity suite still compiles the complete store.
+
+Compiled negative controls retain the old binding query or independently remove
+worker alias resolution, use the raw key for dialog history, run the writer inline,
+or cache a failed alias lookup. Each must fail the corresponding behavioral
+assertion; compilation errors do not count as detected regressions. Device and
+optimized-APK acceptance listed above remains required.
+
+
+## Rebind retry after a transient alias-read failure
+
+The initial 42-check candidate was rejected by an added callback-level sequence:
+bind → drain writer with failed alias read → recover host database → bind the same
+text → drain writer. The old snapshot reservation prevented the second job.
+The recordTransition method does not recover aliases; its supplied key remains the write identity.
+The writer now releases only the matching (snapshotKey, text) reservation when
+its alias lookup was indeterminate. Definitive misses still deduplicate, and an
+older failed job cannot discard a reservation for newer text. These checks retain
+zero SQLite reads on binding and the original identity/recycling assertions.
