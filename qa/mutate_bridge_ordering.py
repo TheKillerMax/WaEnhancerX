@@ -32,7 +32,10 @@ def main():
             raise RuntimeError(f'Mutation {name} has an ambiguous/missing target')
         with tempfile.TemporaryDirectory(prefix='waex_bridge_mutant_') as temp:
             work = Path(temp)
-            for relative in [BRIDGE, Path('qa/test_bridge_ordering.py'), Path('qa/test_bridge_contract.py'), Path('qa/java/BridgeOrderingChecks.java')]:
+            for relative in [BRIDGE, Path('qa/test_bridge_ordering.py'),
+                             Path('qa/test_bridge_contract.py'), Path('qa/java/BridgeOrderingChecks.java'),
+                             Path('app/src/main/java/com/waenhancer/config/PreferenceSchema.java'),
+                             Path('app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java')]:
                 dest = work/relative
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT/relative, dest)

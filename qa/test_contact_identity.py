@@ -4,6 +4,7 @@ The mocked provider is not Android Binder/ContactsProvider; the SQL runner is Py
 """
 from pathlib import Path
 import re, sqlite3, subprocess, tempfile, json
+import os, shutil
 ROOT=Path(__file__).resolve().parents[1]; SRC=ROOT/'app/src/main/java/com/waenhancer'
 STUBS={
 'Cursor.kt':'''package android.database
@@ -21,6 +22,7 @@ import android.database.Cursor
 import android.content.*
 class SQLiteDatabase(val path:String):java.io.Closeable {
  companion object { const val OPEN_READONLY=1;const val CONFLICT_REPLACE=5
+ var unexpectedLimitedQueries=0
  var reads=mutableListOf<Triple<String,String,List<String>>>()
  var handler:(String,String,List<String>)->List<List<Any?>> = { _, _, _ -> emptyList() }
  fun openDatabase(path:String,factory:Any?,flags:Int)=SQLiteDatabase(path) }
@@ -28,6 +30,8 @@ class SQLiteDatabase(val path:String):java.io.Closeable {
  fun execSQL(sql:String){};fun insertWithOnConflict(t:String,n:String?,v:ContentValues,f:Int)=1L
  fun update(t:String,v:ContentValues,w:String,args:Array<String>)=1
  fun query(t:String,cols:Array<String>,s:String?,a:Array<String>?,g:String?,h:String?,o:String?):Cursor=Cursor(emptyList())
+ // Message lookup is outside this name-resolution fixture; never silently return a row.
+ fun query(t:String,cols:Array<String>,s:String?,a:Array<String>?,g:String?,h:String?,o:String?,limit:String):Cursor{unexpectedLimitedQueries++;throw AssertionError("Message lookup is outside contact fixture")}
  override fun close(){} }
 abstract class SQLiteOpenHelper(c:Context,n:String,f:Any?,v:Int){val readableDatabase=SQLiteDatabase("preserved");val writableDatabase=readableDatabase
  abstract fun onCreate(db:SQLiteDatabase);abstract fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int)
@@ -135,7 +139,8 @@ fun main(){
  SQLiteDatabase.handler={p,_,_->if(p=="preserved")listOf(listOf("Name A"),listOf("Name B"))else emptyList()}
  ck("conflicting preserved cache",PreservedMessageStore.getInstance(ctx).getContactNameByJid(phone)==null)
  ck("cache no invented namespace",PreservedMessageStore.getInstance(ctx).getContactNameByJid("12345")==null)
- ck("databases confined to caller",SQLiteDatabase.reads.all{it.first=="preserved"||it.first.startsWith(ctx.dbRoot.absolutePath+"/")})
+ ck("databases confined to caller",SQLiteDatabase.reads.all{it.first=="preserved"||it.first.startsWith(ctx.dbRoot.absolutePath+java.io.File.separator)})
+ ck("no message lookup escaped identity scope",SQLiteDatabase.unexpectedLimitedQueries==0)
  println("PASS: $checks whole-resolver/policy checks (explicit Android/database/provider doubles)")
 }
 '''
@@ -179,11 +184,19 @@ public int getColumnCount(){return rows.isEmpty()?0:rows.get(0).size();}
 public int getColumnIndex(String s){return 0;}
 public void close(){}
 }''')
-        subprocess.run(['javac','--release','17','-d',str(c),str(SRC/'utils/ContactIdentityPolicy.java'),str(cursor)],check=True,timeout=60)
+        diagnostics={
+            'androidx/annotation/NonNull.java':'package androidx.annotation; public @interface NonNull {}',
+            'androidx/annotation/VisibleForTesting.java':'package androidx.annotation; public @interface VisibleForTesting {}',
+            'de/robv/android/xposed/XposedBridge.java':'package de.robv.android.xposed; public final class XposedBridge {public static void log(String s){System.err.println("[QA diagnostic sink] "+s);}}',
+        }
+        java_sources=[SRC/'utils/ContactIdentityPolicy.java',SRC/'xposed/utils/HookErrors.java',cursor]
+        for name,content in diagnostics.items():
+            target=d/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(content);java_sources.append(target)
+        subprocess.run(['javac','--release','17','-d',str(c),*map(str,java_sources)],check=True,timeout=60)
         for p,s in STUBS.items():
             if p != 'Cursor.kt': (d/p).write_text(s)
         (d/'Test.kt').write_text(TEST)
-        subprocess.run(['kotlinc','-jvm-target','17','-cp',str(c),*map(str,d.glob('*.kt')),str(SRC/'utils/ContactNameResolver.kt'),str(SRC/'xposed/core/db/PreservedMessageStore.kt'),'-include-runtime','-d',str(d/'test.jar')],check=True,timeout=90)
+        subprocess.run([shutil.which('kotlinc') or 'kotlinc','-jvm-target','17','-cp',str(c),*map(str,d.glob('*.kt')),str(SRC/'utils/ContactNameResolver.kt'),str(SRC/'xposed/core/db/PreservedMessageStore.kt'),'-include-runtime','-d',str(d/'test.jar')],check=True,timeout=90)
         print('COMPILE_OK: full Kotlin resolver/store and Java identity policy', flush=True)
-        subprocess.run(['java','-cp',str(d/'test.jar')+':'+str(c),'com.waenhancer.utils.TestKt'],check=True,timeout=60)
+        subprocess.run(['java','-cp',str(d/'test.jar')+os.pathsep+str(c),'com.waenhancer.utils.TestKt'],check=True,timeout=60)
 if __name__=='__main__':main()
