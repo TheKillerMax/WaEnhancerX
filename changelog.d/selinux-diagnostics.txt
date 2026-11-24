@@ -1,0 +1,3 @@
+[Fixes]
+- Fix SELinux diagnostics showing Permissive when a state check cannot be read.
+  Unverified results now show Unknown until a confirmed reading is available.

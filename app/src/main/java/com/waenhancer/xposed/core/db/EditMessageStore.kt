@@ -124,6 +124,31 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         writer.execute { recordTransition(rowId, keyId, previousMessage, newMessage, timestamp) }
     }
 
+    /** Resolve edited-row aliases on the existing writer before persisting a bound snapshot. */
+    fun recordBoundSnapshotAsync(
+        rowId: Long,
+        keyId: String?,
+        currentMessage: String,
+        timestamp: Long,
+        resolveAlias: Boolean,
+        onAliasUnresolved: (() -> Unit)? = null
+    ) {
+        if (currentMessage.isBlank() || (rowId <= 0 && keyId.isNullOrBlank())) return
+        writer.execute {
+            val resolvedKey = if (resolveAlias && !keyId.isNullOrBlank()) resolveOriginalKey(keyId) else keyId
+            val resolvedRow = if (resolvedKey != keyId) 0L else rowId
+            try {
+                recordTransition(resolvedRow, resolvedKey, null, currentMessage, timestamp)
+            } finally {
+                // A failed host read was not cached. Allow an identical binding to retry;
+                // a definitive hit or miss retains the normal snapshot deduplication.
+                if (resolveAlias && !keyId.isNullOrBlank() && !originalKeyCache.containsKey(keyId)) {
+                    onAliasUnresolved?.invoke()
+                }
+            }
+        }
+    }
+
     @Synchronized
     fun recordTransition(
         rowId: Long,

@@ -2,7 +2,7 @@
 """Compile production getView and click callbacks with explicit Kotlin view doubles.
 
 Checks adapter identity, recycled-listener invalidation and zero canonical DB
-lookups in binding. This is not a rendered Android/host performance measurement.
+lookups in binding. The current original-key resolver body is also compiled unchanged, with counted SQLite boundaries. This is not a rendered Android/host performance measurement.
 """
 from pathlib import Path
 import argparse
@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--source', type=Path, default=root / (
     'app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt'))
 parser.add_argument('--scenario', choices=['all', 'queries', 'recycle'], default='all')
+parser.add_argument('--store-source', type=Path, default=root / 'app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt')
 args = parser.parse_args()
 source = args.source.read_text()
 
@@ -35,11 +36,75 @@ def body_after(signature, source=source):
             if depth == 0: return source[start:index + 1]
     raise AssertionError('unterminated method')
 
+store_source = args.store_source.read_text()
+
 fixture = r'''
+import java.util.concurrent.ConcurrentHashMap
+
 class Context { val resources = Resources(); val packageName = "com.whatsapp" }
 class Resources {
     fun getIdentifier(name: String, type: String, pkg: String) =
         if (name == "edit_label") 31 else if (name == "edited_label") 32 else 0
+}
+object HostResourceIds {
+    fun id(context: Context, name: String): Int = context.resources.getIdentifier(name, "id", context.packageName)
+}
+object MessageStore {
+    fun findMsgstoreDbFile(context: Context): java.io.File? = java.io.File("fixture-msgstore.db")
+}
+class FixtureCursor(private val resolved: String?) : AutoCloseable {
+    fun moveToFirst() = resolved != null
+    fun getString(index: Int): String? { check(index == 0); return resolved }
+    override fun close() {}
+}
+class SQLiteDatabase : AutoCloseable {
+    companion object {
+        const val OPEN_READONLY = 1
+        var queryCount = 0
+        var failRead = false
+        val aliases = mutableMapOf<String, String>()
+        fun openDatabase(path: String, factory: Any?, flags: Int) = SQLiteDatabase()
+    }
+    fun rawQuery(sql: String, args: Array<String>): FixtureCursor {
+        queryCount++
+        if (failRead) throw IllegalStateException("fixture read failure")
+        check(sql.contains("message_edit_info") && args.size == 1)
+        return FixtureCursor(aliases[args.single()])
+    }
+    override fun close() {}
+}
+object XposedBridge {
+    val logs = mutableListOf<String>()
+    fun log(message: String) { logs.add(message) }
+}
+class QueuedWriter {
+    val jobs = java.util.ArrayDeque<Runnable>()
+    fun execute(job: Runnable) { jobs.addLast(job) }
+    fun drain() { while (!jobs.isEmpty()) jobs.removeFirst().run() }
+}
+class EditMessageStore(private val context: Context) {
+    data class MessageItem(val rowId: Long, val keyId: String, val textData: String, val timestamp: Long, val versionNumber: Int)
+    data class Write(val rowId: Long, val keyId: String?, val previous: String?, val text: String, val timestamp: Long)
+    private val originalKeyCache = ConcurrentHashMap<String, String>()
+    private val TAG = "edit-binding-fixture"
+    val writer = QueuedWriter()
+    val writes = mutableListOf<Write>()
+    val requests = mutableListOf<Pair<Long, String?>>()
+    var stored = emptyList<MessageItem>()
+    fun resolveOriginalKey(keyId: String): String STORE_BODY
+    fun recordBoundSnapshotAsync(rowId: Long, keyId: String?, currentMessage: String, timestamp: Long, resolveAlias: Boolean, onAliasUnresolved: (() -> Unit)? = null) SNAPSHOT_BODY
+    private fun recordTransition(rowId: Long, keyId: String?, previousMessage: String?, newMessage: String, timestamp: Long) {
+        writes.add(Write(rowId, keyId, previousMessage, newMessage, timestamp))
+    }
+    fun getMessages(rowId: Long, keyId: String?): List<MessageItem> {
+        requests.add(rowId to keyId); return stored
+    }
+    fun recordTransitionAsync(rowId: Long, keyId: String?, previousMessage: String?, newMessage: String, timestamp: Long) {
+        throw AssertionError("Legacy snapshot writer is outside this adapter-identity fixture")
+    }
+}
+class HistoryLoader(private val editStore: EditMessageStore) {
+    fun load(ctx: Context, rowId: Long, keyId: String?, currentText: String?): List<EditMessageStore.MessageItem> LOAD_BODY
 }
 open class View {
     val context = Context()
@@ -56,6 +121,7 @@ open class View {
 }
 class TextView : View() { var text: CharSequence = "Edited" }
 class ViewGroup : View() {
+    var visibleText: String? = null
     val label = TextView().apply { resourceName = "edit_label"; parent = this@ViewGroup }
     @Suppress("UNCHECKED_CAST")
     fun <T : View> findViewById(id: Int): T? = (if (id == 31) label else null) as T?
@@ -92,18 +158,22 @@ class Callback(private val adapter: ListAdapter) {
     private val FIELD_MSG_TEXT = "waex_msg_text"
     private val FIELD_BINDING_TOKEN = "waex_edit_binding_token"
     var enabled = true
-    var dbQueries = 0
+    private var canonicalDbQueries = 0
+    val dbQueries get() = canonicalDbQueries + SQLiteDatabase.queryCount
+    private val editStore = EditMessageStore(Context())
+    val snapshotStore get() = editStore
+    private val sSnapshotted = ConcurrentHashMap<String, String>()
     var treeSearches = 0
     val opened = mutableListOf<Message>()
     private fun isFeatureEnabled() = enabled
     private fun extractStableKeyId(item: Any) = (item as Message).key
     private fun extractRowId(item: Any) = (item as Message).id
     private fun extractMessageText(item: Any) = (item as Message).text
-    private fun resolveCanonicalRowId(row: Long, key: String?): Long { dbQueries++; return row }
+    private fun resolveCanonicalRowId(row: Long, key: String?): Long { canonicalDbQueries++; return row }
     private fun findChildByResourceName(row: ViewGroup, name: String): View? { treeSearches++; return row.label }
     private fun findParentMessageRow(row: View): View? = row.parent
     private fun getResourceEntryName(view: View): String? = view.resourceName
-    private fun extractTextFromMessageBubble(row: View?): String? = null
+    private fun extractTextFromMessageBubble(row: View?): String? = (row as? ViewGroup)?.visibleText
     private fun showEditHistoryBottomSheet(context: Any, rowId: Long, keyId: String?, text: String?) {
         opened.add(Message(rowId, keyId, text))
     }
@@ -197,10 +267,84 @@ fun main(args: Array<String>) {
     callback.afterHookedMethod(MethodHookParam(Any(), arrayOf(0), row))
     row.label.click()
     checkCase(nativeClicks[0] == 1, "invalidation erased WhatsApp's new click listener")
+    val store = EditMessageStore(Context())
+    SQLiteDatabase.aliases["edited-key"] = "original-key"
+    val queriesBeforeSnapshot = SQLiteDatabase.queryCount
+    store.recordBoundSnapshotAsync(77, "edited-key", "edited body", 201, true)
+    checkCase(SQLiteDatabase.queryCount == queriesBeforeSnapshot, "snapshot alias lookup ran before writer dispatch")
+    checkCase(store.writes.isEmpty() && store.writer.jobs.size == 1, "snapshot must be queued before persistence")
+    store.writer.drain()
+    checkCase(store.writes.single() == EditMessageStore.Write(0, "original-key", null, "edited body", 201), "snapshot lost canonical original-message identity")
+    checkCase(SQLiteDatabase.queryCount == queriesBeforeSnapshot + 1, "cold alias must resolve once on writer")
+    store.stored = listOf(EditMessageStore.MessageItem(0, "original-key", "original body", 101, 1))
+    val versions = HistoryLoader(store).load(Context(), 77, "edited-key", "edited body")
+    checkCase(store.requests.last() == (0L to "original-key"), "history lookup used the edit identity instead of original")
+    checkCase(versions.map { it.textData } == listOf("original body", "edited body"), "history lost original/current text")
+    checkCase(versions.all { it.rowId == 0L && it.keyId == "original-key" } && versions.map { it.versionNumber } == listOf(1, 2), "history versions kept contradictory edit-row identity")
+    checkCase(SQLiteDatabase.queryCount == queriesBeforeSnapshot + 1, "cached alias unexpectedly reopened host database")
+    store.recordBoundSnapshotAsync(88, null, "row body", 202, true)
+    store.recordBoundSnapshotAsync(99, "plain-key", "plain body", 203, false)
+    store.writer.drain()
+    checkCase(store.writes[1] == EditMessageStore.Write(88, null, null, "row body", 202), "row-only snapshot identity changed")
+    checkCase(store.writes[2] == EditMessageStore.Write(99, "plain-key", null, "plain body", 203), "unedited snapshot identity changed")
+    checkCase(SQLiteDatabase.queryCount == queriesBeforeSnapshot + 1, "unedited or row-only snapshot queried alias database")
+    store.recordBoundSnapshotAsync(0, null, "invalid identity", 204, true)
+    store.recordBoundSnapshotAsync(1, "key", "   ", 204, true)
+    checkCase(store.writer.jobs.isEmpty(), "invalid snapshots entered writer queue")
+    val retryStore = EditMessageStore(Context())
+    SQLiteDatabase.aliases["retry-edit"] = "retry-original"
+    SQLiteDatabase.failRead = true
+    retryStore.recordBoundSnapshotAsync(12, "retry-edit", "retry body", 205, true)
+    retryStore.writer.drain()
+    checkCase(retryStore.writes.single().keyId == "retry-edit" && retryStore.writes.single().rowId == 12L, "unresolved alias fabricated another identity")
+    checkCase(XposedBridge.logs.last().contains("IllegalStateException"), "failed alias read did not reach production diagnostic path")
+    SQLiteDatabase.failRead = false
+    retryStore.recordBoundSnapshotAsync(12, "retry-edit", "retry body", 206, true)
+    retryStore.writer.drain()
+    checkCase(retryStore.writes.last().keyId == "retry-original" && retryStore.writes.last().rowId == 0L, "failed alias read poisoned later successful resolution")
+    val rebindAdapter = Adapter(Message(901, "rebind-edit", "unchanged body"))
+    val rebindCallback = Callback(rebindAdapter)
+    val rebindRow = ViewGroup().apply { visibleText = "unchanged body" }
+    SQLiteDatabase.aliases["rebind-edit"] = "rebind-original"
+    SQLiteDatabase.failRead = true
+    val beforeRebind = SQLiteDatabase.queryCount
+    rebindCallback.afterHookedMethod(MethodHookParam(rebindAdapter, arrayOf(0), rebindRow))
+    checkCase(SQLiteDatabase.queryCount == beforeRebind, "first retry binding queried SQLite")
+    checkCase(rebindCallback.snapshotStore.writer.jobs.size == 1, "first bound snapshot was not queued")
+    rebindCallback.snapshotStore.writer.drain()
+    checkCase(rebindCallback.snapshotStore.writes.single().keyId == "rebind-edit", "failed lookup must retain raw identity")
+    SQLiteDatabase.failRead = false
+    val beforeRecoveredBinding = SQLiteDatabase.queryCount
+    rebindCallback.afterHookedMethod(MethodHookParam(rebindAdapter, arrayOf(0), rebindRow))
+    checkCase(SQLiteDatabase.queryCount == beforeRecoveredBinding, "recovery binding queried SQLite")
+    checkCase(rebindCallback.snapshotStore.writer.jobs.size == 1, "identical rebind after alias failure did not retry")
+    rebindCallback.snapshotStore.writer.drain()
+    checkCase(rebindCallback.snapshotStore.writes.last().keyId == "rebind-original" && rebindCallback.snapshotStore.writes.last().rowId == 0L,
+              "recovered callback did not persist canonical identity")
+    repeat(100) { rebindCallback.afterHookedMethod(MethodHookParam(rebindAdapter, arrayOf(0), rebindRow)) }
+    checkCase(rebindCallback.snapshotStore.writer.jobs.isEmpty(), "successful snapshot no longer deduplicates identical binds")
+    val changedAdapter = Adapter(Message(902, "changed-edit", "old text"))
+    val changedCallback = Callback(changedAdapter)
+    val changedRow = ViewGroup().apply { visibleText = "old text" }
+    SQLiteDatabase.aliases["changed-edit"] = "changed-original"
+    changedCallback.afterHookedMethod(MethodHookParam(changedAdapter, arrayOf(0), changedRow))
+    changedAdapter.message = Message(902, "changed-edit", "new text")
+    changedRow.visibleText = "new text"
+    changedCallback.afterHookedMethod(MethodHookParam(changedAdapter, arrayOf(0), changedRow))
+    checkCase(changedCallback.snapshotStore.writer.jobs.size == 2, "changed text must enqueue separately")
+    SQLiteDatabase.failRead = true
+    changedCallback.snapshotStore.writer.jobs.removeFirst().run()
+    changedCallback.afterHookedMethod(MethodHookParam(changedAdapter, arrayOf(0), changedRow))
+    checkCase(changedCallback.snapshotStore.writer.jobs.size == 1, "older alias failure discarded newer snapshot reservation")
+    SQLiteDatabase.failRead = false
+    changedCallback.snapshotStore.writer.drain()
+    checkCase(changedCallback.snapshotStore.writes.last().keyId == "changed-original" &&
+              changedCallback.snapshotStore.writes.last().text == "new text", "newer snapshot lost canonical identity")
+    println("PASS: writer/click alias identity, fallback and retry checks with actual extracted production bodies")
     println("PASS: $checks extracted production adapter/click checks; 10,000 source getView calls")
 
 }
-'''.replace('CALLBACK_BODY', body_after('override fun afterHookedMethod(p: MethodHookParam)')).replace(
+'''.replace('SNAPSHOT_BODY', body_after('fun recordBoundSnapshotAsync(', store_source)).replace('LOAD_BODY', body_after('private fun loadAllChronologicalVersions(', source)).replace('STORE_BODY', body_after('fun resolveOriginalKey(keyId: String): String', store_source)).replace('CALLBACK_BODY', body_after('override fun afterHookedMethod(p: MethodHookParam)')).replace(
     'LABEL_BODY', body_after('private fun bindEditLabel(')).replace(
     'INVALIDATE_BODY', body_after('private fun invalidateEditLabelBinding(')
     if 'private fun invalidateEditLabelBinding(' in source

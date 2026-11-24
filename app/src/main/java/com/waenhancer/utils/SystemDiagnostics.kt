@@ -32,8 +32,13 @@ data class SystemDiagnostics(
 object SystemDiagnosticsReader {
     @Volatile
     private var cachedDiagnostics: SystemDiagnostics? = null
+    private data class SelinuxSnapshot(
+        val state: String,
+        val rootAllowedWhenProbed: Boolean? = null,
+    )
+
     @Volatile
-    private var cachedSelinux: String? = null
+    private var cachedSelinux: SelinuxSnapshot? = null
 
     private val knownManagers = listOf(
         "org.lsposed.manager", "io.github.lsposed.manager",
@@ -85,7 +90,7 @@ object SystemDiagnosticsReader {
             device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
             abis = Build.SUPPORTED_ABIS.joinToString(", "),
             kernel = System.getProperty("os.version").orEmpty().ifBlank { "Unknown" },
-            selinux = cachedSelinux ?: readFastSelinuxState().also { cachedSelinux = it },
+            selinux = (cachedSelinux ?: SelinuxSnapshot(readFastSelinuxState()).also { cachedSelinux = it }).state,
             hookedTargets = runtimeStore.getStringSet("hooked_whatsapp_packages", emptySet())
                 ?.sorted()?.joinToString()?.ifBlank { "None reported" } ?: "None reported"
         )
@@ -107,7 +112,11 @@ object SystemDiagnosticsReader {
         val manager = findFrameworkManager(pm, runtimeFramework)
         val hooked = runtimeStore.getStringSet("hooked_whatsapp_packages", emptySet()).orEmpty()
         val rootAllowed = UpdateDownloader.hasRootAccess(forceRefresh)
-        val selinuxState = cachedSelinux?.takeIf { !forceRefresh } ?: readSelinuxState(rootAllowed).also { cachedSelinux = it }
+        // Upgrade a fast Unknown once in the background. Reuse failed probes until
+        // root availability changes or the caller explicitly requests a refresh.
+        val selinuxState = cachedSelinux?.takeIf {
+            !forceRefresh && (it.state != "Unknown" || it.rootAllowedWhenProbed == rootAllowed)
+        } ?: SelinuxSnapshot(readSelinuxState(rootAllowed), rootAllowed).also { cachedSelinux = it }
 
         return SystemDiagnostics(
             moduleVersion = own?.versionName ?: BuildConfig.VERSION_NAME,
@@ -130,7 +139,7 @@ object SystemDiagnosticsReader {
             device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
             abis = Build.SUPPORTED_ABIS.joinToString(", "),
             kernel = System.getProperty("os.version").orEmpty().ifBlank { "Unknown" },
-            selinux = selinuxState,
+            selinux = selinuxState.state,
             hookedTargets = hooked.sorted().joinToString().ifBlank { "None reported" }
         ).also { cachedDiagnostics = it }
     }
@@ -173,37 +182,28 @@ object SystemDiagnosticsReader {
         else -> "Xposed"
     }
 
-    private fun readFastSelinuxState(): String {
-        runCatching {
-            normalizeSelinuxState(File("/sys/fs/selinux/enforce").readText())
-        }.getOrNull()?.let { return it }
-
-        runCatching {
-            val selinux = Class.forName("android.os.SELinux")
-            val enforced = selinux.getMethod("isSELinuxEnforced").invoke(null) as Boolean
-            return if (enforced) "Enforcing" else "Permissive"
-        }.getOrNull()?.let { return it }
-
-        return "Enforcing"
-    }
+    private fun readFastSelinuxState(): String = readSelinuxState(rootAllowed = false)
 
     private fun readSelinuxState(rootAllowed: Boolean): String {
         runCatching {
             normalizeSelinuxState(File("/sys/fs/selinux/enforce").readText())
         }.getOrNull()?.let { return it }
 
-        runCatching {
+        // Android's boolean JNI API maps both permissive (0) and read errors (-1)
+        // to false. Only true is positive evidence; false must not mask root data.
+        val enforced = runCatching {
             val selinux = Class.forName("android.os.SELinux")
-            val enforced = selinux.getMethod("isSELinuxEnforced").invoke(null) as Boolean
-            return if (enforced) "Enforcing" else "Permissive"
-        }.getOrNull()?.let { return it }
+            selinux.getMethod("isSELinuxEnforced").invoke(null) as? Boolean
+        }.getOrNull()
+        if (enforced == true) return "Enforcing"
 
         if (rootAllowed) {
-            normalizeSelinuxState(AppRestartHelper.runRootCommand("getenforce"))
-                ?.let { return it }
+            runCatching {
+                normalizeSelinuxState(AppRestartHelper.runRootCommand("getenforce"))
+            }.getOrNull()?.let { return it }
         }
 
-        return "Enforcing"
+        return "Unknown"
     }
 
     private fun normalizeSelinuxState(raw: String?): String? = when (raw?.trim()?.lowercase()) {

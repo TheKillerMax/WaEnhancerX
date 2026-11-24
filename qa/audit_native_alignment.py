@@ -2,7 +2,8 @@
 """Read-only 16 KiB native-library packaging preflight for a supplied APK.
 
 Check ELF headers/program headers in every lib/<abi>/*.so, then require 64-bit
-PT_LOAD alignment and 16 KiB ZIP offsets for stored
+PT_LOAD alignment, GNU_RELRO page protection without writable-data overlap,
+and 16 KiB ZIP offsets for stored
 64-bit libraries. Compressed libraries do not require a direct-load ZIP offset.
 32-bit libraries are structurally parsed and reported, not certified for 16 KiB.
 
@@ -30,6 +31,8 @@ MAX_TOTAL_NATIVE_BYTES = 512 * 1024 * 1024
 MAX_PROGRAM_HEADERS = 4096
 NATIVE = re.compile(r"lib/([^/.][^/]*)/([^/]+\.so)\Z")
 PT_LOAD = 1
+PT_GNU_RELRO = 0x6474E552
+PF_W = 2
 
 
 class AuditError(ValueError):
@@ -39,6 +42,62 @@ class AuditError(ValueError):
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AuditError(message)
+
+
+def merged_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Merge nonempty half-open ranges, including adjacent RELRO declarations."""
+    merged = []
+    for start, end in sorted(ranges):
+        if start == end:
+            continue
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def relro_writable_overlaps(loads: list[dict], relros: list[dict]) -> list[dict]:
+    """Find RW bytes outside RELRO covered by 16 KiB protection rounding.
+
+    Bionic rounds both ends of PT_GNU_RELRO to page boundaries. Inspect every
+    writable LOAD, not just the one containing RELRO: another LOAD can begin in
+    the same page. RELRO memory can include padding past its LOAD, so demanding
+    equality of their ends would reject valid linker output. Multiple RELRO
+    declarations are treated as a union to avoid reporting another RELRO's data.
+    This checks header ranges, not section contents or Android compat mode.
+    """
+    declared = merged_ranges([(item["virtual_address"],
+                               item["virtual_address"] + item["memory_size"])
+                              for item in relros])
+    protected = merged_ranges([
+        (item["virtual_address"] // PAGE_SIZE * PAGE_SIZE,
+         ((item["virtual_address"] + item["memory_size"] + PAGE_SIZE - 1)
+          // PAGE_SIZE * PAGE_SIZE)) for item in relros])
+    padding = []
+    for start, end in protected:
+        cursor = start
+        for relro_start, relro_end in declared:
+            if relro_end <= cursor:
+                continue
+            if relro_start >= end:
+                break
+            if cursor < relro_start:
+                padding.append((cursor, relro_start))
+            cursor = max(cursor, relro_end)
+        if cursor < end:
+            padding.append((cursor, end))
+    overlaps = []
+    for item in loads:
+        if not item["flags"] & PF_W:
+            continue
+        for start, end in padding:
+            overlap_start = max(start, item["virtual_address"])
+            overlap_end = min(end, item["virtual_address"] + item["memory_size"])
+            if overlap_start < overlap_end:
+                overlaps.append({"load_segment_index": item["index"],
+                                 "start": overlap_start, "end": overlap_end})
+    return overlaps
 
 
 def inspect_elf(data: bytes) -> dict:
@@ -63,7 +122,7 @@ def inspect_elf(data: bytes) -> dict:
     require(0 < count <= MAX_PROGRAM_HEADERS, "Unsupported ELF program-header count")
     require(header_size <= ph_offset <= len(data), "ELF program-header offset out of bounds")
     require(count * entry_size <= len(data) - ph_offset, "Truncated ELF program-header table")
-    loads = []
+    loads, relros = [], []
     for index in range(count):
         offset = ph_offset + index * entry_size
         if bits == 64:
@@ -72,7 +131,7 @@ def inspect_elf(data: bytes) -> dict:
         else:
             kind, file_offset, address, _, file_size, mem_size, flags, alignment = \
                 struct.unpack_from(endian + "IIIIIIII", data, offset)
-        if kind != PT_LOAD:
+        if kind not in (PT_LOAD, PT_GNU_RELRO):
             continue
         require(file_offset <= len(data) and file_size <= len(data) - file_offset,
                 "ELF segment file range out of bounds")
@@ -80,20 +139,27 @@ def inspect_elf(data: bytes) -> dict:
         require(address + mem_size <= (1 << bits), "ELF memory range overflows its address width")
         require(alignment in (0, 1) or alignment & (alignment - 1) == 0,
                 "ELF segment alignment is not a power of two")
-        if alignment > 1:
+        if kind == PT_LOAD and alignment > 1:
             require(file_offset % alignment == address % alignment,
                     "ELF file and virtual offsets violate segment alignment")
         item = {"index": index, "file_offset": file_offset, "virtual_address": address,
-                "file_size": file_size, "memory_size": mem_size, "alignment": alignment}
-        loads.append(item)
+                "file_size": file_size, "memory_size": mem_size, "alignment": alignment,
+                "flags": flags}
+        (loads if kind == PT_LOAD else relros).append(item)
     require(bool(loads), "ELF has no loadable segment")
     issues = []
+    overlaps = []
     if bits == 64:
         if any(segment["alignment"] < PAGE_SIZE for segment in loads):
             issues.append("ELF_LOAD_ALIGNMENT_BELOW_16K")
+        overlaps = relro_writable_overlaps(loads, relros)
+        if overlaps:
+            issues.append("ELF_RELRO_OVERLAPS_WRITABLE_16K")
     return {"elf_bits": bits, "machine": machine,
             "byte_order": "little" if encoding == 1 else "big",
-            "load_segments": loads, "issues": issues}
+            "load_segments": loads, "relro_segments": relros,
+            "relro_alignment_checked": bits == 64,
+            "relro_writable_overlaps": overlaps, "issues": issues}
 
 
 def zip_data_offset(stream, entry: zipfile.ZipInfo, apk_size: int) -> int:
@@ -170,15 +236,17 @@ def audit(apk: Path) -> dict:
             libraries.append(result)
     findings = [{"entry": library["entry"], "issues": library["issues"]}
                 for library in libraries if library["issues"]]
-    return {"schema_version": 1, "apk": apk.name, "apk_sha256": digest.hexdigest(),
+    return {"schema_version": 2, "apk": apk.name, "apk_sha256": digest.hexdigest(),
             "page_size": PAGE_SIZE, "native_library_count": len(libraries),
             "checked_64bit_library_count": sum(library["alignment_checked"] for library in libraries),
             "libraries": libraries, "findings": findings, "passed": not findings,
-            "scope": ("64-bit ELF PT_LOAD and stored native ZIP offsets; "
+            "scope": ("64-bit ELF PT_LOAD, GNU_RELRO page-rounding overlap with writable "
+                      "LOAD ranges, and stored native ZIP offsets; "
                       "native-entry CRC only, not APK signatures, resources, linker execution "
                       "or device compatibility. Stored offsets are checked conservatively "
-                      "for direct loading; the binary manifest extraction policy, GNU_RELRO "
-                      "protection layout and non-loadable segments are not validated.")}
+                      "for direct loading; the binary manifest extraction policy, ELF section "
+                      "contents, full memory mapping, Android compat-mode behavior and "
+                      "other non-loadable segments are not validated.")}
 
 
 def main(argv=None) -> int:
