@@ -27,7 +27,14 @@ with tempfile.TemporaryDirectory(prefix='waex_bridge_order_') as directory:
         p.write_text(content)
     classes = out/'classes'
     classes.mkdir()
+    # Compile current production dependencies instead of accidentally omitting them.
     source = ROOT/'app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java'
-    subprocess.run(['javac', '-d', str(classes), *map(str, out.rglob('*.java')), str(source)], check=True, timeout=45)
+    schema = ROOT/'app/src/main/java/com/waenhancer/config/PreferenceSchema.java'
+    errors = ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'
+    for production in (source, schema, errors):
+        if not production.is_file():
+            raise SystemExit(f'Required production dependency missing: {production}')
+    subprocess.run(['javac', '-d', str(classes), *map(str, out.rglob('*.java')),
+                    str(schema), str(errors), str(source)], check=True, timeout=45)
     print('COMPILE_OK', flush=True)
     subprocess.run(['java', '-cp', str(classes), 'test.BridgeOrderingChecks', str(args.repeat)], check=True, timeout=45)
