@@ -150,9 +150,14 @@ class SQLiteDatabase : AutoCloseable {
     override fun close() { closeCount++ }
 }
 """,
-    "XposedBridge.kt": """package de.robv.android.xposed
-object XposedBridge { fun log(message: String) { System.err.println(message) } }
+    "XposedBridge.java": """package de.robv.android.xposed;
+public final class XposedBridge {
+    private XposedBridge() {}
+    public static void log(String message) { System.err.println(message); }
+}
 """,
+    "NonNull.java": "package androidx.annotation; public @interface NonNull {}",
+    "VisibleForTesting.java": "package androidx.annotation; public @interface VisibleForTesting {}",
     "MessageStore.kt": """package com.waenhancer.xposed.core.db
 import android.content.Context
 import java.io.File
@@ -170,7 +175,10 @@ with tempfile.TemporaryDirectory() as folder:
         (java_sources if path.suffix == ".java" else sources).append(str(path))
     classes = temp / "classes"
     classes.mkdir()
-    subprocess.run(["javac", "--release", "17", "-d", str(classes), *java_sources], check=True)
+    errors = root / "app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java"
+    if not errors.is_file():
+        raise SystemExit(f"Required production dependency missing: {errors}")
+    subprocess.run(["javac", "--release", "17", "-d", str(classes), *java_sources, str(errors)], check=True)
     subprocess.run([shutil.which("kotlinc.bat") or shutil.which("kotlinc") or "kotlinc", "-classpath", str(classes), *sources, str(args.source),
                     str(root / "qa/fixtures/EditHistoryStoreChecks.kt"), "-jvm-target", "17",
                     "-include-runtime", "-d", str(temp / "checks.jar")], check=True)
