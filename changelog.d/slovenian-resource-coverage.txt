@@ -1,0 +1,3 @@
+[Fixes]
+- Complete Slovenian translations for custom emojis, issue reports, Telegram
+  sign-in and licensing, diagnostics, and new settings.
