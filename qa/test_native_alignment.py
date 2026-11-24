@@ -36,6 +36,40 @@ def elf(bits=64, endian="<", alignment=PAGE_SIZE, relro_end=None):
     return bytes(data)
 
 
+def segmented_elf(segments, *, bits=64, endian="<"):
+    """Encode explicit program headers independently of the audit's range logic.
+
+    Tuples are (type, flags, file offset, virtual address, file size, memory
+    size, alignment). Payload bytes are placeholders, not executable code.
+    """
+    header, ph = (64, 56) if bits == 64 else (52, 32)
+    length = max(header + ph * len(segments),
+                 max(offset + size for _, _, offset, _, size, _, _ in segments))
+    data = bytearray(length)
+    data[:7] = b"\x7fELF" + bytes([2 if bits == 64 else 1, 1 if endian == "<" else 2, 1])
+    struct.pack_into(endian + "HHI", data, 16, 3, 183 if bits == 64 else 40, 1)
+    struct.pack_into(endian + ("Q" if bits == 64 else "I"), data, 32 if bits == 64 else 28, header)
+    struct.pack_into(endian + "HHH", data, 52 if bits == 64 else 40, header, ph, len(segments))
+    for index, (kind, flags, offset, address, size, memory, alignment) in enumerate(segments):
+        values = ((kind, flags, offset, address, address, size, memory, alignment)
+                  if bits == 64 else
+                  (kind, offset, address, address, size, memory, flags, alignment))
+        struct.pack_into(endian + ("IIQQQQQQ" if bits == 64 else "IIIIIIII"),
+                         data, header + index * ph, *values)
+    return bytes(data)
+
+
+def relro_fixture(*, relro_start=0x5000, relro_end=0x6000,
+                  load_end=0x8000, flags=6, extra=(), **kwargs):
+    return segmented_elf([
+        (1, 5, 0, 0, 0x1000, 0x1000, 0x4000),
+        (1, flags, 0x1000, 0x5000, load_end - 0x5000, load_end - 0x5000, 0x4000),
+        (0x6474E552, 4, relro_start - 0x4000, relro_start,
+         0, relro_end - relro_start, 1),
+        *extra,
+    ], **kwargs)
+
+
 def apk(path, content=None, *, align_zip=True, compressed=False, duplicate=False,
         abi="arm64-v8a", manifest=True):
     with zipfile.ZipFile(path, "w") as archive:
@@ -115,6 +149,96 @@ class ElfTests(unittest.TestCase):
         struct.pack_into("<Q", data, 64 + 40, PAGE_SIZE + 1)
         with self.assertRaises(AuditError):
             inspect_elf(bytes(data))
+
+
+class RelroTests(unittest.TestCase):
+    ISSUE = "ELF_RELRO_OVERLAPS_WRITABLE_16K"
+
+    def test_writable_tail_fails_even_with_aligned_load_headers(self):
+        for endian in ("<", ">"):
+            with self.subTest(endian=endian):
+                report = inspect_elf(relro_fixture(endian=endian))
+                self.assertEqual([self.ISSUE], report["issues"])
+                self.assertEqual([{"load_segment_index": 1, "start": 0x6000,
+                                   "end": 0x8000}], report["relro_writable_overlaps"])
+
+    def test_readonly_tail_is_not_a_writable_data_finding(self):
+        self.assertEqual([], inspect_elf(relro_fixture(flags=4))["issues"])
+
+    def test_aligned_end_and_exact_end_of_load_are_safe(self):
+        for options in ({"relro_end": 0x8000, "load_end": 0x9000},
+                        {"load_end": 0x6000}):
+            with self.subTest(options=options):
+                self.assertEqual([], inspect_elf(relro_fixture(**options))["issues"])
+
+    def test_one_byte_before_page_boundary_is_a_finding(self):
+        report = inspect_elf(relro_fixture(relro_end=0x7fff))
+        self.assertEqual([self.ISSUE], report["issues"])
+        self.assertEqual(0x7fff, report["relro_writable_overlaps"][0]["start"])
+        self.assertEqual(0x8000, report["relro_writable_overlaps"][0]["end"])
+        self.assertEqual([], inspect_elf(relro_fixture(relro_end=0x8000))["issues"])
+
+    def test_relro_padding_beyond_load_is_not_rejected(self):
+        self.assertEqual([], inspect_elf(relro_fixture(relro_end=0x7000,
+                                                       load_end=0x6000))["issues"])
+
+    def test_next_writable_load_must_not_share_relro_trailing_page(self):
+        for address, expected in ((0x7000, [self.ISSUE]), (0x8000, [])):
+            next_load = (1, 6, address - 0x4000, address, 0, 0x1000, 0x4000)
+            report = inspect_elf(relro_fixture(load_end=0x6000, extra=[next_load]))
+            with self.subTest(address=address):
+                self.assertEqual(expected, report["issues"])
+
+    def test_start_rounding_detects_writable_prefix(self):
+        report = inspect_elf(relro_fixture(relro_start=0x6000, relro_end=0x8000))
+        self.assertEqual([self.ISSUE], report["issues"])
+        self.assertEqual([{"load_segment_index": 1, "start": 0x5000,
+                           "end": 0x6000}], report["relro_writable_overlaps"])
+
+    def test_multiple_relro_ranges_cover_each_other_but_not_gaps(self):
+        for start, expected in ((0x6000, []), (0x7000, [self.ISSUE])):
+            second = (0x6474E552, 4, start - 0x4000, start, 0, 0x8000 - start, 1)
+            report = inspect_elf(relro_fixture(extra=[second]))
+            with self.subTest(start=start):
+                self.assertEqual(expected, report["issues"])
+
+    def test_empty_relro_uses_actual_page_rounding_without_certifying_32bit(self):
+        self.assertEqual([self.ISSUE], inspect_elf(relro_fixture(
+            relro_start=0x5000, relro_end=0x5000))["issues"])
+        self.assertEqual([], inspect_elf(relro_fixture(
+            relro_start=0x8000, relro_end=0x8000))["issues"])
+        report = inspect_elf(relro_fixture(bits=32))
+        self.assertEqual([], report["issues"])
+        self.assertFalse(report["relro_alignment_checked"])
+        self.assertEqual(1, len(report["relro_segments"]))
+
+    def test_relro_file_and_memory_bounds_are_validated(self):
+        # The third ELF64 header is GNU_RELRO; alter one field at a time.
+        start = 64 + 2 * 56
+        for offset, value in ((8, 2**63), (32, 2**63), (32, 0x1001),
+                              (16, 2**64 - 1), (48, 3)):
+            data = bytearray(relro_fixture())
+            struct.pack_into("<Q", data, start + offset, value)
+            with self.subTest(offset=offset, value=value), self.assertRaises(AuditError):
+                inspect_elf(bytes(data))
+
+    def test_documented_relro_examples(self):
+        # Explicit program headers from Android's 16 KiB guide, examples 1, 2,
+        # and 4. They cover shared RW data, aligned end, and a separate LOAD.
+        examples = [
+            ([(1, 5, 0, 0, 0xcfaf0, 0xcfaf0, 0x4000),
+              (1, 6, 0xcfaf0, 0xdfaf0, 0x2510, 0x4510, 0x4000),
+              (0x6474E552, 4, 0xcfaf0, 0xdfaf0, 0x1510, 0x1510, 1)], [self.ISSUE]),
+            ([(1, 5, 0, 0, 0xcfaf0, 0xcfaf0, 0x4000),
+              (1, 6, 0xcfaf0, 0xdfaf0, 0x1510, 0x3510, 0x4000),
+              (0x6474E552, 4, 0xcfaf0, 0xdfaf0, 0x510, 0x510, 1)], []),
+            ([(1, 5, 0, 0, 0x680, 0x680, 0x4000),
+              (1, 6, 0x680, 0x4680, 0x1d8, 0x980, 0x4000),
+              (0x6474E552, 4, 0x680, 0x4680, 0x1d8, 0x980, 1)], []),
+        ]
+        for index, (segments, expected) in enumerate(examples):
+            with self.subTest(example=index):
+                self.assertEqual(expected, inspect_elf(segmented_elf(segments))["issues"])
 
 
 class ApkTests(unittest.TestCase):
@@ -199,6 +323,18 @@ class ApkTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertEqual(expected, result.returncode, result.stderr)
                 self.assertEqual(expected == 0, json.loads(result.stdout)["passed"])
+
+    def test_relro_finding_survives_compression_and_cli_reports_schema_two(self):
+        apk(self.path, relro_fixture(), compressed=True)
+        script = Path(__file__).with_name("audit_native_alignment.py")
+        result = subprocess.run([sys.executable, str(script), str(self.path), "--json"],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(1, result.returncode, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(2, report["schema_version"])
+        self.assertFalse(report["passed"])
+        self.assertEqual([RelroTests.ISSUE], report["findings"][0]["issues"])
+        self.assertTrue(report["libraries"][0]["relro_alignment_checked"])
 
 
 if __name__ == "__main__":

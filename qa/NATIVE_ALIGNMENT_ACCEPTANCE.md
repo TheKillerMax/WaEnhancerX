@@ -3,14 +3,19 @@
 `audit_native_alignment.py` is a read-only packaging diagnostic for an APK
 supplied locally. It inspects every native ELF header and program-header table,
 checks native member CRCs, and reports SHA-256 identities. For 64-bit libraries it
-checks each `PT_LOAD` alignment and ZIP data offsets
-for uncompressed libraries. These are separate checks: a ZIP-aligned library can
+checks each `PT_LOAD` alignment, GNU_RELRO page-rounding overlap with writable
+LOAD ranges, and ZIP data offsets for uncompressed libraries. These are separate checks: a ZIP-aligned library can
 still contain ELF segments aligned to only 4 KiB.
 
 ```sh
 python3 qa/audit_native_alignment.py /path/to/module.apk --json
 python3 qa/test_native_alignment.py
 ```
+
+JSON schema version 2 retains the previous keys and adds LOAD permission flags,
+RELRO segment metadata, `relro_alignment_checked`, and
+`relro_writable_overlaps`. Consumers that require schema version 1 must accept
+version 2 explicitly: an input can now fail an additional RELRO check.
 
 Exit 0 means these packaging checks passed; 1 reports alignment findings; 2 means
 the input was malformed, unsupported, out of bounds, or unreadable. A missing
@@ -22,7 +27,10 @@ loading; the tool does not decode `extractNativeLibs` from the binary manifest.
 
 The synthetic fixtures cover little/big-endian ELF32/ELF64, malformed ranges and
 headers, every load segment, distinct ZIP/ELF failures, native CRC
-corruption, duplicate ZIP members, ABI mismatches, and CLI exit codes. Synthetic
+corruption, duplicate ZIP members, ABI mismatches, and CLI exit codes. RELRO
+fixtures also cover page-boundary bytes, padded ranges, writable prefixes and
+tails, neighboring LOAD segments, multiple RELRO declarations, and the
+numerical examples in the Android 16 KiB guidance. Synthetic
 ELF containers do not execute native code. Public CI uses these synthetic inputs
 only; do not commit APKs, extracted libraries, signing material, or private code.
 
@@ -50,9 +58,11 @@ Primary specification and Android guidance:
 - [ELF program headers](https://gabi.xinuos.com/elf/07-pheader.html)
 - [AOSP linker page rounding and RELRO protection](https://android.googlesource.com/platform/bionic/+/refs/heads/main/linker/linker_phdr.cpp)
 
-The scope is deliberately limited to `PT_LOAD` and native ZIP alignment.
-`GNU_RELRO` protection depends on the surrounding writable segment layout and
-page rounding; a raw RELRO end modulus alone is not a sufficient failure test.
-Section tables, relocations, symbols and Android linker execution are outside
-this checker. A passing result does not authenticate an APK, prove correct
+The scope includes `PT_LOAD`, native ZIP alignment, and the overlap between
+16 KiB-rounded GNU_RELRO protection and writable LOAD bytes outside declared
+RELRO ranges. Both page edges and neighboring LOADs are considered; a raw
+RELRO end modulus alone is not a sufficient failure test. Padded RELRO memory
+may extend past its LOAD without causing a finding. Section tables,
+relocations, symbols, full memory mapping, Android compat-mode behavior and
+Android linker execution remain outside this checker. A passing result does not authenticate an APK, prove correct
 resources, or certify WhatsApp/LSPosed feature compatibility.
