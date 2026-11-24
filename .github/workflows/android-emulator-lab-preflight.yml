@@ -1,0 +1,49 @@
+name: Android emulator lab preflight
+
+on:
+  push:
+    branches: ['lab/android-emulator-matrix-nightly8-20261124']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-lab-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the isolated public lab branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2; existing repository pin
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Inspect KVM, SDK metadata and existing licenses
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          python3 qa/android_emulator_lab_preflight.py --out "$RUNNER_TEMP/waex-android-lab-preflight"
+
+      - name: Preserve preflight reports even when a requirement is missing
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1; existing repository pin
+        with:
+          name: android-lab-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-android-lab-preflight/
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 1
+          include-hidden-files: false
