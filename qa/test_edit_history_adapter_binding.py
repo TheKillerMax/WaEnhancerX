@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Compile production getView and click callbacks with explicit Kotlin view doubles.
 
-Checks adapter identity, recycled-listener invalidation and zero canonical DB
-lookups in binding. This is not a rendered Android/host performance measurement.
+Checks adapter identity, recycled-listener invalidation, no canonical-row SQLite
+queries and the production alias-cache contract (one cold key read). Alias misses
+can still synchronously query SQLite; no host scrolling benchmark is claimed.
 """
 from pathlib import Path
 import argparse
@@ -40,6 +41,11 @@ class Context { val resources = Resources(); val packageName = "com.whatsapp" }
 class Resources {
     fun getIdentifier(name: String, type: String, pkg: String) =
         if (name == "edit_label") 31 else if (name == "edited_label") 32 else 0
+}
+// Explicit host resource boundary; the production resolver is tested separately.
+object HostResourceIds {
+    fun id(context: Context, name: String): Int =
+        context.resources.getIdentifier(name, "id", context.packageName)
 }
 open class View {
     val context = Context()
@@ -86,6 +92,25 @@ class Callback(private val adapter: ListAdapter) {
     private val TAG_EDIT_ORIGINAL_TEXT = 0x57414545
     private var sEditLabelResId = 0
     private var sEditedLabelResId = 0
+    private val sSnapshotted = mutableMapOf<String, String>()
+    // Model the real EditMessageStore alias cache, including one cold SQLite read.
+    class AliasStore {
+        var coldQueries = 0
+        var calls = 0
+        val recorded = mutableListOf<String>()
+        private val cached = mutableMapOf<String, String>()
+        fun resolveOriginalKey(key: String): String {
+            calls++
+            return cached.getOrPut(key) {
+                coldQueries++
+                if (key == "edited-chat") "original-chat" else key
+            }
+        }
+        fun recordTransitionAsync(rowId: Long, keyId: String?, old: String?, text: String, ts: Long) {
+            recorded.add("$rowId:$keyId:$text")
+        }
+    }
+    val editStore = AliasStore()
     private data class EditData(val rowId: Long, val keyId: String?, val msgText: String?)
     private val FIELD_ROW_ID = "waex_row_id"
     private val FIELD_MSG_ID = "waex_msg_id"
@@ -121,9 +146,12 @@ fun main(args: Array<String>) {
     if (args.single() == "queries" || args.single() == "all") {
         repeat(10_000) { callback.afterHookedMethod(MethodHookParam(first, arrayOf(0), row)) }
         checkCase(callback.dbQueries == 0, "scroll binding performed ${callback.dbQueries} canonical DB queries")
+        checkCase(callback.editStore.coldQueries == 1 && callback.editStore.calls == 10_000,
+                  "alias cache must perform one cold resolution, then reuse it for 9,999 binds")
         row.label.click()
         checkCase(callback.opened.single().key == "first-chat", "keyed history remains accessible without row lookup")
-        println("PASS: $checks callback query checks; 10,000 getView calls, ${callback.dbQueries} DB queries")
+        println("PASS: $checks callback query checks; 10,000 getView calls, "
+                + "${callback.dbQueries} canonical queries, ${callback.editStore.coldQueries} cold alias query")
         if (args.single() == "queries") return
         callback.opened.clear()
         first.reads = 0
@@ -147,7 +175,7 @@ fun main(args: Array<String>) {
     checkCase(row.label.fields["waex_msg_id"] == "second-chat", "row key follows conversation")
     checkCase("waex_row_id" !in row.label.fields, "keyed binding does not guess a numeric database ID")
     checkCase(first.reads == 1 && second.reads == 1, "class hook reads current receiver")
-    checkCase(callback.dbQueries == 0, "getView must not query SQLite")
+    checkCase(callback.dbQueries == 0, "getView must not run canonical-row SQLite resolution")
     val noKey = Adapter(Message(4, null, "fourth text"))
     callback.afterHookedMethod(MethodHookParam(noKey, arrayOf(0), row)); row.label.click()
     checkCase(callback.opened.last().id == 4L && callback.opened.last().key == null, "row-only compatibility")
@@ -197,6 +225,13 @@ fun main(args: Array<String>) {
     callback.afterHookedMethod(MethodHookParam(Any(), arrayOf(0), row))
     row.label.click()
     checkCase(nativeClicks[0] == 1, "invalidation erased WhatsApp's new click listener")
+    // An edited row must open the history of the original, not a newly allocated edit key.
+    val edited = Adapter(Message(7, "edited-chat", "edited text"))
+    callback.afterHookedMethod(MethodHookParam(edited, arrayOf(0), row)); row.label.click()
+    checkCase(callback.opened.last().key == "original-chat",
+              "edited message lookup did not resolve the canonical original key")
+    checkCase(callback.editStore.coldQueries > 1 && callback.editStore.calls >= 10_000,
+              "alias lookup coverage missing")
     println("PASS: $checks extracted production adapter/click checks; 10,000 source getView calls")
 
 }
