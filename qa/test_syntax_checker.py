@@ -170,5 +170,35 @@ class SyntaxCheckerTests(unittest.TestCase):
         self.assertTrue(any('root does not exist' in x.lower() for x in obj['toolchain_errors']))
 
 
+    def test_large_source_inventory_and_special_paths_remain_complete(self):
+        directory = 'src/' + 'long_component_' * 4 + '/# @ spaced 日本語/'
+        for index in range(300):
+            self.write(directory + f'Entry{index:03d}.java', f'class Entry{index:03d} {{}}\n')
+            self.write(directory + f'Entry{index:03d}.kt', f'val entry{index:03d} = {index}\n')
+        java_paths = list(self.root.rglob('*.java'))
+        kotlin_paths = list(self.root.rglob('*.kt'))
+        # The fixture is large enough to reproduce the former Windows206 error
+        # independently for each parser, while every individual path stays short.
+        self.assertGreater(sum(len(str(path)) + 3 for path in java_paths), 32767)
+        self.assertGreater(sum(len(str(path)) + 3 for path in kotlin_paths), 32767)
+        code, obj = self.run_checker()
+        self.assertEqual(code, 0, obj)
+        self.assertEqual((obj['java_files'], obj['kotlin_files']), (300, 300))
+        self.assertFalse(obj['kotlin_skipped'])
+        self.assertEqual(obj['syntax_errors'], [])
+        # A late invalid member proves that passing a source list did not truncate
+        # either parser's inventory or silently skip difficult path characters.
+        self.write(directory + 'Entry299.java', 'class Entry299 {\nvoid broken( { }\n')
+        self.write(directory + 'Entry299.kt', 'val good = 1\nfun broken( {\n')
+        code, obj = self.run_checker()
+        self.assertEqual(code, 1, obj)
+        self.assertEqual((obj['java_files'], obj['kotlin_files']), (300, 300))
+        self.assertEqual({e['language'] for e in obj['syntax_errors']}, {'java', 'kotlin'})
+        for error in obj['syntax_errors']:
+            self.assertTrue(Path(error['file']).name.startswith('Entry299.'))
+            self.assertEqual(error['line'], 2)
+
+
+
 if __name__ == '__main__':
     unittest.main()

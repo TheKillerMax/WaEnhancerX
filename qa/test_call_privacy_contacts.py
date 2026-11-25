@@ -12,6 +12,7 @@ Alternatively, --android-json-jar accepts the hash-pinned Android 14 Robolectric
 framework archive, using its real org.json implementation (not framework shadows).
 """
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -30,6 +31,10 @@ HOOK = Path("app/src/main/java/com/waenhancer/xposed/features/privacy/CallPrivac
 IDENTITY = Path("app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java")
 CUSTOM = Path("app/src/main/java/com/waenhancer/xposed/features/privacy/CustomPrivacyHook.kt")
 ANDROID_14_JAR_SHA256 = '6be2218c6a53fe3c57bc22ebdc723edcb7270a8a6f187545708aa5c0ed813977'
+WAJID = Path("app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java")
+WATARGETS = Path("app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java")
+SHARED_SOURCES = (HOOK, IDENTITY, CUSTOM, WAJID, WATARGETS,
+                  Path("app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java"))
 STUBS = {}
 
 
@@ -95,6 +100,8 @@ public class SQLiteDatabase implements AutoCloseable {
 }
 ''')
 stub('android/os/Build.java', '''package android.os;public class Build {public static class VERSION {public static int SDK_INT=34;}public static class VERSION_CODES{public static final int O=26;}}''')
+# The host clock is monotonic; Android's native elapsedRealtime is not available on a host JVM.
+stub('android/os/SystemClock.java', 'package android.os;public final class SystemClock {public static long elapsedRealtime(){return System.nanoTime()/1000000L;}}')
 stub('android/os/Message.java', '''package android.os;public class Message {public Object obj;}''')
 stub('android/text/TextUtils.java', '''package android.text;public class TextUtils {public static boolean isEmpty(CharSequence s){return s==null||s.length()==0;}}''')
 stub('android/R.java', '''package android;public class R {public static class drawable{public static final int ic_dialog_info=1;}}''')
@@ -123,7 +130,24 @@ public class ContactNameResolver {
  public static final ContactNameResolver INSTANCE=new ContactNameResolver();
  public final Map<String,String> mappings=new HashMap<>(), saved=new HashMap<>(), display=new HashMap<>();
  public int mappingCalls,systemCalls; public RuntimeException systemFailure; public Error fatalSystemFailure;
- public void reset(){mappings.clear();saved.clear();display.clear();mappingCalls=systemCalls=0;systemFailure=null;fatalSystemFailure=null;}
+ public void reset(){
+  // Each existing reset starts an independent synthetic profile/process fixture.
+  // Preserve genuine WaJid caching within a case; remove only prior-case state.
+  try {
+   Class<?> owner=Class.forName("com.waenhancer.xposed.core.wa.WaJid");
+   for(String side:new String[]{"LID_TO_PHONE","PHONE_TO_LID"}){
+    java.lang.reflect.Field field=owner.getDeclaredField(side);field.setAccessible(true);Object map=field.get(null);
+    synchronized(map){for(String member:new String[]{"hits","missesAt"}){
+     java.lang.reflect.Field cache=map.getClass().getDeclaredField(member);cache.setAccessible(true);
+     ((android.util.LruCache<?,?>)cache.get(map)).evictAll();
+    }}
+   }
+  }catch(ReflectiveOperationException failure){throw new AssertionError("WaJid fixture isolation contract changed",failure);}
+  mappings.clear();saved.clear();display.clear();mappingCalls=systemCalls=0;systemFailure=null;fatalSystemFailure=null;
+ }
+ public String resolvePhoneToLid(Context c,String jid){
+  throw com.waenhancer.xposed.features.privacy.CallPrivacyFixtureScope.unexpected("reverse identity lookup");
+ }
  public String resolveLidToPhone(Context c,String jid){mappingCalls++;return mappings.get(jid);}
  public String resolveName(Context c,String jid,String fallback,String hint){
   if(display.containsKey(jid))return display.get(jid);
@@ -173,7 +197,9 @@ import android.content.Context;import java.lang.reflect.Method;import org.luckyp
 public class DexSearchEngine {public static Method incoming;public static DexSearchEngine getInstance(){return new DexSearchEngine();}
  public interface Finder<T>{T find(Bridge b,ClassLoader l)throws Throwable;}
  public Method findMethodWithCache(Context c,ClassLoader l,String key,Finder<Method> f){if(!key.equals("wpp_voip_on_call_state_changed")&&!key.equals("waex_voip_on_call_state_changed"))throw new AssertionError("unexpected incoming selector cache");return incoming;}
- public Class<?> findClassWithCache(Context c,ClassLoader l,String key,Finder<Class<?>> f){return null;}
+ public Class<?> findClassWithCache(Context c,ClassLoader l,String key,Finder<Class<?>> f){
+  throw com.waenhancer.xposed.features.privacy.CallPrivacyFixtureScope.unexpected("typed class discovery");
+ }
  public static class Results<T> extends java.util.ArrayList<T>{public T firstOrNull(){return isEmpty()?null:get(0);}}
  public static class Bridge {public Results<ClassData> findClass(Object o){return new Results<>();}public Results<MethodData> findMethod(Object o){return new Results<>();}}
 }
@@ -188,6 +214,39 @@ public class CallInfo {public final String jid;public final boolean outgoing;pub
 }
 ''')
 
+
+stub('com/waenhancer/xposed/features/privacy/CallPrivacyFixtureScope.java', '''package com.waenhancer.xposed.features.privacy;
+public final class CallPrivacyFixtureScope {
+ private static final java.util.concurrent.atomic.AtomicInteger unexpectedCalls=new java.util.concurrent.atomic.AtomicInteger();
+ public static AssertionError unexpected(String boundary){unexpectedCalls.incrementAndGet();return new AssertionError(boundary+" outside call privacy fixture");}
+ public static void requireUnused(){if(unexpectedCalls.get()!=0)throw new AssertionError("Unexpected call privacy boundary was used: "+unexpectedCalls.get());}
+}
+''')
+stub('com/waenhancer/xposed/features/privacy/CallPrivacyContactsMain.java', '''package com.waenhancer.xposed.features.privacy;
+public final class CallPrivacyContactsMain {
+ public static void main(String[] args)throws Throwable {
+  CallPrivacyContactsTest.main(args);
+  // Genuine WaJid catches resolver errors. A sticky boundary counter prevents
+  // a swallowed out-of-scope lookup from making the fixture appear successful.
+  CallPrivacyFixtureScope.requireUnused();
+ }
+}
+''')
+stub('com/waenhancer/xposed/features/privacy/CallPrivacyBoundaryProbe.java', '''package com.waenhancer.xposed.features.privacy;
+public final class CallPrivacyBoundaryProbe {
+ public static void main(String[] args){
+  android.content.Context context=new android.content.Context(new java.io.File("."));
+  if("reverse".equals(args[0]))
+   com.waenhancer.xposed.core.wa.WaJid.lidFor(context,"56912345678@s.whatsapp.net");
+  else if("class".equals(args[0]))
+   com.waenhancer.xposed.core.wa.WaJid.jidClass(context,CallPrivacyBoundaryProbe.class.getClassLoader());
+  else throw new IllegalArgumentException("Unknown boundary");
+  CallPrivacyFixtureScope.requireUnused();
+ }
+}
+''')
+
+
 def source_block(source, start):
     """Extract a complete balanced production body, failing if its boundary changes."""
     opening = source.index('{', start)
@@ -200,8 +259,45 @@ def source_block(source, start):
     return source[start:end]
 
 
+
+def wa_targets_fixture(source):
+    markers = (
+        'public static Method callStateChanged(',
+        'private static Method requireMethod(',
+        'public static Class<?> jidClass(',
+    )
+    blocks = {}
+    for marker in markers:
+        if source.count(marker) != 1:
+            raise ValueError('Current WaTargets declaration changed: '+marker)
+        blocks[marker] = source_block(source, source.index(marker))
+    # Only discovery unrelated to callStateChanged is outside this fixture.
+    # All three selected production method bodies are copied verbatim.
+    wrapper = '''package com.waenhancer.xposed.core.wa;
+import android.content.Context;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import java.lang.reflect.Method;
+import org.luckypray.dexkit.query.FindClass;
+import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.enums.StringMatchType;
+import org.luckypray.dexkit.query.matchers.ClassMatcher;
+import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.ClassData;
+import org.luckypray.dexkit.result.MethodData;
+public final class WaTargets {
+'''+ '\n\n'.join(blocks.values()) + '\n}\n'
+    return wrapper, {marker: hashlib.sha256(block.encode()).hexdigest()
+                     for marker, block in blocks.items()}
+
+
 def custom_privacy_fixture(source):
     reader = source_block(source, source.index('fun getContactPrivacy('))
+    cache = re.search(r'^        private val PARSED_RULES = LruCache<String, JSONObject>\([0-9]+\)$',
+                      source, re.M)
+    if cache is None:
+        raise ValueError('Current parsed-rule cache declaration is missing')
     callbacks = []
     for button in ('.setPositiveButton(', '.setNegativeButton('):
         start = source.index('DialogInterface.OnClickListener {', source.index(button))
@@ -217,6 +313,7 @@ import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
 import de.robv.android.xposed.XposedBridge
 import org.json.JSONObject
+import android.util.LruCache
 
 /** Exact production reader and Save/Cancel callbacks; UI construction/name lookup are adapters. */
 class CustomPrivacyHook {
@@ -224,6 +321,7 @@ class CustomPrivacyHook {
   const val TAG = "[WAEX_CUSTOM_PRIVACY]"
   @JvmStatic
   __READER__
+  __CACHE__
   private fun extractDisplayName(activity: Context, jid: String, cleanNumber: String) = "Synthetic contact"
   @JvmStatic
   fun saveDialogChoice(prefs: SharedPreferences, jid: String, choices: Map<String, Boolean>, cancel: Boolean) {
@@ -236,9 +334,10 @@ class CustomPrivacyHook {
  }
 }
 '''
-    return (harness.replace('__READER__', reader).replace('__CLEAN_NUMBER__', clean_number)
+    return (harness.replace('__READER__', reader).replace('__CACHE__', cache.group()).replace('__CLEAN_NUMBER__', clean_number)
             .replace('__SAVE__', callbacks[0]).replace('__CANCEL__', callbacks[1])), {
         'getContactPrivacy': hashlib.sha256(reader.encode()).hexdigest(),
+        'parsedRulesCache': hashlib.sha256(cache.group().encode()).hexdigest(),
         'dialogSave': hashlib.sha256(callbacks[0].encode()).hexdigest(),
         'dialogCancel': hashlib.sha256(callbacks[1].encode()).hexdigest(),
     }
@@ -387,7 +486,7 @@ def prepare_databases(out):
         if name == 'corrupt':
             path.write_bytes(b'Synthetic invalid SQLite database')
             continue
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.executescript(schema)
             if name in ('saved_phone', 'legacy_only'):
                 db.execute('INSERT INTO wa_contacts VALUES (?,NULL,?,1)', (phone, 'Saved contact'))
@@ -403,7 +502,7 @@ def prepare_databases(out):
             elif name == 'legacy_only':
                 db.execute('DROP TABLE wa_address_book')
     # A synthetic relative-path decoy makes the old null-files-dir fallback observable.
-    with sqlite3.connect(root / 'wa.db') as db:
+    with closing(sqlite3.connect(root / 'wa.db')) as db, db:
         db.executescript(schema)
         db.execute('INSERT INTO wa_contacts VALUES (?,NULL,?,1)', (phone, 'Other client contact'))
     return root
@@ -413,6 +512,8 @@ def run(root, out, allow_failure=False, json_source_dir=None, android_json_jar=N
     out.mkdir(parents=True, exist_ok=True)
     source = (root / HOOK).read_text()
     custom_source = (root / CUSTOM).read_text()
+    targets_source, targets_hashes = wa_targets_fixture((root / WATARGETS).read_text())
+    stub('com/waenhancer/xposed/core/wa/WaTargets.java', targets_source)
     sources = out / 'sources'
     classes = out / 'classes'
     classes.mkdir(exist_ok=True)
@@ -433,6 +534,11 @@ def run(root, out, allow_failure=False, json_source_dir=None, android_json_jar=N
         aosp_sources = json_sources(cache, allow_download=json_source_dir is None
                                    and not os.environ.get('WAEX_AOSP_JSON_SOURCE_DIR'))
         json_identity = {'aosp_json_android_14_source_sha256': SHA256}
+    lru_source = ROOT / 'qa/fixtures/aosp_android14/android/util/LruCache.java'
+    lru_sha256 = hashlib.sha256(lru_source.read_bytes()).hexdigest()
+    if lru_sha256 != '8fcf11fb69a00168a326237ee0ff3d3222533ffe0c27f1ee923fb4b24e8ad2d7':
+        raise ValueError('AOSP Android 14 LruCache fixture identity mismatch')
+    aosp_sources = [*aosp_sources, lru_source]
     for relative, annotation in android_doubles(ROOT).items():
         if not relative.startswith('android/content/'):
             stub(relative, annotation)
@@ -440,6 +546,7 @@ def run(root, out, allow_failure=False, json_source_dir=None, android_json_jar=N
     stub('com/waenhancer/app/R.java', 'package com.waenhancer.app;public class R {public static class string {'
          + ''.join('public static final int '+key+'='+str(index)+';' for index, key in enumerate(ids, 1)) + '}}')
     stub('com/waenhancer/xposed/features/privacy/CallPrivacyContactsTest.java', TEST)
+    stub('com/waenhancer/xposed/features/privacy/CallPrivacyLruCacheChecks.java', 'package com.waenhancer.xposed.features.privacy;\nimport android.util.LruCache;\npublic final class CallPrivacyLruCacheChecks {\n private static int checks;\n private static void check(boolean value,String message){checks++;if(!value)throw new AssertionError(message);}\n public static void main(String[] args){\n  LruCache<String,Object> cache=new LruCache<>(128);Object first=new Object();\n  cache.put("k0",first);for(int i=1;i<128;i++)cache.put("k"+i,new Object());\n  check(cache.size()==128&&cache.maxSize()==128,"bounded cache capacity");\n  check(cache.get("k0")==first,"same parsed object identity");\n  cache.put("k128",new Object());\n  check(cache.get("k1")==null,"least recently used entry must be evicted");\n  check(cache.get("k0")==first,"recently accessed entry must survive");\n  check(cache.size()==128&&cache.evictionCount()==1,"one bounded eviction");\n  Object replacement=new Object();check(cache.put("k0",replacement)==first,"replacement returns prior object");\n  check(cache.get("k0")==replacement&&cache.size()==128,"replacement does not grow cache");\n  cache.evictAll();check(cache.size()==0,"evictAll removes retained entries");\n  System.out.println("LRU_FIXTURE_CHECKS="+checks);\n }\n}\n')
     for relative, text in STUBS.items():
         path = sources / relative
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -449,31 +556,40 @@ def run(root, out, allow_failure=False, json_source_dir=None, android_json_jar=N
     kotlin.write_text(kotlin_source)
     custom_jar = out / 'custom_privacy_callbacks.jar'
     test_source = sources / 'com/waenhancer/xposed/features/privacy/CallPrivacyContactsTest.java'
+    test_main = sources / 'com/waenhancer/xposed/features/privacy/CallPrivacyContactsMain.java'
     database_root = prepare_databases(out)
     sql_runner = out / 'query_sqlite.py'
     sql_runner.write_text('''import base64, sqlite3, sys
+from contextlib import closing
 from pathlib import Path
 decode=lambda s:base64.b64decode(s).decode('utf-8')
 try:
- with sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+'?mode=ro',uri=True) as db:
+ with closing(sqlite3.connect(Path(sys.argv[1]).resolve().as_uri()+'?mode=ro',uri=True)) as db, db:
   print(int(db.execute(decode(sys.argv[2]),[decode(a) for a in sys.argv[3:]]).fetchone() is not None))
 except sqlite3.Error:
  print('SQL_ERROR')
  sys.exit(12)
 ''')
+    compiler = os.environ.get('KOTLINC') or shutil.which('kotlinc')
+    if not compiler:
+        raise FileNotFoundError('Complete Kotlin compiler distribution required')
+    kotlin_home = Path(compiler).resolve().parent.parent
+    if not (kotlin_home / 'lib/kotlin-compiler.jar').is_file():
+        raise FileNotFoundError('Kotlin compiler JARs missing from resolved distribution')
     commands = [
         ['javac', '--release', '17', '-d', str(classes),
          *(['-classpath', os.pathsep.join(map(str, json_archives))] if json_archives else []),
-         *map(str, sorted(p for p in sources.rglob('*.java') if p != test_source)),
-         *map(str, aosp_sources), str(root / IDENTITY),
+         *map(str, sorted(p for p in sources.rglob('*.java') if p not in (test_source, test_main))),
+         *map(str, aosp_sources), str(root / IDENTITY), str(root / WAJID),
          str(root / 'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java')],
-        ['kotlinc', '-jvm-target', '17', '-classpath', os.pathsep.join(map(str, (classes, *json_archives))),
+        ['java', '-cp', str(kotlin_home / 'lib/*'), 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
+         '-kotlin-home', str(kotlin_home), '-jvm-target', '17', '-classpath', os.pathsep.join(map(str, (classes, *json_archives))),
          str(kotlin), '-include-runtime', '-d', str(custom_jar)],
         ['javac', '--release', '17', '-classpath', os.pathsep.join(map(str, (classes, custom_jar, *json_archives))),
-         '-d', str(classes), str(root / HOOK), str(test_source)],
+         '-d', str(classes), str(root / HOOK), str(test_source), str(test_main)],
         ['java', '-Dfixture.python='+sys.executable, '-Dfixture.sql='+str(sql_runner),
          '-cp', os.pathsep.join(map(str, (classes, custom_jar, *json_archives))),
-         'com.waenhancer.xposed.features.privacy.CallPrivacyContactsTest', str(database_root)],
+         'com.waenhancer.xposed.features.privacy.CallPrivacyContactsMain', str(database_root)],
     ]
     outcomes = []
     compile_output = []
@@ -489,6 +605,13 @@ except sqlite3.Error:
         print(result.stdout, end='')
         if index < len(commands) - 1 and result.returncode:
             raise RuntimeError('Production call hook/dialog callback compilation failed at stage '+str(index))
+    cache_control = subprocess.run(
+        ['java', '-cp', os.pathsep.join(map(str, (classes, custom_jar, *json_archives))),
+         'com.waenhancer.xposed.features.privacy.CallPrivacyLruCacheChecks'],
+        cwd=out, capture_output=True, text=True, timeout=30)
+    (out / 'cache-controls.log').write_text(cache_control.stdout + cache_control.stderr, encoding='utf-8')
+    if cache_control.returncode or cache_control.stdout.strip() != 'LRU_FIXTURE_CHECKS=8':
+        raise RuntimeError('AOSP LruCache host compatibility controls failed')
     match = re.search(r'^RESULT\|(\d+)\|(\d+)$', result.stdout, re.M)
     if not match:
         raise RuntimeError('No completed fixture result; a startup failure is not a negative control')
@@ -497,12 +620,16 @@ except sqlite3.Error:
     report = {
         'source_root': str(root), 'complete_hook_compiled': True, 'checks': count,
         'failed': failed, 'expected_checks': expected, 'exit_codes': outcomes,
-        'source_sha256': {str(p): hashlib.sha256((root / p).read_bytes()).hexdigest() for p in (HOOK, IDENTITY, CUSTOM)},
+        'source_sha256': {str(p): hashlib.sha256((root / p).read_bytes()).hexdigest() for p in SHARED_SOURCES},
         'compiled_custom_privacy_fragments': callback_hashes,
+        'compiled_wa_targets_fragments': targets_hashes,
+        'identity_cache_isolation': 'Genuine WaJid hit/miss caches are cleared only at existing synthetic process/profile reset boundaries; retained and exercised unchanged within every case.',
         'async_isolation': 'Every intercepted incoming callback awaits its own Context notification endpoint with a bounded latch before another case can reset contact counters; the production executor and callback remain unchanged.',
         'json_identity': json_identity,
+        'lru_fixture_sha256': lru_sha256, 'lru_fixture_checks': 8,
         'fixture_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        'limits': ('Complete production CallPrivacyHook and ContactIdentityPolicy compiled and executed. '
+        'limits': ('Complete production CallPrivacyHook, ContactIdentityPolicy and WaJid compiled and executed. '
+                   'WaTargets callStateChanged/requireMethod/jidClass bodies are exact extracted production fragments. '
                    'Exact CustomPrivacyHook reader and Save/Cancel callbacks compiled in Kotlin; '
                    'full native dialog construction is not compiled or rendered. JSON is hash-pinned AOSP Android 14. '
                    'SQLite predicates run read-only against real file-backed Python SQLite. Android Context, '
@@ -534,8 +661,7 @@ def mutation_controls(root, out, json_source_dir=None, android_json_jar=None):
             raise ValueError('Mutation anchor changed: ' + name)
         with tempfile.TemporaryDirectory(prefix='waex-call-contact-mutant-') as temporary:
             target = Path(temporary)
-            for path in (HOOK, IDENTITY, CUSTOM,
-                         Path('app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java')):
+            for path in SHARED_SOURCES:
                 (target / path).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(root / path, target / path)
             (target / HOOK).write_text(original.replace(before, after, 1))

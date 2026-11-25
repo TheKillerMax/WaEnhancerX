@@ -4,6 +4,7 @@
 Only the provider authority is stubbed because PreferenceBridgeClient itself
 has broader Xposed/AndroidX dependencies unrelated to this feature. The stub's
 single constant is checked against the real implementation before compilation.
+The actual shared HookProviderIpc route is compiled with the adapter.
 This is an Android API compile contract, not a runtime/injection test.
 """
 
@@ -20,6 +21,7 @@ SOURCE = ROOT / "app/src/main/java/com/waenhancer"
 CLIENT = SOURCE / "xposed/bridge/client/PreferenceBridgeClient.java"
 STUB = ROOT / "qa/fixtures/android_target_exit_stub/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java"
 ADAPTER = SOURCE / "xposed/utils/TargetExitReporter.java"
+IPC = SOURCE / "xposed/bridge/client/HookProviderIpc.java"
 CONTRACT = SOURCE / "utils/TargetExitContract.java"
 TARGETS = SOURCE / "utils/DeclaredWhatsAppTargets.java"
 
@@ -42,7 +44,7 @@ def main() -> int:
         classes.mkdir()
         command = [javac, "--release", "17", "-cp", str(args.android_jar),
                    "-d", str(classes), str(STUB), str(TARGETS),
-                   str(CONTRACT), str(ADAPTER)]
+                   str(CONTRACT), str(IPC), str(ADAPTER)]
         result = subprocess.run(command, text=True, capture_output=True, timeout=90)
         if result.returncode:
             print(result.stdout + result.stderr, file=sys.stderr)

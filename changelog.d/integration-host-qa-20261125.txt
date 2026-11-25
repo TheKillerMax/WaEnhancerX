@@ -1,0 +1,4 @@
+[Fixes]
+- Keep manual receipt retry fixtures aligned with the current sender and compile the authenticated target-exit bridge against Android APIs.
+- Preserve complete Java and Kotlin source inventories on Windows, including long command lines and non-ASCII paths.
+- Exercise call privacy with current selectors, isolated identity caches, awaited callbacks and the pinned Android 14 LruCache implementation.
