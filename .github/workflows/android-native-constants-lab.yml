@@ -1,0 +1,212 @@
+name: waexdiag JNI constants in 4K and simulated16K
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    paths:
+      - .github/workflows/android-native-constants-lab.yml
+      - qa/android_native_constants_lab.py
+      - qa/summarize_native_constants_lab.py
+      - qa/test_android_native_constants_lab.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: waexdiag-native-constants-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      apk_sha256: ${{ steps.producer.outputs.apk_sha256 }}
+      build_receipt_sha256: ${{ steps.producer.outputs.build_receipt_sha256 }}
+    steps:
+      - name: Checkout reviewed laboratory sources
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Checkout the immutable public C and ELF auditor
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: TheKillerMax/WaEnhancerX
+          ref: 1c50db163ee1b8127288ea27a055242c9899541f
+          path: audit-source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Verify context and reviewed source lock
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from android_emulator_lab_preflight import context_check
+          from android_native_constants_lab import checked_lock
+          context_check(os.environ)
+          checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), 'api35')
+          PY
+      - name: Run host controls before downloading or building
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            python3 qa/test_native_constants_probe.py
+            python3 qa/test_android_native_constants_lab.py
+          } 2>&1 | tee "$RUNNER_TEMP/waex-native-host-controls.log"
+      - name: Build one isolated candidate ELF and QA APK
+        run: |
+          python3 qa/build_native_constants_probe.py --audit-repo audit-source \
+            --out "$RUNNER_TEMP/waex-native-build"
+      - name: Pin the APK and its independent build receipt
+        id: producer
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from android_emulator_lab_preflight import sha256_file
+          from android_native_constants_lab import checked_lock, verified_bundle
+          lock, _ = checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), 'api35')
+          bundle = Path(os.environ['RUNNER_TEMP']) / 'waex-native-build'
+          apk_sha = sha256_file(bundle / 'native-constants-probe.apk')
+          receipt_sha = sha256_file(bundle / 'build-result.json')
+          verified_bundle(bundle, apk_sha, receipt_sha, lock)
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as stream:
+              stream.write('apk_sha256=' + apk_sha + '\n')
+              stream.write('build_receipt_sha256=' + receipt_sha + '\n')
+          PY
+      - name: Preserve the single APK and build receipt
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-native-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-native-build/native-constants-probe.apk
+            ${{ runner.temp }}/waex-native-build/build-result.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve build and host evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-native-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-native-host-controls.log
+            ${{ runner.temp }}/waex-native-build/build-result.json
+            ${{ runner.temp }}/waex-native-build/logs/
+          if-no-files-found: warn
+          retention-days: 1
+
+  constants:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target: [api35, api35-16k]
+    env:
+      TARGET: ${{ matrix.target }}
+      APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
+      BUILD_RECEIPT_SHA256: ${{ needs.build.outputs.build_receipt_sha256 }}
+    steps:
+      - name: Checkout the identical laboratory commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Fetch the unique producer artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: android-lab-native-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-native-input
+      - name: Verify both producer hashes before bootstrap or ADB
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from android_emulator_lab_preflight import context_check
+          from android_native_constants_lab import checked_lock, verified_bundle
+          context_check(os.environ)
+          lock, _ = checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), os.environ['TARGET'])
+          verified_bundle(Path(os.environ['RUNNER_TEMP']) / 'waex-native-input',
+                          os.environ['APK_SHA256'], os.environ['BUILD_RECEIPT_SHA256'], lock)
+          PY
+      - name: Bootstrap the disposable runner
+        run: |
+          python3 qa/android_emulator_lab_bootstrap.py \
+            --out "$RUNNER_TEMP/waex-native-bootstrap-$TARGET"
+      - name: Boot the reviewed image and observe JNI constants
+        run: |
+          python3 qa/android_native_constants_lab.py --target "$TARGET" \
+            --lock qa/android_emulator_lab_matrix_lock.json \
+            --apk-dir "$RUNNER_TEMP/waex-native-input" \
+            --apk-sha256 "$APK_SHA256" --build-receipt-sha256 "$BUILD_RECEIPT_SHA256" \
+            --out "$RUNNER_TEMP/waex-native-$TARGET"
+      - name: Preserve the target evidence and cleanup result
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-native-runtime-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-native-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/waex-native-bootstrap-${{ matrix.target }}/
+          if-no-files-found: warn
+          retention-days: 1
+
+  summary:
+    needs: [build, constants]
+    if: >-
+      always() &&
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
+      BUILD_RECEIPT_SHA256: ${{ needs.build.outputs.build_receipt_sha256 }}
+      BUILD_JOB_RESULT: ${{ needs.build.result }}
+    steps:
+      - name: Checkout the reviewed validators
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Fetch both current-run runtime artifacts separately
+        if: needs.build.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: android-lab-native-runtime-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-native-collected
+          merge-multiple: false
+      - name: Require both exact observations and their cleanup
+        if: always()
+        run: |
+          python3 qa/summarize_native_constants_lab.py \
+            --reports "$RUNNER_TEMP/waex-native-collected" \
+            --lock qa/android_emulator_lab_matrix_lock.json \
+            --apk-sha256 "$APK_SHA256" --build-receipt-sha256 "$BUILD_RECEIPT_SHA256" \
+            --build-job-result "$BUILD_JOB_RESULT" --out "$RUNNER_TEMP/waex-native-summary"
+      - name: Preserve the bounded coverage report
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-native-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-native-summary/
+          if-no-files-found: warn
+          retention-days: 1
