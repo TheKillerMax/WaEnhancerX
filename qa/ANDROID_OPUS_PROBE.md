@@ -3,8 +3,9 @@
 ## Acceptance and scope
 
 This experiment tests the original x86_64 library from
-`io.element.android:opusencoder:1.2.0` in fresh, controller-owned Android 35
-AVDs with 4096-byte and simulated 16384-byte application pages. Android performs
+`io.element.android:opusencoder:1.2.0` in fresh, controller-owned x86_64
+AVDs covering the 21 exact tuples below, with 4096-byte and simulated
+16384-byte application pages. Android performs
 encoding through the published Java/Kotlin wrapper. A separate pinned
 libopus 1.5.2 build on the Linux host decodes the returned Ogg stream.
 
@@ -16,7 +17,7 @@ A passing row requires all of the following:
   emulator identity and unprivileged shell match the lab contract.
 - No probe package exists before installation. A fresh installed-APK readback
   matches the producer before execution and again before removal.
-- Both serial PCM cases complete all 157 successful JNI calls and 189 Android
+- Both serial PCM cases complete all 157 successful JNI calls and 190 Android
   checks. There is exactly one successful release after each successful init.
 - The nonce-bound chunk transport is complete, ordered and hash-consistent.
   Instrumentation finishes successfully without duplicate or error fields.
@@ -30,6 +31,25 @@ A passing row requires all of the following:
 Failures retain the raw transcript, producer identity and independent execution
 and cleanup errors. A mismatching installed APK is never uninstalled. The
 surrounding boot controller still terminates only its owned disposable AVD.
+
+| Android API tuple | Application page size | Image tag |
+|---|---|---|
+| 24, 25, 26, 28, 29, 30, 33, 34, 35, 36, 36.1, 37.0 | 4096 bytes | `google_apis` |
+| 27, 31, 32 | 4096 bytes | `default` |
+| 35, 36, 36.1, 37.0, 37.1, 37.2 | 16384 bytes, simulated | `google_apis_ps16k` |
+
+API36 and later report `Build.VERSION.SDK_INT_FULL` by reflection from the
+actual Android process; its major and minor must match the locked image and
+the independently observed guest property. Earlier releases report that the
+field was not read, with null full/minor fields, and require metadata minor0.
+The parser rejects tuples outside the table, including unreviewed minor versions.
+
+An installed APK is read back byte-for-byte before JNI execution and again
+before removal. Only the observed API24 STATv1 failure permits the existing
+unprivileged `adb exec-out /system/bin/cat` readback, with the exact package
+path and no partial pull file. It must return the bounded producer bytes and
+SHA-256. Other errors, interrupted reads, changed bytes and failed cleanup
+remain failures. No root or debuggable APK is needed.
 
 ## Fixed inputs
 
@@ -60,7 +80,7 @@ does not establish successful dynamic loading.
 The JDK 21/SDK 36 tools are existing runner inputs, individually hashed before
 and after the build. D8 must emit no stdout or stderr diagnostics. Signing uses
 an ephemeral QA key that is removed before successful publication. Each run
-produces one APK reused by both targets; its bytes are not expected to be
+produces one APK reused by all 21 targets; its bytes are not expected to be
 identical across independent runs with different ephemeral signing keys.
 
 ## PCM and output oracle
@@ -96,11 +116,13 @@ run normally and with Python optimization enabled.
 Only the `opus` workflow jobs execute JNI on Android. The output consists of
 the unique APK artifact, the decoder artifact, producer evidence and one
 runtime artifact per target. Review the entire current-run inventory and
-recompute each report/manifest and payload hash before claiming both targets.
+recompute each report/manifest and payload hash before claiming all 21 targets.
+Never combine successful rows from separate commits, runs or attempts into a
+complete matrix. This file defines acceptance; it is not a runtime result.
 
-The initial pilot does not qualify WAEX, WhatsApp, LSPosed, recording,
+This experiment does not qualify WAEX, WhatsApp, LSPosed, recording,
 playback, concurrent encoders, long-running native lifecycle, physical ARM64
-hardware or every Android version. The observed encoder JNI uses a global
+hardware, DSU boot or Android versions outside the table. The observed encoder JNI uses a global
 codec instance; this experiment deliberately runs two bounded serial cases.
 The inspected binary/source do not justify a production dependency upgrade.
 The public source repository exposed no 1.2.0 tag during inspection, so the

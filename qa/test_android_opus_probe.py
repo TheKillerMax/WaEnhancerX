@@ -131,16 +131,18 @@ def container(name, packets, pre_skip, *, vendor=b'WAEX host controls libopus 1.
     return b''.join(pages)
 
 
-def transport(payloads, nonce=NONCE, pages=4096):
-    receipt = {'schema': 'WAEX_ANDROID_OPUS_PROBE_V1', 'run_nonce': nonce,
+def transport(payloads, nonce=NONCE, pages=4096, api=35, minor=0):
+    receipt = {'schema': 'WAEX_ANDROID_OPUS_PROBE_V2', 'run_nonce': nonce,
                'package': validator.PACKAGE, 'status': 'PASS_ENCODE_ONLY',
                'native_sha256': validator.NATIVE_SHA256,
                'wrapper': 'io.element.android.opusencoder.OggOpusEncoder',
-               'sdk': 35, 'release': '15', 'application_page_size_bytes': pages,
+               'sdk': api, 'release': 'HOST_FIXTURE_ONLY', 'application_page_size_bytes': pages,
+               'sdk_int_full': api * 100000 + minor if api >= 36 else None,
+               'sdk_minor': minor if api >= 36 else None, 'sdk_int_full_field_read': api >= 36,
                'hardware': 'ranchu', 'supported_abis': ['x86_64'],
                'process_is_64bit': True, 'test_only': True, 'own_directory_absent': True,
                'debuggable': False, 'requested_permissions': [], 'uid': 10123, 'pid': 1234,
-               'elapsed_ms': 1000, 'checks': 189, 'cases': []}
+               'elapsed_ms': 1000, 'checks': 190, 'cases': []}
     chunks = []
     for name in validator.CASE_ORDER:
         spec = validator.CASE_SPECS[name]
@@ -194,18 +196,66 @@ class OpusControls(unittest.TestCase):
         with self.assertRaisesRegex(validator.ProbeError, message):
             validator.parse_instrumentation(log_bytes(receipt, chunks), NONCE, 35, 4096)
 
-    def test_complete_real_decode_two_profiles(self):
-        for pages in (4096, 16384):
-            receipt, chunks = transport(self.payloads, pages=pages)
-            report, recovered = validator.validate_probe(log_bytes(receipt, chunks), NONCE, 35, pages,
-                                                          LIBRARY, LIBRARY_SHA256)
-            self.assertEqual(recovered, self.payloads)
-            self.assertEqual(report['transport']['jni_calls'], 157)
-            self.assertEqual(report['cases']['pcm48k']['decoded']['samples'], 96000)
-            self.assertEqual(report['cases']['pcm16k']['decoded']['samples'], 48000)
-            self.assertGreater(report['cases']['pcm48k']['decoded']['pre_skip_removed'], 0)
-            self.assertGreater(report['cases']['pcm48k']['decoded']['end_trim_removed'], 0)
-            POSITIVE_REPORTS[str(pages)] = report
+    def test_complete_real_decode_all_reviewed_profiles(self):
+        for name, (api, minor, pages) in validator.REVIEWED_PROFILES.items():
+            with self.subTest(profile=name):
+                receipt, chunks = transport(self.payloads, pages=pages, api=api, minor=minor)
+                report, recovered = validator.validate_probe(log_bytes(receipt, chunks), NONCE, api, pages,
+                                                              LIBRARY, LIBRARY_SHA256, expected_minor=minor)
+                self.assertEqual(recovered, self.payloads)
+                self.assertEqual(report['profile'], name)
+                self.assertEqual(report['minor'], minor)
+                self.assertEqual(report['android_receipt']['checks'], 190)
+                self.assertEqual(report['transport']['jni_calls'], 157)
+                self.assertEqual(report['cases']['pcm48k']['decoded']['samples'], 96000)
+                self.assertEqual(report['cases']['pcm16k']['decoded']['samples'], 48000)
+                self.assertGreater(report['cases']['pcm48k']['decoded']['pre_skip_removed'], 0)
+                self.assertGreater(report['cases']['pcm48k']['decoded']['end_trim_removed'], 0)
+                POSITIVE_REPORTS[name] = report
+
+    def test_profiles_match_the_frozen_v5_matrix(self):
+        path = Path(__file__).parent / 'android_emulator_lab_matrix_lock.json'
+        raw = path.read_bytes()
+        self.assertEqual(validator.digest(raw), '3d79bc3e71a0747a837961a307225b30001e6ad23521c1ee6bb8cc29127cd4ad')
+        lock = json.loads(raw)
+        expected = {name: (row['image']['api'], row['image']['minor'], row['application_page_size_bytes'])
+                    for name, row in lock['targets'].items()}
+        self.assertEqual(len(expected), 21)
+        self.assertEqual(validator.REVIEWED_PROFILES, expected)
+        self.assertTrue(all(row['image']['abi'] == 'x86_64' for row in lock['targets'].values()))
+
+    def test_unreviewed_profile_inputs_are_rejected(self):
+        receipt, chunks = transport(self.payloads); raw = log_bytes(receipt, chunks)
+        variants = [(23,0,4096), (38,0,4096), (24,1,4096), (35,1,4096), (36,2,4096),
+                    (37,3,16384), (34,0,16384), (37,1,4096), (37,2,4096), (35,0,8192),
+                    (True,0,4096), (35.0,0,4096), (35,False,4096), (35,0.0,4096),
+                    (35,0,4096.0), ('35',0,4096), (35,'0',4096), (35,0,'4096')]
+        for api, minor, pages in variants:
+            with self.subTest(api=api, minor=minor, pages=pages):
+                with self.assertRaises(validator.ProbeError):
+                    validator.parse_instrumentation(raw, NONCE, api, pages, minor)
+
+    def test_sdk_observation_metadata_controls(self):
+        for api, minor, pages in ((24,0,4096), (35,0,16384), (36,1,4096), (37,2,16384)):
+            original, chunks = transport(self.payloads, api=api, minor=minor, pages=pages)
+            changes = [('sdk', api+1), ('checks',189), ('schema','WAEX_ANDROID_OPUS_PROBE_V1')]
+            if api < 36:
+                changes += [('sdk_int_full',api*100000), ('sdk_minor',0), ('sdk_int_full_field_read',True)]
+            else:
+                changes += [('sdk_int_full',(api-1)*100000+minor), ('sdk_int_full',api*100000+minor+1),
+                            ('sdk_int_full',float(api*100000+minor)), ('sdk_int_full',None),
+                            ('sdk_minor',minor-1), ('sdk_minor',True), ('sdk_minor',None),
+                            ('sdk_int_full_field_read',False), ('sdk_int_full_field_read',1)]
+            for field, value in changes:
+                with self.subTest(api=api, field=field, value=value):
+                    receipt = copy.deepcopy(original); receipt[field]=value
+                    with self.assertRaises(validator.ProbeError):
+                        validator.parse_instrumentation(log_bytes(receipt,chunks),NONCE,api,pages,minor)
+            for field in ('sdk_int_full','sdk_minor','sdk_int_full_field_read'):
+                with self.subTest(api=api, missing=field):
+                    receipt=copy.deepcopy(original); del receipt[field]
+                    with self.assertRaisesRegex(validator.ProbeError,'Missing SDK'):
+                        validator.parse_instrumentation(log_bytes(receipt,chunks),NONCE,api,pages,minor)
 
     def test_pcm_assets_pins_and_no_overwrite(self):
         with tempfile.TemporaryDirectory() as folder:

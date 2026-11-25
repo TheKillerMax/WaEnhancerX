@@ -309,21 +309,27 @@ def legacy_auxv_page_size(elf, raw):
 
 
 def application_page_size(out, adb, env, guest, expected_page_size):
-    command, value = invoke(out, 'guest-application_page_size_bytes',
-                            [str(adb), '-s', 'emulator-5580', 'shell', 'getconf', 'PAGE_SIZE'],
-                            env, required=False)
-    if command['failure'] is None and command['returncode'] == 0:
+    require(guest.get('sdk') in tuple(str(api) for api in range(24, 38)) and
+            guest.get('abi') == 'x86_64' and type(expected_page_size) is int and
+            expected_page_size in (4096, 16384), 'Unexpected page-size observation target')
+    legacy = int(guest['sdk']) <= 28
+    require(not legacy or expected_page_size == 4096,
+            'Legacy AUXV observation is limited to reviewed 4 KiB targets')
+    policy = {'api': int(guest['sdk']), 'expected_application_page_size_bytes': expected_page_size,
+              'getconf_requested': not legacy,
+              'policy': 'API24-28 use ELF64/AUXV directly; API29+ require successful getconf'}
+    save(out, 'guest-page-size-policy.json', policy)
+    if not legacy:
+        command, value = invoke(out, 'guest-application_page_size_bytes',
+                                [str(adb), '-s', 'emulator-5580', 'shell', 'getconf', 'PAGE_SIZE'],
+                                env, required=False)
+        require(command['failure'] is None and command['returncode'] == 0,
+                'Page-size getconf command failed on a modern target')
         require(re.fullmatch(r'[1-9][0-9]*', value.strip()), 'getconf returned an invalid page size')
         require(value.strip() == str(expected_page_size), 'getconf page size differs from the reviewed target')
-        return value.strip(), {'method': 'getconf_PAGE_SIZE'}
-    require(guest['sdk'] in ('24', '25', '26', '27', '28') and guest['abi'] == 'x86_64' and
-            expected_page_size == 4096 and command['failure'] is None and command['returncode'] == 127 and
-            re.fullmatch(r'/system/bin/sh: getconf: (?:not found|inaccessible or not found)', value.strip()),
-            'Page-size command failed; fallback requires API 24-28 and an absent getconf on a 4 KiB target')
-    _, absent = invoke(out, 'guest-getconf-absent',
-                       [str(adb), '-s', 'emulator-5580', 'shell',
-                        '[ ! -e /system/bin/getconf ] && [ ! -L /system/bin/getconf ] && ! command -v getconf'], env)
-    require(not absent.strip(), 'getconf presence check returned unexpected output')
+        return value.strip(), {'method': 'getconf_PAGE_SIZE', 'getconf_requested': True}
+    # Old guest shells report the same absent getconf as either 127 or 255.
+    # Select the existing binary proof from the reviewed API, never from a failed command.
     # exec-out transports binary bytes without a PTY/ONLCR conversion. No root or APK.
     elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-legacy-auxv.log'
     reader_identity = {}
@@ -343,12 +349,13 @@ def application_page_size(out, adb, env, guest, expected_page_size):
     invoke(out, 'guest-legacy-auxv',
            [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/cat', '/proc/self/auxv'], env)
     size = legacy_auxv_page_size(elf_path.read_bytes(), auxv_path.read_bytes())
-    return str(size), {'method': 'legacy_Bionic_sysconf_AT_PAGESZ', 'api': int(guest['sdk']), 'reader': '/system/bin/cat',
+    return str(size), {'method': 'legacy_Bionic_sysconf_AT_PAGESZ', 'getconf_requested': False,
+                       'api': int(guest['sdk']), 'reader': '/system/bin/cat',
                        'reader_identity': reader_identity,
                        'reader_elf_class': 64, 'reader_endian': 'little', 'pointer_bytes': 8,
                        'reader_elf_header_sha256': sha256_file(elf_path),
                        'auxv_bytes': auxv_path.stat().st_size, 'auxv_sha256': sha256_file(auxv_path),
-                       'scope': 'API 24-28 only; never a fallback for simulated 16 KiB images'}
+                       'scope': 'Direct observation on API24-28 x86_64/4 KiB only; no fallback after a failed command'}
 
 
 def read_full_sdk_property(out, adb, env, api):

@@ -840,7 +840,7 @@
   "source_sha256": {
     "qa/android_emulator_lab_preflight.py": "095e06cc348e6d6cd895a8f4ee1bbec7770cb2b9c1fee5822002e1cf11c99923",
     "qa/android_emulator_lab_bootstrap.py": "4a2d8d8e06e1ee8e07c39db3007a656083230f99274a4a7048be6a4638529940",
-    "qa/android_emulator_lab_pilot.py": "8ee27a6a4246cec9a3c013011a991251d83c9e363bd4ebce6650919f63b05148",
+    "qa/android_emulator_lab_pilot.py": "468390c96524d65383bba2eedb7aecefff9d0aa89df73cb4d0ed3cb05363cdf5",
     "qa/android_emulator_lab_matrix.py": "b14acb92c5659a9fa1ef984f8cf195dc34f508f238c80c389abd8fe02721cafe",
     "qa/summarize_android_emulator_lab_matrix.py": "5679d8d529f72e87f3a0e34937002456c6cb1d5e025dacb39b80e8dea15da5ee",
     "qa/build_android_sqlite_probe.py": "c1745496c4e39f3398570e22235132adb1af21fe3f55deb31e111a160b053fb1",

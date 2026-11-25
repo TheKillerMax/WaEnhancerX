@@ -7,19 +7,19 @@ from pathlib import Path, PurePosixPath
 import re
 import secrets
 
-from android_emulator_lab_matrix import TARGETS as MATRIX_TARGETS, checked_lock as matrix_lock
+from android_emulator_lab_matrix import TARGETS as MATRIX_TARGETS, checked_lock as matrix_lock, expected_minor
 from android_emulator_lab_pilot import BootContext, invoke, main as boot_main, require
 from android_emulator_lab_preflight import context_check, save, sha256_file
 from build_android_opus_probe import COMPONENT, PACKAGE, source_pins
 from validate_android_opus_probe import validate_probe
 
 ROOT = Path(__file__).resolve().parent.parent
-TARGETS = {key: MATRIX_TARGETS[key] for key in ('api35', 'api35-16k')}
+TARGETS = dict(MATRIX_TARGETS)
 MAX_APK = 4 * 1024**2
 
 
 def checked_lock(path, target):
-    require(target in TARGETS, 'Only the two reviewed Opus pilot targets are enabled')
+    require(target in TARGETS, 'Only the 21 reviewed Opus matrix targets are enabled')
     return matrix_lock(path, target)
 
 
@@ -111,13 +111,18 @@ def installed_apk_path(text):
 def opus_action(apk, build_receipt, apk_sha, build_sha, library, decoder_receipt, library_sha, decoder_sha):
     def run(context: BootContext):
         require(context.target in TARGETS and context.serial == 'emulator-5580'
-                and context.guest['abi'] == 'x86_64' and context.api == 35,
-                'Opus phase requires the controller-owned API35 x86_64 emulator')
+                and context.guest['abi'] == 'x86_64'
+                and (context.api, context.application_page_size_bytes) ==
+                    (TARGETS[context.target][0], TARGETS[context.target][2])
+                and context.minor == expected_minor(context.target),
+                'Opus phase requires the exact controller-owned x86_64 matrix target')
         (context.out / 'opus-build-result.json').write_bytes(build_receipt.read_bytes())
         (context.out / 'opus-decoder-receipt.json').write_bytes(decoder_receipt.read_bytes())
         nonce = secrets.token_hex(16)
         phase = {'status': 'BLOCKED', 'scope': 'synthetic_opus_120_android_encode_host_decode',
-                 'package': PACKAGE, 'nonce': nonce, 'apk_sha256': apk_sha,
+                 'package': PACKAGE, 'target': context.target, 'api': context.api,
+                 'minor': context.minor, 'application_page_size_bytes': context.application_page_size_bytes,
+                 'nonce': nonce, 'apk_sha256': apk_sha,
                  'build_receipt_sha256': build_sha, 'decoder_sha256': library_sha,
                  'decoder_receipt_sha256': decoder_sha, 'package_absent_after_cleanup': False,
                  'controller_sha256': sha256_file(__file__)}
@@ -138,10 +143,29 @@ def opus_action(apk, build_receipt, apk_sha, build_sha, library, decoder_receipt
             installed_path = installed_apk_path(output)
             readback = context.work / (prefix + '-base.apk')
             require(not readback.exists(), 'Fresh installed-APK readback destination required')
-            adb(prefix + '-pull', 'pull', installed_path, str(readback), timeout=60)
+            pull, output = adb(prefix + '-pull', 'pull', installed_path, str(readback),
+                               timeout=60, required=False)
+            require(pull['failure'] is None, 'Installed APK pull was interrupted or exceeded its bound')
+            method = 'adb_pull'
+            if pull['returncode'] != 0:
+                # Preserve the independently reviewed SQLite API24 readback condition.
+                # STATv1 cannot convey errno; its text alone does not prove absence.
+                require(context.api == 24 and context.application_page_size_bytes == 4096
+                        and pull['returncode'] == 1 and not readback.exists()
+                        and output.strip() == "adb: error: remote object '" + installed_path + "' does not exist"
+                        and re.fullmatch(r'/data/app/' + re.escape(PACKAGE) + r'-[A-Za-z0-9_-]+/base\.apk',
+                                         installed_path),
+                        'Installed APK pull failed without the reviewed API24 readback condition')
+                name = prefix + '-exec-out'
+                command, _ = adb(name, 'exec-out', '/system/bin/cat', installed_path,
+                                 timeout=60, required=False)
+                readback = context.out / (name + '.log')
+                require(command['failure'] is None and command['returncode'] == 0,
+                        'API24 binary APK readback failed')
+                method = 'adb_exec_out_cat_api24'
             bounded_file(readback, apk_sha, MAX_APK)
             require(readback.stat().st_size == apk.stat().st_size, 'Installed APK size differs')
-            identity = {'bytes': readback.stat().st_size, 'sha256': sha256_file(readback), 'method': 'adb_pull'}
+            identity = {'bytes': readback.stat().st_size, 'sha256': sha256_file(readback), 'method': method}
             phase[prefix + '_identity'] = identity
             readback.unlink()
             return identity
@@ -163,7 +187,8 @@ def opus_action(apk, build_receipt, apk_sha, build_sha, library, decoder_receipt
             log = context.out / 'opus-instrumentation.log'
             require(log.stat().st_size <= 4 * 1024**2, 'Opus instrumentation log exceeds 4 MiB')
             report, payloads = validate_probe(log.read_bytes(), nonce, context.api,
-                                              context.application_page_size_bytes, library, library_sha)
+                                              context.application_page_size_bytes, library, library_sha,
+                                              expected_minor=context.minor)
             for name, raw in payloads.items():
                 require(name in ('pcm48k', 'pcm16k'), 'Unexpected encoded case')
                 (context.out / (name + '.ogg')).write_bytes(raw)
@@ -215,7 +240,7 @@ def main():
                          library, decoder_receipt, args.decoder_sha256, args.decoder_receipt_sha256)
     return boot_main(['--target', args.target, '--lock', str(args.lock), '--out', str(args.out)],
                      targets=TARGETS, read_lock=checked_lock, boot_action=action,
-                     phase='neutral_opus_pilot', result_name='opus-result.json',
+                     phase='neutral_opus_matrix', result_name='opus-result.json',
                      limits='Synthetic mono Opus1.2.0 JNI encoding on x86_64 AVDs, with independent host '
                             'Ogg validation/decoding. No WAEX, WhatsApp, LSPosed, playback, physical ARM64, '
                             'full native lifecycle or production dependency qualification.')

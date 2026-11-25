@@ -26,7 +26,12 @@ CHUNK_BYTES = 12288
 CASE_ORDER = ('pcm48k', 'pcm16k')
 PCM_SHA256 = {'pcm48k': '00cde5d613eaadc51c6b3e8b66f827a57f681aebbd1c9228bc365d082a6d92ba',
               'pcm16k': '4e57713a4022f94e833ea3f8567f1eec0204f9db2b32ae63f6bbcb1ab9ce59e5'}
-EXPECTED_ANDROID_CHECKS = 189
+EXPECTED_ANDROID_CHECKS = 190
+REVIEWED_PROFILES = {'api' + str(api): (api, 0, 4096) for api in range(24, 38)}
+REVIEWED_PROFILES['api36.1'] = (36, 1, 4096)
+for _api, _minor in ((35, 0), (36, 0), (36, 1), (37, 0), (37, 1), (37, 2)):
+    _label = str(_api) + ('.' + str(_minor) if _minor else '')
+    REVIEWED_PROFILES['api' + _label + '-16k'] = (_api, _minor, 16384)
 CASE_SPECS = {
     'pcm48k': {'rate': 48000, 'samples': 96000, 'frame': 960,
                'tones': (440, 880), 'seconds': 2, 'decoded_samples': 96000,
@@ -144,10 +149,17 @@ def ogg_crc(raw):
     return crc
 
 
-def parse_instrumentation(log, nonce, expected_api, expected_pages):
+def reviewed_profile(api, pages, minor=0):
+    require(type(api) is int and type(pages) is int and type(minor) is int,
+            'Expected profile values must be integers')
+    names = [name for name, profile in REVIEWED_PROFILES.items() if profile == (api, minor, pages)]
+    require(len(names) == 1, 'Expected API/minor/page tuple is outside the reviewed 21 profiles')
+    return names[0]
+
+
+def parse_instrumentation(log, nonce, expected_api, expected_pages, expected_minor=0):
     require(re.fullmatch('[a-f0-9]{32}', nonce), 'Expected nonce format')
-    require(type(expected_api) is int and expected_api == 35
-            and type(expected_pages) is int and expected_pages in (4096, 16384), 'Expected emulator profile')
+    reviewed_profile(expected_api, expected_pages, expected_minor)
     raw = log.encode('utf-8') if isinstance(log, str) else log
     require(type(raw) is bytes and 0 < len(raw) <= MAX_LOG, 'Instrumentation log bound')
     try:
@@ -201,11 +213,22 @@ def parse_instrumentation(log, nonce, expected_api, expected_pages):
                 'Explicit instrumentation error/unknown protocol field')
     require(finish_codes == ['-1'] and type(receipt) is dict, 'Instrumentation did not finish successfully')
     require(status_codes == ['0'] * sum(len(value) for value in chunks.values()), 'Chunk status codes differ')
-    for key, value in {'schema': 'WAEX_ANDROID_OPUS_PROBE_V1', 'run_nonce': nonce, 'package': PACKAGE,
+    for key, value in {'schema': 'WAEX_ANDROID_OPUS_PROBE_V2', 'run_nonce': nonce, 'package': PACKAGE,
                        'status': 'PASS_ENCODE_ONLY', 'native_sha256': NATIVE_SHA256,
                        'wrapper': 'io.element.android.opusencoder.OggOpusEncoder'}.items():
         require(receipt.get(key) == value, 'Receipt identity: ' + key)
-    require(integer(receipt.get('sdk'), 35, 35, 'SDK') == expected_api, 'Expected SDK differs')
+    require(integer(receipt.get('sdk'), 24, 37, 'SDK') == expected_api, 'Expected SDK differs')
+    require(all(key in receipt for key in ('sdk_int_full', 'sdk_minor', 'sdk_int_full_field_read')),
+            'Missing SDK version observation fields')
+    if expected_api >= 36:
+        require(receipt['sdk_int_full_field_read'] is True, 'Modern SDK_INT_FULL was not read')
+        require(integer(receipt['sdk_int_full'], 3600000, 3799999, 'SDK_INT_FULL')
+                == expected_api * 100000 + expected_minor, 'Expected SDK major/minor differs')
+        require(integer(receipt['sdk_minor'], 0, 2, 'Observed SDK minor') == expected_minor,
+                'SDK minor observation differs')
+    else:
+        require(expected_minor == 0 and receipt['sdk_int_full'] is None and receipt['sdk_minor'] is None
+                and receipt['sdk_int_full_field_read'] is False, 'Legacy SDK extension must remain unobserved')
     require(integer(receipt.get('application_page_size_bytes'), 4096, 16384, 'Page bytes') == expected_pages,
             'Expected application pages differ')
     require(receipt.get('hardware') in ('ranchu', 'goldfish'), 'Hardware is not emulator')
@@ -438,8 +461,8 @@ def tone_measurements(pcm, case_name):
     return rows
 
 
-def validate_probe(log, nonce, expected_api, expected_pages, libopus, libopus_sha256):
-    receipt, payloads, transport = parse_instrumentation(log, nonce, expected_api, expected_pages)
+def validate_probe(log, nonce, expected_api, expected_pages, libopus, libopus_sha256, expected_minor=0):
+    receipt, payloads, transport = parse_instrumentation(log, nonce, expected_api, expected_pages, expected_minor)
     decoder = PinnedOpus(libopus, libopus_sha256)
     results = {}
     for name in CASE_ORDER:
@@ -448,8 +471,10 @@ def validate_probe(log, nonce, expected_api, expected_pages, libopus, libopus_sh
         results[name] = {key: value for key, value in parsed.items() if key not in ('packets', 'pages')}
         results[name].update({'pages': len(parsed['pages']), 'audio_packets': len(parsed['packets']) - 2,
                               'decoded': decoded})
-    return {'schema': 'WAEX_OPUS_HOST_VALIDATION_V1', 'status': 'PASS_OPUS_120_SYNTHETIC_CODEC',
-            'run_nonce': nonce, 'api': expected_api, 'application_page_size_bytes': expected_pages,
+    return {'schema': 'WAEX_OPUS_HOST_VALIDATION_V2', 'status': 'PASS_OPUS_120_SYNTHETIC_CODEC',
+            'run_nonce': nonce, 'api': expected_api, 'minor': expected_minor,
+            'profile': reviewed_profile(expected_api, expected_pages, expected_minor),
+            'application_page_size_bytes': expected_pages,
             'android_receipt': receipt, 'transport': transport, 'cases': results,
             'scope': 'Pinned JNI encoder executed on Android; independent Ogg parser and decoder on host; no playback'}, payloads
 
@@ -459,6 +484,7 @@ def main():
     parser.add_argument('--log', type=Path, required=True)
     parser.add_argument('--nonce', required=True)
     parser.add_argument('--api', type=int, required=True)
+    parser.add_argument('--minor', type=int, default=0)
     parser.add_argument('--page-bytes', type=int, required=True)
     parser.add_argument('--libopus', type=Path, required=True)
     parser.add_argument('--libopus-sha256', required=True)
@@ -468,7 +494,7 @@ def main():
     args.out.mkdir(parents=True, exist_ok=False)
     try:
         result, payloads = validate_probe(args.log.read_bytes(), args.nonce, args.api,
-                                        args.page_bytes, args.libopus, args.libopus_sha256)
+                                        args.page_bytes, args.libopus, args.libopus_sha256, args.minor)
         for name, raw in payloads.items():
             (args.out / (name + '.ogg')).write_bytes(raw)
         (args.out / 'validation.json').write_text(json.dumps(result, indent=2) + '\n')

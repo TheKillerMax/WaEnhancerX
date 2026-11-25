@@ -11,6 +11,8 @@ on:
       - qa/validate_android_opus_probe.py
       - qa/test_android_opus_probe.py
       - qa/test_android_opus_controller.py
+      - qa/android_emulator_lab_pilot.py
+      - qa/android_emulator_lab_matrix_lock.json
 permissions:
   contents: read
 concurrency:
@@ -48,6 +50,14 @@ jobs:
           for target in TARGETS:
               checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), target)
           PY
+      - name: Verify exact guest version and legacy page-size policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_android_guest_version.py
+          python3 -O qa/test_android_guest_version.py
+          python3 qa/test_android_page_size.py
+          python3 -O qa/test_android_page_size.py
       - name: Build the pinned independent host decoder
         run: python3 qa/android_opus_probe/prepare_decoder.py --out "$RUNNER_TEMP/opus-decoder"
       - name: Run host protocol and ownership counterchecks
@@ -63,7 +73,7 @@ jobs:
           } 2>&1 | tee "$RUNNER_TEMP/opus-host-controls.log"
       - name: Build one native APK with the existing SDK and JDK21
         run: python3 qa/build_android_opus_probe.py --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --out "$RUNNER_TEMP/opus-build"
-      - name: Bind producer bytes to both runtime jobs
+      - name: Bind one producer to all 21 runtime jobs
         id: identity
         run: |
           PYTHONPATH=qa python3 - <<'PY'
@@ -116,9 +126,9 @@ jobs:
     timeout-minutes: 25
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
-        target: [api35, api35-16k]
+        target: [api24, api25, api26, api27, api28, api29, api30, api31, api32, api33, api34, api35, api36, api37, api36.1, api35-16k, api36-16k, api36.1-16k, api37-16k, api37.1-16k, api37.2-16k]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

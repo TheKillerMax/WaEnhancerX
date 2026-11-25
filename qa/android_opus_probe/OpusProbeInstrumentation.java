@@ -72,11 +72,16 @@ public final class OpusProbeInstrumentation extends Instrumentation {
             req((info.flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0, "NON_DEBUGGABLE_APK");
             PackageInfo packageInfo = getTargetContext().getPackageManager().getPackageInfo(PACKAGE, PackageManager.GET_PERMISSIONS);
             req(packageInfo.requestedPermissions == null || packageInfo.requestedPermissions.length == 0, "NO_REQUESTED_PERMISSIONS");
-            req(Build.VERSION.SDK_INT == 35, "SDK_35_ONLY");
+            int sdk = Build.VERSION.SDK_INT;
+            req(sdk >= 24 && sdk <= 37, "REVIEWED_SDK_RANGE");
+            Integer sdkFull = readSdkFull(sdk);
+            int sdkMinor = sdkFull == null ? 0 : sdkFull.intValue() % 100000;
+            req(sdk < 36 ? sdkFull == null : sdkFull != null && sdkFull.intValue() / 100000 == sdk,
+                    "SDK_VERSION_OBSERVATION");
             req("ranchu".equals(Build.HARDWARE) || "goldfish".equals(Build.HARDWARE), "EMULATOR_HARDWARE");
             req(Arrays.asList(Build.SUPPORTED_ABIS).contains("x86_64") && android.os.Process.is64Bit(), "X86_64_PROCESS");
             long pages = android.system.Os.sysconf(android.system.OsConstants._SC_PAGESIZE);
-            req(pages == 4096 || pages == 16384, "APPLICATION_PAGE_SIZE");
+            req(reviewedProfile(sdk, sdkMinor, pages), "REVIEWED_API_MINOR_PAGE_PROFILE");
             verifyNativeEntry(info.sourceDir);
             File cache = getTargetContext().getCacheDir().getCanonicalFile();
             directory = new File(cache, "waex-opus-" + nonce);
@@ -84,10 +89,13 @@ public final class OpusProbeInstrumentation extends Instrumentation {
             req(directory.mkdir(), "CREATE_OWN_DIRECTORY");
             owned = true;
             receipt = new JSONObject();
-            receipt.put("schema", "WAEX_ANDROID_OPUS_PROBE_V1");
+            receipt.put("schema", "WAEX_ANDROID_OPUS_PROBE_V2");
             receipt.put("run_nonce", nonce);
             receipt.put("package", PACKAGE);
-            receipt.put("sdk", Build.VERSION.SDK_INT);
+            receipt.put("sdk", sdk);
+            receipt.put("sdk_int_full", sdkFull == null ? JSONObject.NULL : sdkFull);
+            receipt.put("sdk_minor", sdkFull == null ? JSONObject.NULL : Integer.valueOf(sdkMinor));
+            receipt.put("sdk_int_full_field_read", sdk >= 36);
             receipt.put("release", Build.VERSION.RELEASE);
             receipt.put("hardware", Build.HARDWARE);
             receipt.put("uid", info.uid);
@@ -141,6 +149,22 @@ public final class OpusProbeInstrumentation extends Instrumentation {
             output.putString("waex_opus_partial_cases", cases.toString());
         }
         finish(result, output);
+    }
+
+    private static Integer readSdkFull(int sdk) throws Exception {
+        // API24-35 never resolve the field that was introduced in API36.
+        if (sdk < 36) return null;
+        return (Integer) Build.VERSION.class.getField("SDK_INT_FULL").get(null);
+    }
+
+    private static boolean reviewedProfile(int sdk, int minor, long pages) {
+        if (sdk >= 24 && sdk <= 34) return minor == 0 && pages == 4096;
+        boolean knownPages = pages == 4096 || pages == 16384;
+        if (sdk == 35) return minor == 0 && knownPages;
+        if (sdk == 36) return minor >= 0 && minor <= 1 && knownPages;
+        if (sdk == 37) return (minor == 0 && knownPages)
+                || ((minor == 1 || minor == 2) && pages == 16384);
+        return false;
     }
 
     private void verifyNativeEntry(String apkPath) throws Exception {
