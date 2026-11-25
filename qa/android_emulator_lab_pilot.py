@@ -13,6 +13,7 @@ import signal
 import socket
 import struct
 import subprocess
+import sys
 import time
 import xml.etree.ElementTree as ET
 
@@ -20,6 +21,7 @@ from android_emulator_lab_preflight import (
     context_check, fetch_metadata, inspect_kvm, license_files, parse_feed,
     save, sdk_snapshot, sha256_file, tool_identity,
 )
+import android_emulator_lab_adb as reviewed_adb
 
 GIB = 1024 ** 3
 RESERVE_BYTES = 2 * GIB
@@ -109,6 +111,41 @@ def invoke(out, name, command, env, timeout=30, input_bytes=None, required=True)
     if required:
         require(reason is None and result['returncode'] == 0, name + ' failed: ' + str(reason or result['returncode']))
     return result, text
+
+
+def reviewed_tools(work, out, tools, env, pins):
+    observed = {name: tool_identity(path) for name, path in tools.items()}
+    # Preserve rejected identities too; the old loop failed before saving them.
+    save(out, 'tool-identities-observed.json', observed)
+    for name in tools:
+        if name != 'adb':
+            require(observed[name].get('sha256') == pins.get(name),
+                    'Tool changed since reviewed preflight: ' + name)
+    owned = None
+    if observed['adb'].get('sha256') != pins.get('adb'):
+        require(pins.get('adb') == reviewed_adb.MEMBERS['adb'][1],
+                'ADB recovery does not match the original reviewed pin')
+        owned = work / 'reviewed-platform-tools'
+        invoke(out, 'acquire-reviewed-adb', [sys.executable, str(Path(reviewed_adb.__file__).resolve()),
+               '--out', str(owned), '--report', str(out / 'reviewed-adb-acquisition.json')], env, timeout=90)
+        reviewed_adb.installed_identity(owned)
+        tools['adb'] = owned / 'adb'
+    selected = {name: tool_identity(path) for name, path in tools.items()}
+    save(out, 'tool-identities-selected.json', selected)
+    for name in tools:
+        require(selected[name].get('sha256') == pins.get(name),
+                'Tool changed since reviewed preflight: ' + name)
+    env['PATH'] = str(tools['adb'].parent) + os.pathsep + env.get('PATH', '')
+    save(out, 'adb-selection.json', {'origin': 'owned_official_archive' if owned else 'preinstalled_reviewed',
+         'observed': observed['adb'], 'selected': selected['adb'], 'required_sha256': pins['adb'],
+         'sdk_modified': False})
+    return selected, observed['adb'], owned
+
+
+def unchanged_adb(sdk, observed, owned):
+    require(tool_identity(sdk / 'platform-tools/adb') == observed, 'Preinstalled SDK ADB changed during the lab')
+    if owned is not None:
+        reviewed_adb.installed_identity(owned)
 
 
 
@@ -459,7 +496,8 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
               'github_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
               'github_head_sha': os.environ.get('GITHUB_SHA'), 'requested_phase_completed': False}
     emulator_process, emulator_stream, sdk, accepted_before = None, None, None, None
-    before_tools = {}
+    before_tools, tools = {}, {}
+    observed_adb, owned_adb = None, None
     env = os.environ.copy()
     try:
         context_check(env)
@@ -479,9 +517,7 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
         tools = {'sdkmanager': sdk / 'cmdline-tools/latest/bin/sdkmanager',
                  'emulator': sdk / 'emulator/emulator', 'adb': sdk / 'platform-tools/adb',
                  'java': Path(shutil.which('java') or '/missing/java')}
-        for name, path in tools.items():
-            before_tools[name] = tool_identity(path)
-            require(before_tools[name].get('sha256') == lock['tool_sha256'].get(name), 'Tool changed since reviewed preflight: ' + name)
+        before_tools, observed_adb, owned_adb = reviewed_tools(work, out, tools, env, lock['tool_sha256'])
         avdmanager = sdk / 'cmdline-tools/latest/bin/avdmanager'
         require(avdmanager.is_file(), 'Preinstalled avdmanager is required')
         save(out, 'tool-identities-before.json', {**before_tools, 'avdmanager': tool_identity(avdmanager)})
@@ -517,6 +553,7 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
         require(license_files(sdk) == accepted_before, 'License acceptance files changed during installation')
         for name, path in tools.items():
             require(tool_identity(path) == before_tools[name], 'Installer changed a preinstalled tool: ' + name)
+        unchanged_adb(sdk, observed_adb, owned_adb)
         _, devices = invoke(out, 'adb-devices-before', [str(tools['adb']), 'devices'], env)
         require(not re.search(r'^\S+\s+(device|offline|unauthorized)\s*$', devices, re.M), 'An existing ADB device makes this runner unsuitable')
         for port in (5580, 5581):
@@ -629,6 +666,16 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
             result['owned_emulator_reaped'] = emulator_process.poll() is not None
         if emulator_stream is not None:
             emulator_stream.close()
+        if before_tools:
+            try:
+                after_tools = {name: tool_identity(path) for name, path in tools.items()}
+                save(out, 'tool-identities-after.json', after_tools)
+                require(after_tools == before_tools, 'Selected tools changed during the lab')
+                unchanged_adb(sdk, observed_adb, owned_adb)
+                result['selected_tools_unchanged'] = True
+            except (OSError, RuntimeError) as exc:
+                result['selected_tools_unchanged'] = False
+                result['issues'].append(type(exc).__name__ + ': ' + str(exc))
         if sdk is not None and accepted_before is not None:
             result['license_files_unchanged'] = license_files(sdk) == accepted_before
             if not result['license_files_unchanged']:

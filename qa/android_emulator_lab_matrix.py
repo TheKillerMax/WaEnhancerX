@@ -27,6 +27,7 @@ for _label, _api, _version in (('35', 35, '35'), ('36', 36, '36'), ('36.1', 36, 
 SOURCE_FILES = (
     'qa/android_emulator_lab_preflight.py', 'qa/android_emulator_lab_bootstrap.py',
     'qa/android_emulator_lab_pilot.py', 'qa/android_emulator_lab_matrix.py',
+    'qa/android_emulator_lab_adb.py',
     'qa/summarize_android_emulator_lab_matrix.py',
     'qa/build_android_sqlite_probe.py', 'qa/validate_android_sqlite_probe.py',
     'qa/test_android_sqlite_probe.py', 'qa/ANDROID_SQLITE_PROBE.md',
