@@ -79,13 +79,23 @@ boot gate using `getconf=16384`; neither target installed an APK.
 The correction permits a fallback only for that exact missing-command result,
 API 24, x86_64 and a reviewed 4096-byte target. Nougat Bionic implements both
 page-size `sysconf` queries through `getauxval(AT_PAGESZ)`. The job therefore reads
-the first 64 bytes of `/system/bin/cat`, verifies an ELF64 little-endian x86_64
+`/system/bin/cat` with that same `cat` executable and retains only its first 64 bytes,
+records the full executable size/hash, verifies an ELF64 little-endian x86_64
 executable, then reads that exact executable's `/proc/self/auxv`. Both commands
 use `adb exec-out` to avoid PTY newline conversion. Parsing requires complete
 64-bit tag/value pairs, unique tags, a final `AT_NULL` and one `AT_PAGESZ=4096`.
 Wrong architecture, truncated input, duplicate tags, missing values and other
 command failures stay blocked. No package, binary, privilege or device setting
 is installed or changed for this read.
+
+The second real run, [45524206607](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45524206607),
+showed that this API 24 image's `head` also lacks the `-c` option: it produced
+`head: not integer: c` instead of an ELF header, which the parser correctly
+rejected. Its `cat /proc/self/auxv` command did return a 304-byte vector. The
+revised reader uses only the already observed `cat` path, without adding an
+unverified legacy utility option. The temporary executable capture is reduced
+to 64 bytes in `finally`, on success or failure, before reports are uploaded.
+The original second-run API 24 receipt remains `BLOCKED`; a rerun is required.
 
 This fallback is forbidden on the simulated 16 KiB image: its kernel AUXV can
 describe 4 KiB, so only the application-facing `getconf` result satisfies that

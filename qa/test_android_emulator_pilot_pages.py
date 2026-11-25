@@ -35,6 +35,7 @@ class PageSizeControls(unittest.TestCase):
             'wrong endian': (elf64()[:5] + b'\x02' + elf64()[6:], good),
             'wrong machine': (elf64()[:18] + b'\xb7\x00' + elf64()[20:], good),
             'not ELF': (bytes(64), good),
+            'observed old head error': (b'head: not integer: c\n', good),
             'empty AUXV': (elf64(), b''),
             'truncated AUXV': (elf64(), good[:-1]),
             'oversized AUXV': (elf64(), bytes(8208)),
@@ -61,7 +62,7 @@ class PageSizeControls(unittest.TestCase):
                 if name == 'guest-application_page_size_bytes':
                     return {'returncode': rc, 'failure': failure}, text
                 if name == 'guest-auxv-reader-elf':
-                    (output / (name + '.log')).write_bytes(elf64())
+                    (output / (name + '.log')).write_bytes(elf64() + b'synthetic executable body')
                 elif name == 'guest-api24-auxv':
                     (output / (name + '.log')).write_bytes(raw if raw is not None else auxv((6, 4096), (0, 0)))
                 else:
@@ -76,7 +77,9 @@ class PageSizeControls(unittest.TestCase):
         result, commands = self.run_reader()
         self.assertEqual(result[0], '4096')
         self.assertEqual(result[1]['pointer_bytes'], 8)
-        self.assertEqual(commands[1][3:], ['exec-out', '/system/bin/head', '-c', '64', '/system/bin/cat'])
+        self.assertEqual(result[1]['reader_identity']['retained_bytes'], 64)
+        self.assertGreater(result[1]['reader_identity']['full_executable_bytes'], 64)
+        self.assertEqual(commands[1][3:], ['exec-out', '/system/bin/cat', '/system/bin/cat'])
         self.assertEqual(commands[2][3:], ['exec-out', '/system/bin/cat', '/proc/self/auxv'])
         self.assertTrue(all(command[1:3] == ['-s', 'emulator-5580'] for command in commands))
 

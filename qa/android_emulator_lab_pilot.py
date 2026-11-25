@@ -126,13 +126,26 @@ def application_page_size(out, adb, env, guest, expected_page_size):
             value.strip() == '/system/bin/sh: getconf: not found',
             'Page-size command failed; only the observed API 24 missing-getconf case has a fallback')
     # exec-out transports binary bytes without a PTY/ONLCR conversion. No root or APK.
-    invoke(out, 'guest-auxv-reader-elf',
-           [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/head', '-c', '64', '/system/bin/cat'], env)
+    elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-api24-auxv.log'
+    reader_identity = {}
+    try:
+        invoke(out, 'guest-auxv-reader-elf',
+               [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/cat', '/system/bin/cat'], env)
+    finally:
+        if elf_path.exists():
+            reader_identity = {'full_executable_bytes': elf_path.stat().st_size,
+                               'full_executable_sha256': sha256_file(elf_path),
+                               'retained_bytes': min(64, elf_path.stat().st_size),
+                               'capture': 'exec-out /system/bin/cat /system/bin/cat; only the ELF header is retained'}
+            with elf_path.open('rb') as stream:
+                header = stream.read(64)
+            elf_path.write_bytes(header)
+            save(out, 'guest-auxv-reader-identity.json', reader_identity)
     invoke(out, 'guest-api24-auxv',
            [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/cat', '/proc/self/auxv'], env)
-    elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-api24-auxv.log'
     size = api24_auxv_page_size(elf_path.read_bytes(), auxv_path.read_bytes())
     return str(size), {'method': 'API24_Bionic_sysconf_AT_PAGESZ', 'reader': '/system/bin/cat',
+                       'reader_identity': reader_identity,
                        'reader_elf_class': 64, 'reader_endian': 'little', 'pointer_bytes': 8,
                        'reader_elf_header_sha256': sha256_file(elf_path),
                        'auxv_bytes': auxv_path.stat().st_size, 'auxv_sha256': sha256_file(auxv_path),
