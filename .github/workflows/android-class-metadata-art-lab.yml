@@ -118,6 +118,58 @@ jobs:
         with:
           name: classmeta-build-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/classmeta-artifact
+      - name: Preserve the hosted Java identity before selection
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import os, shutil, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('classmeta-java-' + os.environ['TARGET'])
+          out.mkdir()
+          save(out, 'preinstalled-java.json', {
+              'java': tool_identity(Path(shutil.which('java') or '/missing/java')),
+              'JAVA_HOME': os.environ.get('JAVA_HOME'),
+          })
+          PYCODE
+      - name: Select the exact reviewed Java runtime
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17.0.21+9'
+          java-package: jre
+          architecture: x64
+          check-latest: false
+      - name: Verify the selected runtime against the unchanged preflight pin
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, shutil, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, sha256_file, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('classmeta-java-' + os.environ['TARGET'])
+          java = Path(shutil.which('java') or '/missing/java').resolve()
+          home = Path(os.environ['JAVA_HOME']).resolve()
+          pin = json.loads(Path('lab/qa/android_emulator_lab_matrix_lock.json').read_bytes())['tool_sha256']['java']
+          record = {'status': 'BLOCKED', 'selected': tool_identity(java), 'JAVA_HOME': str(home), 'required_sha256': pin}
+          try:
+              if java != home / 'bin/java' or record['selected'].get('sha256') != pin:
+                  raise RuntimeError('Selected Java does not match the reviewed launcher and JAVA_HOME')
+              record['release_sha256'] = sha256_file(home / 'release')
+              if record['release_sha256'] != '59425849bf0f00e83133e485c166042ba1f97b7625a5edc389925bc25e19fe4a':
+                  raise RuntimeError('Selected Java release differs from the official reviewed JRE')
+              result = subprocess.run([str(java), '-version'], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
+              record.update(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr)
+              if result.returncode != 0 or '17.0.21+9' not in result.stderr:
+                  raise RuntimeError('Selected Java version is not the reviewed release')
+              record['status'] = 'PASS'
+          finally:
+              save(out, 'selected-java.json', record)
+          PYCODE
       - name: Bootstrap only the existing reviewed Linux runner
         env:
           TARGET: ${{ matrix.target }}
@@ -136,5 +188,6 @@ jobs:
           path: |
             ${{ runner.temp }}/classmeta-${{ matrix.target }}/reports/
             ${{ runner.temp }}/classmeta-bootstrap-${{ matrix.target }}/
+            ${{ runner.temp }}/classmeta-java-${{ matrix.target }}/
           if-no-files-found: warn
           retention-days: 14
