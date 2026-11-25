@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.features.customization;
 
+import java.util.ArrayList;
 import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -146,7 +147,7 @@ public final class TextStatusComposerHook extends BaseFeature {
                 context, classLoader, "waex_text_status_data_consumers_v3", (bridge, loader) -> {
                     MethodDataList matches = bridge.findMethod(FindMethod.create().matcher(
                             MethodMatcher.create().addParamType(textData.getName())));
-                    java.util.ArrayList<Method> methods = new java.util.ArrayList<>();
+                    ArrayList<Method> methods = new ArrayList<>();
                     for (MethodData match : matches) {
                         if (match.isMethod()) {
                             Method m = match.getMethodInstance(loader);
@@ -210,7 +211,7 @@ public final class TextStatusComposerHook extends BaseFeature {
                 context, classLoader, "waex_text_status_data_producers_v3", (bridge, loader) -> {
                     MethodDataList matches = bridge.findMethod(FindMethod.create().matcher(
                             MethodMatcher.create().returnType(textData.getName())));
-                    java.util.ArrayList<Method> methods = new java.util.ArrayList<>();
+                    ArrayList<Method> methods = new ArrayList<>();
                     for (MethodData match : matches) {
                         if (match.isMethod()) {
                             Method m = match.getMethodInstance(loader);

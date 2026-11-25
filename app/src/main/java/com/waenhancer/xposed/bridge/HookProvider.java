@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.bridge;
 
+import com.waenhancer.core.preferences.WaexPreferenceManager;
+import com.waenhancer.theme.ThemeRepository;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -210,7 +212,7 @@ public class HookProvider extends ContentProvider {
 
             if ("theme_asset".equals(method)) {
                 // Serves a bundled theme image/font to the hooked process; names are validated flat files.
-                File asset = com.waenhancer.theme.ThemeRepository.Companion.assetFile(
+                File asset = ThemeRepository.Companion.assetFile(
                         context, arg, extras != null ? extras.getString("name") : null);
                 if (asset == null) return null;
                 try {
@@ -589,7 +591,7 @@ public class HookProvider extends ContentProvider {
 
     private void initializeTarget(SharedPreferences prefs, String packageName) {
         // Seed only once; see WaexPreferenceManager.TARGET_SEEDED_KEY.
-        String seededKey = packageName + ":" + com.waenhancer.core.preferences.WaexPreferenceManager.TARGET_SEEDED_KEY;
+        String seededKey = packageName + ":" + WaexPreferenceManager.TARGET_SEEDED_KEY;
         if (prefs.getBoolean(seededKey, false)) return;
         SharedPreferences.Editor editor = prefs.edit();
         boolean changed = true;

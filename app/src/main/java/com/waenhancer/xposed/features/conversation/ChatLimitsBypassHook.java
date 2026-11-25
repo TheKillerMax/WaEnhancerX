@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.features.conversation;
 
+import org.luckypray.dexkit.DexKitBridge;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
@@ -186,7 +187,7 @@ public class ChatLimitsBypassHook extends BaseFeature {
         try {
             Method getter = DexSearchEngine.getInstance().findMethodWithCache(
                     context, classLoader, "waex_pin_cap_getter_v4", (bridge, loader) -> {
-                        java.util.Map<Method, Integer> calledByPinFlows = new LinkedHashMap<>();
+                        Map<Method, Integer> calledByPinFlows = new LinkedHashMap<>();
                         for (String anchor : PIN_FLOW_ANCHORS) {
                             for (MethodData caller : bridge.findMethod(FindMethod.create()
                                     .matcher(MethodMatcher.create()
@@ -236,8 +237,8 @@ public class ChatLimitsBypassHook extends BaseFeature {
         return params.length == 0;
     }
 
-    private static Method pickCapGetter(org.luckypray.dexkit.DexKitBridge bridge, ClassLoader loader,
-                                        java.util.Map<Method, Integer> calledByPinFlows,
+    private static Method pickCapGetter(DexKitBridge bridge, ClassLoader loader,
+                                        Map<Method, Integer> calledByPinFlows,
                                         boolean requireTwenty, boolean requirePinFlowCaller) {
         MethodMatcher matcher = MethodMatcher.create()
                 .returnType(int.class).paramCount(0, 1).addUsingNumber(3);
@@ -329,7 +330,7 @@ public class ChatLimitsBypassHook extends BaseFeature {
                                     all.subList(start, Math.min(start + 3, all.size())));
                             selectionField.set(param.thisObject, batch);
                             activePinBatch.set(batch);
-                            de.robv.android.xposed.XposedBridge.invokeOriginalMethod(
+                            XposedBridge.invokeOriginalMethod(
                                     pinSelected, param.thisObject, param.args);
                         }
                     } finally {

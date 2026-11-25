@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.features.media;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.waenhancer.app.R;
 import com.waenhancer.utils.UiText;
 
@@ -83,8 +84,8 @@ public final class VoiceNoteTranscriptionHook extends BaseFeature {
 
     private Handler worker;
     /** Set when this feature hit an unexpected error; it then stays off until restart. */
-    private final java.util.concurrent.atomic.AtomicBoolean disabled =
-            new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final AtomicBoolean disabled =
+            new AtomicBoolean(false);
     @Nullable private File voiceRoot;
     private int discoveryAttempts;
 

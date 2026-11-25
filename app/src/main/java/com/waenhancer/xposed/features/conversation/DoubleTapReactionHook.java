@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.features.conversation;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -294,14 +296,14 @@ public class DoubleTapReactionHook extends BaseFeature {
         }
     }
 
-    private static volatile java.lang.reflect.Field sListenerInfoField;
-    private static volatile java.lang.reflect.Field sOnTouchListenerField;
+    private static volatile Field sListenerInfoField;
+    private static volatile Field sOnTouchListenerField;
     private static volatile boolean sReflectionWorks = true;
 
     @Nullable
     private View.OnTouchListener getOnTouchListener(View view) {
         try {
-            java.lang.reflect.Field liField = sListenerInfoField;
+            Field liField = sListenerInfoField;
             if (liField == null) {
                 liField = View.class.getDeclaredField("mListenerInfo");
                 liField.setAccessible(true);
@@ -310,7 +312,7 @@ public class DoubleTapReactionHook extends BaseFeature {
             Object listenerInfo = liField.get(view);
             if (listenerInfo == null) return null;
 
-            java.lang.reflect.Field otlField = sOnTouchListenerField;
+            Field otlField = sOnTouchListenerField;
             if (otlField == null) {
                 otlField = listenerInfo.getClass().getDeclaredField("mOnTouchListener");
                 otlField.setAccessible(true);
@@ -563,7 +565,7 @@ public class DoubleTapReactionHook extends BaseFeature {
 
         // The singleton may have been built before our constructor hook was installed.
         try {
-            for (java.lang.reflect.Field f : actionUserClass.getDeclaredFields()) {
+            for (Field f : actionUserClass.getDeclaredFields()) {
                 if (Modifier.isStatic(f.getModifiers()) && f.getType() == actionUserClass) {
                     f.setAccessible(true);
                     Object value = f.get(null);
@@ -576,7 +578,7 @@ public class DoubleTapReactionHook extends BaseFeature {
         } catch (Throwable ignored) { HookErrors.swallowed("DoubleTapReactionHook", ignored); }
 
         try {
-            for (java.lang.reflect.Constructor<?> c : actionUserClass.getDeclaredConstructors()) {
+            for (Constructor<?> c : actionUserClass.getDeclaredConstructors()) {
                 if (c.getParameterTypes().length == 0) {
                     c.setAccessible(true);
                     cachedActionUserInstance = c.newInstance();

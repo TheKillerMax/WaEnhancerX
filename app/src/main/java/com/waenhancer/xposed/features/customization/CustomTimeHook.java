@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.customization;
 
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
@@ -52,9 +55,9 @@ public class CustomTimeHook extends BaseFeature {
         if (hours < 24) return hours == 1 ? "1 hour ago" : hours + " hours ago";
 
         ZoneId zone = ZoneId.systemDefault();
-        java.time.LocalDate today = java.time.LocalDate.now(zone);
-        java.time.ZonedDateTime then = Instant.ofEpochMilli(millis).atZone(zone);
-        long days = java.time.temporal.ChronoUnit.DAYS.between(then.toLocalDate(), today);
+        LocalDate today = LocalDate.now(zone);
+        ZonedDateTime then = Instant.ofEpochMilli(millis).atZone(zone);
+        long days = ChronoUnit.DAYS.between(then.toLocalDate(), today);
         if (days <= 1) {
             return "Yesterday at " + DateTimeFormatter.ofPattern("h:mm a", loc).format(then);
         }

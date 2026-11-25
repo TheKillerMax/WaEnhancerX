@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.media;
 
+import android.media.MediaMetadataRetriever;
+import de.robv.android.xposed.XposedBridge;
+import java.util.concurrent.atomic.AtomicBoolean;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
@@ -102,14 +105,14 @@ final class VoiceTranscriptionBridge {
      * there would kill the whole WhatsApp process; instead it is logged with its origin and
      * the feature behind {@code disabled} stays off until WhatsApp restarts.
      */
-    static Runnable guard(String tag, java.util.concurrent.atomic.AtomicBoolean disabled, Runnable work) {
+    static Runnable guard(String tag, AtomicBoolean disabled, Runnable work) {
         return () -> {
             if (disabled.get()) return;
             try {
                 work.run();
             } catch (Throwable t) {
                 disabled.set(true);
-                de.robv.android.xposed.XposedBridge.log(tag + " disabled until restart: " + describe(t));
+                XposedBridge.log(tag + " disabled until restart: " + describe(t));
                 log(tag + " turned itself off until WhatsApp restarts: " + describe(t));
             }
         };
@@ -244,10 +247,10 @@ final class VoiceTranscriptionBridge {
     static String describeAudio(@NonNull File audio) {
         long kb = Math.max(1, audio.length() / 1024);
         long seconds = -1;
-        android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try {
             retriever.setDataSource(audio.getAbsolutePath());
-            String ms = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
+            String ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
             if (ms != null) seconds = Math.round(Long.parseLong(ms) / 1000.0);
         } catch (Throwable ignored) { HookErrors.swallowed("VoiceTranscriptionBridge", ignored); } finally {
             try {
