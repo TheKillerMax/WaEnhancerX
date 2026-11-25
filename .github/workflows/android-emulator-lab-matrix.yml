@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/android-emulator-lab-matrix.yml
       - qa/android_emulator_lab_matrix_lock.json
+      - qa/test_android_emulator_pilot_pages.py
   workflow_dispatch:
 
 permissions:
@@ -52,8 +53,15 @@ jobs:
           set -euo pipefail
           {
             python3 qa/test_android_emulator_pilot_pages.py
+            python3 qa/test_android_guest_version.py
+            python3 qa/test_android_page_size.py
             python3 qa/test_android_emulator_matrix.py
             python3 qa/test_android_sqlite_probe.py
+            python3 -O qa/test_android_emulator_pilot_pages.py
+            python3 -O qa/test_android_guest_version.py
+            python3 -O qa/test_android_page_size.py
+            python3 -O qa/test_android_emulator_matrix.py
+            python3 -O qa/test_android_sqlite_probe.py
           } 2>&1 | tee "$RUNNER_TEMP/waex-sqlite-host-controls.log"
       - name: Build one neutral APK with an ephemeral signing key
         run: |

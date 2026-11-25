@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Host controls for page-size fallback and bounded guest readiness; no ADB or emulator execution."""
+"""Host controls for direct legacy page-size proof and readiness; no ADB or emulator execution."""
+import hashlib
 import os
 import json
 from pathlib import Path
@@ -52,69 +53,83 @@ class PageSizeControls(unittest.TestCase):
             with self.subTest(label=label), self.assertRaises(RuntimeError):
                 pilot.legacy_auxv_page_size(header, raw)
 
-    def run_reader(self, api='24', abi='x86_64', expected=4096, rc=127,
-                   text='/system/bin/sh: getconf: not found\n', failure=None, raw=None, absent=True):
+    def run_reader(self, api='24', abi='x86_64', expected=4096, rc=0,
+                   text='4096\n', failure=None, raw=None, fail_stage=None):
         commands = []
+        owned_env = {'ADB_SERVER_PORT': '5038', 'WAEX_HOST_FIXTURE': 'yes'}
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)
 
             def invoke(output, name, command, env, **kwargs):
+                self.assertEqual(env, owned_env)
                 commands.append(command)
                 if name == 'guest-application_page_size_bytes':
+                    self.assertGreaterEqual(int(api), 29, 'Legacy readers must not query getconf')
                     return {'returncode': rc, 'failure': failure}, text
-                if name == 'guest-getconf-absent':
-                    if not absent:
-                        raise RuntimeError('getconf exists or resolves')
-                    return {'returncode': 0, 'failure': None}, ''
+                self.assertIsNot(kwargs.get('required'), False)
                 if name == 'guest-auxv-reader-elf':
                     (output / (name + '.log')).write_bytes(elf64() + b'synthetic executable body')
                 elif name == 'guest-legacy-auxv':
                     (output / (name + '.log')).write_bytes(raw if raw is not None else auxv((6, 4096), (0, 0)))
                 else:
                     raise AssertionError('Unexpected command: ' + name)
+                if name == fail_stage:
+                    raise RuntimeError('synthetic transport failure: ' + name)
                 return {'returncode': 0, 'failure': None}, ''
 
             with patch.object(pilot, 'invoke', invoke):
-                result = pilot.application_page_size(out, '/sdk/adb', {}, {'sdk': api, 'abi': abi}, expected)
+                result = pilot.application_page_size(out, '/sdk/adb', owned_env, {'sdk': api, 'abi': abi}, expected)
+            policy = json.loads((out / 'guest-page-size-policy.json').read_text(encoding='utf-8'))
+            self.assertEqual(policy['api'], int(api))
+            self.assertEqual(policy['expected_application_page_size_bytes'], expected)
+            self.assertIs(policy['getconf_requested'], int(api) >= 29)
         return result, commands
 
-    def test_observed_missing_getconf_uses_raw_exact_reader(self):
+    def test_api24_uses_raw_exact_reader_without_getconf(self):
         result, commands = self.run_reader()
         self.assertEqual(result[0], '4096')
+        self.assertEqual(result[1]['method'], 'legacy_Bionic_sysconf_AT_PAGESZ')
+        self.assertIs(result[1]['getconf_requested'], False)
         self.assertEqual(result[1]['pointer_bytes'], 8)
         self.assertEqual(result[1]['reader_identity']['retained_bytes'], 64)
-        self.assertGreater(result[1]['reader_identity']['full_executable_bytes'], 64)
-        self.assertEqual(commands[2][3:], ['exec-out', '/system/bin/cat', '/system/bin/cat'])
-        self.assertEqual(commands[3][3:], ['exec-out', '/system/bin/cat', '/proc/self/auxv'])
+        executable = elf64() + b'synthetic executable body'
+        self.assertEqual(result[1]['reader_identity']['full_executable_bytes'], len(executable))
+        self.assertEqual(result[1]['reader_identity']['full_executable_sha256'], hashlib.sha256(executable).hexdigest())
+        self.assertEqual(result[1]['reader_elf_header_sha256'], hashlib.sha256(elf64()).hexdigest())
+        self.assertEqual(result[1]['auxv_sha256'], hashlib.sha256(auxv((6, 4096), (0, 0))).hexdigest())
+        self.assertEqual(len(commands), 2)
+        self.assertEqual(commands[0][3:], ['exec-out', '/system/bin/cat', '/system/bin/cat'])
+        self.assertEqual(commands[1][3:], ['exec-out', '/system/bin/cat', '/proc/self/auxv'])
         self.assertTrue(all(command[1:3] == ['-s', 'emulator-5580'] for command in commands))
 
-    def test_legacy_platform_scope_requires_explicit_getconf_absence(self):
+    def test_all_legacy_apis_require_direct_binary_proof(self):
         for api in ('24', '25', '26', '27', '28'):
             with self.subTest(api=api):
                 result, commands = self.run_reader(api=api)
                 self.assertEqual(result[0], '4096')
                 self.assertEqual(result[1]['api'], int(api))
-                self.assertIn('command -v getconf', commands[1][-1])
-                with self.assertRaises(RuntimeError):
-                    self.run_reader(api=api, absent=False)
+                self.assertIs(result[1]['getconf_requested'], False)
+                self.assertEqual([command[3:] for command in commands], [
+                    ['exec-out', '/system/bin/cat', '/system/bin/cat'],
+                    ['exec-out', '/system/bin/cat', '/proc/self/auxv'],
+                ])
 
-    def test_ambiguous_shell_not_found_requires_a_separate_absence_check(self):
-        text = '/system/bin/sh: getconf: inaccessible or not found\n'
-        result, _ = self.run_reader(api='26', text=text)
-        self.assertEqual(result[0], '4096')
-        with self.assertRaises(RuntimeError):
-            self.run_reader(api='26', text=text, absent=False)
+    def test_legacy_transport_failures_are_fatal(self):
+        for stage in ('guest-auxv-reader-elf', 'guest-legacy-auxv'):
+            with self.subTest(stage=stage), self.assertRaisesRegex(RuntimeError, 'synthetic transport failure'):
+                self.run_reader(api='26', fail_stage=stage)
 
     def test_modern_16k_requires_getconf(self):
         result, commands = self.run_reader(api='35', expected=16384, rc=0, text='16384\n')
-        self.assertEqual(result, ('16384', {'method': 'getconf_PAGE_SIZE'}))
+        self.assertEqual(result, ('16384', {'method': 'getconf_PAGE_SIZE', 'getconf_requested': True}))
         self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0][3:], ['shell', 'getconf', 'PAGE_SIZE'])
 
     def test_refuses_other_failures_or_wrong_values(self):
-        cases = [dict(api='35', expected=16384), dict(api='29'), dict(abi='arm64-v8a'),
-                 dict(expected=16384), dict(rc=1), dict(failure='timeout'),
-                 dict(text='permission denied'), dict(rc=0, text=''),
-                 dict(rc=0, text='4096\n16384'), dict(api='35', expected=16384, rc=0, text='4096'),
+        cases = [dict(api='35', expected=16384, rc=127), dict(api='29', rc=255), dict(abi='arm64-v8a'),
+                 dict(expected=16384), dict(api='29', rc=1), dict(api='29', failure='timeout'),
+                 dict(api='29', text='permission denied'), dict(api='29', text=''),
+                 dict(api='29', text='4096\n16384'), dict(api='35', expected=16384, text='4096'),
                  dict(raw=auxv((6, 16384), (0, 0)))]
         for case in cases:
             with self.subTest(case=case), self.assertRaises(RuntimeError):
