@@ -1,0 +1,91 @@
+{
+  "schema": "WAEXDIAG_CONSTANT_CONTRACT_V1",
+  "source_revision": "9d1a3585f2b44b90e632cd3a2a7e46ef86ebf19d",
+  "source_sha256": "96647f2fb72535da9a01c49d176d2ed868f93794a172c032a5afc92ea67b5756",
+  "methods": {
+    "lspConfigDb": {
+      "return_type": "String",
+      "value": "/data/adb/lspd/config/modules_config.db"
+    },
+    "hmaZygiskPath": {
+      "return_type": "String",
+      "value": "/data/adb/modules/hma_oss_zygisk"
+    },
+    "knownHmaPackages": {
+      "return_type": "String[]",
+      "value": [
+        "com.tsng.hidemyapplist",
+        "org.frknkrc44.hma_oss",
+        "com.google.android.hmal"
+      ]
+    },
+    "knownHmaConfigPaths": {
+      "return_type": "String[]",
+      "value": [
+        "/data/adb/hma/config.json",
+        "/data/adb/hma_oss/config.json",
+        "/data/adb/modules/hma_oss_zygisk/config.json",
+        "/data/adb/modules/hma_oss/config.json",
+        "/data/adb/modules/hide_my_applist/config.json",
+        "/data/misc/hide_my_applist/config.json",
+        "/data/misc/hide_my_applist_oss/config.json",
+        "/data/system/hide_my_applist/config.json",
+        "/data/system/users/0/hide_my_applist/config.json",
+        "/data/data/org.frknkrc44.hma_oss/files/config.json",
+        "/data/data/org.frknkrc44.hma_oss/files/temp_config.json",
+        "/data/data/com.tsng.hidemyapplist/files/config.json",
+        "/data/data/com.tsng.hidemyapplist/files/temp_config.json",
+        "/data/data/com.google.android.hmal/files/config.json",
+        "/data/user/0/org.frknkrc44.hma_oss/files/config.json",
+        "/data/user/0/org.frknkrc44.hma_oss/files/temp_config.json",
+        "/data/user/0/com.tsng.hidemyapplist/files/config.json",
+        "/data/user/0/com.tsng.hidemyapplist/files/temp_config.json",
+        "/data/user/0/com.google.android.hmal/files/config.json",
+        "/data/user_de/0/org.frknkrc44.hma_oss/files/config.json",
+        "/data/user_de/0/org.frknkrc44.hma_oss/files/temp_config.json",
+        "/data/user_de/0/com.tsng.hidemyapplist/files/config.json",
+        "/data/user_de/0/com.google.android.hmal/files/config.json"
+      ]
+    },
+    "hmaActiveCheckCommand": {
+      "return_type": "String",
+      "value": "[ -d /data/adb/modules/hma_oss_zygisk ] && [ ! -f /data/adb/modules/hma_oss_zygisk/disable ] && echo active; ls -d /data/adb/modules/*hma* /data/adb/modules/*hide_my_applist* 2>/dev/null; ls -d /data/data/org.frknkrc44.hma_oss /data/data/com.tsng.hidemyapplist /data/data/com.google.android.hmal 2>/dev/null; ls /data/adb/hma*/config.json /data/misc/hide_my_applist*/config.json /data/system/*hide_my_applist*/config.json 2>/dev/null; true"
+    },
+    "lspHmaCheckCommand": {
+      "return_type": "String",
+      "value": "[ -f /data/adb/lspd/config/modules_config.db ] && (grep -E 'hidemyapp|hma' /data/adb/lspd/config/modules_config.db 2>/dev/null || sqlite3 /data/adb/lspd/config/modules_config.db \"SELECT 1 FROM modules WHERE (module_pkg_name LIKE '%hidemyapp%' OR module_pkg_name LIKE '%hma%') AND enabled = 1 LIMIT 1\" 2>/dev/null); true"
+    },
+    "hmaShallowSearchCommand": {
+      "return_type": "String",
+      "value": "find /data/misc /data/adb /data/system -maxdepth 3 -name '*config.json' 2>/dev/null; true"
+    },
+    "hmaConfigGlobCommand": {
+      "return_type": "String",
+      "value": "ls /data/misc/hide_my_applist*/config.json /data/system/users/*/hide_my_applist*/config.json /data/adb/modules/*hma*/config.json /data/adb/modules/*hide_my_applist*/config.json 2>/dev/null; true"
+    },
+    "lspLogGlob": {
+      "return_type": "String",
+      "value": "/data/adb/lspd/log/*.log"
+    },
+    "magiskVersionCommand": {
+      "return_type": "String",
+      "value": "magisk -v 2>/dev/null"
+    },
+    "magiskDenylistStatusCommand": {
+      "return_type": "String",
+      "value": "magisk --denylist status 2>/dev/null; echo exit:$?"
+    },
+    "magiskDenylistListCommand": {
+      "return_type": "String",
+      "value": "magisk --denylist ls 2>/dev/null"
+    },
+    "magiskDenylistRemovePrefix": {
+      "return_type": "String",
+      "value": "magisk --denylist rm "
+    },
+    "magiskDenylistRemoveSuffix": {
+      "return_type": "String",
+      "value": " 2>/dev/null; echo exit:$?"
+    }
+  }
+}

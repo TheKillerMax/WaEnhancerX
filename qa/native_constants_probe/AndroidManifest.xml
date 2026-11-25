@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lab.waex.qa.nativeconstants" android:versionCode="1" android:versionName="1">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
+    <application android:label="WAEX diagnostic constants QA"
+        android:testOnly="true" android:debuggable="false" android:allowBackup="false"
+        android:usesCleartextTraffic="false" android:extractNativeLibs="false" />
+    <instrumentation android:name=".NativeConstantsInstrumentation"
+        android:targetPackage="org.lab.waex.qa.nativeconstants" />
+</manifest>
