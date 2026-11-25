@@ -1,0 +1,161 @@
+name: Lab pinned Opus JNI encoding
+on:
+  workflow_dispatch:
+  push:
+    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    paths:
+      - .github/workflows/android-opus-native-lab.yml
+      - qa/android_opus_probe/**
+      - qa/build_android_opus_probe.py
+      - qa/run_android_opus_probe.py
+      - qa/validate_android_opus_probe.py
+      - qa/test_android_opus_probe.py
+      - qa/test_android_opus_controller.py
+permissions:
+  contents: read
+concurrency:
+  group: waex-opus-native-lab
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  build:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      apk_sha256: ${{ steps.identity.outputs.apk_sha256 }}
+      build_receipt_sha256: ${{ steps.identity.outputs.build_receipt_sha256 }}
+      decoder_sha256: ${{ steps.identity.outputs.decoder_sha256 }}
+      decoder_receipt_sha256: ${{ steps.identity.outputs.decoder_receipt_sha256 }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Verify the public runner and exact reviewed boot inputs
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from android_emulator_lab_preflight import context_check
+          from run_android_opus_probe import TARGETS, checked_lock
+          context_check(os.environ)
+          for target in TARGETS:
+              checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), target)
+          PY
+      - name: Build the pinned independent host decoder
+        run: python3 qa/android_opus_probe/prepare_decoder.py --out "$RUNNER_TEMP/opus-decoder"
+      - name: Run host protocol and ownership counterchecks
+        shell: bash
+        run: |
+          set -euo pipefail
+          decoder_sha="$(sha256sum "$RUNNER_TEMP/opus-decoder/artifact/libopus.so" | cut -d' ' -f1)"
+          {
+            python3 qa/test_android_opus_probe.py --libopus "$RUNNER_TEMP/opus-decoder/artifact/libopus.so" --libopus-sha256 "$decoder_sha" --out "$RUNNER_TEMP/opus-host-controls"
+            python3 -O qa/test_android_opus_probe.py --libopus "$RUNNER_TEMP/opus-decoder/artifact/libopus.so" --libopus-sha256 "$decoder_sha" --out "$RUNNER_TEMP/opus-host-controls-optimized"
+            python3 qa/test_android_opus_controller.py
+            python3 -O qa/test_android_opus_controller.py
+          } 2>&1 | tee "$RUNNER_TEMP/opus-host-controls.log"
+      - name: Build one native APK with the existing SDK and JDK21
+        run: python3 qa/build_android_opus_probe.py --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --out "$RUNNER_TEMP/opus-build"
+      - name: Bind producer bytes to both runtime jobs
+        id: identity
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from android_emulator_lab_preflight import sha256_file
+          from run_android_opus_probe import verified_probe, verified_decoder
+          root = Path(os.environ['RUNNER_TEMP'])
+          apk = root / 'opus-build/artifact'
+          decoder = root / 'opus-decoder/artifact'
+          values = {'apk_sha256': sha256_file(apk / 'opus-probe.apk'),
+                    'build_receipt_sha256': sha256_file(apk / 'build-result.json'),
+                    'decoder_sha256': sha256_file(decoder / 'libopus.so'),
+                    'decoder_receipt_sha256': sha256_file(decoder / 'decoder-receipt.json')}
+          verified_probe(apk, values['apk_sha256'], values['build_receipt_sha256'])
+          verified_decoder(decoder, values['decoder_sha256'], values['decoder_receipt_sha256'])
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as stream:
+              for name, value in values.items():
+                  stream.write(name + '=' + value + '\n')
+          PY
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: opus-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/opus-build/artifact/
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: opus-decoder-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/opus-decoder/artifact/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: opus-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/opus-build/build-result.json
+            ${{ runner.temp }}/opus-build/downloads/
+            ${{ runner.temp }}/opus-build/logs/
+            ${{ runner.temp }}/opus-decoder/*.log
+            ${{ runner.temp }}/opus-decoder/*.command.json
+            ${{ runner.temp }}/opus-decoder/artifact/
+            ${{ runner.temp }}/opus-host-controls*
+          if-no-files-found: warn
+          retention-days: 14
+  opus:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target: [api35, api35-16k]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: opus-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/opus-apk
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: opus-decoder-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/opus-decoder-input
+      - name: Bootstrap only the owned disposable runner
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 qa/android_emulator_lab_bootstrap.py --out "$RUNNER_TEMP/opus-bootstrap-$TARGET"
+      - name: Encode on Android and validate exact Ogg output on the host
+        env:
+          TARGET: ${{ matrix.target }}
+          APK_SHA: ${{ needs.build.outputs.apk_sha256 }}
+          BUILD_SHA: ${{ needs.build.outputs.build_receipt_sha256 }}
+          DECODER_SHA: ${{ needs.build.outputs.decoder_sha256 }}
+          DECODER_RECEIPT_SHA: ${{ needs.build.outputs.decoder_receipt_sha256 }}
+        run: |
+          python3 qa/run_android_opus_probe.py --target "$TARGET" \
+            --lock qa/android_emulator_lab_matrix_lock.json --artifact "$RUNNER_TEMP/opus-apk" \
+            --apk-sha256 "$APK_SHA" --build-receipt-sha256 "$BUILD_SHA" \
+            --decoder "$RUNNER_TEMP/opus-decoder-input" --decoder-sha256 "$DECODER_SHA" \
+            --decoder-receipt-sha256 "$DECODER_RECEIPT_SHA" --out "$RUNNER_TEMP/opus-$TARGET"
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: opus-runtime-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/opus-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/opus-bootstrap-${{ matrix.target }}/
+          if-no-files-found: warn
+          retention-days: 14
