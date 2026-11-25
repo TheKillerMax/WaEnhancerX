@@ -840,9 +840,9 @@
   "source_sha256": {
     "qa/android_emulator_lab_preflight.py": "095e06cc348e6d6cd895a8f4ee1bbec7770cb2b9c1fee5822002e1cf11c99923",
     "qa/android_emulator_lab_bootstrap.py": "4a2d8d8e06e1ee8e07c39db3007a656083230f99274a4a7048be6a4638529940",
-    "qa/android_emulator_lab_pilot.py": "00bf4f1c24e2a8591c12f92cc687511e306cfcfe1a3f6e5fcc018605e97c9203",
+    "qa/android_emulator_lab_pilot.py": "6f69bf6c9c9320ffd741fe4ecc84b020271bb8a192ca378df16768e97c0490d9",
     "qa/android_emulator_lab_matrix.py": "b14acb92c5659a9fa1ef984f8cf195dc34f508f238c80c389abd8fe02721cafe",
-    "qa/summarize_android_emulator_lab_matrix.py": "522cdb7c4520cb9c4a37677cc38e82816fc24291a66860357940120a4c28d739",
+    "qa/summarize_android_emulator_lab_matrix.py": "5679d8d529f72e87f3a0e34937002456c6cb1d5e025dacb39b80e8dea15da5ee",
     "qa/build_android_sqlite_probe.py": "c1745496c4e39f3398570e22235132adb1af21fe3f55deb31e111a160b053fb1",
     "qa/validate_android_sqlite_probe.py": "f5883c5953bf3f0f30c8290bebc8d28025cb11990c7a7d1dd0075a60255a56c8",
     "qa/test_android_sqlite_probe.py": "daf478e5ee1478413d8f4ce9fae6c3d7011606c682b1645a05050a24b28ddaea",

@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 import re
 
 from android_emulator_lab_matrix import TARGETS, checked_lock
-from android_emulator_lab_pilot import guest_version_identity, require, validate_guest_readiness
+from android_emulator_lab_pilot import guest_version_identity, require, validate_guest_readiness, repair_decimal_avd_index
 from android_emulator_lab_preflight import context_check, save, sha256_file
 from validate_android_sqlite_probe import validate
 
@@ -49,6 +49,15 @@ def validate_row(path, lock, lock_sha, run_id, attempt, head, apk_sha, build_sha
         require(type(result.get(key)) is type(value) and result[key] == value,
                 'Target result mismatch: ' + key)
     entry = lock['targets'][target]
+    if re.fullmatch(r'android-\d+\.\d+', entry['image']['path'].split(';')[1]):
+        metadata = json.loads((path.parent / 'avd-target-metadata.json').read_text(encoding='utf-8'))
+        config = json.loads((path.parent / 'fresh-avd-config.json').read_text(encoding='utf-8'))
+        raw = (path.parent / 'fresh-avd-index-before.ini').read_bytes()
+        after, recomputed = repair_decimal_avd_index(raw, entry['image'], config, metadata['owned_avd_path'])
+        require(metadata == recomputed == result.get('avd_target_metadata'),
+                'Decimal AVD target receipt differs from controller')
+        require((path.parent / 'fresh-avd-index-after.ini').read_bytes() == after,
+                'Decimal AVD index readback differs')
     if entry['image']['api'] >= 36:
         ready = json.loads((path.parent / 'guest-readiness.json').read_text(encoding='utf-8'))
         require(result.get('guest_readiness') == ready, 'Readiness receipt differs from controller')

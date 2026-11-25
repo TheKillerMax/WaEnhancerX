@@ -2,6 +2,7 @@
 """Boot two reviewed, empty x86_64 AVD targets on the public Linux/KVM lab only."""
 import argparse
 import datetime
+import hashlib
 from dataclasses import dataclass
 import json
 import os
@@ -247,6 +248,49 @@ def properties(path):
             if '=' in line and not line.lstrip().startswith('#') for key, value in [line.split('=', 1)]}
 
 
+def repair_decimal_avd_index(raw, expected, config, owned_avd_path):
+    """Correct only the known avdmanager decimal-target serialization defect.
+
+    This operates on a fresh, owned runner AVD, never on an attached device.
+    The package, image directory, GPU and runtime readiness gates are unchanged.
+    """
+    parts = expected['path'].split(';')
+    require(len(parts) == 4 and parts[0] == 'system-images'
+            and parts[3] == 'x86_64', 'Unexpected system image path')
+    target = parts[1]
+    match = re.fullmatch(r'android-(\d+)\.(\d+)', target)
+    require(match is not None, 'Only decimal SDK package targets are eligible')
+    require((int(match[1]), int(match[2])) == (expected['api'], expected['minor']),
+            'Decimal SDK metadata differs from package target')
+    require(config.get('image.sysdir.1', '').rstrip('/') == '/'.join(parts),
+            'AVD image directory differs from the pinned package')
+    require(0 < len(raw) <= 16384 and b'\x00' not in raw, 'AVD index size/encoding invalid')
+    text = raw.decode('utf-8', errors='strict')
+    lines = text.splitlines(keepends=True)
+    keys = {}
+    for i, line in enumerate(lines):
+        logical = line.rstrip('\r\n')
+        if not logical.strip() or logical.lstrip().startswith('#'):
+            continue
+        key, sep, value = logical.partition('=')
+        require(sep == '=' and key == key.strip() and key not in keys,
+                'Malformed or duplicate AVD index field')
+        keys[key] = (i, value)
+    require('target' in keys and 'path' in keys, 'AVD index lacks target or path')
+    require(keys['path'][1] == str(owned_avd_path), 'AVD index path is not the owned AVD')
+    i, old = keys['target']
+    require(old in (target, 'android-0'), 'Unexpected AVD index target: ' + old)
+    if old == 'android-0':
+        lines[i] = 'target=' + target + lines[i][len('target=android-0'):]
+    after = ''.join(lines).encode('utf-8')
+    return after, {
+        'image': expected['path'], 'target_before': old, 'target_after': target,
+        'owned_avd_path': str(owned_avd_path), 'corrected': old != target,
+        'before_sha256': hashlib.sha256(raw).hexdigest(),
+        'after_sha256': hashlib.sha256(after).hexdigest(),
+    }
+
+
 def legacy_auxv_page_size(elf, raw):
     # Read the exact /system/bin/cat executable's ELF header before parsing its AUXV.
     require(len(elf) == 64 and elf[:7] == b'\x7fELF\x02\x01\x01',
@@ -461,6 +505,27 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
                '--package', expected['path'], '--path', str(avd_path)], env, timeout=90, input_bytes=b'no\n')
         config = avd_path / 'config.ini'
         values = properties(config)
+        # Old avdmanager versions can serialize decimal SDK targets as android-0.
+        # Preserve the actual pre-launch index and only repair that exact mismatch.
+        if re.fullmatch(r'android-\d+\.\d+', expected['path'].split(';')[1]):
+            index = Path(env['ANDROID_AVD_HOME']) / (avd_name + '.ini')
+            require(index.is_file() and not index.is_symlink() and
+                    index.resolve().parent == (work / 'avd').resolve(),
+                    'Fresh owned AVD index is missing or not a regular owned file')
+            require(config.is_file() and not config.is_symlink() and
+                    avd_path.resolve().parent == (work / 'avd').resolve(),
+                    'Fresh AVD config is not owned')
+            require(0 < index.stat().st_size <= 16384, 'Fresh AVD index exceeds reviewed bounds')
+            raw = index.read_bytes()
+            (out / 'fresh-avd-index-before.ini').write_bytes(raw)
+            save(out, 'fresh-avd-config-before.json', values)
+            after, metadata = repair_decimal_avd_index(raw, expected, values, avd_path)
+            if metadata['corrected']:
+                index.write_bytes(after)
+            require(index.read_bytes() == after, 'AVD index write/readback differs')
+            (out / 'fresh-avd-index-after.ini').write_bytes(after)
+            save(out, 'avd-target-metadata.json', metadata)
+            result['avd_target_metadata'] = metadata
         values.update({'disk.dataPartition.size': '2G', 'hw.ramSize': '2048', 'hw.cpu.ncore': '2',
                        'hw.lcd.width': '480', 'hw.lcd.height': '800', 'hw.lcd.density': '160'})
         config.write_text(''.join(key + '=' + value + '\n' for key, value in values.items()), encoding='utf-8')

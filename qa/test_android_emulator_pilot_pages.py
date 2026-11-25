@@ -271,5 +271,45 @@ class GuestReadinessControls(unittest.TestCase):
             invoke.assert_not_called()
 
 
+class DecimalAvdIndexControls(unittest.TestCase):
+    def test_exact_known_defect_and_byte_preservation(self):
+        expected = {'path': 'system-images;android-36.1;google_apis;x86_64', 'api': 36, 'minor': 1}
+        config = {'image.sysdir.1': 'system-images/android-36.1/google_apis/x86_64/'}
+        owned = '/runner/owned/avd.avd'
+        raw = b'avd.ini.encoding=UTF-8\r\npath=/runner/owned/avd.avd\r\ntarget=android-0\r\npath.rel=avd/avd.avd\r\n'
+        after, meta = pilot.repair_decimal_avd_index(raw, expected, config, owned)
+        self.assertEqual(after, raw.replace(b'target=android-0\r\n', b'target=android-36.1\r\n'))
+        self.assertTrue(meta['corrected'])
+        unchanged, correct = pilot.repair_decimal_avd_index(after, expected, config, owned)
+        self.assertEqual(unchanged, after)
+        self.assertFalse(correct['corrected'])
+        self.assertEqual(correct['before_sha256'], correct['after_sha256'])
+
+    def test_major_zero_minor_is_decimal(self):
+        expected = {'path': 'system-images;android-37.0;google_apis;x86_64', 'api': 37, 'minor': 0}
+        config = {'image.sysdir.1': 'system-images/android-37.0/google_apis/x86_64/'}
+        raw = b'path=/owned.avd\ntarget=android-0\n'
+        after, _ = pilot.repair_decimal_avd_index(raw, expected, config, '/owned.avd')
+        self.assertEqual(after, b'path=/owned.avd\ntarget=android-37.0\n')
+
+    def test_rejects_unreviewed_index_or_image(self):
+        expected = {'path': 'system-images;android-36.1;google_apis;x86_64', 'api': 36, 'minor': 1}
+        config = {'image.sysdir.1': 'system-images/android-36.1/google_apis/x86_64/'}
+        raw = b'path=/owned.avd\ntarget=android-0\n'
+        for bad_raw, image, cfg, owned in (
+            (raw.replace(b'android-0', b'android-36'), expected, config, '/owned.avd'),
+            (raw + b'target=android-36.1\n', expected, config, '/owned.avd'),
+            (raw + b'path=/other.avd\n', expected, config, '/owned.avd'),
+            (raw.replace(b'target=', b' target='), expected, config, '/owned.avd'),
+            (b'path=/owned.avd\n', expected, config, '/owned.avd'),
+            (raw, expected, config, '/other.avd'),
+            (raw, expected, {'image.sysdir.1': 'system-images/android-36/google_apis/x86_64/'}, '/owned.avd'),
+            (raw, {**expected, 'minor': 0}, config, '/owned.avd'),
+            (raw, {**expected, 'path': 'system-images;android-36;google_apis;x86_64'}, config, '/owned.avd'),
+        ):
+            with self.subTest(index=bad_raw, image=image, config=cfg, path=owned), self.assertRaises(RuntimeError):
+                pilot.repair_decimal_avd_index(bad_raw, image, cfg, owned)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

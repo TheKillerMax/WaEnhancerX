@@ -1,0 +1,120 @@
+name: Lab ClassValue ART linkage
+on:
+  workflow_dispatch:
+  push:
+    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    paths:
+      - .github/workflows/android-class-metadata-art-lab.yml
+      - qa/class_metadata_art_probe/**
+permissions:
+  contents: read
+concurrency:
+  group: waex-class-metadata-art-lab
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  build:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      manifest_sha256: ${{ steps.identity.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: lab
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 9d1a3585f2b44b90e632cd3a2a7e46ef86ebf19d
+          path: baseline
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: 8b09642698396c946ed748e6724f167d9f7265a1
+          path: candidate
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Validate receipt oracle and build two immutable DEX probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 lab/qa/class_metadata_art_probe/run.py --host-tests
+          python3 lab/qa/class_metadata_art_probe/build.py --baseline baseline --candidate candidate --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --out "$RUNNER_TEMP/classmeta-build"
+      - name: Bind the producer manifest to every runtime job
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$RUNNER_TEMP/classmeta-build/artifact/artifact-manifest.json"
+          test -s "$manifest"
+          echo "manifest_sha256=$(sha256sum "$manifest" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: classmeta-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/classmeta-build/artifact/
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: classmeta-build-receipts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/classmeta-build/*.log
+            ${{ runner.temp }}/classmeta-build/*-fixture/result.json
+            ${{ runner.temp }}/classmeta-build/*-fixture/*.log
+          if-no-files-found: warn
+          retention-days: 14
+  art:
+    needs: build
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target: [api24, api30, api33, api34]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: lab
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: classmeta-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/classmeta-artifact
+      - name: Bootstrap only the existing reviewed Linux runner
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 lab/qa/android_emulator_lab_bootstrap.py --out "$RUNNER_TEMP/classmeta-bootstrap-$TARGET"
+      - name: Execute both variants on the owned fresh AVD
+        env:
+          TARGET: ${{ matrix.target }}
+          MANIFEST_SHA256: ${{ needs.build.outputs.manifest_sha256 }}
+        run: |
+          set -euo pipefail
+          python3 lab/qa/class_metadata_art_probe/run.py --target "$TARGET" --lock lab/qa/android_emulator_lab_matrix_lock.json --artifact "$RUNNER_TEMP/classmeta-artifact" --manifest-sha256 "$MANIFEST_SHA256" --out "$RUNNER_TEMP/classmeta-$TARGET"
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: classmeta-art-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/classmeta-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/classmeta-bootstrap-${{ matrix.target }}/
+          if-no-files-found: warn
+          retention-days: 14
