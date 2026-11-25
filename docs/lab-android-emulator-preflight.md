@@ -30,6 +30,17 @@ archive download/checksum validation is delegated to the SDK installer, so this
 reference is not described as an independently measured download hash.
 The same bootstrap must run in every future pilot job because runner setup is
 ephemeral. Its receipt is uploaded separately from the read-only inspection.
+On Ubuntu 24.04 it also supplies the QEMU loader dependency
+`libpulse0:amd64=1:16.1+dfsg1-2ubuntu10.1` from `noble-updates/main`.
+Authenticated APT metadata must match the reviewed 292098-byte package and
+SHA-256 `b8d52aa6c2f74ae99e749c9f98d6ad2dbf924fd422371ac469725245cdd919fc`
+before installation. Only the named package and its required dependencies are
+requested, without recommended packages, removals or a general upgrade. An
+already-installed different version blocks the job instead of being replaced.
+The receipt records the exact dpkg version/architecture, APT repository policy,
+resolved library path and SHA-256, and a successful dynamic-library load.
+`emulator -version` must still confirm the pinned version/build and
+`emulator -accel-check` must succeed. This does not accept an Android SDK license.
 The checkout and artifact actions retain the immutable pins already used by the
 repository: `11bd71901bbe5b1630ceea73d27597364c9af683` and
 `4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1`, respectively.
@@ -80,6 +91,20 @@ runners are separately billable and are not selected here. The actual runner's
 free disk is measured; the documented 14 GB disk allocation is not assumed to
 fit all images together.
 
+## Evidence from the first two runs
+
+[Run 45511604598](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45511604598)
+remains `BLOCKED`: the runner lacked KVM access and an installed emulator, and the
+original license-text hash did not apply the SDK's JAXB normalization.
+[Run 45517438374](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45517438374)
+also remains `BLOCKED`. Its runner-specific ACL made KVM API 12 usable,
+`-accel-check` succeeded, emulator 37.3.10 package metadata matched, and all
+15 catalog entries had existing license acceptance. However, `emulator -version`
+failed because the QEMU loader could not find `libpulse.so.0`. The pinned Ubuntu
+client library addresses that observed missing dependency; a new real run must
+confirm loader and preflight success before the pilot can be enabled.
+Neither run downloaded a system image, created an AVD or booted Android.
+
 ## Proposed second phase, after reviewing the real preflight
 
 1. Confirm actual KVM usability, disk space, accepted licenses and tool revisions.
@@ -127,6 +152,9 @@ fit all images together.
 - [Official emulator metadata](https://dl.google.com/android/repository/repository2-3.xml)
 - [Official emulator archive and SHA-256 references](https://developer.android.com/studio/emulator_archive)
 - [ACL modification and mask preservation](https://man7.org/linux/man-pages/man1/setfacl.1.html)
+- [Ubuntu libpulse0 package identity and SHA-256](https://packages.ubuntu.com/noble-updates/amd64/libpulse0/download)
+- [Ubuntu libpulse0 files, including libpulse.so.0](https://packages.ubuntu.com/noble-updates/amd64/libpulse0/filelist)
+- [Ubuntu APT exact-version installation and integrity options](https://manpages.ubuntu.com/manpages/noble/man8/apt-get.8.html)
 - [Official AOSP image metadata](https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml)
 - [Official Google APIs image metadata](https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml)
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Prepare only the disposable public Linux runner; never accepts SDK licenses."""
 import argparse
+import ctypes
 import datetime
 import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import stat
@@ -23,11 +25,63 @@ PIN = {
     'archive_sha256_reference': 'a4405349d8a9c52136ab7861e5331dc40e85574bd91cb8889a298a2ff4c52e26',
     'sha256_reference_source': 'https://developer.android.com/studio/emulator_archive',
 }
+LIBPULSE_PIN = {
+    'package': 'libpulse0', 'architecture': 'amd64', 'version': '1:16.1+dfsg1-2ubuntu10.1',
+    'repository': 'Ubuntu noble-updates/main',
+    'filename': 'pool/main/p/pulseaudio/libpulse0_16.1+dfsg1-2ubuntu10.1_amd64.deb',
+    'archive_bytes': 292098,
+    'archive_sha256': 'b8d52aa6c2f74ae99e749c9f98d6ad2dbf924fd422371ac469725245cdd919fc',
+    'reference_url': 'https://packages.ubuntu.com/noble-updates/amd64/libpulse0/download',
+}
 
 
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def prepare_libpulse(out, env):
+    release = platform.freedesktop_os_release()
+    require(release.get('ID') == 'ubuntu' and release.get('VERSION_ID') == '24.04',
+            'The libpulse0 pin requires Ubuntu 24.04')
+    commands = {name: shutil.which(name) for name in ('sudo', 'apt-get', 'apt-cache', 'dpkg-query', 'env')}
+    require(all(commands.values()), 'Preinstalled Ubuntu package tools are required')
+    package = LIBPULSE_PIN['package'] + ':' + LIBPULSE_PIN['architecture']
+    specification = package + '=' + LIBPULSE_PIN['version']
+    query = [commands['dpkg-query'], '-W', '-f=${Status}\t${Version}\t${Architecture}\n', package]
+    command, before = preflight.run(out, 'libpulse-installed-before', query, env)
+    expected = 'install ok installed\t' + LIBPULSE_PIN['version'] + '\t' + LIBPULSE_PIN['architecture']
+    preinstalled = command['returncode'] == 0 and before.strip() == expected
+    require(preinstalled or command['returncode'] == 1,
+            'An unexpected libpulse0 version/state is installed; it will not be replaced')
+    if not preinstalled:
+        privileged = [commands['sudo'], '-n', commands['env'], 'DEBIAN_FRONTEND=noninteractive', commands['apt-get']]
+        command, _ = preflight.run(out, 'libpulse-apt-update',
+                                  privileged + ['-o', 'Acquire::Retries=1', '-o', 'Acquire::http::Timeout=30', 'update'], env, timeout=120)
+        require(command['returncode'] == 0 and not command.get('output_truncated'), 'Ubuntu package index refresh failed')
+        command, metadata = preflight.run(out, 'libpulse-package-metadata', [commands['apt-cache'], 'show', specification], env)
+        require(command['returncode'] == 0 and not command.get('output_truncated'), 'Pinned libpulse0 metadata is unavailable')
+        records = [dict(line.split(': ', 1) for line in paragraph.splitlines() if line and not line[0].isspace() and ': ' in line)
+                   for paragraph in metadata.strip().split('\n\n')]
+        require(len(records) == 1 and all(records[0].get(key) == value for key, value in {
+            'Package': LIBPULSE_PIN['package'], 'Version': LIBPULSE_PIN['version'], 'Architecture': LIBPULSE_PIN['architecture'],
+            'Filename': LIBPULSE_PIN['filename'], 'Size': str(LIBPULSE_PIN['archive_bytes']), 'SHA256': LIBPULSE_PIN['archive_sha256'],
+        }.items()), 'APT libpulse0 package metadata differs from the reviewed Ubuntu pin')
+        command, _ = preflight.run(out, 'libpulse-install',
+                                  privileged + ['--yes', '--no-install-recommends', '--no-remove', '--no-upgrade',
+                                                'install', specification], env, timeout=120)
+        require(command['returncode'] == 0 and not command.get('output_truncated'), 'Pinned libpulse0 installation failed')
+    command, installed = preflight.run(out, 'libpulse-installed-after', query, env)
+    require(command['returncode'] == 0 and installed.strip() == expected, 'Installed libpulse0 version/architecture differs from the pin')
+    command, _ = preflight.run(out, 'libpulse-repository-policy', [commands['apt-cache'], 'policy', package], env)
+    require(command['returncode'] == 0 and not command.get('output_truncated'), 'Cannot record libpulse0 repository policy')
+    library = Path('/usr/lib/x86_64-linux-gnu/libpulse.so.0').resolve(strict=True)
+    ctypes.CDLL(str(library), mode=os.RTLD_NOW)
+    result = {'pin': LIBPULSE_PIN, 'preinstalled': preinstalled, 'installed_identity': installed.strip(),
+              'library_path': str(library), 'library_sha256': preflight.sha256_file(library), 'library_load_confirmed': True,
+              'archive_integrity_scope': 'Authenticated APT installation; repository metadata must match the reviewed archive size and SHA-256 before installation. No independent download hash is claimed.'}
+    preflight.save(out, 'libpulse-result.json', result)
+    return result
 
 
 def acl_entries(text):
@@ -151,6 +205,7 @@ def main():
         require(package is not None and package.get('path') == 'emulator', 'Installed SDK package identity is invalid')
         revision = [int(package.findtext('./{*}revision/{*}' + name, '0')) for name in ('major', 'minor', 'micro')]
         require(revision == PIN['revision'], 'Installed SDK metadata has an unexpected emulator revision')
+        result['linux_library'] = prepare_libpulse(out, env)
         command, version = preflight.run(out, 'installed-emulator-version', [str(installed / 'emulator'), '-version'], env)
         require(command['returncode'] == 0 and PIN['version'] in version and PIN['build_id'] in version,
                 'Installed emulator executable does not report the exact version/build')
