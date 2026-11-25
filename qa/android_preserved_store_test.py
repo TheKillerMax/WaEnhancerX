@@ -14,11 +14,13 @@ import re
 import shutil
 import subprocess
 import zipfile
+from framework_sdk_matrix import select_sdk
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
     Path('app/src/main/java/com/waenhancer/utils/ContactIdentityPolicy.java'),
     Path('app/src/main/java/com/waenhancer/xposed/core/db/PreservedMessageStore.kt'),
+    Path('app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'),
 ]
 EXPECTED_TESTS = 33
 POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
@@ -51,10 +53,13 @@ def main():
     parser.add_argument('--maven-repo', type=Path)
     parser.add_argument('--deps', type=Path)
     parser.add_argument('--sdk-jars', type=Path, help='Use previously downloaded instrumented Android JARs offline')
+    parser.add_argument('--sdk', type=int, choices=range(24,38), help='Run one runtime API; default preserves API24/28/34')
     parser.add_argument('--expect-assertion-failures', type=int, default=0,
                         help='Require the full suite and exactly this many assertion failures for a known baseline or mutant')
     args = parser.parse_args()
     root, out = args.source_root.resolve(), args.out.resolve()
+    sdk_levels = [args.sdk] if args.sdk is not None else [24,28,34]
+    expected_tests = 11 * len(sdk_levels)
     out.mkdir(parents=True, exist_ok=False)
     deps = args.deps.resolve() if args.deps else out / 'deps'
     deps.mkdir(parents=True, exist_ok=True)
@@ -82,6 +87,17 @@ def main():
     kotlin_runtime = kotlin_lib / 'kotlin-stdlib.jar'
     if not kotlin_runtime.is_file():
         raise RuntimeError('Kotlin standard library was not found beside the compiler')
+    # Invoke the same compiler directly on Windows: kotlinc.bat splits the
+    # semicolon-separated classpath into arguments before the JVM sees it.
+    compiler_command = [compiler]
+    if os.name == 'nt':
+        compiler_jars = sorted(kotlin_lib.glob('*.jar'))
+        if not compiler_jars:
+            raise RuntimeError('Kotlin compiler distribution JARs missing')
+        compiler_command = ['java', '-Dkotlin.home=' + str(kotlin_lib.parent),
+                            '-cp', os.pathsep.join(map(str, compiler_jars)),
+                            'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
+                            '-kotlin-home', str(kotlin_lib.parent)]
     stage, classes = out / 'sources', out / 'classes'
     classes.mkdir()
     identities, staged = {}, []
@@ -106,7 +122,9 @@ object VaultRowKey {
     identities['extracted-production-expression/VaultRowKey.kt'] = hashlib.sha256(row_key.read_bytes()).hexdigest()
     test_source = ROOT / 'qa/fixtures/PreservedStoreCompatibilityTest.java'
     test_dest = stage / test_source.name
-    shutil.copyfile(test_source, test_dest)
+    fixture_bytes = select_sdk(test_source.read_bytes().decode("utf-8"), args.sdk, (24,28,34)).encode("utf-8")
+    test_dest.write_bytes(fixture_bytes)
+    executed_fixture_sha256 = hashlib.sha256(fixture_bytes).hexdigest()
     identities['qa/fixtures/PreservedStoreCompatibilityTest.java'] = hashlib.sha256(test_source.read_bytes()).hexdigest()
     jars = sorted(deps.glob('*.jar'))
     if not any(re.fullmatch(r'kotlin-stdlib-[0-9].*\.jar', p.name) for p in jars):
@@ -116,11 +134,25 @@ object VaultRowKey {
     android = deps / 'android-all-14-robolectric-10818077.jar'
     if not android.is_file():
         raise RuntimeError('Pinned Android compilation API is missing')
+    # Compile genuine production HookErrors with only its Xposed/annotation boundaries.
+    # Keep the Xposed logger visible to the fixture; never replace production failure handling.
+    boundaries = {
+        'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
+        'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
+        'de/robv/android/xposed/XposedBridge.java':
+            'package de.robv.android.xposed; public final class XposedBridge { public static void log(String message) { System.err.println(message); } }',
+    }
+    support = []
+    for relative, content in boundaries.items():
+        dest = stage / relative
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content, encoding='utf-8')
+        support.append(dest)
     # Compile production only against its own API dependencies. Robolectric test
     # internals may use a newer Kotlin metadata version than the app compiler.
     production_cp = os.pathsep.join([str(classes), str(android), str(kotlin_runtime)])
-    run(['javac', '--release', '17', '-cp', cp, '-d', str(classes), str(staged[0])], out / 'javac-production.log')
-    run([compiler, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes), str(staged[1]), str(row_key)], out / 'kotlinc-production.log')
+    run(['javac', '--release', '17', '-cp', cp, '-d', str(classes), str(staged[0]), str(staged[2]), *map(str, support)], out / 'javac-production.log')
+    run([*compiler_command, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes), str(staged[1]), str(row_key)], out / 'kotlinc-production.log')
     run(['javac', '--release', '17', '-cp', classpath, '-d', str(classes), str(test_dest)], out / 'javac-tests.log')
     opens = ['java.base/java.lang', 'java.base/java.util', 'java.base/java.io', 'java.base/java.net',
              'java.base/java.security', 'java.base/java.text', 'java.base/jdk.internal.access',
@@ -150,16 +182,17 @@ object VaultRowKey {
     failures = int(failed.group(2)) if failed else 0
     assertions = junit.count('\njava.lang.AssertionError:')
     expected_failures = args.expect_assertion_failures
-    valid = count == EXPECTED_TESTS and failures == expected_failures
+    valid = count == expected_tests and failures == expected_failures
     if expected_failures:
         valid = valid and result != 0 and assertions == expected_failures
     else:
         valid = valid and result == 0 and success is not None
     summary = {'source_root': str(root), 'junit_exit_code': result, 'passed_tests': count - failures,
-               'expected_tests': EXPECTED_TESTS, 'source_sha256': identities,
+               'expected_tests': expected_tests, 'source_sha256': identities,
+               'sdk_levels': sdk_levels, 'executed_fixture_sha256': executed_fixture_sha256,
                'tests': count, 'failures': failures, 'assertion_failures': assertions,
                'expected_assertion_failures': expected_failures, 'accepted_result': valid,
-               'limits': 'Complete production store and Android SQLiteOpenHelper on Robolectric API 24/28/34 with real SQLite files. Exact row-key expression extracted from the production Compose mapper and compiled separately. Synthetic rows and historical schemas; no WhatsApp, capture hook, LSPosed, or full Compose vault screen.'}
+               'limits': 'Complete production store and Android SQLiteOpenHelper on the selected Robolectric runtime APIs with real SQLite files. Exact row-key expression extracted from the production Compose mapper and compiled separately. Synthetic rows and historical schemas; no WhatsApp, capture hook, LSPosed, or full Compose vault screen.'}
     (out / 'result.json').write_text(json.dumps(summary, indent=2) + '\n')
     if not valid:
         print(junit[-18000:])
