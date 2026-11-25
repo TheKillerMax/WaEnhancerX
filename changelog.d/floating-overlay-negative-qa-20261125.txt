@@ -1,0 +1,2 @@
+[Fixes]
+Reject six causal listener, drawable-ownership and overlay-fallback mutations. Validate overlay resource parity and duplicate definitions without treating framework evidence as full Compose or OEM-device coverage.
