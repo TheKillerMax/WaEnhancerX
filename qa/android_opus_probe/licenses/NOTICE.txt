@@ -1,0 +1,27 @@
+WAEX neutral Opus laboratory APK
+
+This synthetic test APK contains the original x86_64 native library and base
+class bytes from io.element.android:opusencoder:1.2.0, together with the public
+runtime dependencies recorded in dependency-lock.json. No production signing
+key, application data, recording, or WhatsApp/WAEX implementation is included.
+
+The encoder wrapper's published Maven POM declares the Apache License 2.0.
+Its source notice identifies New Vector Ltd. The distribution's native binary
+reports libopus 1.5.2 and incorporates Xiph Opus/Opusenc components. Their full
+copyright and redistribution notices are retained in libopus-COPYING.txt and
+libopusenc-COPYING.txt. The C++ runtime's Apache 2.0 with LLVM Exceptions text
+is retained in libcxx-LICENSE.txt.
+
+Kotlin stdlib 2.1.21 and JetBrains annotations 13.0 are distributed under the
+Apache License 2.0. AndroidX annotation-jvm 1.9.1's embedded license is retained
+verbatim in androidx-annotation-LICENSE.txt. APACHE-2.0.txt contains the full
+Apache License 2.0 text. The original downloaded AAR/JAR archives are also kept
+in the producer's build evidence.
+
+Provenance limitation: the public encoder repository inspected for this
+experiment exposed no 1.2.0 source tag; its main branch declared 1.1.2.
+Consequently this experiment binds the released binary by its published
+artifact hash and records observed binary behavior. The upstream license
+copies are attribution material, not a claim that this binary was independently
+reproduced from the inspected main-branch source. No source/binary equivalence,
+production upgrade, or universal 16 KiB compatibility is asserted.

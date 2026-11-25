@@ -1,0 +1,56 @@
+{
+  "schema": "WAEX_OPUS_DEPENDENCY_LOCK_V1",
+  "aar": "io.element.android:opusencoder:1.2.0",
+  "native_member": "jni/x86_64/libopuscodec.so",
+  "native_sha256": "4f2b782362aeda7da6f9f4a0bdfdb30a310a824a91da1f2e770b4f65780864dc",
+  "classes_jar_sha256": "1f90e41d2a9dc388510568f2cea3605a435a3e735bdd76bb348dd6baafba2578",
+  "inputs": [
+    {
+      "file": "opusencoder-1.2.0.aar",
+      "url": "https://repo.maven.apache.org/maven2/io/element/android/opusencoder/1.2.0/opusencoder-1.2.0.aar",
+      "bytes": 1463752,
+      "sha256": "e93855fc25d075d66361a03ea1d353bbb029054e6683b7bbc4c82eedad7a91e5"
+    },
+    {
+      "file": "kotlin-stdlib-2.1.21.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.21/kotlin-stdlib-2.1.21.jar",
+      "bytes": 1724058,
+      "sha256": "263bdc679e1f62012db7b091796279b6d71cf36f4797a98ff1ace05835f201c8"
+    },
+    {
+      "file": "annotation-jvm-1.9.1.jar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/annotation/annotation-jvm/1.9.1/annotation-jvm-1.9.1.jar",
+      "bytes": 60577,
+      "sha256": "1e343917ebf27ba96fe4dc52b1cad7fd32b738fbc6355bb6cd5b3b305d7212d0"
+    },
+    {
+      "file": "annotations-13.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    }
+  ],
+  "provenance": [
+    {
+      "file": "opusencoder-1.2.0.module",
+      "bytes": 4065,
+      "sha256": "c132bc87ee87550e45d220a3eb5bf5edb268e69f969e2828a07dfff41014dab7"
+    },
+    {
+      "file": "kotlin-stdlib-2.1.21.pom",
+      "bytes": 2322,
+      "sha256": "c5524086ca3e49a67986df8fdccd66037baf5f3c5a358b76f9dd609bee7bb638"
+    },
+    {
+      "file": "annotation-1.9.1.module",
+      "bytes": 43864,
+      "sha256": "f204b05b728a97561718bc716242e47c629c0085a80ee74fca53d4d638bcbe3f"
+    },
+    {
+      "file": "annotation-jvm-1.9.1.module",
+      "bytes": 3388,
+      "sha256": "03fb659177c8618e47425925c11bc91f384703ea26c265be9b25cd79292b511c"
+    }
+  ],
+  "resolution": "Opus runtime module requires Kotlin2.1.21 and AndroidX annotation1.9.1; annotation JVM variants point to annotation-jvm1.9.1. Its Kotlin1.9.24 lower requirement resolves to2.1.21. Stdlib2.1.21 POM adds JetBrains annotations13.0. No Kotlin2.0 substitution."
+}

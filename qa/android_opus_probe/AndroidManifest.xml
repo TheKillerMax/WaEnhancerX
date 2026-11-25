@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.lab.waex.qa.opus" android:versionCode="1" android:versionName="1.2.0-lab">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
+    <application android:label="WAEX Opus Lab" android:testOnly="true"
+        android:debuggable="false" android:allowBackup="false"
+        android:usesCleartextTraffic="false" android:extractNativeLibs="false" />
+    <instrumentation android:name=".OpusProbeInstrumentation"
+        android:targetPackage="org.lab.waex.qa.opus" />
+</manifest>
