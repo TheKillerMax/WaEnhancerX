@@ -1,0 +1,3 @@
+[Fixes]
+- Detect HMA caller, profile, encoding and transaction regressions with
+  compiled framework controls and dashboard state checks.
