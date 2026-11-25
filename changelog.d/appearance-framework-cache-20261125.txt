@@ -1,0 +1,5 @@
+[Fixes]
+Prepare and verify Appearance's locked 36-file framework graph directly on a cache miss, avoiding Maven plugin resolution while preserving dependency identities, bounded transport and all Android test oracles.
+Share the verified dependency directory across Floating, Channel and their causal mutants, and rehash it after consumers.
+Add a separately identified one-off historical bundle seed with complete verification before staging and after the dependency cache roundtrip.
+Reject evidence paths inside dependency destinations or caches before any write or worker launch, including worker-log and pending-receipt aliases.

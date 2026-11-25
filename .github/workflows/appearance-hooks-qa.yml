@@ -102,22 +102,43 @@ jobs:
           python3 qa/prepare_robolectric_sdks.py \
             --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
             --report "$RUNNER_TEMP/waex-appearance-hooks/sdk-bootstrap.json"
+      - name: Restore the exact locked framework dependency cache
+        id: framework-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
+          key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Verify or fetch the 36 pinned dependencies without Maven resolution
+        id: framework
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_prepare_framework_dependencies.py --out "$RUNNER_TEMP/waex-appearance-hooks/framework-transport-controls"
+          python3 qa/prepare_framework_dependencies.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --report "$RUNNER_TEMP/waex-appearance-hooks/framework-bootstrap.json"
+      - name: Save only the verified framework graph before test consumers
+        if: steps.framework-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
+          key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
       - name: Exercise bounded Android method bodies and the complete overlay launcher
         shell: bash
         run: |
           set -euo pipefail
           test "$(command -v kotlinc)" = "$KOTLIN_HOME/bin/kotlinc"
-          mvn -version
           test -f qa/maven_dependencies.py
           test -f qa/android_media_preview_test.py
           python3 qa/test_overlay_permission_resources.py
           python3 qa/android_floating_bottom_bar_methods_test.py \
             --out "$RUNNER_TEMP/waex-appearance-hooks/floating" \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
             --sdk-jars "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars"
           python3 qa/mutate_floating_bar_methods.py \
             --positive-result "$RUNNER_TEMP/waex-appearance-hooks/floating/result.json" \
             --out "$RUNNER_TEMP/waex-appearance-hooks/mutations" \
-            --deps "$RUNNER_TEMP/waex-appearance-hooks/floating/deps" \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
             --core-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/core-1.18.0.jar" \
             --annotation-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/annotation-jvm-1.9.1.jar" \
             --dexkit-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/dexkit-2.2.0.jar" \
@@ -127,7 +148,7 @@ jobs:
         run: |
           set -euo pipefail
           args=(
-            --deps "$RUNNER_TEMP/waex-appearance-hooks/floating/deps"
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps"
             --core-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/core-1.18.0.jar"
             --annotation-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/annotation-jvm-1.9.1.jar"
             --dexkit-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/dexkit-2.2.0.jar"
@@ -137,6 +158,12 @@ jobs:
           python3 qa/mutate_channel_visibility.py \
             --positive-result "$RUNNER_TEMP/waex-appearance-hooks/channel/result.json" \
             --out "$RUNNER_TEMP/waex-appearance-hooks/channel-mutations" "${args[@]}"
+      - name: Rehash the shared framework graph after all attempted consumers
+        if: always() && steps.framework.outcome == 'success'
+        run: |
+          python3 qa/prepare_framework_dependencies.py --offline \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --report "$RUNNER_TEMP/waex-appearance-hooks/framework-final.json"
       - name: Preserve the declared projection, source identities and execution evidence
         if: always()
         uses: actions/upload-artifact@v4
