@@ -1,0 +1,83 @@
+name: Lab public framework gates sequentially
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    paths:
+      - .github/workflows/lab-source-framework.yml
+      - qa/source_framework_lab.py
+      - qa/source_framework_lab_lock.json
+      - qa/test_source_framework_lab.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: waex-public-source-framework-lab
+  cancel-in-progress: false
+
+jobs:
+  sequential:
+    if: github.repository == 'TheKillerMax/WaEnhancerX' && github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out reviewed lab controller
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: lab
+          persist-credentials: false
+          submodules: false
+      - name: Check out immutable WAEX source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: TheKillerMax/WaEnhancerX
+          ref: c52f064bad7ba32445f8515bc2f0421618438975
+          path: source
+          persist-credentials: false
+          submodules: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.11'
+      - name: Run controller counterchecks without network or Android
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/source-framework-host-controls"
+          python3 lab/qa/test_source_framework_lab.py 2>&1 | tee "$RUNNER_TEMP/source-framework-host-controls/controls.log"
+      - name: Set up JDK21 and restore dependency-only cache
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          overwrite-settings: false
+          cache: maven
+          cache-path: ${{ runner.temp }}/waex-framework-dependency-cache
+          cache-dependency-path: |
+            lab/qa/source_framework_lab_lock.json
+            lab/qa/source_framework_lab.py
+          cache-jdk: false
+      - name: Run unchanged framework gates sequentially
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: >-
+          python3 lab/qa/source_framework_lab.py
+          --source source
+          --cache "$RUNNER_TEMP/waex-framework-dependency-cache"
+          --out "$RUNNER_TEMP/source-framework-evidence"
+      - name: Preserve reports even on dependency or test failure
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: source-framework-sequential-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/source-framework-host-controls/*.log
+            ${{ runner.temp }}/source-framework-evidence/**/*.json
+            ${{ runner.temp }}/source-framework-evidence/**/*.log
+            ${{ runner.temp }}/source-framework-evidence/**/*.xml

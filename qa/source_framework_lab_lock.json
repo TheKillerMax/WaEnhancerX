@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "source_head": "c52f064bad7ba32445f8515bc2f0421618438975",
+  "robolectric": "4.17",
+  "kotlin_cli_version": "2.4.21",
+  "sdk_default_union": [
+    24,
+    28,
+    34,
+    36
+  ],
+  "gradle": {
+    "version": "9.1.0",
+    "url": "https://services.gradle.org/distributions/gradle-9.1.0-bin.zip",
+    "sha256": "a17ddd85a26b6a7f5ddb71ff8b05fc5104c0202c6e64782429790c933686c806",
+    "provenance": "Exact reviewed source gradle-wrapper.properties, checksum verified by original wrapper"
+  },
+  "maven_coordinates": [
+    [
+      "org.robolectric",
+      "robolectric",
+      "4.17"
+    ],
+    [
+      "org.robolectric",
+      "android-all",
+      "14-robolectric-10818077"
+    ],
+    [
+      "junit",
+      "junit",
+      "4.13.2"
+    ]
+  ],
+  "sdks": [
+    {
+      "api": 24,
+      "name": "android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/7.0.0_r1-robolectric-r1-i7/android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar",
+      "bytes": 88212080,
+      "max_bytes": 88212080,
+      "algorithm": "sha512",
+      "digest": "0776aacfdcc10a0f11485b22016c04162697506b4c5b30678ca224cafc2550c1f4c0ab36a57f1ed899b1df02d5d8ee7d9130608dcf52173becd879a5689ad9a9",
+      "checksum_url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/7.0.0_r1-robolectric-r1-i7/android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar.sha512"
+    },
+    {
+      "api": 28,
+      "name": "android-all-instrumented-9-robolectric-4913185-2-i7.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/9-robolectric-4913185-2-i7/android-all-instrumented-9-robolectric-4913185-2-i7.jar",
+      "bytes": 106130412,
+      "max_bytes": 106130412,
+      "algorithm": "sha512",
+      "digest": "24687b9ea919eb20f5e27e47274f2aa711e98eb332d4769d34044a3b4952a71393831d0a3f61ba726dc8fe220673a76138c11a0716f304999e5b029146fe88eb",
+      "checksum_url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/9-robolectric-4913185-2-i7/android-all-instrumented-9-robolectric-4913185-2-i7.jar.sha512"
+    },
+    {
+      "api": 34,
+      "name": "android-all-instrumented-14-robolectric-10818077-i7.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/14-robolectric-10818077-i7/android-all-instrumented-14-robolectric-10818077-i7.jar",
+      "bytes": 151142227,
+      "max_bytes": 151142227,
+      "algorithm": "sha512",
+      "digest": "7cdc0b1306e7865f1acd25a363073149654caee5b8e278c5ae37ff4724185724eff39f0b0111800b521e640bb28698d9d2e655134a801569a0f07470e7b5f455",
+      "checksum_url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/14-robolectric-10818077-i7/android-all-instrumented-14-robolectric-10818077-i7.jar.sha512"
+    },
+    {
+      "api": 36,
+      "name": "android-all-instrumented-16-robolectric-13921718-i7.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/16-robolectric-13921718-i7/android-all-instrumented-16-robolectric-13921718-i7.jar",
+      "bytes": 213431622,
+      "max_bytes": 213431622,
+      "algorithm": "sha512",
+      "digest": "0576318b89abb0a1c9a760a61bb68ccd2d509b33164b8265d6b1fb587a4b7629e1e805b6c7f8fbefab94fc03c8db8100b1d4856a32728803c242d2677aa7ec76",
+      "checksum_url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/16-robolectric-13921718-i7/android-all-instrumented-16-robolectric-13921718-i7.jar.sha512"
+    }
+  ],
+  "small_jars": [
+    {
+      "name": "junit-4.13.2.jar",
+      "url": "https://repo.maven.apache.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar",
+      "bytes": 384581,
+      "max_bytes": 384581,
+      "algorithm": "sha256",
+      "digest": "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3",
+      "official_sha1": "8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12",
+      "checksum_url": "https://repo.maven.apache.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar.sha1",
+      "provenance": "SHA256 computed from cached bytes matching the official SHA1 sidecar and HEAD size; SHA512 sidecar returns404"
+    },
+    {
+      "name": "hamcrest-core-1.3.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar",
+      "bytes": 45024,
+      "max_bytes": 45024,
+      "algorithm": "sha256",
+      "digest": "66fdef91e9739348df7a096aa384a5685f4e875584cce89386a7a47251c4d8e9",
+      "official_sha1": "42a25dc3219429f0e5d060061f71acb49bf010a0",
+      "checksum_url": "https://repo.maven.apache.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar.sha1",
+      "provenance": "SHA256 computed from cached bytes matching the official SHA1 sidecar and HEAD size; SHA512 sidecar returns404"
+    }
+  ],
+  "native_runtime": {
+    "name": "nativeruntime-dist-compat-1.0.19.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/robolectric/nativeruntime-dist-compat/1.0.19/nativeruntime-dist-compat-1.0.19.jar",
+    "bytes": 159144356,
+    "max_bytes": 159144356,
+    "algorithm": "sha512",
+    "digest": "72e49291888ccccbfb1321f5d116a9b636064aa3c84ed3e4f57e648156c43e83d53ec8331c0bcc5dca579a44bd1b5963116c5ee08752c048ceb673d0430b229d",
+    "checksum_url": "https://repo.maven.apache.org/maven2/org/robolectric/nativeruntime-dist-compat/1.0.19/nativeruntime-dist-compat-1.0.19.jar.sha512"
+  },
+  "dexkit": {
+    "name": "dexkit-2.2.0.aar",
+    "url": "https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar",
+    "max_bytes": 8388608,
+    "algorithm": "sha256",
+    "digest": "cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6",
+    "provenance": "Existing reviewed source-qa dispatch SHA256 pin"
+  },
+  "dexkit_classes_sha256": "195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1",
+  "public_apks": [
+    {
+      "name": "debug.apk",
+      "url": "https://github.com/WaEnhancerX/WaEnhancerX/releases/download/2.0.3/WaEnhancerX-v2.0.3_debug.apk",
+      "max_bytes": 67108864,
+      "algorithm": "sha256",
+      "digest": "c4531d92851c5f251614e8af822f340737981adeb7128341463f8897e3d42114",
+      "provenance": "Existing reviewed verify_runtime_framework.py2.0.3 pin; no new app build"
+    },
+    {
+      "name": "release.apk",
+      "url": "https://github.com/WaEnhancerX/WaEnhancerX/releases/download/2.0.3/WaEnhancerX-v2.0.3_release.apk",
+      "max_bytes": 67108864,
+      "algorithm": "sha256",
+      "digest": "f19d64239b493785b48540dce068a32a295f33bd33b18e48b46d168896c4ac0f",
+      "provenance": "Existing reviewed verify_runtime_framework.py2.0.3 pin; no new app build"
+    }
+  ]
+}
