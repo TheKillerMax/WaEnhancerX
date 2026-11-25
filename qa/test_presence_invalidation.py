@@ -122,9 +122,18 @@ def main():
     body=body[:start]+' boolean isOnlineToastEnabled(){return enabled;}\n'+toast+'\n'+body[end:]
     body=body.replace('static class Handler {public void handleMessage(Message m){}}',
                       'static class Handler {public void handleMessage(Message m){} boolean post(Runnable r){uiQueue.add(r);return true;}}')
-    body+=CASES
+    body="import java.util.function.BooleanSupplier;\nimport com.waenhancer.xposed.utils.HookErrors;\n"+body+CASES
     with tempfile.TemporaryDirectory(prefix='waex_presence_lifecycle_') as tmp:
         p=Path(tmp)/'TestPresenceEventContract.java';p.write_text(body)
-        subprocess.run(['javac','--release','17','-d',tmp,str(src/'PresenceStateStore.java'),str(src/'PresenceEventPolicy.java'),str(p)],check=True,timeout=60)
+        java_sources=[src/'PresenceStateStore.java',src/'PresenceEventPolicy.java',p,
+                      args.source_root/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java']
+        diagnostics={
+            'androidx/annotation/NonNull.java':'package androidx.annotation; public @interface NonNull {}',
+            'androidx/annotation/VisibleForTesting.java':'package androidx.annotation; public @interface VisibleForTesting {}',
+            'de/robv/android/xposed/XposedBridge.java':'package de.robv.android.xposed; public class XposedBridge {public static void log(String s){System.err.println("[QA diagnostic sink] "+s);}}',
+        }
+        for name,content in diagnostics.items():
+            target=Path(tmp)/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(content);java_sources.append(target)
+        subprocess.run(['javac','--release','17','-d',tmp,*map(str,java_sources)],check=True,timeout=60)
         subprocess.run(['java','-cp',tmp,'TestPresenceEventContract'],check=True,timeout=60)
 if __name__=='__main__':main()
