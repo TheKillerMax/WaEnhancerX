@@ -1,0 +1,2 @@
+[Fixes]
+Add real Android API24/28/34 regression coverage for floating-bar method bodies, listener ownership and the complete overlay launcher. Record the exact declaration-only projection and retain the unresolved private ScreenScopedFeature dependency as a full-compilation blocker.
