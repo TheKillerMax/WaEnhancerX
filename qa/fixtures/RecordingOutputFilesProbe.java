@@ -1,5 +1,6 @@
 package com.waenhancer.calls;
 
+import java.util.Arrays;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -58,7 +59,7 @@ public final class RecordingOutputFilesProbe {
         byte[] original = "previous completed recording".getBytes(StandardCharsets.UTF_8);
         Files.write(saved.toPath(), original);
         check(RecordingOutputFiles.reserve(root, firstName) == null, "collision was accepted");
-        check(java.util.Arrays.equals(original, Files.readAllBytes(saved.toPath())),
+        check(Arrays.equals(original, Files.readAllBytes(saved.toPath())),
                 "collision changed the previous recording");
         check(RecordingOutputFiles.reserve(root, secondName) != null,
                 "another same-second recording could not reserve its own file");

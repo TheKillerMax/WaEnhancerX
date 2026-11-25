@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.features.privacy;
 
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,8 +14,8 @@ public final class TestPendingReadReceiptStore {
 
   // Test-only model of successful enqueue acknowledgements; production uses
   // snapshot then removes each exact accepted recipe. A snapshot alone is read-only.
-  private static <T> java.util.List<T> acknowledgeSnapshot(PendingReadReceiptStore<T> store,String recipient){
-    java.util.List<T> batch=store.snapshot(recipient);
+  private static <T> List<T> acknowledgeSnapshot(PendingReadReceiptStore<T> store,String recipient){
+    List<T> batch=store.snapshot(recipient);
     for(T item:batch)store.remove(recipient,item);
     return batch;
   }
@@ -70,7 +71,7 @@ public final class TestPendingReadReceiptStore {
                 finally {latch.countDown();}
             }).start();
         }
-        if(!latch.await(30,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Concurrent insertions timed out");
+        if(!latch.await(30,TimeUnit.SECONDS))throw new AssertionError("Concurrent insertions timed out");
         check(failures.get()==0,"concurrent writers succeed");
         check(concurrent.recipientCount()<=48,"concurrent capacity bounded");
         check(acknowledgeSnapshot(concurrent,"thread-1@s.whatsapp.net").size()==32,"concurrent per-chat bounded");

@@ -1,0 +1,2 @@
+[Fixes]
+- Restore QA import policy and align diagnostics and Meta AI source contracts with the shared provider and view dispatcher.

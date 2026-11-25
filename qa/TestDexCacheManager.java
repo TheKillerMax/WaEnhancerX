@@ -1,5 +1,9 @@
 package com.waenhancer.xposed.core.devkit;
 
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -187,26 +191,26 @@ public final class TestDexCacheManager {
 
         // All waiting callers passed the first cooldown check before the leader failed.
         // They must observe the newly recorded cooldown after acquiring the same lock.
-        java.util.concurrent.atomic.AtomicReference<Throwable> workerError=new java.util.concurrent.atomic.AtomicReference<>();
+        AtomicReference<Throwable> workerError=new AtomicReference<>();
         CountDownLatch resolverEntered=new CountDownLatch(1),resolverRelease=new CountDownLatch(1);
         AtomicInteger failedScans=new AtomicInteger();
         Runnable failedLookup=()->{try{
             if(flightCache.getClass(loader,"overlapping-miss",()->{
                 failedScans.incrementAndGet();resolverEntered.countDown();
-                if(!resolverRelease.await(5,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("resolver release timeout");
+                if(!resolverRelease.await(5,TimeUnit.SECONDS))throw new AssertionError("resolver release timeout");
                 return null;
             })!=null)throw new AssertionError("null resolver contract");
         }catch(Throwable t){workerError.compareAndSet(null,t);}};
         Thread leader=new Thread(failedLookup);Thread[] waiters=new Thread[7];leader.start();
         try {
-            check(resolverEntered.await(5,java.util.concurrent.TimeUnit.SECONDS),"leader did not enter resolver");
+            check(resolverEntered.await(5,TimeUnit.SECONDS),"leader did not enter resolver");
             for(int i=0;i<waiters.length;i++){waiters[i]=new Thread(failedLookup);waiters[i].start();}
-            long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
-            while(java.util.Arrays.stream(waiters).anyMatch(t->t.getState()!=Thread.State.BLOCKED) && System.nanoTime()<deadline)Thread.sleep(1);
-            check(java.util.Arrays.stream(waiters).allMatch(t->t.getState()==Thread.State.BLOCKED),"waiters were not held on the key monitor");
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+            while(Arrays.stream(waiters).anyMatch(t->t.getState()!=Thread.State.BLOCKED) && System.nanoTime()<deadline)Thread.sleep(1);
+            check(Arrays.stream(waiters).allMatch(t->t.getState()==Thread.State.BLOCKED),"waiters were not held on the key monitor");
         } finally { resolverRelease.countDown(); }
         leader.join(6000);for(Thread t:waiters)if(t!=null)t.join(6000);
-        check(!leader.isAlive() && java.util.Arrays.stream(waiters).allMatch(t->t!=null&&!t.isAlive()),"cache worker did not terminate");
+        check(!leader.isAlive() && Arrays.stream(waiters).allMatch(t->t!=null&&!t.isAlive()),"cache worker did not terminate");
         if(workerError.get()!=null)throw new AssertionError("worker failure",workerError.get());
         check(failedScans.get()==1,"waiters repeated the failed resolver instead of rechecking cooldown");
 
@@ -291,11 +295,11 @@ public final class TestDexCacheManager {
         check(unknownHost.getMethod(loader, "method-key", () -> {
             safeScans.incrementAndGet(); return length;
         }).equals(corrected) && safeScans.get() == 3, "safe memory result avoids repeated scan");
-        check(java.util.Objects.equals(beforeClass, context.preferences.getString("class:test-missing-class", null)),
+        check(Objects.equals(beforeClass, context.preferences.getString("class:test-missing-class", null)),
                 "unvalidated class result is not persisted");
-        check(java.util.Objects.equals(beforeMethod, context.preferences.getString("method:method-key", null)),
+        check(Objects.equals(beforeMethod, context.preferences.getString("method:method-key", null)),
                 "unvalidated method result is not persisted");
-        check(java.util.Objects.equals(beforeField, context.preferences.getString("field:field-key", null)),
+        check(Objects.equals(beforeField, context.preferences.getString("field:field-key", null)),
                 "unvalidated field result is not persisted");
         Map<String,Object> diskBeforeUnknown=new HashMap<>(context.preferences.values);
         check(unknownHost.getMethods(loader,"method-array",()->new Method[]{corrected})[0].equals(corrected),"unvalidated host bypasses method array");

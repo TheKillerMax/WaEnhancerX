@@ -1,5 +1,6 @@
 package com.waenhancer.fixture
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -59,7 +60,7 @@ internal object UiText {
 
 internal object TargetAppManager {
     val requests = mutableListOf<List<String>>()
-    fun syncHooks(context: android.content.Context, packages: List<String>) {
+    fun syncHooks(context: Context, packages: List<String>) {
         check(packages == listOf("com.whatsapp")) { "Unexpected target in layout fixture" }
         requests += packages.toList()
     }

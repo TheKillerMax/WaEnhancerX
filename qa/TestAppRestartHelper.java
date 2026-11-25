@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.utils;
 
+import android.content.pm.ApplicationInfo;
+import android.os.Handler;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,8 +28,8 @@ public final class TestAppRestartHelper {
 
     private static final class FakeContext extends Context {
         final PackageManager pm = new PackageManager();
-        final android.content.pm.ApplicationInfo app = new android.content.pm.ApplicationInfo();
-        @Override public android.content.pm.ApplicationInfo getApplicationInfo() { return app; }
+        final ApplicationInfo app = new ApplicationInfo();
+        @Override public ApplicationInfo getApplicationInfo() { return app; }
         volatile Intent broadcast;
         volatile Intent launch;
         volatile int broadcasts;
@@ -186,14 +188,14 @@ public final class TestAppRestartHelper {
         awaitIdle();
         ok(refusedBroadcast.launches == 1, "bulk broadcast failure prevented fallback launch");
         RootCommandRunner.mode = "root";
-        android.os.Handler.reject = true;
+        Handler.reject = true;
         try {
             FakeContext rejectedPost = new FakeContext();
             rejectedPost.setTarget("com.whatsapp");
             AppRestartHelper.restartWhatsAppAndModule(rejectedPost);
             awaitIdle();
             ok(rejectedPost.launches == 0, "rejected callback still ran");
-        } finally { android.os.Handler.reject = false; }
+        } finally { Handler.reject = false; }
         System.out.println("PASS: " + assertions + " AppRestartHelper launch, authorization and duplicate-request checks");
     }
 }

@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.privacy;
 
+import com.waenhancer.xposed.core.db.HideSeenStore;
+import java.util.Arrays;
+import java.util.Objects;
 import android.content.Context;
 import com.whatsapp.infra.core.jid.Jid;
 import android.content.SharedPreferences;
@@ -118,8 +121,8 @@ public final class ReceiptStanzaRuntimeChecks {
     private static void scenario(String label, Scenario action) {
         scenarios++;
         PREFS.values.clear();
-        com.waenhancer.xposed.core.db.HideSeenStore.viewed=false;
-        com.waenhancer.xposed.core.db.HideSeenStore.inserts=0;
+        HideSeenStore.viewed=false;
+        HideSeenStore.inserts=0;
         CustomPrivacyHook.contacts.clear();
         CustomPrivacyHook.lookups = 0;
         BlueOnReplyHook.manualChats.clear(); BlueOnReplyHook.captured.clear(); BlueOnReplyHook.prepared.clear(); BlueOnReplyHook.staged.clear();
@@ -175,13 +178,13 @@ public final class ReceiptStanzaRuntimeChecks {
         int before = GENERATOR.calls;
         check(transform(node) == node, "generator result object was replaced");
         check(GENERATOR.calls == before + 1, "host generator did not run exactly once");
-        check(java.util.Objects.equals(attribute(node, "type"), expectedType), "wrong privacy receipt type");
+        check(Objects.equals(attribute(node, "type"), expectedType), "wrong privacy receipt type");
         check(attribute(node, "sts") == null, "privacy timestamp was retained");
         check(node.attributes[0] == to && node.attributes[1] == id,
                 "unrelated recipient/id attribute objects were replaced");
         check(node.children == children && node.data == data,
                 "receipt children or binary payload were replaced");
-        check(java.util.Arrays.equals(childValues, node.children) && java.util.Arrays.equals(bytes, node.data),
+        check(Arrays.equals(childValues, node.children) && Arrays.equals(bytes, node.data),
                 "receipt children or binary payload were mutated");
         check(otherAttributes.equals(attributeValues(node, false)),
                 "unrelated attributes were changed");
@@ -198,7 +201,7 @@ public final class ReceiptStanzaRuntimeChecks {
         check(node.attributes == attributes, "control or unrelated receipt attributes were rewritten");
         check(values.equals(attributeValues(node, true)), "control or unrelated receipt attribute values changed");
         check(node.children == children && node.data == data, "control payload changed");
-        check(java.util.Arrays.equals(childValues, node.children) && java.util.Arrays.equals(bytes, node.data),
+        check(Arrays.equals(childValues, node.children) && Arrays.equals(bytes, node.data),
                 "control payload contents changed");
     }
 
@@ -291,10 +294,10 @@ public final class ReceiptStanzaRuntimeChecks {
         scenario("contact-hide-delivery", () -> {
             CustomPrivacyHook.contacts.put(PERSON, new JSONObject().put("HideReceipt", true));
             expectReadHidden(node(null, PERSON, null, "delivery-id"), "inactive");
-            check(com.waenhancer.xposed.core.db.HideSeenStore.inserts==1,
+            check(HideSeenStore.inserts==1,
                     "hidden delivery must record the message as owing a read receipt");
             expectUntouched(node(null, OTHER, null, "other-id"));
-            check(com.waenhancer.xposed.core.db.HideSeenStore.inserts==1,
+            check(HideSeenStore.inserts==1,
                     "an untouched receipt must not be recorded");
         });
         scenario("contact-exceptions", () -> {
@@ -313,9 +316,9 @@ public final class ReceiptStanzaRuntimeChecks {
             Object[] args = {new String[]{"allowed-id"}};
             HideReceiptsHook.allowExplicitReceiptIds(PERSON, args);
             try {
-                int sentBefore = com.waenhancer.xposed.core.db.HideSeenStore.sentMarks;
+                int sentBefore = HideSeenStore.sentMarks;
                 expectUntouched(node("read", PERSON, null, "allowed-id"));
-                check(com.waenhancer.xposed.core.db.HideSeenStore.sentMarks == sentBefore + 1,
+                check(HideSeenStore.sentMarks == sentBefore + 1,
                         "an explicitly sent read receipt must be marked sent in the ledger");
                 expectReadHidden(node("read", PERSON, null, "other-id"), null);
                 expectReadHidden(node("read", OTHER, null, "allowed-id"), null);
@@ -410,28 +413,28 @@ public final class ReceiptStanzaRuntimeChecks {
         });
         scenario("viewed-ordinary-delivery-cannot-bypass-ghost", () -> {
             PREFS.values.put("ghostmode_active", true);
-            com.waenhancer.xposed.core.db.HideSeenStore.viewed=true;
+            HideSeenStore.viewed=true;
             expectReadHidden(node(null,PERSON,null,"seen-delivery"),"inactive");
         });
         scenario("viewed-read-cannot-bypass-hide-delivery", () -> {
             PREFS.values.put("hide_delivery_receipts", true);
-            com.waenhancer.xposed.core.db.HideSeenStore.viewed=true;
+            HideSeenStore.viewed=true;
             expectReadHidden(node("read",PERSON,null,"seen"),"inactive");
         });
         scenario("viewed-read-cannot-bypass-ghost", () -> {
             PREFS.values.put("ghostmode_active", true);
-            com.waenhancer.xposed.core.db.HideSeenStore.viewed=true;
+            HideSeenStore.viewed=true;
             expectReadHidden(node("read",PERSON,null,"seen"),"inactive");
         });
         scenario("viewed-history-is-not-explicit-read-consent", () -> {
             PREFS.values.put("hide_read_receipts", true);
-            com.waenhancer.xposed.core.db.HideSeenStore.viewed=true;
+            HideSeenStore.viewed=true;
             expectReadHidden(node("read",PERSON,null,"seen"),null);
         });
         scenario("control-receipt-not-recorded-as-pending-read", () -> {
             PREFS.values.put("hide_read_receipts", true);
             expectUntouched(node("retry",PERSON,null,"control"));
-            check(com.waenhancer.xposed.core.db.HideSeenStore.inserts==0,"control receipt stored as pending read");
+            check(HideSeenStore.inserts==0,"control receipt stored as pending read");
         });
         for(String pref:new String[]{"hide_delivery_receipts","ghostmode_active"})scenario("manual-chat-keeps-"+pref,()->{
             PREFS.values.put(pref,true);ReadJob j=job(PERSON,null);markManual(j);

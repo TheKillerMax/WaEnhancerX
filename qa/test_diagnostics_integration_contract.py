@@ -141,9 +141,15 @@ require("getTraceInputStream" not in reporter and "getDescription" not in report
         "WhatsApp stack/ANR traces or unrestricted logcat must never leave the host")
 require("history == null" in reporter and "history.isEmpty()" not in reporter,
         "an empty OS ring buffer must still be reported, not silently dropped")
-require("context.getContentResolver().call(" in reporter
-        and '"report_target_exit_history"' in reporter,
-        "host metadata must use the existing authenticated ContentProvider bridge")
+require('HookProviderIpc.call(context, "report_target_exit_history", target, data)' in reporter,
+        "host metadata must use the shared authenticated ContentProvider bridge")
+ipc = (SOURCE / "xposed/bridge/client/HookProviderIpc.java").read_text(encoding="utf-8")
+require('Uri.parse("content://com.waenhancer.hookprovider")' in ipc
+        and "context.getContentResolver().acquireUnstableContentProviderClient(URI)" in ipc,
+        "shared IPC must acquire the existing provider without a stable host dependency")
+require("try (ContentProviderClient provider =" in ipc
+        and "return provider.call(method, arg, extras);" in ipc,
+        "shared IPC must pass the metadata call through a scoped provider reference")
 
 main_hook = (SOURCE / "xposed/MainHook.java").read_text(encoding="utf-8")
 require("TargetExitReporter.scheduleOnce(appContext, packageName, advancedConsent" in main_hook

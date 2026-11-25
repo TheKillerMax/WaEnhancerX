@@ -6,18 +6,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = ROOT / "app/src/main/java/com/waenhancer/xposed/features/homescreen/ChatListCustomizationsHook.java"
 REGISTRY = ROOT / "app/src/main/java/com/waenhancer/xposed/core/FeatureRegistry.java"
+DISPATCHER = ROOT / "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java"
 STRINGS = ROOT / "app/src/main/res/values/meta_ai_control.xml"
 SETTINGS = ROOT / "app/src/main/java/com/waenhancer/ui/screens/settings/StylesSettingsScreen.kt"
 
 hook = HOOK.read_text(encoding="utf-8")
 registry = REGISTRY.read_text(encoding="utf-8")
+dispatcher = DISPATCHER.read_text(encoding="utf-8")
 strings = STRINGS.read_text(encoding="utf-8")
 settings = SETTINGS.read_text(encoding="utf-8")
 
 contracts = {
     "host preference follows complete suppression": 'HOST_PREFERENCE.equals(param.args[0])' in hook
     and "shouldDisableHostConfiguration()" in hook and "param.setResult(false)" in hook,
-    "new views removed": '"onAttachedToWindow"' in hook and "removeView(view)" in hook,
+    "new views removed": "ViewHookDispatcher.onAttached(this, view -> {" in hook
+    and "if (shouldRemoveView(view)) removeView(view);" in hook,
+    "shared attachment event reaches listeners":
+        'XposedBridge.hookAllMethods(View.class, "onAttachedToWindow"' in dispatcher
+        and "ATTACH.computeIfAbsent(owner, ignored -> new CopyOnWriteArrayList<>()).add(listener);" in dispatcher
+        and "dispatch(ATTACH, (View) param.thisObject);" in dispatcher
+        and "listener.onView(view);" in dispatcher,
     "existing hierarchy rescanned": '"onPostResume"' in hook and "removeAssistantViews(decor)" in hook,
     "layout space collapsed": "params.width = 0" in hook and "params.height = 0" in hook,
     "assistant navigation blocked": "isAssistantConversation" in hook and "activity.finish()" in hook,

@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.features.privacy;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,8 +39,8 @@ public final class TestReceiptPropertyStress {
 
   // Test-only model of successful enqueue acknowledgements; production uses
   // snapshot then removes each exact accepted recipe. A snapshot alone is read-only.
-  private static <T> java.util.List<T> acknowledgeSnapshot(PendingReadReceiptStore<T> store,String recipient){
-    java.util.List<T> batch=store.snapshot(recipient);
+  private static <T> List<T> acknowledgeSnapshot(PendingReadReceiptStore<T> store,String recipient){
+    List<T> batch=store.snapshot(recipient);
     for(T item:batch)store.remove(recipient,item);
     return batch;
   }
@@ -81,7 +83,7 @@ public final class TestReceiptPropertyStress {
         finally {done.countDown();}
       }).start();
     }
-    if(!done.await(30,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Concurrent receipt operations timed out");
+    if(!done.await(30,TimeUnit.SECONDS))throw new AssertionError("Concurrent receipt operations timed out");
     must(errors.get()==0,"concurrent scenario threw exception");
     must(shared.recipientCount()<=128,"concurrent recipient capacity");
     System.out.println("PASS: "+assertions+" differential/capacity assertions; 100,000 serial + 100,000 concurrent mixed operations");
