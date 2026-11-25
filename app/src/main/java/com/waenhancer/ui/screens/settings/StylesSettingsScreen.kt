@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
+import android.content.Context
+import com.waenhancer.theme.ThemeRepository
 import com.waenhancer.theme.ThemeCssValidator
 import com.waenhancer.ui.components.WaexSheetTitle
 
@@ -1388,11 +1390,11 @@ private fun typedStyleSummary(
     key: String,
     preferenceManager: WaexPreferenceManager,
     @Suppress("UNUSED_PARAMETER") revision: Int,
-    context: android.content.Context
+    context: Context
 ): String = when (key) {
     "custom_theme" -> when {
         preferenceManager.getString("css_theme", "").isNullOrBlank() -> UiText.get(R.string.waex_ui_not_configured, "Not configured")
-        else -> com.waenhancer.theme.ThemeRepository(context.applicationContext, preferenceManager).activeTheme()?.displayName
+        else -> ThemeRepository(context.applicationContext, preferenceManager).activeTheme()?.displayName
             ?: UiText.get(R.string.waex_ui_custom_css, "Custom CSS")
     }
     "custom_view_dpi" -> preferenceManager.getString("change_dpi", "0")?.let { if (it == "0") UiText.get(R.string.waex_ui_device_default, "Device default") else "$it DPI" } ?: UiText.get(R.string.waex_ui_device_default, "Device default")

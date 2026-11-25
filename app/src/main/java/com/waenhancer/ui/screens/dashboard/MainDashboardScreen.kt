@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.dashboard
 
+import androidx.compose.foundation.layout.ColumnScope
 import com.waenhancer.ui.components.WaexSheetTitle
 
 import com.waenhancer.ui.components.WaexSheetHorizontalMargin
@@ -1229,7 +1230,7 @@ private fun DiagnosticsDetailsSheet(
     isFixing: Boolean,
     onDismiss: () -> Unit,
     headerAction: (@Composable () -> Unit)? = null,
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = WaexTheme.colors
     val typography = WaexTheme.typography

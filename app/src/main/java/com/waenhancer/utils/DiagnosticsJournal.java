@@ -1,5 +1,6 @@
 package com.waenhancer.utils;
 
+import com.waenhancer.config.PreferenceSchema;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -127,8 +128,8 @@ public final class DiagnosticsJournal {
     public synchronized void recordPreferenceChange(long now, String key, boolean targetScoped,
                                                      String operation)
             throws IOException {
-        com.waenhancer.config.PreferenceSchema.Entry entry =
-                com.waenhancer.config.PreferenceSchema.entry(key);
+        PreferenceSchema.Entry entry =
+                PreferenceSchema.entry(key);
         if (entry == null || !entry.isExportable()
                 || (!"PUT".equals(operation) && !"REMOVE".equals(operation))) return;
         append(now, "WAEX_SETTING key=" + entry.key

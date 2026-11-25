@@ -1,5 +1,6 @@
 package com.waenhancer.ui.navigation
 
+import androidx.compose.ui.graphics.ImageBitmap
 import com.waenhancer.utils.UiText
 
 import com.waenhancer.licensing.LicenseManager
@@ -432,7 +433,7 @@ fun MainContainerScreen() {
     data class TargetAppInfo(
         val packageName: String,
         val label: String,
-        val icon: androidx.compose.ui.graphics.ImageBitmap?
+        val icon: ImageBitmap?
     )
 
     // Targets are read on demand with root while the home screen is visible; nothing runs when it is not.
@@ -1379,7 +1380,7 @@ private fun saveContactPrivacy(preferenceManager: WaexPreferenceManager, updated
     val currentRules = preferenceManager.getString("${updated.id}_privacy", null)
         ?: preferenceManager.getString("${updated.jid}_privacy", null)
         ?: preferenceManager.getString("per_contact_rules_${updated.jid}", null)
-    val json = if (currentRules == null) org.json.JSONObject() else org.json.JSONObject(currentRules)
+    val json = if (currentRules == null) JSONObject() else JSONObject(currentRules)
     if (!json.has("name")) json.put("name", updated.name)
     json.put("HideSeen", updated.hideSeen)
     json.put("HideTyping", updated.hideTyping)

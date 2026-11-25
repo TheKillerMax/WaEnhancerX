@@ -1,5 +1,6 @@
 package com.waenhancer.licensing.customprops
 
+import androidx.compose.foundation.layout.PaddingValues
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -66,7 +67,7 @@ fun CustomAbPropsScreen(
         WaexTopBar(title = "Custom AB Properties", onBackClick = onBack)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -186,7 +187,7 @@ fun CustomAbPropEditorScreen(index: Int, prefs: CustomAbPropsStore, onBack: () -
         WaexTopBar(if (original == null) "Add AB Property" else "Edit AB Property", onBackClick = onBack)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {

@@ -1,5 +1,8 @@
 package com.waenhancer.core.transcription;
 
+import com.waenhancer.core.transcription.local.WhisperNative;
+import java.util.List;
+import java.util.concurrent.Semaphore;
 import android.content.Context;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
@@ -29,7 +32,7 @@ public final class TranscriptionRequestHandler {
      * At most two requests at once: voice notes arrive in bursts and servers rate-limit, but a
      * request the user is waiting on must not queue behind a background one.
      */
-    private static final java.util.concurrent.Semaphore SLOTS = new java.util.concurrent.Semaphore(2);
+    private static final Semaphore SLOTS = new Semaphore(2);
 
     private TranscriptionRequestHandler() {}
 
@@ -109,18 +112,18 @@ public final class TranscriptionRequestHandler {
      * never leaves this process). Throws with a readable message. Blocking.
      */
     @NonNull
-    public static java.util.List<String> listCustomModels(@NonNull Context context)
+    public static List<String> listCustomModels(@NonNull Context context)
             throws TranscriptionClient.TranscriptionException {
         return listCustomModels(context, null);
     }
 
     @NonNull
-    public static java.util.List<String> listCustomModels(@NonNull Context context, @Nullable String target)
+    public static List<String> listCustomModels(@NonNull Context context, @Nullable String target)
             throws TranscriptionClient.TranscriptionException {
         String url = readString(context, "custom_transcription_url", "", target);
         if (url.trim().isEmpty()) throw new TranscriptionClient.TranscriptionException("Enter the endpoint URL first");
         try {
-            java.util.List<String> models = new TranscriptionClient().listModels(url,
+            List<String> models = new TranscriptionClient().listModels(url,
                     readString(context, "custom_transcription_key", "", target));
             TranscriptionLog.add(context, "app", "Model discovery: " + models.size() + " models");
             return models;
@@ -152,8 +155,8 @@ public final class TranscriptionRequestHandler {
     private static String localStatus(Context context, TranscriptionClient.Config config, @Nullable String target) {
         if (!TranscriptionClient.PROVIDER_LOCAL.equals(config.provider)) return " (API key or URL missing)";
         String model = localModel(context, target);
-        if (!com.waenhancer.core.transcription.local.WhisperNative.isSupported()) {
-            return " (" + com.waenhancer.core.transcription.local.WhisperNative.unsupportedReason() + ")";
+        if (!WhisperNative.isSupported()) {
+            return " (" + WhisperNative.unsupportedReason() + ")";
         }
         return " (model " + model + " not downloaded)";
     }

@@ -1,5 +1,6 @@
 package com.waenhancer.config;
 
+import java.io.File;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -84,10 +85,10 @@ public final class PreferenceStores {
     public static void makePublicStoreReadable(Context context) {
         if (context == null) return;
         try {
-            java.io.File dataDir = context.getApplicationInfo().dataDir != null
-                    ? new java.io.File(context.getApplicationInfo().dataDir)
+            File dataDir = context.getApplicationInfo().dataDir != null
+                    ? new File(context.getApplicationInfo().dataDir)
                     : context.getFilesDir().getParentFile();
-            java.io.File prefsFile = new java.io.File(dataDir, "shared_prefs/" + PUBLIC_NAME + ".xml");
+            File prefsFile = new File(dataDir, "shared_prefs/" + PUBLIC_NAME + ".xml");
             if (prefsFile.exists()) {
                 prefsFile.setReadable(true, false);
             }

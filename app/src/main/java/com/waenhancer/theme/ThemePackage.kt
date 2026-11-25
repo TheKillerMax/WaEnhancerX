@@ -1,5 +1,6 @@
 package com.waenhancer.theme
 
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -167,7 +168,7 @@ object ThemeArchive {
     }
 
     private fun readLimited(input: InputStream, limit: Long, name: String): ByteArray {
-        val out = java.io.ByteArrayOutputStream()
+        val out = ByteArrayOutputStream()
         val buffer = ByteArray(8192)
         var read: Int
         var size = 0L

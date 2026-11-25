@@ -1,5 +1,6 @@
 package com.waenhancer.theme
 
+import java.io.IOException
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -59,7 +60,7 @@ class ThemeRepository(
                 ?: throw ThemeArchive.InvalidThemeException("Unable to read the selected file.")
             val destination = File(root(context), id)
             destination.deleteRecursively()
-            if (!staging.renameTo(destination)) throw java.io.IOException("Unable to install theme.")
+            if (!staging.renameTo(destination)) throw IOException("Unable to install theme.")
             if (activeId() == id) activate(id)
             InstalledTheme(id, ThemeHeader.parse(css), destination.listFiles().orEmpty().size - 1)
         } finally {

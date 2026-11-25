@@ -192,7 +192,6 @@ private fun FeedLoader(packageName: String, onLoaded: (List<ApkMirrorRelease>) -
                 ) {
                     // Cloudflare answers its check page with 403/503.
                     if (request.isForMainFrame) {
-                        Log.d(TAG, "http ${errorResponse.statusCode} for ${request.url}")
                         pageSettled = true
                         // Cloudflare's check page: open the WebView for the user right away.
                         needsVerification = true
@@ -785,7 +784,6 @@ private suspend fun WebView.readFeedPages(): FeedRead {
     } ?: return FeedRead.NoResponse
     val text = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull() ?: return FeedRead.NotFeed
     if (text.startsWith("NOT_FEED")) {
-        Log.d(TAG, "not the feed yet: ${text.take(160)}")
         return FeedRead.NotFeed
     }
     val xml = runCatching {

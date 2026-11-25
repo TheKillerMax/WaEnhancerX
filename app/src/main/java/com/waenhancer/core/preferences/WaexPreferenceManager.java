@@ -1,5 +1,6 @@
 package com.waenhancer.core.preferences;
 
+import java.util.Objects;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -64,7 +65,7 @@ public final class WaexPreferenceManager implements CustomAbPropsStore {
 
     /** Selects the target whose settings are edited by the UI. */
     public void setTargetPackage(String packageName) {
-        if (java.util.Objects.equals(targetPackage, packageName)) return;
+        if (Objects.equals(targetPackage, packageName)) return;
         targetPackage = packageName;
         targetEpoch++;
         if (packageName != null && PER_TARGET_MODE.equals(rawString(MODE_KEY, "Universal"))) {
@@ -387,7 +388,7 @@ public final class WaexPreferenceManager implements CustomAbPropsStore {
         try {
             // Never serialize the value, target package, or an unknown/dynamic preference key.
             DiagnosticsRecorder.recordPreferenceChange(context, key,
-                    !java.util.Objects.equals(resolvedKey(key), key), operation);
+                    !Objects.equals(resolvedKey(key), key), operation);
         } catch (RuntimeException ignored) {}
     }
 
