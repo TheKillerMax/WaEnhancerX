@@ -6,6 +6,9 @@ on:
     paths:
       - .github/workflows/android-class-metadata-art-lab.yml
       - qa/class_metadata_art_probe/**
+      - qa/android_emulator_lab_pilot.py
+      - qa/android_emulator_lab_matrix_lock.json
+      - qa/test_android_guest_version.py
 permissions:
   contents: read
 concurrency:
@@ -48,6 +51,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 lab/qa/test_android_guest_version.py
+          python3 -O lab/qa/test_android_guest_version.py
           python3 lab/qa/class_metadata_art_probe/test_toolchain.py
           python3 -O lab/qa/class_metadata_art_probe/test_toolchain.py
           python3 lab/qa/class_metadata_art_probe/run.py --host-tests

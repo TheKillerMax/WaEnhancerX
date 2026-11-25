@@ -351,6 +351,22 @@ def application_page_size(out, adb, env, guest, expected_page_size):
                        'scope': 'API 24-28 only; never a fallback for simulated 16 KiB images'}
 
 
+def read_full_sdk_property(out, adb, env, api):
+    require(type(api) is int and 24 <= api <= 37, 'Unexpected API for the SDK property policy')
+    # SDK_INT_FULL and its source property were introduced with API36. Older
+    # getprop implementations need not successfully query an unknown property.
+    # Do not turn their optional metadata lookup into a boot prerequisite.
+    observation = {'api': api, 'requested': api >= 36,
+                   'property': 'ro.build.version.sdk_full',
+                   'policy': 'Require major/minor property only on API36 and later'}
+    save(out, 'guest-sdk-full-policy.json', observation)
+    if api < 36:
+        return ''
+    _, value = invoke(out, 'guest-sdk_full_property',
+                      [str(adb), '-s', 'emulator-5580', 'shell', 'getprop', observation['property']], env)
+    return value.strip()
+
+
 def guest_version_identity(guest, expected):
     require(guest['sdk'] == str(expected['api']), 'Booted Android API differs from image metadata')
     raw = guest.get('sdk_full_property', '')
@@ -564,10 +580,11 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
             'sdk': ['getprop', 'ro.build.version.sdk'], 'release': ['getprop', 'ro.build.version.release'],
             'abi': ['getprop', 'ro.product.cpu.abi'], 'fingerprint': ['getprop', 'ro.build.fingerprint'],
             'package_manager': ['pm', 'path', 'android'],
-            'sdk_full_property': ['getprop', 'ro.build.version.sdk_full'],
         }.items():
             _, value = invoke(out, 'guest-' + key, [str(tools['adb']), '-s', 'emulator-5580', 'shell', *arguments], env)
             guest[key] = value.strip()
+        require(guest['sdk'] == str(expected['api']), 'Booted API differs before querying version extensions')
+        guest['sdk_full_property'] = read_full_sdk_property(out, tools['adb'], env, expected['api'])
         guest['application_page_size_bytes'], page_observation = application_page_size(
             out, tools['adb'], env, guest, entry['application_page_size_bytes'])
         save(out, 'application-page-size-observation.json', page_observation)
