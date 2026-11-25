@@ -1,0 +1,15 @@
+{
+  "schema": "WAEX_OPUS_HOST_DECODER_LOCK_V1",
+  "version": "1.5.2",
+  "source_url": "https://downloads.xiph.org/releases/opus/opus-1.5.2.tar.gz",
+  "source_bytes": 7839412,
+  "source_sha256": "65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1",
+  "publisher_checksum_url": "https://opus-codec.org/release/stable/2024/04/12/libopus-1_5_2.html",
+  "license_sha256": "01e1167d54a096d123cf6dfbbeb19587278845c6481d2d66d545669846079551",
+  "configure_sha256": "5978d522cbd8c593b0b68f72ea4500aada28d324da5d4fcf9c76f152e5aa5796",
+  "source_root": "opus-1.5.2",
+  "source_entries": 502,
+  "source_expanded_bytes": 23057920,
+  "configure_flags": ["--enable-shared", "--disable-static", "--disable-doc", "--disable-extra-programs", "--disable-intrinsics", "--disable-rtcd"],
+  "cflags": "-O2 -fPIC"
+}
