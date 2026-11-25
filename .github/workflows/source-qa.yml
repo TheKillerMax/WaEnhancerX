@@ -719,3 +719,65 @@ jobs:
             ${{ runner.temp }}/waex-hma-command-contracts/test_*/*.sh
           retention-days: 14
           if-no-files-found: error
+
+  runtime-reporting-framework:
+    name: Profile UID evidence / bounded reporting / Android API 24, 28, 34
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Require public runtime sources, Maven and an installed Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v mvn
+          test -d "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -f qa/run_runtime_reporting_ci.py
+          test -f qa/runtime_profile_toolchain/toolchain-lock.json
+          test -f app/src/main/java/com/waenhancer/xposed/core/RuntimeReportDispatcher.java
+          test -f app/src/main/java/com/waenhancer/config/PreferenceSyncPolicy.java
+      - name: Verify runtime evidence, shared bounded reporting and causal negative controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/run_runtime_reporting_ci.py \
+            --out "$RUNNER_TEMP/waex-runtime-reporting" \
+            --java-home "$JAVA_HOME"
+      - name: Preserve source, compiler, framework and negative-control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-reporting-framework-evidence
+          path: |
+            ${{ runner.temp }}/waex-runtime-reporting/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/toolchain/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/toolchain/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/profile/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/profile/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/queue/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/queue/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/catalogue/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/catalogue/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/injection-io/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/injection-io/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/preference-telemetry/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/preference-telemetry/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/injection-negative/**/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/injection-negative/**/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/preference-negative/**/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/preference-negative/**/*.log
+            ${{ runner.temp }}/waex-runtime-reporting/identity-negative/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/identity-negative/*.log
+          retention-days: 14
+          if-no-files-found: error

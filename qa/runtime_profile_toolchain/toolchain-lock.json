@@ -1,0 +1,62 @@
+{
+  "schema": "WAEX_CLASS_METADATA_KOTLIN_TOOLCHAIN_V1",
+  "kotlin_version": "2.0.20",
+  "java_major": 21,
+  "source": "https://repo.maven.apache.org/maven2/",
+  "artifacts": [
+    {
+      "file": "kotlin-compiler.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler/2.0.20/kotlin-compiler-2.0.20.jar",
+      "bytes": 59684377,
+      "sha256": "31ade4e3a65a2750c84b90788d37f23d89baa0e3e5c88538eda18914c908ee6d"
+    },
+    {
+      "file": "kotlin-stdlib.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.0.20/kotlin-stdlib-2.0.20.jar",
+      "bytes": 1747659,
+      "sha256": "fb169596659a518357c4b2c16f43dc75ab1c4980565ed4b4a317a050e5e39006"
+    },
+    {
+      "file": "kotlin-stdlib-jdk7.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk7/2.0.20/kotlin-stdlib-jdk7-2.0.20.jar",
+      "bytes": 945,
+      "sha256": "f4dad806a01ac5aab44e8250813d1d3eaa6cd52fec9ec59d7fbf04a873a445aa"
+    },
+    {
+      "file": "kotlin-stdlib-jdk8.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk8/2.0.20/kotlin-stdlib-jdk8-2.0.20.jar",
+      "bytes": 951,
+      "sha256": "e9e73558df903fcb93152273e86e4b8a3e3a4d5377898c4e5273cb42c49e00a8"
+    },
+    {
+      "file": "kotlin-script-runtime.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-script-runtime/2.0.20/kotlin-script-runtime-2.0.20.jar",
+      "bytes": 43369,
+      "sha256": "fe97002a6798f7207564648919d6eeccfb338b95dc04b48886d856655bc64a4e"
+    },
+    {
+      "file": "kotlin-reflect.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-reflect/1.6.10/kotlin-reflect-1.6.10.jar",
+      "bytes": 3038560,
+      "sha256": "3277ac102ae17aad10a55abec75ff5696c8d109790396434b496e75087854203"
+    },
+    {
+      "file": "trove4j.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/intellij/deps/trove4j/1.0.20200330/trove4j-1.0.20200330.jar",
+      "bytes": 572985,
+      "sha256": "c5fd725bffab51846bf3c77db1383c60aaaebfe1b7fe2f00d23fe1b7df0a439d"
+    },
+    {
+      "file": "kotlinx-coroutines-core-jvm.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.6.4/kotlinx-coroutines-core-jvm-1.6.4.jar",
+      "bytes": 1476653,
+      "sha256": "c24c8bb27bb320c4a93871501a7e5e0c61607638907b197aef675513d4c820be"
+    },
+    {
+      "file": "annotations.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+      "bytes": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+    }
+  ]
+}

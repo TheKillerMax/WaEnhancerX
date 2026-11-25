@@ -1,0 +1,2 @@
+[Fixes]
+- Exercise profile identity, bounded reporting and telemetry contracts with explicit public-source boundaries, causal negative controls and a pinned Kotlin compiler closure.
