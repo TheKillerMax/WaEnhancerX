@@ -1,0 +1,2 @@
+[Fixes]
+- Restore all 60 media preview lifecycle cases and five behavioral mutation controls with explicit current-source boundaries.
