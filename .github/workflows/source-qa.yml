@@ -383,6 +383,7 @@ jobs:
             qa/test_separate_groups_policy.py \
             qa/test_declared_targets.py \
             qa/test_runtime_diagnostics.py \
+            qa/test_system_diagnostics_selinux.py \
             qa/test_dynamic_menu_resources.py \
             qa/test_update_download_contract.py \
             qa/test_update_session.py \

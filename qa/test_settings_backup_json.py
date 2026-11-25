@@ -126,7 +126,7 @@ def main() -> int:
     for tool, executable in resolved.items():
         if not executable:
             raise FileNotFoundError(f'Required JVM tool unavailable: {tool}')
-    kotlin_stdlib = Path(resolved['kotlinc']).parent.parent / 'lib/kotlin-stdlib.jar'
+    kotlin_stdlib = Path(resolved['kotlinc']).resolve().parent.parent / 'lib/kotlin-stdlib.jar'
     if not kotlin_stdlib.is_file():
         raise FileNotFoundError(f'Compiler-matched Kotlin runtime unavailable: {kotlin_stdlib}')
     root = args.root.resolve()
