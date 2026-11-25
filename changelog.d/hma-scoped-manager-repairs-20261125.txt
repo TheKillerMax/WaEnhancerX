@@ -1,0 +1,3 @@
+[Fixes]
+- Keep HMA inspection and repairs within the calling Android profile and live
+  target scope, and show unavailable checks without a healthy state.
