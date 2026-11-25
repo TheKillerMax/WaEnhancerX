@@ -1,10 +1,13 @@
 {
   "schema": "WAEX_ART_LAB_V3",
-  "source_revision": "c52f064bad7ba32445f8515bc2f0421618438975",
+  "source_revision": "7814908a1213d86f05ef5dc068b548d322a24d94",
   "targets": [
     "api24",
     "api25",
-    "api26"
+    "api26",
+    "api28",
+    "api34",
+    "api35-16k"
   ],
   "renderer_harness_sha256": "241385367b8ff949679f330c5632245e4eb8e3a6b1b191074b7d2313fd1cf63a",
   "source_files": {
@@ -19,12 +22,12 @@
   "probe_sources": {
     "qa/presence_art_probe/AndroidManifest.xml": "3d9ddf84ab6a7fa8de3a0186a696206da75eb49a98a9229ec3f5204252d9659d",
     "qa/presence_art_probe/PresenceActivity.java": "dd7e8a2e0f20aff43e852c6b319678f20df718f7bfbb206ca0860e270f116080",
-    "qa/presence_art_probe/PresenceInstrumentation.kt.in": "ccd4302683c903a1b9f144e25fbd5a68cf75c8e581933812b35dcd86e66ced55",
-    "qa/presence_art_probe/README.md": "2f559fd4f5bb282bbf23644d605aef758abf26d7dd959186414bda773b6b2b9c",
+    "qa/presence_art_probe/PresenceInstrumentation.kt.in": "56a8a3319245879a6b740219d960ead7849b62a78e810fcc949c8e889c9832d5",
+    "qa/presence_art_probe/README.md": "2b96d2302f4e2a3cc9dc8ed7cab8507197b97638c35a7025d2f8b9418bf8f99d",
     "qa/presence_art_probe/build_presence_art_probe.py": "456b3fd3dc59b59eba544e694a3ece38aa26aceac5656a54ad357187c83d3f3c",
     "qa/presence_art_probe/res/values/ids.xml": "6169d9e3b53174e8e20e2e6d5a7bb1d7beaea15b1a3c10657c4f952be32919e8",
-    "qa/presence_art_probe/run_presence_art_probe.py": "db67cbac9bc52a5fb5c295b53b0cb32fa6abb7d4587f3fd09e2b7b5160c5f0e5",
-    "qa/presence_art_probe/test_presence_art_host.py": "e3f2c64c466aae0af8042dc43114e5ad787a7226e2f7090ae1e9ae21ed72b37d"
+    "qa/presence_art_probe/run_presence_art_probe.py": "4e374ecfb6ca830a5f186081c1624fc04efc0000b8024759218821f446b48de1",
+    "qa/presence_art_probe/test_presence_art_host.py": "efb46864b7aa67893d3c9ae48b578a2edd2fc7829af57b6333bcdebaee567706"
   },
   "jars": [
     {

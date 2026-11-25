@@ -70,6 +70,15 @@ elif cmd[:3]==['shell','am','instrument']:
     if mode=='missing_phase':cases[2]['observations'].pop()
     if mode=='assertion_failure':cases[2]['status']='FAIL'
     report={'schema_version':1,'run_id':run_id if mode!='stale_nonce' else 'old-nonce','api':api,'candidate_variant':'positive','tests':4,'passed':3 if mode=='assertion_failure' else 4,'failures':1 if mode=='assertion_failure' else 0,'errors':0,'skipped':0,'cases':cases}
+    pages=config['page_bytes']
+    assert cmd[cmd.index('page_bytes')+1]==str(pages)
+    report.update(application_page_size_bytes=pages,environment={'application_page_size_bytes':pages,'page_size_method':'android.system.Os.sysconf(_SC_PAGE_SIZE)'})
+    if mode=='wrong_process_pages':report['application_page_size_bytes']=4096
+    if mode=='missing_process_pages':report.pop('application_page_size_bytes')
+    if mode=='noninteger_process_pages':report['application_page_size_bytes']=str(pages)
+    if mode=='boolean_process_pages':report['application_page_size_bytes']=True
+    if mode=='wrong_environment_pages':report['environment']['application_page_size_bytes']=4096
+    if mode=='wrong_page_method':report['environment']['page_size_method']='unmeasured'
     (root/'device-result.json').write_text(json.dumps(report))
     bundle=dict(report)
     if mode=='bundle_mismatch':bundle['api']=25
@@ -97,33 +106,41 @@ NEW_MODES=['legacy_readback','legacy_other_api','legacy_unrelated_error','legacy
  'legacy_empty_suffix','legacy_split_path','legacy_traversal_path','legacy_wrong_size','legacy_wrong_hash',
  'legacy_cat_failure','legacy_cat_stderr','legacy_cat_oversize','legacy_cleanup_cat_failure',
  'installed_hash_mismatch','cleanup_replaced','cleanup_unknown_path','cleanup_readback_failure']
+PAGE_MODES=['positive_api28','positive_api34','positive_api35_16k','wrong_process_pages',
+ 'missing_process_pages','noninteger_process_pages','boolean_process_pages','wrong_environment_pages',
+ 'wrong_page_method','unsupported_16k_api24']
+POSITIVE_MODES=['positive','legacy_readback','positive_api28','positive_api34','positive_api35_16k']
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out',required=True,type=Path)
     p.add_argument('--runner',type=Path,default=Path(__file__).with_name('run_presence_art_probe.py'))
     a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
     results=[]
-    for mode in ORIGINAL_MODES+NEW_MODES:
+    for mode in ORIGINAL_MODES+NEW_MODES+PAGE_MODES:
         d=a.out/mode;d.mkdir();fake=d/'adb-fixture';fake.write_text(FAKE_ADB);fake.chmod(0o755)
         api=25 if mode=='legacy_other_api' else 24
-        (d/'config.json').write_text(json.dumps({'mode':mode,'api':api}))
+        if mode in PAGE_MODES:api={'positive_api28':28,'positive_api34':34,'unsupported_16k_api24':24}.get(mode,35)
+        pages=16384 if mode in PAGE_MODES and mode not in ['positive_api28','positive_api34'] else 4096
+        (d/'config.json').write_text(json.dumps({'mode':mode,'api':api,'page_bytes':pages}))
         apk=d/'candidate.apk';apk.write_bytes(b'Controlled QA APK input; no Android binary')
         digest=hashlib.sha256(apk.read_bytes()).hexdigest()
         cmd=[sys.executable,str(a.runner.resolve()),'--adb',str(fake.resolve()),'--serial',
              'MOTOROLA' if mode=='physical_serial' else 'emulator-5554','--api',str(api),'--apk',str(apk.resolve()),
+             '--page-bytes',str(pages),
              '--expected-sha256','0'*64 if mode=='wrong_apk_hash' else digest,'--out',str((d/'run').resolve())]
         run=subprocess.run(cmd,capture_output=True,timeout=30)
         (d/'stdout.log').write_bytes(run.stdout);(d/'stderr.log').write_bytes(run.stderr)
         calls=[json.loads(x)[2:] for x in (d/'calls.jsonl').read_text().splitlines()] if (d/'calls.jsonl').is_file() else []
         receipt=json.loads((d/'run/receipt.json').read_text()) if (d/'run/receipt.json').is_file() else None
         issues=[]
-        if (run.returncode==0)!=(mode in ['positive','legacy_readback']):issues.append('Unexpected acceptance/rejection')
-        if mode in ['physical_serial','wrong_apk_hash'] and calls:issues.append('Preflight must never invoke ADB')
+        if (run.returncode==0)!=(mode in POSITIVE_MODES):issues.append('Unexpected acceptance/rejection')
+        if mode in ['physical_serial','wrong_apk_hash','unsupported_16k_api24'] and calls:issues.append('Preflight must never invoke ADB')
         if mode in ['non_qemu','wrong_api','preexisting'] and any(c[0] in ['install','uninstall'] for c in calls):issues.append('Pre-existing/unsupported device must remain untouched')
         if any(c[0]=='install' and (c[1]!='-t' or '-r' in c) for c in calls):issues.append('Installation must be testOnly without replace')
         if mode=='preexisting' and not receipt['failure']:issues.append('Existing package was not rejected explicitly')
         cleanup_expected=['positive','stale_nonce','missing_finish','duplicate_finish','bundle_mismatch',
                           'failed_marker','nonzero_instrument','missing_phase','assertion_failure','ambiguous_install','legacy_readback']
+        cleanup_expected += [x for x in PAGE_MODES if x!='unsupported_16k_api24']
         if mode in cleanup_expected:
             if not receipt or receipt['cleanup']['status']!='PASS':issues.append('Verified owned installation must be removed')
         blocked_identity=(mode in ['installed_mismatch','installed_hash_mismatch','ambiguous_mismatch',
@@ -134,7 +151,9 @@ def main():
             if receipt and receipt['cleanup']['status']=='PASS':issues.append('Unverified cleanup must not be PASS')
             if mode not in ['cleanup_replaced','cleanup_unknown_path','cleanup_readback_failure','legacy_cleanup_cat_failure'] and any(c[:3]==['shell','am','instrument'] for c in calls):
                 issues.append('Unverified installed APK must not be instrumented')
-        if mode in ['positive','legacy_readback']:
+        if mode in POSITIVE_MODES:
+            if receipt.get('page_size_verified') is not True or receipt.get('application_page_size_bytes')!=pages:
+                issues.append('Instrumentation process page size must match the requested profile')
             if receipt['installed_apk_sha256']!=digest or not receipt['instrumentation_finish_verified']:issues.append('Positive identity/finish contract absent')
             if len(list((d/'run').glob('*.png')))!=7:issues.append('Positive evidence requires seven PNGs')
             if receipt['cleanup'].get('apk_sha256')!=digest or not receipt['cleanup'].get('identity_verified'):

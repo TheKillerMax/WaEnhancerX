@@ -45,9 +45,10 @@ not a change to the project's compileSdk/targetSdk or a compatibility claim.
 | `nativeCanvasContainsGreenDotAndClearsOffline` | The production renderer draws green; the same coordinate clears after a real offline store update. |
 | `invalidationClearsTheNativeGreenPixel` | The production renderer draws green; the same coordinate clears after real store invalidation. |
 
-Initial execution plan: API 24, 25 and 26, four cases each, with API 26 as a
-positive framework boundary control. Each row records actual API, package,
-density, pixel values, PNGs, failures/errors and zero skips. These cases do not
+The historical API 24, 25 and 26 profiles remain admitted. The current workflow
+executes only the additional API 28/34 profiles with 4 KiB pages and API 35 with
+simulated 16 KiB pages on x86_64, four cases and seven PNGs each. Each row records
+actual API, package, density, pixel values, failures/errors and zero skips. These cases do not
 replace or change the four preserved Robolectric FAIL results.
 
 ## Offline build
@@ -94,7 +95,12 @@ than substituted for a positive matrix result.
 The matrix controller must own the disposable AVD and record the system-image
 identity, ABI and page size. Those are controller preconditions: the launcher
 checks the explicit serial, QEMU, API and package absence, but does not establish
-AVD ownership or certify ABI/page-size coverage by itself.
+AVD ownership or certify the ABI by itself. It requires an explicit page-size
+expectation; Instrumentation measures `Os.sysconf(OsConstants._SC_PAGE_SIZE)`
+inside its own process. Both the recovered JSON and the matching final Bundle
+must agree with that expectation. The wrapper also requires the shared boot
+controller to observe the same application-facing page size. The x86_64 ps16k
+profile remains a simulation, not a physical ARM64 or kernel-page-size result.
 
 The launcher only accepts an explicit `emulator-NNNN` serial and verifies QEMU,
 the requested API and the frozen APK hash before installation. The QA package
@@ -107,7 +113,7 @@ result cannot be mistaken for a current run.
 ```sh
 python run_presence_art_probe.py \
   --adb /path/to/android-sdk/platform-tools/adb \
-  --serial emulator-5554 --api 24 \
+  --serial emulator-5554 --api 24 --page-bytes 4096 \
   --apk /path/to/presence-art-positive.apk \
   --expected-sha256 SHA256_FROM_BUILD_RECEIPT \
   --out /new/evidence/api24-presence
@@ -129,3 +135,5 @@ Android lifecycle references:
 - https://developer.android.com/reference/android/app/Instrumentation#runOnMainSync(java.lang.Runnable)
 - https://developer.android.com/reference/android/app/Instrumentation#waitForIdleSync()
 - https://developer.android.com/reference/android/app/Instrumentation#startActivitySync(android.content.Intent)
+
+Page-size API reference: https://source.android.com/docs/core/architecture/16kb-page-size/getting-page-size

@@ -11,10 +11,24 @@ from android_emulator_lab_pilot import main as boot_main, invoke, require
 from android_emulator_lab_matrix import TARGETS, checked_lock as matrix_lock
 from build_presence_art_lab import (LOCK, SOURCE, PACKAGE, checked_lock, digest, save, verify_files,
                                     validate_toolchain_receipt, validate_d8_receipt)
+from presence_art_probe.run_presence_art_probe import verified_process_page_size
 
-ART_TARGETS = {name: TARGETS[name] for name in ('api24', 'api25', 'api26')}
-LIMITS = ('Four original/neutral ART Canvas cases and seven PNG observations on API24/25/26 only. '
+ART_TARGETS = {name: TARGETS[name] for name in ('api24', 'api25', 'api26', 'api28', 'api34', 'api35-16k')}
+LIMITS = ('Four original/neutral ART Canvas cases and seven PNG observations per reviewed x86_64 profile. '
+          'API24/25/26/28/34 use 4 KiB; API35 uses simulated 16 KiB. '
           'No full WAEX APK, Xposed, WhatsApp, DSU, physical ARM64 or private dependencies.')
+
+
+def validate_boot_context(ctx, target):
+    expected = ART_TARGETS.get(target)
+    require(expected is not None and ctx.target == target and type(ctx.api) is int
+            and type(ctx.minor) is int and type(ctx.application_page_size_bytes) is int
+            and ctx.api == expected[0]
+            and ctx.minor == 0 and ctx.application_page_size_bytes == expected[2]
+            and ctx.serial == 'emulator-5580' and ctx.guest.get('abi') == 'x86_64'
+            and ctx.guest.get('sdk') == str(expected[0])
+            and ctx.guest.get('application_page_size_bytes') == str(expected[2]),
+            'Unexpected ART boot context')
 
 
 def verify_artifact(folder, expected_sha):
@@ -53,7 +67,13 @@ def verify_artifact(folder, expected_sha):
     return apk, value
 
 
-def validate_receipt(receipt, api, expected_sha, directory):
+def validate_receipt(receipt, api, expected_sha, directory, page_bytes):
+    require(receipt.get('page_size_verified') is True
+            and type(receipt.get('application_page_size_bytes')) is int
+            and type(receipt.get('expected_application_page_size_bytes')) is int
+            and receipt['application_page_size_bytes'] == receipt['expected_application_page_size_bytes'] == page_bytes,
+            'ART receipt process page size differs')
+    verified_process_page_size(json.loads((directory / 'device-result.json').read_bytes()), page_bytes)
     require(receipt['status'] == 'PASS' and receipt['failure'] is None
             and receipt['api'] == api and receipt['serial'] == 'emulator-5580'
             and receipt['apk_sha256'] == receipt['installed_apk_sha256'] == expected_sha
@@ -99,13 +119,12 @@ def main(argv=None):
     verify_files(Path(__file__).resolve().parents[1], checked_lock()['probe_sources'])
 
     def after_boot(ctx):
-        require(ctx.target == args.target and ctx.api in (24, 25, 26)
-                and ctx.application_page_size_bytes == 4096 and ctx.serial == 'emulator-5580',
-                'Unexpected ART boot context')
+        validate_boot_context(ctx, args.target)
         report_dir = ctx.out / 'presence'
         launcher = Path(__file__).with_name('presence_art_probe') / 'run_presence_art_probe.py'
         command = [sys.executable, str(launcher), '--adb', str(ctx.adb),
                    '--serial', ctx.serial, '--api', str(ctx.api), '--apk', str(apk),
+                   '--page-bytes', str(ctx.application_page_size_bytes),
                    '--expected-sha256', args.apk_sha256, '--out', str(report_dir)]
         outcome, _ = invoke(ctx.out, 'presence-art-launcher', command, ctx.env, timeout=420, required=False)
         receipt_path = report_dir / 'receipt.json'
@@ -129,8 +148,10 @@ def main(argv=None):
         save(report_dir / 'apk-readback-identities.json', readbacks)
         save(report_dir / 'build-artifact-provenance.json', built)
         require(outcome['failure'] is None and outcome['returncode'] == 0, 'ART launcher failed')
-        validate_receipt(receipt, ctx.api, args.apk_sha256, report_dir)
+        validate_receipt(receipt, ctx.api, args.apk_sha256, report_dir, ctx.application_page_size_bytes)
         return {'status': 'PASS', 'tests': 4, 'png_count': 7, 'package': PACKAGE,
+                'application_page_size_bytes': receipt['application_page_size_bytes'],
+                'process_page_size_verified': True,
                 'apk_sha256': args.apk_sha256, 'receipt_sha256': digest(receipt_path),
                 'scope': LIMITS}
 

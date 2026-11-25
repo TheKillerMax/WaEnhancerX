@@ -16,6 +16,8 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.system.Os
+import android.system.OsConstants
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -48,10 +50,13 @@ class PresenceInstrumentation : Instrumentation() {
     private val results = JSONArray()
     private var environment = JSONObject()
     private var runId = ""
+    private var expectedPageSize = 0L
+    private var processPageSize = 0L
 
     override fun onCreate(arguments: Bundle?) {
         super.onCreate(arguments)
         runId = arguments?.getString("run_id") ?: ""
+        expectedPageSize = arguments?.getString("page_bytes")?.toLongOrNull() ?: 0L
         start()
     }
 
@@ -61,6 +66,9 @@ class PresenceInstrumentation : Instrumentation() {
         try {
             check(Looper.myLooper() != Looper.getMainLooper())
             require(runId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "A unique run_id argument is required" }
+            require(expectedPageSize == 4096L || expectedPageSize == 16384L) { "An exact expected page size is required" }
+            processPageSize = Os.sysconf(OsConstants._SC_PAGE_SIZE)
+            check(processPageSize == expectedPageSize) { "Instrumentation process page size differs from the matrix" }
             evidence = File(targetContext.filesDir, "qa-presence/$runId")
             check(!evidence.exists()) { "Refusing to overwrite an earlier instrumentation run" }
             check(evidence.mkdirs())
@@ -93,6 +101,7 @@ class PresenceInstrumentation : Instrumentation() {
             val failed = (0 until results.length()).count { results.getJSONObject(it).getString("status") == "FAIL" }
             val errors = results.length() - passed - failed
             val report = JSONObject().put("schema_version", 1).put("run_id", runId).put("api", Build.VERSION.SDK_INT)
+                .put("application_page_size_bytes", processPageSize)
                 .put("tests", results.length()).put("passed", passed).put("failures", failed)
                 .put("errors", errors).put("skipped", 0).put("environment", environment)
                 .put("cases", results).put("scope", "Extracted public presence renderer and real Android Canvas/View/Handler; synthetic host; no Xposed or WhatsApp")
@@ -151,6 +160,8 @@ class PresenceInstrumentation : Instrumentation() {
             aliases.isAccessible = true
             (aliases.get(null) as MutableMap<*, *>).clear()
             environment = JSONObject().put("api", Build.VERSION.SDK_INT)
+                .put("application_page_size_bytes", Os.sysconf(OsConstants._SC_PAGE_SIZE))
+                .put("page_size_method", "android.system.Os.sysconf(_SC_PAGE_SIZE)")
                 .put("target_sdk", app.applicationInfo.targetSdkVersion)
                 .put("device_density", app.resources.displayMetrics.density)
                 .put("fixture_density", host.resources.displayMetrics.density)

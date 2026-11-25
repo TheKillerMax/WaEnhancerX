@@ -20,6 +20,18 @@ CASES=['pureCircleRasterizesWithoutWaex','plainAndroidViewDrawsAndClearsWhenHidd
        'nativeCanvasContainsGreenDotAndClearsOffline','invalidationClearsTheNativeGreenPixel']
 PHASES=[['circle'],['visible','hidden'],['online','offline'],['online','invalidated']]
 
+def verified_process_page_size(report, expected):
+    environment=report.get('environment', {})
+    actual=report.get('application_page_size_bytes')
+    if (type(expected) is not int or expected not in (4096,16384)
+            or type(actual) is not int or actual!=expected
+            or not isinstance(environment,dict)
+            or type(environment.get('application_page_size_bytes')) is not int
+            or environment['application_page_size_bytes']!=expected
+            or environment.get('page_size_method')!='android.system.Os.sysconf(_SC_PAGE_SIZE)'):
+        raise RuntimeError('Instrumentation process page size was not measured as requested')
+    return actual
+
 def verified_finish(stdout, report):
     text=stdout.decode('utf-8',errors='replace')
     if re.search(r'^INSTRUMENTATION_(?:FAILED|ABORTED)\b',text,re.M):
@@ -60,10 +72,12 @@ def main():
     p.add_argument('--adb',required=True,type=Path)
     p.add_argument('--serial',required=True)
     p.add_argument('--api',required=True,type=int,choices=range(24,38))
+    p.add_argument('--page-bytes',required=True,type=int,choices=(4096,16384))
     p.add_argument('--apk',required=True,type=Path)
     p.add_argument('--expected-sha256',required=True)
     p.add_argument('--out',required=True,type=Path)
     a=p.parse_args()
+    if a.page_bytes==16384 and a.api<35:p.error('The reviewed simulated 16 KiB images require API35 or later')
     if not re.fullmatch(r'emulator-[0-9]+',a.serial):p.error('Only an explicit emulator-NNNN serial is accepted')
     if not re.fullmatch(r'[a-f0-9]{64}',a.expected_sha256):p.error('Expected SHA-256 must be 64 lowercase hex characters')
     if a.apk.is_symlink() or not a.apk.is_file() or not 0<a.apk.stat().st_size<=MAX_APK_BYTES:
@@ -74,7 +88,7 @@ def main():
     out=a.out.resolve();out.mkdir(parents=True,exist_ok=False)
     run_id='presence-'+uuid.uuid4().hex
     commands=[];readbacks={};initial_absent=False;install_started=False
-    report=None;failure=None;cleanup={'status':'not_installed'};installed_sha=None;phases_complete=False;finish_verified=False
+    report=None;failure=None;cleanup={'status':'not_installed'};installed_sha=None;phases_complete=False;finish_verified=False;page_size_verified=False
 
     def run(name,args,timeout=60,check=True):
         cmd=[str(a.adb),'-s',a.serial,*args];start=time.monotonic()
@@ -153,11 +167,13 @@ def main():
         installed_sha=pull_installed('installed',path)
         if installed_sha!=actual:raise RuntimeError('Installed APK bytes differ from the frozen candidate')
         instrument=run('instrument',['shell','am','instrument','-w','-r','-e','run_id',run_id,
+             '-e','page_bytes',str(a.page_bytes),
              PACKAGE+'/'+PACKAGE+'.PresenceInstrumentation'],timeout=180,check=False)
         base='files/qa-presence/'+run_id+'/'
         raw=run('result',['exec-out','run-as',PACKAGE,'cat',base+'result.json']).stdout
         (out/'device-result.json').write_bytes(raw);report=json.loads(raw)
         if report.get('run_id')!=run_id or report.get('api')!=a.api:raise RuntimeError('Stale or wrong-device receipt')
+        verified_process_page_size(report,a.page_bytes);page_size_verified=True
         if report.get('candidate_variant')!='positive':raise RuntimeError('Only a positive candidate can be a matrix PASS')
         if [x.get('name') for x in report.get('cases',[])]!=CASES:raise RuntimeError('Missing, duplicate or unexpected cases')
         if report.get('tests')!=4 or report.get('skipped')!=0:raise RuntimeError('All four cases must execute without omissions')
@@ -199,10 +215,13 @@ def main():
             except Exception as exc:
                 cleanup={'status':'FAIL' if removal_started else 'identity_unverified_not_removed',
                          'package':PACKAGE,'identity_verified':False,'message':str(exc)}
-    success=(failure is None and cleanup['status']=='PASS' and report is not None and phases_complete and finish_verified
+    success=(failure is None and cleanup['status']=='PASS' and report is not None and phases_complete and finish_verified and page_size_verified
              and report.get('passed')==4 and report.get('failures')==0 and report.get('errors')==0
              and all(x.get('status')=='PASS' for x in report['cases']))
     receipt={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'run_id':run_id,'api':a.api,'serial':a.serial,
+             'expected_application_page_size_bytes':a.page_bytes,
+             'application_page_size_bytes':report.get('application_page_size_bytes') if report else None,
+             'page_size_verified':page_size_verified,
              'apk_sha256':actual,'installed_apk_sha256':installed_sha,'initially_absent':initial_absent,
              'status':'PASS' if success else 'FAIL','failure':failure,'cleanup':cleanup,'commands':commands,'readbacks':readbacks,
              'scope':'Four ART Canvas/presence cases only; separate from SQLite and full application/Xposed testing.',

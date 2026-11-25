@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 import urllib.error
 from unittest.mock import patch
@@ -27,6 +28,31 @@ def pin_for(data):
 
 
 class ArtLabControls(unittest.TestCase):
+    def test_expanded_boot_profiles_require_exact_api_abi_minor_and_page_observation(self):
+        expected = {'api24': (24, 4096), 'api25': (25, 4096), 'api26': (26, 4096),
+                    'api28': (28, 4096), 'api34': (34, 4096), 'api35-16k': (35, 16384)}
+        self.assertEqual(set(art.ART_TARGETS), set(expected))
+        for target, (api, pages) in expected.items():
+            ctx = SimpleNamespace(target=target, api=api, minor=0,
+                                  application_page_size_bytes=pages, serial='emulator-5580',
+                                  guest={'abi': 'x86_64', 'sdk': str(api),
+                                         'application_page_size_bytes': str(pages)})
+            art.validate_boot_context(ctx, target)
+            for name, value in [('target', 'api37'), ('api', api + 1), ('minor', 1),
+                                ('application_page_size_bytes', 16384 if pages == 4096 else 4096),
+                                ('serial', 'physical-device'), ('api', float(api)),
+                                ('minor', False), ('application_page_size_bytes', float(pages))]:
+                with self.subTest(target=target, field=name), self.assertRaises(RuntimeError):
+                    bad = copy.deepcopy(ctx); setattr(bad, name, value)
+                    art.validate_boot_context(bad, target)
+            for name, value in [('abi', 'arm64-v8a'), ('sdk', str(api + 1)),
+                                ('application_page_size_bytes', str(16384 if pages == 4096 else 4096))]:
+                with self.subTest(target=target, guest=name), self.assertRaises(RuntimeError):
+                    bad = copy.deepcopy(ctx); bad.guest[name] = value
+                    art.validate_boot_context(bad, target)
+            with self.assertRaises(RuntimeError):
+                art.validate_boot_context(ctx, 'api37')
+
     def test_all_pinned_jar_hashes_and_length(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'input.jar'; data = b'HOST ONLY, NOT A JAR'; path.write_bytes(data)
@@ -69,10 +95,15 @@ class ArtLabControls(unittest.TestCase):
 
     def test_art_receipt_requires_finish_cleanup_cases_and_all_pngs(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); (root / 'device-result.json').write_text('{}\n')
+            root = Path(temp); (root / 'device-result.json').write_text(json.dumps({
+                'application_page_size_bytes': 4096,
+                'environment': {'application_page_size_bytes': 4096,
+                                'page_size_method': 'android.system.Os.sysconf(_SC_PAGE_SIZE)'}}) + '\n')
             for index in range(7):
                 (root / ('phase_' + str(index) + '.png')).write_bytes(b'\x89PNG\r\n\x1a\nHOST CONTROL')
             receipt = {'status': 'PASS', 'failure': None, 'api': 24, 'serial': 'emulator-5580',
+                       'expected_application_page_size_bytes': 4096,
+                       'application_page_size_bytes': 4096, 'page_size_verified': True,
                        'apk_sha256': 'a' * 64, 'installed_apk_sha256': 'a' * 64,
                        'initially_absent': True,
                        'cleanup': {'status': 'PASS', 'verified_absent': True, 'identity_verified': True,
@@ -83,7 +114,7 @@ class ArtLabControls(unittest.TestCase):
                        'device_counts': {'tests': 4, 'passed': 4, 'failures': 0, 'errors': 0, 'skipped': 0},
                        'device_result_sha256': build.digest(root / 'device-result.json'),
                        'png_sha256': {p.name: build.digest(p) for p in root.glob('*.png')}}
-            art.validate_receipt(receipt, 24, 'a' * 64, root)
+            art.validate_receipt(receipt, 24, 'a' * 64, root, 4096)
             mutations = [('instrumentation_finish_verified', False), ('all_seven_png_phases_present', False),
                          ('initially_absent', False), ('installed_apk_sha256', 'b' * 64),
                          ('serial', 'physical-phone'), ('cleanup', {'status': 'PASS', 'verified_absent': False}),
@@ -92,12 +123,15 @@ class ArtLabControls(unittest.TestCase):
                          ('cleanup', {'status': 'PASS', 'verified_absent': True, 'identity_verified': False}),
                          ('cleanup', {**receipt['cleanup'], 'apk_sha256': 'b' * 64}),
                          ('cleanup', {**receipt['cleanup'], 'apk_bytes': 1025})]
+            mutations += [('application_page_size_bytes', 16384), ('page_size_verified', False),
+                          ('expected_application_page_size_bytes', 16384),
+                          ('application_page_size_bytes', '4096'), ('application_page_size_bytes', 4096.0)]
             for key, value in mutations:
                 with self.subTest(key=key), self.assertRaises(RuntimeError):
                     bad = copy.deepcopy(receipt); bad[key] = value
-                    art.validate_receipt(bad, 24, 'a' * 64, root)
+                    art.validate_receipt(bad, 24, 'a' * 64, root, 4096)
             (root / 'phase_0.png').write_bytes(b'CHANGED')
-            with self.assertRaises(RuntimeError): art.validate_receipt(receipt, 24, 'a' * 64, root)
+            with self.assertRaises(RuntimeError): art.validate_receipt(receipt, 24, 'a' * 64, root, 4096)
 
     def test_artifact_requires_same_workflow_lock_and_independent_digest(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {

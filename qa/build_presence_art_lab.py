@@ -18,8 +18,8 @@ from presence_art_probe.build_presence_art_probe import compiler_contract, requi
 
 HERE = Path(__file__).resolve().parent
 LOCK = HERE / 'presence_art_lab_lock.json'
-SOURCE = 'c52f064bad7ba32445f8515bc2f0421618438975'
-LAB_REF = 'refs/heads/lab/android-emulator-matrix-nightly8-20261124'
+SOURCE = '7814908a1213d86f05ef5dc068b548d322a24d94'
+LAB_REF = 'refs/heads/lab/presence-current-source-20261125'
 PACKAGE = 'org.waex.qa.presence.host'
 
 
@@ -52,7 +52,7 @@ def checked_lock():
             'ART probe origin/revision policy differs')
     require(len(lock['probe_sources']) == 8 and len(lock['source_files']) == 7,
             'ART source closure changed')
-    require(lock['targets'] == ['api24', 'api25', 'api26'], 'ART target set changed')
+    require(lock['targets'] == ['api24', 'api25', 'api26', 'api28', 'api34', 'api35-16k'], 'ART target set changed')
     require(sum(row['bytes'] for row in lock['jars']) == 429605 and len(lock['jars']) == 2,
             'Public JAR closure differs')
     require(set(lock['toolchain_source_sha256']) == {
