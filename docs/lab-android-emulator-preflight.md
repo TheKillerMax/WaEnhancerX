@@ -7,14 +7,29 @@ A future PR touching these protected paths requires the separate R5 review.
 
 ## First run
 
-Publish the three lab files together on the lab branch. The branch-specific push
+Publish the lab files together on the lab branch. The branch-specific push
 starts one `ubuntu-24.04` job with a ten-minute limit and `contents: read`.
 The workflow also declares `workflow_dispatch`, but the first run uses push:
 GitHub documents a default-branch condition for the manual trigger and its UI.
 No default branch change is needed for this experiment.
 
 The job verifies the named repository, exact branch and public visibility again
-inside Python. It uses only preinstalled Python, Java and Android SDK tools.
+inside Python. It uses preinstalled Python, Java and Android SDK management tools.
+Each disposable runner first grants only its own non-root UID read/write access
+to `/dev/kvm`, preserving existing ACL entries and the effective-rights mask.
+There is no group membership, udev rule, global chmod or persistent host change.
+The bootstrap verifies the stable Google catalog against emulator 37.3.10,
+build 16970787, Linux x64 archive size 350068887 and SHA-1
+`5f7314368fc6c05c937f6991bb4106214dc389e7`. Only after the SDK's normalized
+license hash is already accepted does the official SDK installer install that
+package, with stdin closed. It never accepts a license or replaces an existing
+emulator. Version, build and package metadata must match the pin afterwards.
+The official SHA-256 reference is
+`a4405349d8a9c52136ab7861e5331dc40e85574bd91cb8889a298a2ff4c52e26`;
+archive download/checksum validation is delegated to the SDK installer, so this
+reference is not described as an independently measured download hash.
+The same bootstrap must run in every future pilot job because runner setup is
+ephemeral. Its receipt is uploaded separately from the read-only inspection.
 The checkout and artifact actions retain the immutable pins already used by the
 repository: `11bd71901bbe5b1630ceea73d27597364c9af683` and
 `4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1`, respectively.
@@ -23,27 +38,34 @@ repository: `11bd71901bbe5b1630ceea73d27597364c9af683` and
 
 - Linux CPU, virtualization flags, memory, available disk and runner image version.
 - `/dev/kvm` access, KVM API version 12 and vCPU mmap size. These are query ioctls;
-  no VM is created, and no permissions or host configuration are changed.
+  no VM is created. The bootstrap's runner-specific ACL change is recorded
+  separately before these read-only queries.
 - SDK, emulator, ADB and Java versions, executable/launcher SHA-256 identities,
   QEMU identity when present, and `emulator -accel-check`.
 - Existing NDK, CMake, build-tools and command-line-tools revisions from their
   `source.properties`, including whether NDK `27.0.12077973` and CMake `3.22.1`
-  needed for a separate native build are already installed. Nothing is installed.
+  needed for a separate native build are already installed. Neither is installed
+  by this preflight or by its emulator bootstrap.
 - The stable SDK package list and three fixed Google XML metadata endpoints.
   Metadata responses are bounded at 4 MiB and redirects are rejected. Download
   URLs, sizes, checksums and minimum emulator revisions are recorded, not fetched.
 - Stable x86_64 candidates for each API from 24 through 37, plus the explicit
-  API 35 16 KiB image. The official metadata currently uses AOSP for API 27 and
+  API 35 16 KiB image. Selection first requires presence in the SDK list and
+  an already-accepted license; Google APIs is preferred among eligible images.
+  The current accepted-license selection uses AOSP for APIs 27, 31 and 32 and
   `system-images;android-37.0;google_apis;x86_64` for API 37. Selection is confirmed
-  independently against the runner's SDK package listing.
-- Existing license-file hashes and exact license-text SHA-1 matches using the
+  independently against the runner's SDK package listing. AOSP selections test
+  Android OS/SQLite behavior and do not establish Google Mobile Services coverage.
+- Existing license-file hashes and SDK-normalized license-text SHA-1 matches using the
   Android SDK algorithm. No license acceptance file is created or changed; no
   interactive license command is run. Missing acceptance produces `BLOCKED`.
 - SDK package metadata and license identities before and after inspection.
+  The bootstrap separately permits only the emulator package's metadata to change;
+  existing license files and every other package's metadata must remain unchanged.
 
-The current API 37.0 catalog entry requires emulator 37.2.11 or newer. This is a
-recorded requirement for the next phase; the preflight does not upgrade tools or
-claim that the installed emulator has booted that image.
+The current API 37.0 catalog entry requires emulator 37.2.11 or newer. The exact
+37.3.10 bootstrap pin satisfies that declared requirement; successful preflight
+still does not establish that this or any other Android image has booted.
 
 `preflight-result.json` is `PASS` only if the host/tool/listing checks and all
 15 catalog/license entries are confirmed. Any missing requirement yields exit 2
@@ -100,7 +122,11 @@ fit all images together.
 - [Application-facing 16 KiB simulation on x86_64 and its 4 KiB kernel](https://android-developers.googleblog.com/2024/08/adding-16-kb-page-size-to-android.html)
 - [Linux KVM API, query ioctls and VM creation](https://docs.kernel.org/virt/kvm/api.html)
 - [Android SDK exact license-hash and acceptance algorithm](https://android.googlesource.com/platform/tools/base/+/studio-master-dev/repository/src/main/java/com/android/repository/api/License.java)
+- [SDK JAXB license normalization](https://android.googlesource.com/platform/tools/base/+/studio-2023.1.1/repository/src/main/java/com/android/repository/impl/meta/TrimStringAdapter.java)
 - [Official repository index](https://dl.google.com/android/repository/addons_list-5.xml)
+- [Official emulator metadata](https://dl.google.com/android/repository/repository2-3.xml)
+- [Official emulator archive and SHA-256 references](https://developer.android.com/studio/emulator_archive)
+- [ACL modification and mask preservation](https://man7.org/linux/man-pages/man1/setfacl.1.html)
 - [Official AOSP image metadata](https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml)
 - [Official Google APIs image metadata](https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml)
 

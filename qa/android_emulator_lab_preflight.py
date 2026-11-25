@@ -138,13 +138,31 @@ def child_text(node, name, default=''):
     return ''.join(found.itertext()) if found is not None else default
 
 
+def sdk_license_hash(value):
+    """Hash the SDK's bound license value, without recording acceptance.
+
+    JAXB LicenseType applies AOSP TrimStringAdapter before License hashes UTF-8.
+    Verified against the official cmdline-tools 12.0 and 22.0 adapter classes.
+    Source: platform/tools/base, studio-2023.1.1,
+    repository/src/main/java/com/android/repository/impl/meta/TrimStringAdapter.java.
+    """
+    # Java regex \s is ASCII by default; Python's Unicode \s is broader.
+    value = re.sub(r'(?<=[ \t\n\x0b\f\r])[ \t]*', '', value)
+    value = re.sub(r'(?<!\n)\n(?!\n)', ' ', value)
+    value = re.sub(r' +', ' ', value)
+    # String.trim() removes only UTF-16 code units <= U+0020.
+    value = value.strip(''.join(chr(code) for code in range(33)))
+    return hashlib.sha1(value.encode('utf-8')).hexdigest()
+
+
 def parse_feed(root, url, accepted):
     licenses = {}
+    raw_licenses = {}
     for node in root.findall('./{*}license'):
-        # SDK License.getLicenseHash hashes the exact XML string as UTF-8;
-        # do not trim, collapse whitespace, or write an acceptance file.
         value = ''.join(node.itertext())
-        licenses[node.attrib['id']] = hashlib.sha1(value.encode('utf-8')).hexdigest()
+        license_id = node.attrib['id']
+        licenses[license_id] = sdk_license_hash(value)
+        raw_licenses[license_id] = hashlib.sha1(value.encode('utf-8')).hexdigest()
     packages = []
     for node in root.findall('./{*}remotePackage'):
         path = node.attrib.get('path', '')
@@ -196,6 +214,8 @@ def parse_feed(root, url, accepted):
                          'revision': [int(child_text(node, './{*}revision/{*}' + key, '0'))
                                       for key in ('major', 'minor', 'micro')],
                          'source_metadata': url, 'license_id': license_id, 'license_text_sha1': license_hash,
+                         'license_xml_text_sha1': raw_licenses.get(license_id),
+                         'license_hash_method': 'sdk_TrimStringAdapter_then_sha1_utf8',
                          'license_already_accepted': bool(license_hash and license_hash in
                              accepted.get(license_id, {}).get('accepted_sha1', [])),
                          'archives': archives, 'dependencies': dependencies})
@@ -207,9 +227,11 @@ def choose_targets(packages, sdk_paths):
     for api, mode in [(api, 'standard') for api in API_LEVELS] + [(35, '16k')]:
         tags = ('google_apis_ps16k',) if mode == '16k' else ('google_apis', 'default')
         candidates = [p for p in packages if p['api'] == api and p['tag'] in tags and p['archives']]
-        candidates.sort(key=lambda p: (p['minor'], tags.index(p['tag']), tuple(-v for v in p['revision'])))
+        candidates.sort(key=lambda p: (not (p['license_already_accepted'] and p['path'] in sdk_paths),
+                                       p['minor'], tags.index(p['tag']), tuple(-v for v in p['revision'])))
         selected = candidates[0] if candidates else None
         targets.append({'api': api, 'mode': mode, 'selected': selected,
+                        'selection_policy': 'prefer_preaccepted_and_listed_then_lowest_minor_then_google_apis',
                         'present_in_sdkmanager_list': bool(selected and selected['path'] in sdk_paths),
                         'candidate_paths': [p['path'] for p in candidates]})
     return targets

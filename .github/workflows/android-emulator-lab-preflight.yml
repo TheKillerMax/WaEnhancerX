@@ -29,7 +29,16 @@ jobs:
           submodules: false
           lfs: false
 
+      - name: Prepare KVM access and the reviewed emulator on this disposable runner
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          set -euo pipefail
+          python3 qa/android_emulator_lab_bootstrap.py --out "$RUNNER_TEMP/waex-android-lab-bootstrap"
+
       - name: Inspect KVM, SDK metadata and existing licenses
+        if: always()
         shell: bash
         env:
           PYTHONDONTWRITEBYTECODE: '1'
@@ -42,7 +51,9 @@ jobs:
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1; existing repository pin
         with:
           name: android-lab-preflight-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/waex-android-lab-preflight/
+          path: |
+            ${{ runner.temp }}/waex-android-lab-preflight/
+            ${{ runner.temp }}/waex-android-lab-bootstrap/
           if-no-files-found: error
           compression-level: 9
           retention-days: 1
