@@ -89,6 +89,19 @@ jobs:
           with Path(os.environ['GITHUB_PATH']).open('a') as path_file:
               path_file.write(str(kotlin_home / 'bin') + '\n')
           PYKOTLIN
+      - name: Reuse the pinned Android SDK bytes
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
+          key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Verify or prepare the three Android SDKs before offline consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_prepare_robolectric_sdks.py --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-transport-controls"
+          python3 qa/prepare_robolectric_sdks.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-appearance-hooks/sdk-bootstrap.json"
       - name: Exercise bounded Android method bodies and the complete overlay launcher
         shell: bash
         run: |
@@ -98,14 +111,32 @@ jobs:
           test -f qa/maven_dependencies.py
           test -f qa/android_media_preview_test.py
           python3 qa/test_overlay_permission_resources.py
-          python3 qa/android_floating_bottom_bar_methods_test.py --out "$RUNNER_TEMP/waex-appearance-hooks/floating"
+          python3 qa/android_floating_bottom_bar_methods_test.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/floating" \
+            --sdk-jars "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars"
           python3 qa/mutate_floating_bar_methods.py \
             --positive-result "$RUNNER_TEMP/waex-appearance-hooks/floating/result.json" \
             --out "$RUNNER_TEMP/waex-appearance-hooks/mutations" \
             --deps "$RUNNER_TEMP/waex-appearance-hooks/floating/deps" \
             --core-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/core-1.18.0.jar" \
             --annotation-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/annotation-jvm-1.9.1.jar" \
+            --dexkit-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/dexkit-2.2.0.jar" \
+            --sdk-jars "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars"
+      - name: Exercise Channel ownership with the same verified dependency bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/floating/deps"
+            --core-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/core-1.18.0.jar"
+            --annotation-api-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/annotation-jvm-1.9.1.jar"
             --dexkit-jar "$RUNNER_TEMP/waex-appearance-hooks/floating/public-apis/dexkit-2.2.0.jar"
+            --sdk-jars "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars"
+          )
+          python3 qa/android_channel_visibility_test.py --out "$RUNNER_TEMP/waex-appearance-hooks/channel" "${args[@]}"
+          python3 qa/mutate_channel_visibility.py \
+            --positive-result "$RUNNER_TEMP/waex-appearance-hooks/channel/result.json" \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/channel-mutations" "${args[@]}"
       - name: Preserve the declared projection, source identities and execution evidence
         if: always()
         uses: actions/upload-artifact@v4

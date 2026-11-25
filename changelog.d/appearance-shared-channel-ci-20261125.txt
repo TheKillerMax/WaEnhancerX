@@ -1,0 +1,2 @@
+[Fixes]
+Appearance CI reuses the same pinned Android SDK directory and framework dependencies for Floating and Channel positive and negative tests, retaining the existing overlay coverage and evidence upload.
