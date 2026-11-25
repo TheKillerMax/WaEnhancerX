@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "ready": true,
+  "reason": "Bound to the reviewed real successful preflight and bootstrap; no Android boot is inferred.",
+  "preflight": {
+    "status": "PASS",
+    "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45520358898",
+    "head_sha": "9067ca002f8b687fb9ac61fee1b8c5ac116fb3cb",
+    "report_sha256": {
+      "preflight-result.json": "e0f8f10f91d0ea2c3b03b05087a3abf447bf2ddfd42b01b1cb9c05ef1a10c8f2",
+      "catalog.json": "9bb10ef1832e0776e6f2d568c4835eb5f7a9534973ac32d5ce42480776772a90",
+      "tool-identities.json": "18689c9d53949e85db1d7db0d1967a04d7f64ddda33dac382efaffce662f7d57",
+      "installed-component-properties.json": "ad4617f3875f070bf86efc8415ddb7823cd7ab94bd8e460cdfddc92dcfbb02f4"
+    },
+    "bootstrap_result_sha256": "b2efe100bec868b1901c81294f402f487e200677c827b84ccfb1f35d7b98a4bf",
+    "bootstrap_status": "PASS",
+    "runner_image": "20261116.133.1"
+  },
+  "tool_sha256": {
+    "sdkmanager": "e4c60d8de64e1b32acfc9c366fccb45180273be024bf4119c2dda3ffda28691c",
+    "emulator": "5c48296df39c35bad694a361312e3c9915e47d4061eed475b061c98625599173",
+    "adb": "a902be8f45c6c62e76c9efaf6947a0fa747c9cabd89a2ac8e0d16ecb30b3ed01",
+    "java": "a2195ae9f8a91b82f53df7e1d1b9a650937ebbabbf67d0240c6378b4fbd9990b"
+  },
+  "targets": {
+    "api24": {
+      "image": {
+        "path": "system-images;android-24;google_apis;x86_64",
+        "api": 24,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          27,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-24_r27.zip",
+            "download_bytes": 1119800108,
+            "checksum_type": "sha1",
+            "checksum": "46d09c0723b77ddba00f2281099a2c44a88ac971"
+          }
+        ],
+        "dependencies": []
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 12884901888
+    },
+    "api35-16k": {
+      "image": {
+        "path": "system-images;android-35;google_apis_ps16k;x86_64",
+        "api": 35,
+        "minor": 0,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          5,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-35_r05.zip",
+            "download_bytes": 1696342085,
+            "checksum_type": "sha1",
+            "checksum": "d709cf26b375abecfbbf5803afd20749ddfa2865"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              33,
+              1,
+              24
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 12884901888
+    }
+  },
+  "source_sha256": {
+    "qa/android_emulator_lab_preflight.py": "095e06cc348e6d6cd895a8f4ee1bbec7770cb2b9c1fee5822002e1cf11c99923",
+    "qa/android_emulator_lab_bootstrap.py": "4a2d8d8e06e1ee8e07c39db3007a656083230f99274a4a7048be6a4638529940"
+  },
+  "catalog_proposal": {
+    "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45517438374",
+    "head_sha": "94dd0ab8dae7afd54174b046b1f1f611895287eb",
+    "run_status": "BLOCKED",
+    "catalog_sha256": "9bb10ef1832e0776e6f2d568c4835eb5f7a9534973ac32d5ce42480776772a90",
+    "scope": "Listed stable image metadata and existing license acceptance only; no runtime success inferred."
+  }
+}

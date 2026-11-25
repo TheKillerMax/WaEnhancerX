@@ -1,0 +1,90 @@
+name: Android emulator lab boot pilot
+
+on:
+  push:
+    branches: ['lab/android-emulator-matrix-nightly8-20261124']
+    paths:
+      - '.github/workflows/android-emulator-lab-pilot.yml'
+      - 'qa/android_emulator_lab_pilot.py'
+      - 'qa/android_emulator_lab_pilot_lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-lab-pilot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  boot:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target: ['api24', 'api35-16k']
+    steps:
+      - name: Check out the isolated public lab branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Require the reviewed real preflight lock before setup
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          LAB_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, sys
+          from pathlib import Path
+          sys.path.insert(0, 'qa')
+          from android_emulator_lab_preflight import context_check
+          from android_emulator_lab_pilot import checked_lock
+          context_check(os.environ)
+          checked_lock(Path('qa/android_emulator_lab_pilot_lock.json'), os.environ['LAB_TARGET'])
+          PY
+
+      - name: Prepare this fresh runner with the reviewed bootstrap
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          LAB_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          python3 qa/android_emulator_lab_bootstrap.py --out "$RUNNER_TEMP/waex-pilot-bootstrap-$LAB_TARGET"
+
+      - name: Verify the reviewed preflight and boot one empty AVD
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          LAB_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          python3 qa/android_emulator_lab_pilot.py \
+            --target "$LAB_TARGET" \
+            --lock qa/android_emulator_lab_pilot_lock.json \
+            --out "$RUNNER_TEMP/waex-boot-$LAB_TARGET"
+
+      - name: Preserve bounded boot evidence
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-boot-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-boot-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/waex-pilot-bootstrap-${{ matrix.target }}/
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 1
+          include-hidden-files: false
