@@ -1,9 +1,9 @@
-name: Lab ART presence on API24 API25 API26
+name: Lab current ART presence on API28 API34 simulated16K
 
 on:
   workflow_dispatch:
   push:
-    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    branches: [lab/presence-current-source-20261125]
     paths:
       - .github/workflows/android-presence-art-lab.yml
       - qa/build_presence_art_lab.py
@@ -14,7 +14,10 @@ on:
       - qa/presence_art_probe/**
       - qa/class_metadata_art_probe/toolchain.py
       - qa/class_metadata_art_probe/toolchain-lock.json
+      - qa/android_emulator_lab_preflight.py
       - qa/android_emulator_lab_pilot.py
+      - qa/android_emulator_lab_adb.py
+      - qa/test_android_emulator_lab_adb.py
       - qa/android_emulator_lab_matrix.py
       - qa/android_emulator_lab_matrix_lock.json
 
@@ -22,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: waex-presence-art-lab
+  group: waex-presence-current-art-lab
   cancel-in-progress: false
 
 env:
@@ -32,7 +35,7 @@ jobs:
   build:
     if: >-
       github.repository == 'TheKillerMax/WaEnhancerX' &&
-      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.ref == 'refs/heads/lab/presence-current-source-20261125' &&
       github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -49,7 +52,7 @@ jobs:
       - name: Check out the immutable source and original oracles
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: c52f064bad7ba32445f8515bc2f0421618438975
+          ref: 7814908a1213d86f05ef5dc068b548d322a24d94
           path: source
           persist-credentials: false
           submodules: false
@@ -63,9 +66,11 @@ jobs:
           from pathlib import Path
           sys.path.insert(0, 'lab/qa')
           from android_emulator_lab_matrix import checked_lock
-          for target in ('api24', 'api25', 'api26'):
+          for target in ('api28', 'api34', 'api35-16k'):
               checked_lock(Path('lab/qa/android_emulator_lab_matrix_lock.json'), target)
           PY
+          python3 lab/qa/test_android_emulator_lab_adb.py 2>&1 | tee "$RUNNER_TEMP/presence-art-adb-controls.log"
+          python3 -O lab/qa/test_android_emulator_lab_adb.py 2>&1 | tee "$RUNNER_TEMP/presence-art-adb-controls-optimized.log"
           python3 lab/qa/presence_art_probe/test_presence_art_host.py --out "$RUNNER_TEMP/presence-art-host-controls" 2>&1 | tee "$RUNNER_TEMP/presence-art-host-controls.log"
           python3 lab/qa/test_presence_art_lab.py 2>&1 | tee "$RUNNER_TEMP/presence-art-lab-controls.log"
           python3 lab/qa/test_presence_art_toolchain.py 2>&1 | tee "$RUNNER_TEMP/presence-art-toolchain-controls.log"
@@ -113,6 +118,8 @@ jobs:
           name: presence-art-build-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/presence-art-build/reports/
+            ${{ runner.temp }}/presence-art-adb-controls.log
+            ${{ runner.temp }}/presence-art-adb-controls-optimized.log
             ${{ runner.temp }}/presence-art-host-controls/result.json
             ${{ runner.temp }}/presence-art-host-controls.log
             ${{ runner.temp }}/presence-art-lab-controls.log
@@ -129,7 +136,7 @@ jobs:
     needs: build
     if: >-
       github.repository == 'TheKillerMax/WaEnhancerX' &&
-      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.ref == 'refs/heads/lab/presence-current-source-20261125' &&
       github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -137,7 +144,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        target: [api24, api25, api26]
+        target: [api28, api34, api35-16k]
     steps:
       - name: Check out the same laboratory commit
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -151,6 +158,58 @@ jobs:
         with:
           name: presence-art-apk-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/presence-art-apk
+      - name: Preserve the hosted Java identity before selection
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import os, shutil, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('presence-art-java-' + os.environ['TARGET'])
+          out.mkdir()
+          save(out, 'preinstalled-java.json', {
+              'java': tool_identity(Path(shutil.which('java') or '/missing/java')),
+              'JAVA_HOME': os.environ.get('JAVA_HOME'),
+          })
+          PYCODE
+      - name: Select the exact reviewed Java runtime
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17.0.21+9'
+          java-package: jre
+          architecture: x64
+          check-latest: false
+      - name: Verify the selected runtime against the unchanged preflight pin
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, shutil, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, sha256_file, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('presence-art-java-' + os.environ['TARGET'])
+          java = Path(shutil.which('java') or '/missing/java').resolve()
+          home = Path(os.environ['JAVA_HOME']).resolve()
+          pin = json.loads(Path('lab/qa/android_emulator_lab_matrix_lock.json').read_bytes())['tool_sha256']['java']
+          record = {'status': 'BLOCKED', 'selected': tool_identity(java), 'JAVA_HOME': str(home), 'required_sha256': pin}
+          try:
+              if java != home / 'bin/java' or record['selected'].get('sha256') != pin:
+                  raise RuntimeError('Selected Java does not match the reviewed launcher and JAVA_HOME')
+              record['release_sha256'] = sha256_file(home / 'release')
+              if record['release_sha256'] != '59425849bf0f00e83133e485c166042ba1f97b7625a5edc389925bc25e19fe4a':
+                  raise RuntimeError('Selected Java release differs from the official reviewed JRE')
+              result = subprocess.run([str(java), '-version'], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
+              record.update(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr)
+              if result.returncode != 0 or '17.0.21+9' not in result.stderr:
+                  raise RuntimeError('Selected Java version is not the reviewed release')
+              record['status'] = 'PASS'
+          finally:
+              save(out, 'selected-java.json', record)
+          PYCODE
       - name: Prepare the reviewed Linux KVM runner
         shell: bash
         env:
@@ -178,6 +237,7 @@ jobs:
           path: |
             ${{ runner.temp }}/presence-art-${{ matrix.target }}/reports/
             ${{ runner.temp }}/presence-art-bootstrap-${{ matrix.target }}/
+            ${{ runner.temp }}/presence-art-java-${{ matrix.target }}/
           if-no-files-found: warn
           retention-days: 14
           compression-level: 9
