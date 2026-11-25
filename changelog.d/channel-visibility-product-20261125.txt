@@ -1,0 +1,2 @@
+[Fixes]
+Channel recommendations remain hidden after host rebinding without changing host layout parameters. Validated View selection and owner-scoped listener cleanup preserve scoped preferences and release detached Views even when the owner is removed from a worker thread.

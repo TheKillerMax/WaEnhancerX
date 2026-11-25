@@ -16,6 +16,7 @@ public final class ViewHookDispatcher {
     private static final ConcurrentHashMap<Object, CopyOnWriteArrayList<ViewListener>> ATTACH = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Object, CopyOnWriteArrayList<ViewListener>> DETACH = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Object, CopyOnWriteArrayList<SetFlagsFilter>> FLAGS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Object, CopyOnWriteArrayList<Runnable>> CLEANUP = new ConcurrentHashMap<>();
     private static volatile boolean attachHooked;
     private static volatile boolean detachHooked;
     private static volatile boolean flagsHooked;
@@ -37,10 +38,21 @@ public final class ViewHookDispatcher {
         ensureFlagsHook();
     }
 
+    /** Releases local View listeners through the same owner lifecycle as shared hooks. */
+    public static void onUnregistered(Object owner, Runnable cleanup) {
+        CLEANUP.computeIfAbsent(owner, ignored -> new CopyOnWriteArrayList<>()).add(cleanup);
+    }
+
     public static void unregister(Object owner) {
         ATTACH.remove(owner);
         DETACH.remove(owner);
         FLAGS.remove(owner);
+        CopyOnWriteArrayList<Runnable> cleanups = CLEANUP.remove(owner);
+        if (cleanups != null) {
+            for (Runnable cleanup : cleanups) {
+                try { cleanup.run(); } catch (Throwable error) { HookErrors.swallowed("ViewHookDispatcher", error); }
+            }
+        }
     }
 
     private static synchronized void ensureAttachHook() {
