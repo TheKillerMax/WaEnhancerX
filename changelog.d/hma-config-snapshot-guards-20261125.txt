@@ -1,0 +1,3 @@
+[Fixes]
+- Preserve HMA configuration bytes and reject unsupported list shapes before
+  preparing a repair.
