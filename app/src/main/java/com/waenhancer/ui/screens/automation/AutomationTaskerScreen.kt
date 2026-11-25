@@ -722,7 +722,7 @@ fun AutomationTaskerScreen(targetEpoch: Int = 0) {
                                         Surface(
                                             shape = RoundedCornerShape(10.dp),
                                             color = if (isSelected) colors.primary else colors.surfaceContainerLow,
-                                            border = androidx.compose.foundation.BorderStroke(
+                                            border = BorderStroke(
                                                 1.dp,
                                                 if (isSelected) colors.primary else colors.outlineVariant.copy(alpha = 0.5f)
                                             ),

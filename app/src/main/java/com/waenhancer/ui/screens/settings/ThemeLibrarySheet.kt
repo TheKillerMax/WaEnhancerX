@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.settings
 
+import com.waenhancer.core.preferences.WaexPreferenceManager
 import com.waenhancer.ui.components.WaexSheetTitle
 
 import com.waenhancer.ui.components.WaexSheetHorizontalMargin
@@ -50,7 +51,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ThemeLibrarySheet(
-    preferenceManager: com.waenhancer.core.preferences.WaexPreferenceManager,
+    preferenceManager: WaexPreferenceManager,
     onDismiss: () -> Unit,
     onChanged: () -> Unit,
     onWriteCss: () -> Unit

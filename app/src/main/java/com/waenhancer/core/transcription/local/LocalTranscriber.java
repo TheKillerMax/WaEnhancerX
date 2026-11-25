@@ -1,5 +1,6 @@
 package com.waenhancer.core.transcription.local;
 
+import java.util.Locale;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -72,7 +73,7 @@ public final class LocalTranscriber {
 
         long decodeStart = System.currentTimeMillis();
         float[] samples = decode(context, audio, fileName);
-        TranscriptionLog.add(context, "app", String.format(java.util.Locale.ROOT,
+        TranscriptionLog.add(context, "app", String.format(Locale.ROOT,
                 "Decoded %.1f s of audio in %d ms", samples.length / (float) AudioDecoder.TARGET_RATE,
                 System.currentTimeMillis() - decodeStart));
         if (samples.length < AudioDecoder.TARGET_RATE / 10) return ""; // Under 0.1 s: nothing to hear.
@@ -92,7 +93,7 @@ public final class LocalTranscriber {
                 long runStart = System.currentTimeMillis();
                 byte[] text = WhisperNative.transcribe(handle, samples, language, threads());
                 long runMs = System.currentTimeMillis() - runStart;
-                TranscriptionLog.add(context, "app", String.format(java.util.Locale.ROOT,
+                TranscriptionLog.add(context, "app", String.format(Locale.ROOT,
                         "Inference %d ms (%.2fx real time)%s", runMs,
                         runMs / 1000f / Math.max(0.1f, samples.length / (float) AudioDecoder.TARGET_RATE),
                         text == null ? ", failed" : ""));

@@ -1,0 +1,2 @@
+[Fixes]
+- Restore the production source gates by declaring manager types through imports and removing five debug logs from APK download screens.

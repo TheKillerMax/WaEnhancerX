@@ -1,5 +1,6 @@
 package com.waenhancer.utils;
 
+import java.util.Collections;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -189,7 +190,7 @@ public final class DiagnosticsRecorder {
             SharedPreferences privateStore = PreferenceStores.privateStore(context);
             String seenKey = SEEN_TARGET_EXITS_PREFIX + target;
             Set<String> seen = new LinkedHashSet<>(privateStore.getStringSet(
-                    seenKey, java.util.Collections.emptySet()));
+                    seenKey, Collections.emptySet()));
             // Expired IDs are not retained indefinitely; only recent exit IDs are relevant.
             seen.removeIf(id -> {
                 try {

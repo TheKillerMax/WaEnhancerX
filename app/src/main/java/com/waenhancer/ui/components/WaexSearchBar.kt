@@ -1,5 +1,7 @@
 package com.waenhancer.ui.components
 
+import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
 
@@ -36,7 +38,7 @@ fun WaexSearchBar(
         modifier = modifier.fillMaxWidth(),
         textStyle = typography.bodyLg,
         placeholder = {
-            androidx.compose.material3.Text(
+            Text(
                 text = placeholder,
                 style = typography.bodyLg,
                 maxLines = 1,
@@ -69,9 +71,9 @@ fun WaexSearchBar(
             focusedContainerColor = colors.surfaceContainerHigh,
             unfocusedContainerColor = colors.surfaceContainerHigh,
             disabledContainerColor = colors.surfaceContainerLow,
-            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-            disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
             cursorColor = colors.primary,
             focusedTextColor = colors.onSurface,
             unfocusedTextColor = colors.onSurface

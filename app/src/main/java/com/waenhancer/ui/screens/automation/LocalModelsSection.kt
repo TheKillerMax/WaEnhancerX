@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.automation
 
+import androidx.compose.foundation.BorderStroke
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
 
@@ -162,7 +163,7 @@ fun LocalModelsSection(language: String = "") {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = colors.surfaceContainerLow,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+            border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -211,7 +212,7 @@ fun LocalModelsSection(language: String = "") {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = colors.error.copy(alpha = 0.1f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.error.copy(alpha = 0.3f)),
+                border = BorderStroke(1.dp, colors.error.copy(alpha = 0.3f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -280,7 +281,7 @@ fun LocalModelsSection(language: String = "") {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = containerBg,
-                    border = androidx.compose.foundation.BorderStroke(if (isChosen) 1.5.dp else 1.dp, borderColor),
+                    border = BorderStroke(if (isChosen) 1.5.dp else 1.dp, borderColor),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
@@ -511,7 +512,7 @@ private fun NativeLibsLockedCard(
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = colors.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)),
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

@@ -1,5 +1,6 @@
 package com.waenhancer.core.transcription;
 
+import java.io.FileInputStream;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import java.io.File;
@@ -65,7 +66,7 @@ public final class TranscriptionLog {
         if (file.isFile()) {
             try {
                 byte[] data = new byte[(int) Math.min(file.length(), 256 * 1024)];
-                try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
+                try (FileInputStream in = new FileInputStream(file)) {
                     int offset = 0;
                     int read;
                     while (offset < data.length && (read = in.read(data, offset, data.length - offset)) > 0) {

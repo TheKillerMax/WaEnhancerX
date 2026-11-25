@@ -63,7 +63,7 @@ object UpdateDownloader {
     fun hasCachedRootAccess(): Boolean? = cachedRootAccess
 
     fun hasRootAccess(forceRefresh: Boolean = false): Boolean {
-        val now = android.os.SystemClock.elapsedRealtime()
+        val now = SystemClock.elapsedRealtime()
         if (!forceRefresh && cachedRootAccess != null && (now - lastRootCheckElapsed < ROOT_CACHE_TTL_MS)) {
             return cachedRootAccess!!
         }

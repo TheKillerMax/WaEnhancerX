@@ -1,5 +1,7 @@
 package com.waenhancer.ui.screens.settings
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.Brush
 import com.waenhancer.utils.UiText
 
 import android.content.Intent
@@ -1114,7 +1116,7 @@ private fun parseStargazerProfile(json: String, fallbackLogin: String): Stargaze
 }
 
 @Composable
-private fun stargazerShimmerBrush(): androidx.compose.ui.graphics.Brush {
+private fun stargazerShimmerBrush(): Brush {
     val colors = WaexTheme.colors
     val shimmerColors = listOf(
         colors.surfaceContainerHighest,
@@ -1128,15 +1130,15 @@ private fun stargazerShimmerBrush(): androidx.compose.ui.graphics.Brush {
         initialValue = 0f,
         targetValue = 1400f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "stargazer shimmer translate"
     )
-    return androidx.compose.ui.graphics.Brush.linearGradient(
+    return Brush.linearGradient(
         colors = shimmerColors,
-        start = androidx.compose.ui.geometry.Offset(translateAnim - 700f, 0f),
-        end = androidx.compose.ui.geometry.Offset(translateAnim, 0f)
+        start = Offset(translateAnim - 700f, 0f),
+        end = Offset(translateAnim, 0f)
     )
 }
 

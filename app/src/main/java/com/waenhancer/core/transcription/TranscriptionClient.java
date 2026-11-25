@@ -1,5 +1,9 @@
 package com.waenhancer.core.transcription;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.TreeSet;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -141,7 +145,7 @@ public final class TranscriptionClient {
             if (list == null) list = ((Map<?, ?>) json).get("models");
         }
         if (!(list instanceof List)) throw new TranscriptionException("Unexpected model list from server");
-        java.util.TreeSet<String> ids = new java.util.TreeSet<>();
+        TreeSet<String> ids = new TreeSet<>();
         for (Object item : (List<?>) list) {
             Object id = item instanceof String ? item : null;
             if (item instanceof Map) {
@@ -152,7 +156,7 @@ public final class TranscriptionClient {
                 ids.add(((String) id).trim());
             }
         }
-        List<String> sorted = new java.util.ArrayList<>(ids);
+        List<String> sorted = new ArrayList<>(ids);
         sorted.sort((a, b) -> Boolean.compare(!isSpeechModel(a), !isSpeechModel(b)));
         return sorted;
     }
@@ -272,8 +276,8 @@ public final class TranscriptionClient {
     public static byte[] silentWav() {
         int sampleRate = 16_000;
         int dataBytes = sampleRate * 2;
-        java.nio.ByteBuffer wav = java.nio.ByteBuffer.allocate(44 + dataBytes)
-                .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer wav = ByteBuffer.allocate(44 + dataBytes)
+                .order(ByteOrder.LITTLE_ENDIAN);
         wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + dataBytes)
                 .put("WAVE".getBytes(StandardCharsets.US_ASCII))
                 .put("fmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16)
@@ -491,7 +495,7 @@ public final class TranscriptionClient {
 
         private List<Object> array() {
             enter();
-            List<Object> list = new java.util.ArrayList<>();
+            List<Object> list = new ArrayList<>();
             i++;
             skipWs();
             if (peek(']')) { i++; depth--; return list; }

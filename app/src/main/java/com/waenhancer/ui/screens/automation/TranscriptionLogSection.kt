@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.automation
 
+import androidx.compose.foundation.BorderStroke
 import com.waenhancer.ui.components.WaexSheetTitle
 
 import com.waenhancer.app.R
@@ -94,7 +95,7 @@ fun TranscriptionLogSection() {
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = colors.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -281,7 +282,7 @@ fun TranscriptionLogSection() {
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = colors.surfaceDim,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(380.dp)

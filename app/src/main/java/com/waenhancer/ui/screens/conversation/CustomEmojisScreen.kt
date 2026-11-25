@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.conversation
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.Toast
@@ -531,7 +532,7 @@ private fun EmojiSection(title: String, content: @Composable () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun EmojiBuiltinRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     isSelected: Boolean,

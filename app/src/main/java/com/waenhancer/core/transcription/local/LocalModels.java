@@ -1,5 +1,6 @@
 package com.waenhancer.core.transcription.local;
 
+import java.util.Locale;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import java.util.Arrays;
@@ -37,7 +38,7 @@ public final class LocalModels {
         }
 
         public String sizeLabel() {
-            return sizeBytes >= 1_000_000_000 ? String.format(java.util.Locale.ROOT, "%.1f GB", sizeBytes / 1e9)
+            return sizeBytes >= 1_000_000_000 ? String.format(Locale.ROOT, "%.1f GB", sizeBytes / 1e9)
                     : (sizeBytes / 1_000_000) + " MB";
         }
     }
@@ -92,7 +93,7 @@ public final class LocalModels {
         // Android reports less than the nominal size (an "8 GB" phone shows about 7.4 GiB).
         double ramGb = Math.ceil(totalRamBytes / (1024.0 * 1024 * 1024));
         boolean english = "en".equals(language);
-        String ram = String.format(java.util.Locale.ROOT, "%.0f GB RAM", ramGb);
+        String ram = String.format(Locale.ROOT, "%.0f GB RAM", ramGb);
         if (english) {
             if (ramGb < 3 || cores < 4) return new Recommendation(byId("tiny.en"), ram + ": fastest English model");
             if (ramGb < 6) return new Recommendation(byId("base.en"), ram + ": good English accuracy, fast");

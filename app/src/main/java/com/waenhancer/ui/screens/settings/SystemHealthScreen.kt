@@ -1,5 +1,6 @@
 package com.waenhancer.ui.screens.settings
 
+import java.io.IOException
 import android.content.ClipData
 import android.content.Intent
 import android.os.Build
@@ -398,7 +399,7 @@ fun SystemHealthScreen() {
                                                 share, context.getString(R.string.diag_capture_share_chooser)
                                             )
                                         )
-                                    } catch (e: java.io.IOException) {
+                                    } catch (e: IOException) {
                                         captureFeedback = context.getString(
                                             if (e.message?.startsWith("No diagnostic events") == true)
                                                 R.string.diag_capture_no_events

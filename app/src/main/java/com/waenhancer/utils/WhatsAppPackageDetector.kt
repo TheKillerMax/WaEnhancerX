@@ -1,5 +1,6 @@
 package com.waenhancer.utils
 
+import android.content.pm.ApplicationInfo
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
 
@@ -320,7 +321,7 @@ object WhatsAppPackageDetector {
     }
 
     /** The label the user sees on their launcher; the package name only if the system has none. */
-    private fun appLabel(pm: PackageManager, info: android.content.pm.ApplicationInfo?, pkg: String): String {
+    private fun appLabel(pm: PackageManager, info: ApplicationInfo?, pkg: String): String {
         val launcher = runCatching {
             pm.getLaunchIntentForPackage(pkg)?.let { pm.resolveActivity(it, 0)?.loadLabel(pm)?.toString() }
         }.getOrNull()?.takeIf { it.isNotBlank() }
