@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.lab.waex.qa.sqlite">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36" />
+    <application android:label="WAEX lab SQLite probe" android:testOnly="true"
+        android:allowBackup="false" android:usesCleartextTraffic="false" android:debuggable="false" />
+    <instrumentation android:name=".SqliteProbeInstrumentation"
+        android:targetPackage="org.lab.waex.qa.sqlite" android:label="Isolated SQLite probe" />
+</manifest>
