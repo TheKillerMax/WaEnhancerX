@@ -18,6 +18,8 @@ import subprocess
 import time
 import zipfile
 
+from framework_sdk_matrix import select_sdk
+
 ROOT = Path(__file__).resolve().parents[1]
 RENDERER = Path('app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt')
 STORE = Path('app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java')
@@ -286,7 +288,7 @@ def execute(root, out, deps, baseline, host_resources, runtime_jars, sdk_dir=Non
         if mutation and failures.count(MUTATION_ORACLES[mutation]) != len(SDK_LEVELS):
             raise RuntimeError('Mutant must fail its discriminating oracle on every declared Android API')
     elif 'OK ('+str(EXPECTED_TESTS)+' tests)' not in log:
-        raise RuntimeError('Expected every declared scenario on all three Android API levels')
+        raise RuntimeError('Expected every declared scenario on every selected Android API level')
     return {'source_root':str(root),'baseline':baseline,'exit_code':result,
             'mutation':mutation,'unique_scenarios':len(TEST_NAMES),'sdk_levels':SDK_LEVELS,
             'scope':'Extracted production renderer/store, real Android layout/Skia, synthetic compiled host IDs; no Xposed/WhatsApp',
@@ -328,6 +330,7 @@ def run(cmd,log,allow_failure=False,timeout=300):
     return p.returncode
 
 def main():
+    global TESTS, SDK_LEVELS, EXPECTED_TESTS
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--source-root',type=Path,default=ROOT)
     ap.add_argument('--baseline-root',type=Path)
@@ -335,8 +338,16 @@ def main():
     ap.add_argument('--aapt2',type=Path)
     ap.add_argument('--deps',type=Path,help='Reuse an existing dependency directory; hashes are still recorded')
     ap.add_argument('--sdk-dir',type=Path,help='Use verified local Robolectric SDK JARs in offline mode')
+    ap.add_argument('--sdk',type=int,choices=range(24,38),help='Run one Android API; default keeps the existing three-API fixture')
     ap.add_argument('--mutations',action='store_true',help='Require compiled behavioral rejection of focused renderer mutants')
-    args=ap.parse_args(); args.out=fresh_output(args.out)
+    args=ap.parse_args()
+    TESTS=select_sdk(TESTS,args.sdk,SDK_LEVELS)
+    if args.sdk is not None:
+        if len(TEST_NAMES) != 30:
+            raise ValueError("Single-API presence matrix requires exactly 30 declared scenarios")
+        SDK_LEVELS=(args.sdk,)
+        EXPECTED_TESTS=30
+    args.out=fresh_output(args.out)
     for tool in ['java','javac','kotlinc'] + ([] if args.deps else ['mvn']):
         if not shutil.which(tool): raise RuntimeError('Required tool missing: '+tool)
     run(['java','-version'],args.out/'java-version.log')

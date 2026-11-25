@@ -8,6 +8,8 @@ are explicit fixtures. Cached dependencies can be supplied for offline checks.
 from pathlib import Path
 import argparse,hashlib,json,os,re,shutil,subprocess,zipfile,urllib.request,io
 
+from framework_sdk_matrix import select_sdk
+
 ROOT=Path(__file__).resolve().parents[1]
 EXPECTED_TESTS=105
 PKG=Path('app/src/main/java/com/waenhancer')
@@ -193,9 +195,12 @@ def main():
     parser.add_argument('--dexkit',type=Path)
     parser.add_argument('--maven',default='mvn')
     parser.add_argument('--maven-repo',type=Path)
+    parser.add_argument('--sdk',type=int,choices=range(24,38),help='Run one runtime API; default preserves API24/28/34')
     parser.add_argument('--expect-assertion-failures',type=int,default=0)
     args=parser.parse_args()
     root=args.source_root.resolve();out=args.out.resolve();out.mkdir(parents=True,exist_ok=False)
+    sdk_levels=[args.sdk] if args.sdk is not None else [24,28,34]
+    expected_tests=35*len(sdk_levels)
     deps=args.deps.resolve() if args.deps else out/'deps'
     if args.deps:
         if not deps.is_dir(): raise RuntimeError('Dependency directory missing')
@@ -430,8 +435,12 @@ public final class WaexPreferenceManager {
              *[s for s in sources if s.name in lifecycle_names]],out/'kotlinc-production.log')
     execute(['javac','--release','17','-cp',cp,'-d',classes,
              *[s for s in sources if s.name in lifecycle_names]],out/'javac-hook-lifecycle.log')
-    test=stage/'PreservedDispatchContractTest.java';shutil.copyfile(ROOT/'qa/fixtures'/test.name,test)
-    identities['qa/fixtures/'+test.name]=hashlib.sha256(test.read_bytes()).hexdigest()
+    test=stage/'PreservedDispatchContractTest.java'
+    test_source=ROOT/'qa/fixtures'/test.name
+    fixture_bytes=select_sdk(test_source.read_bytes().decode('utf-8'),args.sdk,(24,28,34)).encode('utf-8')
+    test.write_bytes(fixture_bytes)
+    identities['qa/fixtures/'+test.name]=hashlib.sha256(test_source.read_bytes()).hexdigest()
+    executed_fixture_sha256=hashlib.sha256(fixture_bytes).hexdigest()
     execute(['javac','--release','17','-cp',cp,'-d',classes,stage/PKG/'xposed/bridge/HookProvider.java',test],out/'javac-provider-tests.log')
     opens=['java.base/java.lang','java.base/java.util','java.base/java.io','java.base/java.net','java.base/java.security','java.base/java.text','java.base/jdk.internal.access','java.desktop/java.awt.font','jdk.compiler/com.sun.tools.javac.api']
     command=['java',*['--add-opens='+part+'=ALL-UNNAMED' for part in opens],'-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2','-cp',cp,'org.junit.runner.JUnitCore','com.waenhancer.audit.PreservedDispatchContractTest']
@@ -443,9 +452,9 @@ public final class WaexPreferenceManager {
     failures=int(failed.group(2)) if failed else 0
     assertions=len(re.findall(r'^java\.lang\.AssertionError(?::|$)',log,re.MULTILINE))
     expected=args.expect_assertion_failures
-    accepted=count==EXPECTED_TESTS and failures==expected and (result==0 and passed is not None if expected==0 else result!=0 and assertions==expected)
-    report={'source_root':str(root),'tests':count,'failures':failures,'assertion_failures':assertions,'expected_tests':EXPECTED_TESTS,'expected_assertion_failures':expected,'junit_exit':result,'accepted_result':accepted,'source_sha256':identities,'external_service_fixture_sha256':fixture_identities,
-            'compile_only_source_contract_sha256':contract_hashes,'limits':'Complete production sender/provider/store and support policies/cache classes; Robolectric Android ContentResolver, ContentProvider, SQLite files and Binder/UID/package shadows on API24/28/34. Explicit Xposed dispatch and synthetic host Runnable/message graph/SQL schema. Package detector facade delegates to real DeclaredWhatsAppTargets; unrelated private license, update and lazy privacy service entry points throw if called. No native DexKit discovery, actual WhatsApp/LSPosed, device disk fault or kernel cross-process Binder test.'}
+    accepted=count==expected_tests and failures==expected and (result==0 and passed is not None if expected==0 else result!=0 and assertions==expected)
+    report={'source_root':str(root),'tests':count,'failures':failures,'assertion_failures':assertions,'expected_tests':expected_tests,'sdk_levels':sdk_levels,'executed_fixture_sha256':executed_fixture_sha256,'expected_assertion_failures':expected,'junit_exit':result,'accepted_result':accepted,'source_sha256':identities,'external_service_fixture_sha256':fixture_identities,
+            'compile_only_source_contract_sha256':contract_hashes,'limits':'Complete production sender/provider/store and support policies/cache classes; Robolectric Android ContentResolver, ContentProvider, SQLite files and Binder/UID/package shadows on the selected runtime APIs. Explicit Xposed dispatch and synthetic host Runnable/message graph/SQL schema. Package detector facade delegates to real DeclaredWhatsAppTargets; unrelated private license, update and lazy privacy service entry points throw if called. No native DexKit discovery, actual WhatsApp/LSPosed, device disk fault or kernel cross-process Binder test.'}
     (out/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     dependency_paths=[*sorted(deps.glob('*.jar')),dexkit]
     (out/'dependency-sha256.json').write_text(json.dumps({path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in dependency_paths},indent=2)+'\n')

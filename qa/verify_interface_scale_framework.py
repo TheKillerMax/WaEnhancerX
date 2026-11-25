@@ -14,6 +14,8 @@ import subprocess
 import tomllib
 import xml.etree.ElementTree as ET
 
+from framework_sdk_matrix import runtime_env, select_sdk
+
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN = Path('app/src/main/java/com/waenhancer/ui/designsystem')
 SOURCES = [DESIGN / (name + '.kt') for name in (
@@ -27,7 +29,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--root', type=Path, default=ROOT)
     ap.add_argument('--out', type=Path, required=True)
+    ap.add_argument('--sdk', type=int, choices=range(24,38),
+                    help='Run one Android API; default keeps the existing three-API fixture')
     a = ap.parse_args(); root = a.root.resolve(); out = a.out.resolve()
+    sdk_levels = [a.sdk] if a.sdk is not None else [24,28,34]
+    expected_tests = 4 * len(sdk_levels)
+    executed_fixture_sha256 = None
     out.mkdir(parents=True, exist_ok=False)
     evidence = out / 'evidence'; evidence.mkdir()
     project = out / 'fixture'; project.mkdir()
@@ -118,6 +125,8 @@ tasks.register("writeQaDependencyHashes") {
             target = main / source.relative_to('app/src/main')
         elif source == FIXTURE:
             target = probe / 'src/test/java/com/waenhancer/fixture' / source.name
+            content = select_sdk(content.decode('utf-8'), a.sdk, (24,28,34)).encode('utf-8')
+            executed_fixture_sha256 = hashlib.sha256(content).hexdigest()
         else:
             continue
         target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(content)
@@ -135,7 +144,7 @@ tasks.register("writeQaDependencyHashes") {
     returncode = None; failure = None
     try:
         with (evidence / 'framework-build.log').open('w') as log:
-            returncode = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
+            returncode = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=900, env=runtime_env(a.sdk)).returncode
     except (OSError, subprocess.TimeoutExpired) as exc:
         failure = type(exc).__name__ + ': ' + str(exc)
     for report in (probe / 'build/test-results/testDebugUnitTest').glob('*.xml'):
@@ -147,10 +156,11 @@ tasks.register("writeQaDependencyHashes") {
             counts[index] += int(suite.get(key, 0))
     result = dict(zip(['tests', 'failures', 'errors', 'skipped'], counts))
     result.update({'build_returncode': returncode, 'failure': failure,
-                   'android_api': [24, 28, 34], 'interface_sizes': ['Compact', 'Standard', 'Comfortable', 'Large'],
+                   'android_api': sdk_levels, 'executed_fixture_sha256': executed_fixture_sha256,
+                   'interface_sizes': ['Compact', 'Standard', 'Comfortable', 'Large'],
                    'limits': 'Complete production theme and six design-system files; real Compose, Material3, Android Density and recomposition. Dimension conversion only, no glyph rasterization, full APK or device/LSPosed execution.'})
     (evidence / 'result.json').write_text(json.dumps(result, indent=2))
-    if returncode != 0 or counts != [12, 0, 0, 0]:
+    if returncode != 0 or counts != [expected_tests, 0, 0, 0]:
         print((evidence / 'framework-build.log').read_text()[-22000:])
         raise RuntimeError('Interface scale framework failed: ' + json.dumps(result))
     print('PASS: ' + json.dumps(result))

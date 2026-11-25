@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import zipfile
+from framework_sdk_matrix import select_sdk
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
@@ -52,10 +53,13 @@ def main():
     parser.add_argument('--maven-repo', type=Path)
     parser.add_argument('--deps', type=Path)
     parser.add_argument('--sdk-jars', type=Path, help='Use previously downloaded instrumented Android JARs offline')
+    parser.add_argument('--sdk', type=int, choices=range(24,38), help='Run one runtime API; default preserves API24/28/34')
     parser.add_argument('--expect-assertion-failures', type=int, default=0,
                         help='Require the full suite and exactly this many assertion failures for a known baseline or mutant')
     args = parser.parse_args()
     root, out = args.source_root.resolve(), args.out.resolve()
+    sdk_levels = [args.sdk] if args.sdk is not None else [24,28,34]
+    expected_tests = 11 * len(sdk_levels)
     out.mkdir(parents=True, exist_ok=False)
     deps = args.deps.resolve() if args.deps else out / 'deps'
     deps.mkdir(parents=True, exist_ok=True)
@@ -118,7 +122,9 @@ object VaultRowKey {
     identities['extracted-production-expression/VaultRowKey.kt'] = hashlib.sha256(row_key.read_bytes()).hexdigest()
     test_source = ROOT / 'qa/fixtures/PreservedStoreCompatibilityTest.java'
     test_dest = stage / test_source.name
-    shutil.copyfile(test_source, test_dest)
+    fixture_bytes = select_sdk(test_source.read_bytes().decode("utf-8"), args.sdk, (24,28,34)).encode("utf-8")
+    test_dest.write_bytes(fixture_bytes)
+    executed_fixture_sha256 = hashlib.sha256(fixture_bytes).hexdigest()
     identities['qa/fixtures/PreservedStoreCompatibilityTest.java'] = hashlib.sha256(test_source.read_bytes()).hexdigest()
     jars = sorted(deps.glob('*.jar'))
     if not any(re.fullmatch(r'kotlin-stdlib-[0-9].*\.jar', p.name) for p in jars):
@@ -176,16 +182,17 @@ object VaultRowKey {
     failures = int(failed.group(2)) if failed else 0
     assertions = junit.count('\njava.lang.AssertionError:')
     expected_failures = args.expect_assertion_failures
-    valid = count == EXPECTED_TESTS and failures == expected_failures
+    valid = count == expected_tests and failures == expected_failures
     if expected_failures:
         valid = valid and result != 0 and assertions == expected_failures
     else:
         valid = valid and result == 0 and success is not None
     summary = {'source_root': str(root), 'junit_exit_code': result, 'passed_tests': count - failures,
-               'expected_tests': EXPECTED_TESTS, 'source_sha256': identities,
+               'expected_tests': expected_tests, 'source_sha256': identities,
+               'sdk_levels': sdk_levels, 'executed_fixture_sha256': executed_fixture_sha256,
                'tests': count, 'failures': failures, 'assertion_failures': assertions,
                'expected_assertion_failures': expected_failures, 'accepted_result': valid,
-               'limits': 'Complete production store and Android SQLiteOpenHelper on Robolectric API 24/28/34 with real SQLite files. Exact row-key expression extracted from the production Compose mapper and compiled separately. Synthetic rows and historical schemas; no WhatsApp, capture hook, LSPosed, or full Compose vault screen.'}
+               'limits': 'Complete production store and Android SQLiteOpenHelper on the selected Robolectric runtime APIs with real SQLite files. Exact row-key expression extracted from the production Compose mapper and compiled separately. Synthetic rows and historical schemas; no WhatsApp, capture hook, LSPosed, or full Compose vault screen.'}
     (out / 'result.json').write_text(json.dumps(summary, indent=2) + '\n')
     if not valid:
         print(junit[-18000:])

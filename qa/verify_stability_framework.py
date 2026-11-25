@@ -7,15 +7,19 @@ from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tomllib
 import xml.etree.ElementTree as ET
 from framework_localization import stage_localization
+from framework_sdk_matrix import runtime_env, select_sdk
 
 ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--root',type=Path,default=ROOT)
     ap.add_argument('--out',type=Path,required=True)
+    ap.add_argument('--sdk',type=int,choices=range(24,38),help='Run one runtime API; default preserves API34')
     ap.add_argument('--mode',choices=['all','update','filter'],default='all',
                     help='all runs the current updater and filter suites; on-demand runtime refresh has its separate source/JVM suite')
     a=ap.parse_args();root=a.root.resolve();out=a.out.resolve()
+    sdk_levels=[a.sdk] if a.sdk is not None else [34]
+    executed_fixture_sha256={}
     out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir()
     p=out/'fixture';p.mkdir();v=tomllib.loads((root/'gradle/libs.versions.toml').read_text())['versions']
     # Compose's BOM does not select the experimental Material3 APIs used by
@@ -82,11 +86,13 @@ dependencies {
         source=root/('qa/fixtures/Stability'+mode.title()+'Test.kt')
         target=probe/'src/test/java/com/waenhancer/fixture'/source.name
         target.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copyfile(source,target)
+        fixture_bytes=select_sdk(source.read_bytes().decode("utf-8"),a.sdk,(34,)).encode("utf-8")
+        target.write_bytes(fixture_bytes)
         shutil.copy2(source,e/source.name)
+        executed_fixture_sha256[source.name]=hashlib.sha256(fixture_bytes).hexdigest()
         digest=hashlib.sha256(source.read_bytes()).hexdigest()
         identity[str(source.relative_to(root))]=digest
-        if any(hashlib.sha256(path.read_bytes()).hexdigest()!=digest for path in (target,e/source.name)):
+        if hashlib.sha256((e/source.name).read_bytes()).hexdigest()!=digest or target.read_bytes()!=fixture_bytes:
             raise ValueError('Changed bytes while staging JUnit source or evidence: '+source.name)
     # Only a theme adapter for compilation; no fonts or licensing implementation copied.
     # The updater compiles real radius/elevation tokens; other standalone modes
@@ -153,13 +159,13 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     if not bash:raise RuntimeError('Compatible bash required for Gradle wrapper')
     cmd=[bash,(root/'gradlew').as_posix(),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
     with (e/'framework-build.log').open('w') as log:
-        result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+        result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900,env=runtime_env(a.sdk))
     for f in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(f,e/f.name)
     reports=list(e.glob('TEST-*.xml'));counts=[0,0,0,0]
     for f in reports:
         t=ET.parse(f).getroot()
         for i,k in enumerate(['tests','failures','errors','skipped']):counts[i]+=int(t.get(k,0))
-    summary={'modes':modes,'tests':counts[0],'failures':counts[1],'errors':counts[2],'skipped':counts[3],'build_returncode':result.returncode,'limits':'Real Android Resources/Views/Handler and real Compose Composition/Recomposer; design theme, BaseFeature, Xposed and private Pro service are controlled fixtures, not full WAEX or LSPosed.'}
+    summary={'modes':modes,'sdk_levels':sdk_levels,'executed_fixture_sha256':executed_fixture_sha256,'tests':counts[0],'failures':counts[1],'errors':counts[2],'skipped':counts[3],'build_returncode':result.returncode,'limits':'Real Android Resources/Views/Handler and real Compose Composition/Recomposer; design theme, BaseFeature, Xposed and private Pro service are controlled fixtures, not full WAEX or LSPosed.'}
     (e/'result.json').write_text(json.dumps(summary,indent=2))
     if result.returncode or counts != [sum(expected[m] for m in modes),0,0,0]:
         print((e/'framework-build.log').read_text()[-22000:]);raise RuntimeError('Stability framework failed: '+str(summary))
