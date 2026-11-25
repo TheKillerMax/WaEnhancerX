@@ -1,0 +1,2 @@
+[Fixes]
+Channel lifecycle regression coverage preserves the recovered behavior oracles and exercises complete public hook code on Android API 24, 28 and 34. Compiled negative controls detect listener, preference, selector and host ownership regressions while retaining the separate limits of the Floating method suite.
