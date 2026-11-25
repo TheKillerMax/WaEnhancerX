@@ -2,6 +2,7 @@
 """Boot two reviewed, empty x86_64 AVD targets on the public Linux/KVM lab only."""
 import argparse
 import datetime
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,24 @@ TARGETS = {
     'api24': (24, 'system-images;android-24;google_apis;x86_64', 4096),
     'api35-16k': (35, 'system-images;android-35;google_apis_ps16k;x86_64', 16384),
 }
+
+DEFAULT_LIMITS = 'Empty AVD boot and application-facing page-size identity only. No APK, WAEX, WhatsApp, LSPosed or real ARM64 16 KiB validation.'
+
+
+@dataclass(frozen=True)
+class BootContext:
+    target: str
+    api: int
+    minor: int
+    application_page_size_bytes: int
+    adb: Path
+    serial: str
+    env: dict
+    work: Path
+    out: Path
+    guest: dict
+    entry: dict
+    result: dict
 
 
 def require(condition, reason):
@@ -96,7 +115,7 @@ def properties(path):
             if '=' in line and not line.lstrip().startswith('#') for key, value in [line.split('=', 1)]}
 
 
-def api24_auxv_page_size(elf, raw):
+def legacy_auxv_page_size(elf, raw):
     # Read the exact /system/bin/cat executable's ELF header before parsing its AUXV.
     require(len(elf) == 64 and elf[:7] == b'\x7fELF\x02\x01\x01',
             'AUXV reader is not a complete ELF64 little-endian executable')
@@ -109,7 +128,7 @@ def api24_auxv_page_size(elf, raw):
     for tag, value in pairs[:-1]:
         require(tag != 0 and tag not in values, 'AUXV contains an early terminator or duplicate tag')
         values[tag] = value
-    require(values.get(6) == 4096, 'API 24 AUXV AT_PAGESZ is missing or differs from 4096')
+    require(values.get(6) == 4096, 'Legacy AUXV AT_PAGESZ is missing or differs from 4096')
     return 4096
 
 
@@ -121,12 +140,16 @@ def application_page_size(out, adb, env, guest, expected_page_size):
         require(re.fullmatch(r'[1-9][0-9]*', value.strip()), 'getconf returned an invalid page size')
         require(value.strip() == str(expected_page_size), 'getconf page size differs from the reviewed target')
         return value.strip(), {'method': 'getconf_PAGE_SIZE'}
-    require(guest['sdk'] == '24' and guest['abi'] == 'x86_64' and expected_page_size == 4096 and
-            command['failure'] is None and command['returncode'] == 127 and
-            value.strip() == '/system/bin/sh: getconf: not found',
-            'Page-size command failed; only the observed API 24 missing-getconf case has a fallback')
+    require(guest['sdk'] in ('24', '25', '26', '27', '28') and guest['abi'] == 'x86_64' and
+            expected_page_size == 4096 and command['failure'] is None and command['returncode'] == 127 and
+            re.fullmatch(r'/system/bin/sh: getconf: (?:not found|inaccessible or not found)', value.strip()),
+            'Page-size command failed; fallback requires API 24-28 and an absent getconf on a 4 KiB target')
+    _, absent = invoke(out, 'guest-getconf-absent',
+                       [str(adb), '-s', 'emulator-5580', 'shell',
+                        '[ ! -e /system/bin/getconf ] && [ ! -L /system/bin/getconf ] && ! command -v getconf'], env)
+    require(not absent.strip(), 'getconf presence check returned unexpected output')
     # exec-out transports binary bytes without a PTY/ONLCR conversion. No root or APK.
-    elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-api24-auxv.log'
+    elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-legacy-auxv.log'
     reader_identity = {}
     try:
         invoke(out, 'guest-auxv-reader-elf',
@@ -141,15 +164,34 @@ def application_page_size(out, adb, env, guest, expected_page_size):
                 header = stream.read(64)
             elf_path.write_bytes(header)
             save(out, 'guest-auxv-reader-identity.json', reader_identity)
-    invoke(out, 'guest-api24-auxv',
+    invoke(out, 'guest-legacy-auxv',
            [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/cat', '/proc/self/auxv'], env)
-    size = api24_auxv_page_size(elf_path.read_bytes(), auxv_path.read_bytes())
-    return str(size), {'method': 'API24_Bionic_sysconf_AT_PAGESZ', 'reader': '/system/bin/cat',
+    size = legacy_auxv_page_size(elf_path.read_bytes(), auxv_path.read_bytes())
+    return str(size), {'method': 'legacy_Bionic_sysconf_AT_PAGESZ', 'api': int(guest['sdk']), 'reader': '/system/bin/cat',
                        'reader_identity': reader_identity,
                        'reader_elf_class': 64, 'reader_endian': 'little', 'pointer_bytes': 8,
                        'reader_elf_header_sha256': sha256_file(elf_path),
                        'auxv_bytes': auxv_path.stat().st_size, 'auxv_sha256': sha256_file(auxv_path),
-                       'scope': 'API 24 only; never a fallback for simulated 16 KiB images'}
+                       'scope': 'API 24-28 only; never a fallback for simulated 16 KiB images'}
+
+
+def guest_version_identity(guest, expected):
+    require(guest['sdk'] == str(expected['api']), 'Booted Android API differs from image metadata')
+    raw = guest.get('sdk_full_property', '')
+    observation = {'api': expected['api'], 'metadata_minor': expected['minor'],
+                   'sdk_full_property': raw, 'sdk_int_full_from_property': None,
+                   'java_sdk_int_full_field_read': False, 'minor_verified': False}
+    if expected['api'] >= 36:
+        match = re.fullmatch(r'([0-9]+)(?:\.([0-9]+))?', raw)
+        require(match is not None, 'Missing or malformed ro.build.version.sdk_full')
+        major, minor = int(match[1]), int(match[2] or 0)
+        require(major < 21474 and minor < 100000, 'SDK full version exceeds the AOSP bounds')
+        require((major, minor) == (expected['api'], expected['minor']),
+                'Booted SDK major/minor differs from image metadata')
+        observation.update(sdk_int_full_from_property=major * 100000 + minor, minor_verified=True)
+    else:
+        require(expected['minor'] == 0, 'Legacy API metadata has an unsupported minor version')
+    return observation
 
 
 def package_identity(path, expected):
@@ -163,7 +205,7 @@ def package_identity(path, expected):
             'source_properties': properties(path / 'source.properties')}
 
 
-def checked_lock(path, target):
+def reviewed_preflight_lock(path):
     lock = json.loads(path.read_text(encoding='utf-8'))
     require(lock.get('schema_version') == 1 and lock.get('ready') is True,
             'Pilot remains disabled until a real successful preflight has been reviewed')
@@ -183,6 +225,11 @@ def checked_lock(path, target):
         source = Path(__file__).resolve().parent.parent / name
         require(re.fullmatch(r'[0-9a-f]{64}', expected_sha) and source.is_file() and sha256_file(source) == expected_sha,
                 'Checkout source changed since the reviewed preflight: ' + name)
+    return lock
+
+
+def checked_lock(path, target):
+    lock = reviewed_preflight_lock(path)
     entry = lock['targets'][target]
     api, image_path, page_size = TARGETS[target]
     require(entry['image']['path'] == image_path and entry['image']['api'] == api,
@@ -192,26 +239,32 @@ def checked_lock(path, target):
     return lock, entry
 
 
-def main():
+def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, phase='boot_pilot_only',
+         result_name='pilot-result.json', limits=DEFAULT_LIMITS):
+    targets = TARGETS if targets is None else targets
+    require(re.fullmatch(r'[a-z0-9_-]+\.json', result_name), 'Invalid result filename')
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--target', choices=sorted(TARGETS), required=True)
+    parser.add_argument('--target', choices=sorted(targets), required=True)
     parser.add_argument('--lock', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     work = args.out.resolve()
     work.mkdir(parents=True, exist_ok=False)
     out = work / 'reports'
     out.mkdir()
-    result = {'schema_version': 1, 'phase': 'boot_pilot_only', 'target': args.target, 'status': 'BLOCKED',
+    result = {'schema_version': 1, 'phase': phase, 'target': args.target, 'status': 'BLOCKED',
               'started_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'issues': [],
-              'apk_installed': False, 'licenses_accepted_by_this_run': False, 'emulator_process_started': False,
-              'source_sha256': sha256_file(__file__), 'lock_sha256': sha256_file(args.lock)}
+              'apk_install_attempted': False, 'apk_installed': False, 'licenses_accepted_by_this_run': False, 'emulator_process_started': False,
+              'source_sha256': sha256_file(__file__), 'lock_sha256': sha256_file(args.lock),
+              'github_run_id': os.environ.get('GITHUB_RUN_ID'),
+              'github_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'github_head_sha': os.environ.get('GITHUB_SHA'), 'requested_phase_completed': False}
     emulator_process, emulator_stream, sdk, accepted_before = None, None, None, None
     before_tools = {}
     env = os.environ.copy()
     try:
         context_check(env)
-        lock, entry = checked_lock(args.lock, args.target)
+        lock, entry = read_lock(args.lock, args.target)
         save(out, 'reviewed-preflight.json', lock['preflight'])
         expected = entry['image']
         result['host_kvm'] = inspect_kvm()
@@ -270,7 +323,7 @@ def main():
         for port in (5580, 5581):
             with socket.socket() as probe:
                 probe.bind(('127.0.0.1', port))
-        avd_name = 'waex_pilot_' + args.target.replace('-', '_')
+        avd_name = 'waex_pilot_' + args.target.replace('-', '_').replace('.', '_')
         avd_path = work / 'avd' / (avd_name + '.avd')
         invoke(out, 'create-fresh-avd', [str(avdmanager), 'create', 'avd', '--name', avd_name,
                '--package', expected['path'], '--path', str(avd_path)], env, timeout=90, input_bytes=b'no\n')
@@ -311,6 +364,7 @@ def main():
             'sdk': ['getprop', 'ro.build.version.sdk'], 'release': ['getprop', 'ro.build.version.release'],
             'abi': ['getprop', 'ro.product.cpu.abi'], 'fingerprint': ['getprop', 'ro.build.fingerprint'],
             'package_manager': ['pm', 'path', 'android'],
+            'sdk_full_property': ['getprop', 'ro.build.version.sdk_full'],
         }.items():
             _, value = invoke(out, 'guest-' + key, [str(tools['adb']), '-s', 'emulator-5580', 'shell', *arguments], env)
             guest[key] = value.strip()
@@ -318,13 +372,25 @@ def main():
             out, tools['adb'], env, guest, entry['application_page_size_bytes'])
         save(out, 'application-page-size-observation.json', page_observation)
         save(out, 'guest-identity.json', guest)
-        require(guest['sdk'] == str(TARGETS[args.target][0]), 'Booted Android API differs from target')
+        require(expected['api'] == targets[args.target][0], 'Image metadata API differs from target')
+        version_observation = guest_version_identity(guest, expected)
+        save(out, 'guest-version-identity.json', version_observation)
         require(guest['abi'] == 'x86_64', 'Booted ABI differs from target')
         require(guest['application_page_size_bytes'] == str(entry['application_page_size_bytes']), 'Unexpected application-facing page size')
         require(guest['package_manager'].startswith('package:'), 'Android package manager is not ready')
         require(emulator_process.poll() is None, 'Emulator exited during final guest checks')
         result.update(android_booted=True, boot_seconds=round(time.monotonic() - started, 3), guest=guest,
-                      x86_64_16k_simulation=(args.target == 'api35-16k'), real_arm64_16k_validated=False)
+                      guest_version=version_observation,
+                      x86_64_16k_simulation=(entry['application_page_size_bytes'] == 16384), real_arm64_16k_validated=False)
+        if boot_action is not None:
+            context = BootContext(args.target, expected['api'], expected['minor'],
+                                  entry['application_page_size_bytes'], tools['adb'], 'emulator-5580',
+                                  env, work, out, guest, entry, result)
+            receipt = boot_action(context)
+            require(isinstance(receipt, dict) and receipt.get('status') == 'PASS',
+                    'Requested post-boot phase did not return a complete PASS receipt')
+            result['phase_receipt'] = receipt
+        result['requested_phase_completed'] = True
     except (OSError, RuntimeError, ValueError, KeyError, ET.ParseError, subprocess.SubprocessError) as exc:
         result['issues'].append(type(exc).__name__ + ': ' + str(exc))
     finally:
@@ -339,12 +405,12 @@ def main():
             if not result['license_files_unchanged']:
                 result['issues'].append('License files changed during pilot')
         result['free_bytes_after'] = shutil.disk_usage(work).free
-        result['status'] = 'PASS' if result.get('android_booted') and not result['issues'] else 'BLOCKED'
+        result['status'] = 'PASS' if result.get('android_booted') and result['requested_phase_completed'] and not result['issues'] else 'BLOCKED'
         result['finished_utc'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        result['limits'] = 'Empty AVD boot and application-facing page-size identity only. No APK, WAEX, WhatsApp, LSPosed or real ARM64 16 KiB validation.'
-        save(out, 'pilot-result.json', result)
-        save(out, 'manifest.json', {path.name: {'bytes': path.stat().st_size, 'sha256': sha256_file(path)}
-                                  for path in sorted(out.iterdir()) if path.is_file()})
+        result['limits'] = limits
+        save(out, result_name, result)
+        save(out, 'manifest.json', {path.relative_to(out).as_posix(): {'bytes': path.stat().st_size, 'sha256': sha256_file(path)}
+                                  for path in sorted(out.rglob('*')) if path.is_file() and path != out / 'manifest.json'})
         print(json.dumps(result, indent=2))
     return 0 if result['status'] == 'PASS' else 2
 

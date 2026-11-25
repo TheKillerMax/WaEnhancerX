@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host controls for the API 24 page-size fallback; no ADB or emulator execution."""
+"""Host controls for the API 24-28 page-size fallback; no ADB or emulator execution."""
 import os
 from pathlib import Path
 import platform
@@ -25,7 +25,7 @@ def auxv(*pairs):
 
 class PageSizeControls(unittest.TestCase):
     def test_valid_api24_elf_auxv(self):
-        self.assertEqual(pilot.api24_auxv_page_size(elf64(), auxv((3, 123), (6, 4096), (0, 0))), 4096)
+        self.assertEqual(pilot.legacy_auxv_page_size(elf64(), auxv((3, 123), (6, 4096), (0, 0))), 4096)
 
     def test_rejects_invalid_binary_inputs(self):
         good = auxv((3, 123), (6, 4096), (0, 0))
@@ -49,10 +49,10 @@ class PageSizeControls(unittest.TestCase):
         }
         for label, (header, raw) in cases.items():
             with self.subTest(label=label), self.assertRaises(RuntimeError):
-                pilot.api24_auxv_page_size(header, raw)
+                pilot.legacy_auxv_page_size(header, raw)
 
     def run_reader(self, api='24', abi='x86_64', expected=4096, rc=127,
-                   text='/system/bin/sh: getconf: not found\n', failure=None, raw=None):
+                   text='/system/bin/sh: getconf: not found\n', failure=None, raw=None, absent=True):
         commands = []
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)
@@ -61,9 +61,13 @@ class PageSizeControls(unittest.TestCase):
                 commands.append(command)
                 if name == 'guest-application_page_size_bytes':
                     return {'returncode': rc, 'failure': failure}, text
+                if name == 'guest-getconf-absent':
+                    if not absent:
+                        raise RuntimeError('getconf exists or resolves')
+                    return {'returncode': 0, 'failure': None}, ''
                 if name == 'guest-auxv-reader-elf':
                     (output / (name + '.log')).write_bytes(elf64() + b'synthetic executable body')
-                elif name == 'guest-api24-auxv':
+                elif name == 'guest-legacy-auxv':
                     (output / (name + '.log')).write_bytes(raw if raw is not None else auxv((6, 4096), (0, 0)))
                 else:
                     raise AssertionError('Unexpected command: ' + name)
@@ -79,9 +83,26 @@ class PageSizeControls(unittest.TestCase):
         self.assertEqual(result[1]['pointer_bytes'], 8)
         self.assertEqual(result[1]['reader_identity']['retained_bytes'], 64)
         self.assertGreater(result[1]['reader_identity']['full_executable_bytes'], 64)
-        self.assertEqual(commands[1][3:], ['exec-out', '/system/bin/cat', '/system/bin/cat'])
-        self.assertEqual(commands[2][3:], ['exec-out', '/system/bin/cat', '/proc/self/auxv'])
+        self.assertEqual(commands[2][3:], ['exec-out', '/system/bin/cat', '/system/bin/cat'])
+        self.assertEqual(commands[3][3:], ['exec-out', '/system/bin/cat', '/proc/self/auxv'])
         self.assertTrue(all(command[1:3] == ['-s', 'emulator-5580'] for command in commands))
+
+    def test_legacy_platform_scope_requires_explicit_getconf_absence(self):
+        for api in ('24', '25', '26', '27', '28'):
+            with self.subTest(api=api):
+                result, commands = self.run_reader(api=api)
+                self.assertEqual(result[0], '4096')
+                self.assertEqual(result[1]['api'], int(api))
+                self.assertIn('command -v getconf', commands[1][-1])
+                with self.assertRaises(RuntimeError):
+                    self.run_reader(api=api, absent=False)
+
+    def test_ambiguous_shell_not_found_requires_a_separate_absence_check(self):
+        text = '/system/bin/sh: getconf: inaccessible or not found\n'
+        result, _ = self.run_reader(api='26', text=text)
+        self.assertEqual(result[0], '4096')
+        with self.assertRaises(RuntimeError):
+            self.run_reader(api='26', text=text, absent=False)
 
     def test_modern_16k_requires_getconf(self):
         result, commands = self.run_reader(api='35', expected=16384, rc=0, text='16384\n')
@@ -89,7 +110,7 @@ class PageSizeControls(unittest.TestCase):
         self.assertEqual(len(commands), 1)
 
     def test_refuses_other_failures_or_wrong_values(self):
-        cases = [dict(api='35', expected=16384), dict(api='25'), dict(abi='arm64-v8a'),
+        cases = [dict(api='35', expected=16384), dict(api='29'), dict(abi='arm64-v8a'),
                  dict(expected=16384), dict(rc=1), dict(failure='timeout'),
                  dict(text='permission denied'), dict(rc=0, text=''),
                  dict(rc=0, text='4096\n16384'), dict(api='35', expected=16384, rc=0, text='4096'),
@@ -102,7 +123,7 @@ class PageSizeControls(unittest.TestCase):
     def test_real_host_auxv_matches_sysconf_not_android_evidence(self):
         with Path('/proc/self/exe').open('rb') as stream:
             header = stream.read(64)
-        actual = pilot.api24_auxv_page_size(header, Path('/proc/self/auxv').read_bytes())
+        actual = pilot.legacy_auxv_page_size(header, Path('/proc/self/auxv').read_bytes())
         self.assertEqual(actual, os.sysconf('SC_PAGE_SIZE'))
 
 
