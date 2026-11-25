@@ -48,6 +48,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 lab/qa/class_metadata_art_probe/test_toolchain.py
+          python3 -O lab/qa/class_metadata_art_probe/test_toolchain.py
           python3 lab/qa/class_metadata_art_probe/run.py --host-tests
           python3 lab/qa/class_metadata_art_probe/build.py --baseline baseline --candidate candidate --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --out "$RUNNER_TEMP/classmeta-build"
       - name: Bind the producer manifest to every runtime job
@@ -70,6 +72,7 @@ jobs:
           name: classmeta-build-receipts-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/classmeta-build/*.log
+            ${{ runner.temp }}/classmeta-build/kotlin-toolchain.json
             ${{ runner.temp }}/classmeta-build/*-fixture/result.json
             ${{ runner.temp }}/classmeta-build/*-fixture/*.log
           if-no-files-found: warn

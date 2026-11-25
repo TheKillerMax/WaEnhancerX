@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build the exact baseline/candidate class-linkage probes, not the WAEX application."""
-import argparse, hashlib, json, os, re, shutil, subprocess, sys, zipfile
+import argparse, hashlib, json, os, re, subprocess, sys, zipfile
 from pathlib import Path
+from toolchain import prepare as prepare_toolchain, verify_after_build
 
 HERE = Path(__file__).resolve().parent
 LOCK = HERE / 'lock.json'
@@ -38,7 +39,16 @@ def verify_sources(root, entry):
     require(set(pins)==set(projections), 'Source projection coverage differs')
     require(all(pins[rel] in projections[rel].values() for rel in pins), 'Prior exact pins not retained')
     return {rel:verify_text_pin(root/rel,projections[rel]) for rel in pins}
-def compile_dex(out, variant, classes, probe_classes, deps, java, d8, android_jar):
+def zip_member(archive, name, body):
+    entry=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0))
+    entry.compress_type=archive.compression
+    entry.create_system=3
+    entry.external_attr=0o100644 << 16
+    archive.writestr(entry,body)
+def require_quiet_d8(out, variant):
+    require(all((out/(variant+'-d8.'+stream+'.log')).read_bytes()==b''
+                for stream in ('stdout','stderr')), 'D8 emitted diagnostics; inspect preserved logs')
+def compile_dex(out, variant, classes, probe_classes, deps, java, d8, android_jar, env=None):
     class_inputs, excluded = {}, []
     dst = out / (variant+'-classes.jar')
     with zipfile.ZipFile(dst,'x',zipfile.ZIP_DEFLATED) as z:
@@ -49,17 +59,18 @@ def compile_dex(out, variant, classes, probe_classes, deps, java, d8, android_ja
                 continue
             require(rel.startswith(('com/','de/','androidx/')), 'Unexpected class: '+rel)
             class_inputs[rel] = digest(p)
-            z.writestr(rel,p.read_bytes())
+            zip_member(z,rel,p.read_bytes())
         for p in sorted(probe_classes.rglob('*.class')):
             rel = p.relative_to(probe_classes).as_posix()
             require(rel not in class_inputs, 'Duplicate probe class')
             class_inputs[rel] = digest(p)
-            z.writestr(rel,p.read_bytes())
+            zip_member(z,rel,p.read_bytes())
     require(any(n.endswith('/WaJid.class') for n in class_inputs) and
             any(n.endswith('/HideReceiptsHook.class') for n in class_inputs), 'Real target classes missing')
     dexout=out/(variant+'-dex'); dexout.mkdir()
     run(out,variant+'-d8',[java,'-cp',d8,'com.android.tools.r8.D8','--release','--min-api','24',
-                           '--lib',android_jar,'--output',dexout,dst,*deps])
+                           '--lib',android_jar,'--output',dexout,dst,*deps],env=env)
+    require_quiet_d8(out,variant)
     dexes=sorted(dexout.glob('classes*.dex'))
     require(len(dexes)==1 and dexes[0].name=='classes.dex', 'Single DEX required')
     body=dexes[0].read_bytes()
@@ -69,7 +80,7 @@ def compile_dex(out, variant, classes, probe_classes, deps, java, d8, android_ja
     artifact=out/'artifact'; artifact.mkdir(exist_ok=True)
     jar=artifact/(variant+'-art-probe.jar')
     with zipfile.ZipFile(jar,'x',zipfile.ZIP_STORED) as z:
-        z.writestr('classes.dex',body)
+        zip_member(z,'classes.dex',body)
     require(0<jar.stat().st_size<=8*1024**2, 'DEX jar size outside bounds')
     return {'inputs':class_inputs,'excluded_host_only':excluded,'dex_sha256':digest(dexes[0]),
             'jar_sha256':digest(jar),'jar_bytes':jar.stat().st_size,'classvalue_descriptor_present':variant=='baseline'}
@@ -80,7 +91,7 @@ def class_only(src,dst):
             n=member.filename
             if n.endswith('.class') and not n.startswith('META-INF/') and n!='module-info.class':
                 require(n not in seen and not n.startswith('/') and '..' not in Path(n).parts, 'Unexpected dependency class')
-                seen.add(n); zo.writestr(n,zi.read(member))
+                seen.add(n); zip_member(zo,n,zi.read(member))
         require(bool(seen),'Dependency has no classes')
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -112,11 +123,8 @@ def main():
             all(lock[k+'_sha256'] in fixture_projections[k].values() for k in fixture_paths),
             'Prior runner/fixture pins not retained')
     fixture_checkout={k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}
-    env=os.environ.copy()
-    env['PATH']=str(a.java_home/'bin')+os.pathsep+env['PATH']
+    kotlin,env,toolchain_receipt=prepare_toolchain(out,a.java_home)
     env.pop('WAEX_QA_DEXKIT_JAR',None)
-    kotlin=shutil.which('kotlinc',path=env['PATH'])
-    require(kotlin is not None,'Preinstalled Kotlin required')
     stdlib=Path(kotlin).resolve().parents[1]/'lib/kotlin-stdlib.jar'
     java=a.java_home/'bin/java'; javac=a.java_home/'bin/javac'
     android_jar=a.sdk/'platforms/android-36/android.jar'; d8=a.sdk/'build-tools/36.0.0/lib/d8.jar'
@@ -131,6 +139,7 @@ def main():
             'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'lock_sha256':digest(LOCK),
             'probe_sha256':digest(HERE/'Main.java'),'tools_sha256':{str(x):digest(x) for x in (java,javac,stdlib,android_jar,d8)},
             'sources':lock['sources'],'fixture_checkout_sha256':fixture_checkout,'variants':{},'art_executed':False,
+            'kotlin_toolchain':toolchain_receipt,'builder_sha256':digest(Path(__file__)),
             'scope':'Complete two production class definitions with explicit host-service boundaries. No app build or hooks.'}
     deps=None
     for variant in VARIANTS:
@@ -148,7 +157,7 @@ def main():
             deps=[out/'stdlib-classes-only.jar',out/'dexkit-classes-only.jar']
             class_only(stdlib,deps[0]);class_only(dexkit,deps[1])
             env['WAEX_QA_DEXKIT_JAR']=str(dexkit)
-        result_dex=compile_dex(out,variant,receipt/'classes',compiled,deps,java,d8,android_jar)
+        result_dex=compile_dex(out,variant,receipt/'classes',compiled,deps,java,d8,android_jar,env=env)
         result_dex['receipt_sha256']=digest(receipt/'result.json')
         result_dex['host_scenarios']=101;result_dex['host_checks']=702
         result_dex['checkout_source_sha256']=checked[variant]
@@ -156,6 +165,8 @@ def main():
         require(verify_sources(root,lock['sources'][variant])==checked[variant], 'Checkout changed during compilation')
         require({k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}==fixture_checkout,
                 'Receipt fixture changed during compilation')
+    verify_after_build(kotlin,toolchain_receipt)
+    require(digest(Path(__file__))==report['builder_sha256'],'Build recipe changed')
     save(out/'artifact/artifact-manifest.json',report)
     print('PASS_BUILD_ONLY: both variants, no Android execution')
     return 0
