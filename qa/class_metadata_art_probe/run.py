@@ -14,16 +14,19 @@ def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 MAX_JAR_BYTES=8*1024**2
 MAX_STDERR_BYTES=65536
 
-def capture_binary(command,target,errors,env,timeout=60):
-    """Read raw ADB bytes with the owned server environment and bounded lifetime."""
+def capture_pull(command,target,output,errors,env,timeout=60):
+    """Use ADB sync framing, with bounded files, closed stdin and the owned server."""
+    require(not target.exists() and not target.is_symlink(),'Readback payload already exists')
     start=time.monotonic();process=None
     def bounded():
-        require(target.stat().st_size<=MAX_JAR_BYTES and errors.stat().st_size<=MAX_STDERR_BYTES,
-                'Binary readback exceeded its output bound')
-    with target.open('xb') as output,errors.open('xb') as diagnostics:
+        for path,limit in ((target,MAX_JAR_BYTES),(output,MAX_STDERR_BYTES),(errors,MAX_STDERR_BYTES)):
+            require(not path.is_symlink(),'Readback output was redirected')
+            if path.exists():
+                require(path.is_file() and path.stat().st_size<=limit,'Sync readback exceeded its output bound')
+    with output.open('xb') as stdout,errors.open('xb') as stderr:
         try:
-            process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=output,
-                                     stderr=diagnostics,env=env)
+            process=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=stdout,
+                                     stderr=stderr,env=env)
             while process.poll() is None:
                 bounded()
                 remaining=timeout-(time.monotonic()-start)
@@ -36,16 +39,29 @@ def capture_binary(command,target,errors,env,timeout=60):
             if process is not None and process.poll() is None:
                 process.kill();process.wait(timeout=5)
 
-def verify_binary_identity(target,errors,returncode,pin):
-    require(returncode==0 and errors.stat().st_size==0,'Binary readback failed or emitted diagnostics')
+def verify_pull_identity(target,output,errors,returncode,pin):
+    require(returncode==0 and output.stat().st_size==0 and errors.stat().st_size==0,
+            'Quiet sync readback failed or emitted diagnostics')
+    require(target.is_file() and not target.is_symlink(),'Sync readback payload is missing or redirected')
     size=target.stat().st_size
     require(size==pin['jar_bytes'] and 0<size<=MAX_JAR_BYTES,'Guest JAR size differs')
     observed=digest(target)
     require(observed==pin['jar_sha256'],'Guest JAR identity differs')
     return {'bytes':size,'sha256':observed,'matches_producer':True}
 
+def retain_bounded(path,limit,out):
+    """Preserve failed evidence; explicitly label a bounded prefix after overflow."""
+    if not path.exists() and not path.is_symlink():return {'exists':False}
+    require(path.is_file() and not path.is_symlink(),'Readback evidence was redirected')
+    observed=path.stat().st_size
+    if observed>limit:
+        with path.open('r+b') as stream:stream.truncate(limit)
+    return {'exists':True,'path':path.relative_to(out).as_posix(),
+            'observed_bytes':observed,'retained_bytes':path.stat().st_size,
+            'retained_sha256':digest(path),'truncated_to_bound':observed>limit}
+
 def jar_readback(adb,serial,path,pin,out,label,env):
-    """Fresh producer identity before execution/removal, without guest hash utilities."""
+    """Fresh full sync read before execution/removal; failed bytes remain evidence."""
     require(serial=='emulator-5580' and re.fullmatch(
         r'/data/local/tmp/waex-classmetadata-[a-f0-9]{32}-(?:baseline|candidate)\.jar',path),
         'Readback outside the owned emulator probe path')
@@ -53,34 +69,43 @@ def jar_readback(adb,serial,path,pin,out,label,env):
             and 0<pin['jar_bytes']<=MAX_JAR_BYTES
             and re.fullmatch('[a-f0-9]{64}',pin['jar_sha256']),'Invalid readback identity')
     record_path=out/(label+'-readback.json')
-    require(not record_path.exists(),'Readback receipt already exists')
-    command=[str(adb),'-s',serial,'exec-out','/system/bin/cat',path]
-    record={'command':command,'method':'adb_exec_out_cat_binary','status':'BLOCKED',
+    require(not record_path.exists() and not record_path.is_symlink(),'Readback receipt already exists')
+    data=out/(label+'-readback-data');data.mkdir()
+    target=data/'payload.bin';output=data/'stdout.log';errors=data/'stderr.log'
+    # -q suppresses progress only; -Z selects uncompressed sync, including old adbd.
+    command=[str(adb),'-s',serial,'pull','-q','-Z',path,str(target)]
+    record={'command':command,'method':'adb_pull_sync_uncompressed','status':'BLOCKED',
             'expected_bytes':pin['jar_bytes'],'expected_sha256':pin['jar_sha256'],
             'stdin':'closed','server_environment':'owned_boot_context',
-            'payload_retained':False,'returncode':None}
+            'payload_retained':False,'returncode':None,'attempts':1}
     start=time.monotonic()
     try:
-        # Keep receipts for every fresh read; identical JAR payloads are in the build artifact.
-        with tempfile.TemporaryDirectory(prefix='waex-classmeta-readback-') as folder:
-            target=Path(folder)/'payload.bin';errors=Path(folder)/'stderr.bin'
-            try:
-                record['returncode']=capture_binary(command,target,errors,env)
-                record.update(verify_binary_identity(target,errors,record['returncode'],pin))
-                record['status']='PASS'
-            finally:
-                record['stdout_bytes']=target.stat().st_size if target.exists() else 0
-                record['stderr_bytes']=errors.stat().st_size if errors.exists() else 0
-                if errors.exists():
-                    with errors.open('rb') as stream:
-                        record['stderr']=stream.read(MAX_STDERR_BYTES).decode('utf8',errors='replace')
+        record['returncode']=capture_pull(command,target,output,errors,env)
+        record.update(verify_pull_identity(target,output,errors,record['returncode'],pin))
+        record['status']='PASS'
     except Exception as exc:
         record['failure']=type(exc).__name__+': '+str(exc)
         raise
     finally:
-        record['seconds']=round(time.monotonic()-start,3)
-        with record_path.open('x',encoding='utf8') as stream:
-            json.dump(record,stream,indent=2);stream.write('\n')
+        try:
+            for name,file,limit in [('payload',target,MAX_JAR_BYTES),
+                                     ('stdout',output,MAX_STDERR_BYTES),('stderr',errors,MAX_STDERR_BYTES)]:
+                record[name+'_retention']=retain_bounded(file,limit,out)
+            if record['status']=='PASS':
+                require(record['payload_retention']['retained_sha256']==pin['jar_sha256'],
+                        'Readback payload changed after verification')
+                target.unlink()
+                record['payload_retention']['removed_matching_duplicate']=True
+            else:
+                record['payload_retained']=record['payload_retention']['exists']
+        except Exception as exc:
+            record['status']='BLOCKED';record['retention_failure']=type(exc).__name__+': '+str(exc)
+            record['payload_retained']=target.is_file() and not target.is_symlink()
+            raise
+        finally:
+            record['seconds']=round(time.monotonic()-start,3)
+            with record_path.open('x',encoding='utf8') as stream:
+                json.dump(record,stream,indent=2);stream.write('\n')
     return record
 
 def markers(nonce,variant,api):
@@ -97,46 +122,53 @@ def validate_output(text,nonce,variant,api):
     require('FATAL EXCEPTION' not in text and 'Exception in thread' not in text and 'java.lang.AssertionError' not in text,'Unexpected runtime exception')
     return int(actual[-1].split('|')[-2])
 class HostTests(unittest.TestCase):
-    def test_binary_capture_preserves_bytes_environment_and_closed_stdin(self):
+    def test_sync_capture_preserves_bytes_environment_and_closed_stdin(self):
         with tempfile.TemporaryDirectory() as folder:
-            target=Path(folder)/'payload';errors=Path(folder)/'errors'
+            target=Path(folder)/'payload';output=Path(folder)/'stdout';errors=Path(folder)/'errors'
             env=dict(os.environ,WAEX_READBACK_TEST='owned-context')
-            script="import os,sys;assert os.environ['WAEX_READBACK_TEST']=='owned-context';assert sys.stdin.buffer.read()==b'';sys.stdout.buffer.write(b'PK\\x00\\xff\\n\\r\\n')"
-            self.assertEqual(capture_binary([sys.executable,'-c',script],target,errors,env),0)
+            script="import os,sys,pathlib;assert os.environ['WAEX_READBACK_TEST']=='owned-context';assert sys.stdin.buffer.read()==b'';pathlib.Path(sys.argv[1]).write_bytes(b'PK\\x00\\xff\\n\\r\\n')"
+            self.assertEqual(capture_pull([sys.executable,'-c',script,str(target)],target,output,errors,env),0)
             self.assertEqual(target.read_bytes(),b'PK\x00\xff\n\r\n')
-            self.assertEqual(errors.read_bytes(),b'')
+            self.assertEqual(output.read_bytes(),b'');self.assertEqual(errors.read_bytes(),b'')
 
-    def test_binary_capture_timeout_reaps_child(self):
+    def test_sync_capture_timeout_reaps_child(self):
         from unittest.mock import patch
         children=[];original=subprocess.Popen
         def tracked(*args,**kwargs):
             child=original(*args,**kwargs);children.append(child);return child
         with tempfile.TemporaryDirectory() as folder,patch.object(subprocess,'Popen',side_effect=tracked):
             with self.assertRaises(subprocess.TimeoutExpired):
-                capture_binary([sys.executable,'-c','import time;time.sleep(60)'],
-                               Path(folder)/'payload',Path(folder)/'errors',os.environ.copy(),timeout=0.2)
+                capture_pull([sys.executable,'-c','import time;time.sleep(60)'],
+                             Path(folder)/'payload',Path(folder)/'stdout',Path(folder)/'errors',
+                             os.environ.copy(),timeout=0.2)
             self.assertEqual(len(children),1)
             self.assertIsNotNone(children[0].poll())
 
-    def test_binary_capture_output_bounds(self):
-        for stream,limit in [('stdout',MAX_JAR_BYTES),('stderr',MAX_STDERR_BYTES)]:
+    def test_sync_capture_bounds_payload_and_both_diagnostic_streams(self):
+        for stream,limit in [('payload',MAX_JAR_BYTES),('stdout',MAX_STDERR_BYTES),('stderr',MAX_STDERR_BYTES)]:
             with self.subTest(stream=stream),tempfile.TemporaryDirectory() as folder:
-                script='import sys;sys.'+stream+'.buffer.write(b"x"*'+str(limit+1)+')'
+                target=Path(folder)/'payload'
+                script=('import sys,pathlib;pathlib.Path(sys.argv[1]).write_bytes(b"x"*'+str(limit+1)+')'
+                        if stream=='payload' else 'import sys;sys.'+stream+'.buffer.write(b"x"*'+str(limit+1)+')')
                 with self.assertRaisesRegex(RuntimeError,'output bound'):
-                    capture_binary([sys.executable,'-c',script],Path(folder)/'payload',
-                                   Path(folder)/'errors',os.environ.copy())
+                    capture_pull([sys.executable,'-c',script,str(target)],target,Path(folder)/'stdout',
+                                 Path(folder)/'errors',os.environ.copy())
 
-    def test_binary_identity_rejects_changed_partial_failed_and_diagnostic_reads(self):
+    def test_sync_identity_rejects_missing_partial_changed_failed_and_diagnostic_reads(self):
         good=b'PK\x00\xff\n\r\n';pin={'jar_bytes':len(good),'jar_sha256':hashlib.sha256(good).hexdigest()}
         with tempfile.TemporaryDirectory() as folder:
-            target=Path(folder)/'payload';errors=Path(folder)/'errors'
-            target.write_bytes(good);errors.write_bytes(b'')
-            self.assertTrue(verify_binary_identity(target,errors,0,pin)['matches_producer'])
-            for raw,diagnostic,rc in [(good[:-1],b'',0),(good+b'x',b'',0),
-                                      (b'X'+good[1:],b'',0),(good,b'error',0),(good,b'',1)]:
-                target.write_bytes(raw);errors.write_bytes(diagnostic)
-                with self.subTest(raw=raw,diagnostic=diagnostic,rc=rc),self.assertRaises(RuntimeError):
-                    verify_binary_identity(target,errors,rc,pin)
+            target=Path(folder)/'payload';output=Path(folder)/'stdout';errors=Path(folder)/'errors'
+            target.write_bytes(good);output.write_bytes(b'');errors.write_bytes(b'')
+            self.assertTrue(verify_pull_identity(target,output,errors,0,pin)['matches_producer'])
+            for raw,stdout,stderr,rc in [(good[:-1],b'',b'',0),(good+b'x',b'',b'',0),
+                                       (b'X'+good[1:],b'',b'',0),(good,b'',b'error',0),
+                                       (good,b'Unexpected output',b'',0),(good,b'',b'',1)]:
+                target.write_bytes(raw);output.write_bytes(stdout);errors.write_bytes(stderr)
+                with self.subTest(raw=raw,stdout=stdout,stderr=stderr,rc=rc),self.assertRaises(RuntimeError):
+                    verify_pull_identity(target,output,errors,rc,pin)
+            target.unlink();output.write_bytes(b'');errors.write_bytes(b'')
+            with self.assertRaisesRegex(RuntimeError,'missing or redirected'):
+                verify_pull_identity(target,output,errors,0,pin)
 
     def test_readback_scope_and_unknown_identity_stop_before_capture(self):
         from unittest.mock import patch
@@ -145,34 +177,96 @@ class HostTests(unittest.TestCase):
         cases=[('phone',path,pin),('emulator-5580',path+';id',pin),
                ('emulator-5580',path.replace('/tmp/','/tmp/../'),pin),
                ('emulator-5580',path,dict(pin,jar_bytes=0)),
+               ('emulator-5580',path,dict(pin,jar_bytes=True)),
                ('emulator-5580',path,dict(pin,jar_bytes=MAX_JAR_BYTES+1)),
                ('emulator-5580',path,dict(pin,jar_sha256='unknown'))]
-        with tempfile.TemporaryDirectory() as folder,patch(__name__+'.capture_binary') as capture:
+        with tempfile.TemporaryDirectory() as folder,patch(__name__+'.capture_pull') as capture:
             for serial,remote,identity in cases:
                 with self.subTest(serial=serial,remote=remote,identity=identity),self.assertRaises(RuntimeError):
                     jar_readback('adb',serial,remote,identity,Path(folder),'identity',{})
             capture.assert_not_called()
 
-    def test_readback_uses_fresh_bytes_and_records_failed_identity(self):
+    def test_readback_uses_fresh_bytes_and_preserves_failed_identity(self):
         from unittest.mock import patch
         good=b'PK\x00\xff\n\r\n';pin={'jar_bytes':len(good),'jar_sha256':hashlib.sha256(good).hexdigest()}
         remote='/data/local/tmp/waex-classmetadata-'+'b'*32+'-baseline.jar'
         env={'ADB_SERVER_SOCKET':'tcp:localhost:5999'};seen=[]
-        def captured(command,target,errors,actual_env,timeout=60):
-            self.assertEqual(command,['adb','-s','emulator-5580','exec-out','/system/bin/cat',remote])
+        def captured(command,target,output,errors,actual_env,timeout=60):
+            self.assertEqual(command,['adb','-s','emulator-5580','pull','-q','-Z',remote,str(target)])
             self.assertIs(actual_env,env);seen.append(command)
-            target.write_bytes(good if len(seen)==1 else b'X'+good[1:]);errors.write_bytes(b'');return 0
-        with tempfile.TemporaryDirectory() as folder,patch(__name__+'.capture_binary',side_effect=captured):
+            target.write_bytes(good if len(seen)==1 else b'X'+good[1:])
+            output.write_bytes(b'');errors.write_bytes(b'');return 0
+        with tempfile.TemporaryDirectory() as folder,patch(__name__+'.capture_pull',side_effect=captured):
             out=Path(folder)
             self.assertEqual(jar_readback('adb','emulator-5580',remote,pin,out,'before',env)['status'],'PASS')
+            self.assertFalse((out/'before-readback-data/payload.bin').exists())
             with self.assertRaisesRegex(RuntimeError,'identity differs'):
                 jar_readback('adb','emulator-5580',remote,pin,out,'cleanup',env)
             record=json.loads((out/'cleanup-readback.json').read_bytes())
             self.assertEqual(record['status'],'BLOCKED');self.assertIn('identity differs',record['failure'])
+            self.assertTrue(record['payload_retained']);self.assertEqual(record['attempts'],1)
+            self.assertEqual((out/record['payload_retention']['path']).read_bytes(),b'X'+good[1:])
             self.assertEqual(len(seen),2)
             with self.assertRaisesRegex(RuntimeError,'receipt already exists'):
                 jar_readback('adb','emulator-5580',remote,pin,out,'cleanup',env)
             self.assertEqual(len(seen),2)
+
+    def test_sync_capture_refuses_existing_or_redirected_destination_before_process(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder,patch.object(subprocess,'Popen') as popen:
+            root=Path(folder);target=root/'payload';target.write_bytes(b'preserve')
+            with self.assertRaises(RuntimeError):
+                capture_pull(['never'],target,root/'stdout',root/'stderr',{})
+            self.assertEqual(target.read_bytes(),b'preserve')
+            target.unlink();target.symlink_to(root/'missing')
+            with self.assertRaises(RuntimeError):
+                capture_pull(['never'],target,root/'stdout',root/'stderr',{})
+            popen.assert_not_called()
+
+    def test_failed_oversized_evidence_keeps_a_labelled_bounded_prefix(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out=Path(folder);path=out/'payload';path.write_bytes(b'original-long-data')
+            row=retain_bounded(path,8,out)
+            self.assertEqual(row['observed_bytes'],18);self.assertEqual(row['retained_bytes'],8)
+            self.assertTrue(row['truncated_to_bound']);self.assertEqual(path.read_bytes(),b'original')
+            self.assertEqual(row['retained_sha256'],hashlib.sha256(b'original').hexdigest())
+
+    def test_sync_process_zero_exit_still_requires_complete_identity_and_empty_diagnostics(self):
+        good=b'PK'+bytes(range(64));pin={'jar_bytes':len(good),'jar_sha256':hashlib.sha256(good).hexdigest()}
+        remote='/data/local/tmp/waex-classmetadata-'+'c'*32+'-candidate.jar'
+        program='''#!/usr/bin/env python3
+import os,pathlib,sys
+args=sys.argv[1:]
+if args[:5]!=['-s','emulator-5580','pull','-q','-Z']:raise RuntimeError('Wrong sync arguments')
+if os.environ.get('ADB_SERVER_SOCKET')!='tcp:localhost:5999':raise RuntimeError('Lost owned server')
+root=pathlib.Path(__file__).parent
+with (root/'calls').open('a') as stream:stream.write('one\\n')
+mode=os.environ['WAEX_PULL_TEST_MODE'];good=b'PK'+bytes(range(64));raw=good
+if mode=='short-rc-zero':raw=good[:-28]
+if mode=='changed-rc-zero':raw=b'X'+good[1:]
+if mode!='missing-rc-zero':pathlib.Path(args[-1]).write_bytes(raw)
+if mode=='stdout-rc-zero':sys.stdout.write('unexpected output')
+if mode=='stderr-rc-zero':sys.stderr.write('unexpected diagnostic')
+sys.exit(3 if mode=='failed-with-complete-payload' else 0)
+'''
+        modes=['pass','short-rc-zero','changed-rc-zero','missing-rc-zero','stdout-rc-zero',
+               'stderr-rc-zero','failed-with-complete-payload']
+        for mode in modes:
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder);fake=root/'adb-fixture';fake.write_text(program);fake.chmod(0o755)
+                env=dict(os.environ,ADB_SERVER_SOCKET='tcp:localhost:5999',WAEX_PULL_TEST_MODE=mode)
+                if mode=='pass':
+                    self.assertEqual(jar_readback(fake,'emulator-5580',remote,pin,root,'read',env)['status'],'PASS')
+                else:
+                    with self.assertRaises(RuntimeError):jar_readback(fake,'emulator-5580',remote,pin,root,'read',env)
+                record=json.loads((root/'read-readback.json').read_bytes())
+                self.assertEqual(record['status'],'PASS' if mode=='pass' else 'BLOCKED')
+                self.assertEqual(record['attempts'],1);self.assertEqual((root/'calls').read_text(),'one\n')
+                payload=root/'read-readback-data/payload.bin'
+                self.assertEqual(payload.exists(),mode not in ('pass','missing-rc-zero'))
+                if mode=='short-rc-zero':
+                    self.assertEqual(payload.read_bytes(),good[:-28])
+                    self.assertEqual(record['payload_retention']['observed_bytes'],len(good)-28)
 
     def test_expected(self):
         for api in (24,30,33,34):
