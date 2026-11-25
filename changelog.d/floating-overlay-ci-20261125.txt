@@ -1,0 +1,2 @@
+[Fixes]
+Wire the bounded floating/overlay tests and causal controls into a separate public-source CI job with pinned Kotlin and API artifacts and preserved projection evidence.
