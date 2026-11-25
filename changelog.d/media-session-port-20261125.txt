@@ -1,0 +1,2 @@
+[Fixes]
+- Isolate media preview sessions, cancel superseded downloads and queued work, and release only owned temporary files and unpublished bitmaps.
