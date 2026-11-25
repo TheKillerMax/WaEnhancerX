@@ -40,6 +40,10 @@ It does not duplicate the auditor or edit any checked-out product source.
 | NDK27.0.12077973 | `android-ndk-r27-linux.zip` |663,957,918|`5e5cd517bdb98d7e0faf2c494a3041291e71bdcc`|
 | CMake3.22.1 | `cmake-3.22.1-linux.zip` |22,308,647|`fd0a48b4a758310df8c7aa51f59840ed48fe7ed8`|
 
+The checksum-pinned Android SDK CMake package reports the exact banner
+`cmake version 3.22.1-g37088a8`. The runner checks that full build identity;
+the package revision and project CMake requirement remain `3.22.1`.
+
 Both URLs are fixed under `https://dl.google.com/android/repository/`. The job
 rechecks their exact package path, revision, Linux archive, size and checksum
 against official repository metadata before downloading 686,266,565 bytes total.

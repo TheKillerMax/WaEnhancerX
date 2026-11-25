@@ -266,7 +266,7 @@ def main():
         require(len(cmakes) == 1, 'Expected one CMake executable')
         cmake, ninja = cmakes[0], cmakes[0].with_name('ninja')
         require(command(out, 'cmake-version', [cmake, '--version'], env).splitlines()[0]
-                == 'cmake version 3.22.1', 'CMake version differs')
+                == 'cmake version 3.22.1-g37088a8', 'CMake version differs')
         command(out, 'ninja-version', [ninja, '--version'], env)
         toolbin = ndk / 'toolchains/llvm/prebuilt/linux-x86_64/bin'
         readelf = toolbin / 'llvm-readelf'
