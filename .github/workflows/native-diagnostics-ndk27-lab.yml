@@ -1,0 +1,81 @@
+name: Native diagnostics NDK27 lab
+
+on:
+  push:
+    branches: ['lab/android-emulator-matrix-nightly8-20261124']
+    paths:
+      - '.github/workflows/native-diagnostics-ndk27-lab.yml'
+      - 'qa/native_diagnostics_ndk27_lab.py'
+      - 'qa/test_native_diagnostics_ndk27_lab.py'
+      - 'qa/fixtures/native_diag_16kb_CMakeLists.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-diagnostics-ndk27-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-static-comparison:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out the isolated public lab
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Read the published pinned ELF auditor and unchanged source baseline
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: '1c50db163ee1b8127288ea27a055242c9899541f'
+          path: _native-audit
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /qa/audit_native_alignment.py
+            /app/src/main/cpp/waex_diag.c
+            /app/src/main/cpp/CMakeLists.txt
+            /app/build.gradle.kts
+
+      - name: Check the comparison oracles before downloading tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s qa -p test_native_diagnostics_ndk27_lab.py -v \
+            2>&1 | tee "$RUNNER_TEMP/native-ndk27-offline-tests.log"
+
+      - name: Compile base and candidate with official exact NDK and CMake
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/native_diagnostics_ndk27_lab.py \
+            --audit-repo "$GITHUB_WORKSPACE/_native-audit" \
+            --out "$RUNNER_TEMP/waex-native-ndk27-reports"
+
+      - name: Preserve bounded reports for pass or block
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: native-ndk27-lab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-native-ndk27-reports/
+            ${{ runner.temp }}/native-ndk27-offline-tests.log
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 1
+          include-hidden-files: false
