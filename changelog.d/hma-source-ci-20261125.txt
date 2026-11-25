@@ -1,0 +1,3 @@
+[Fixes]
+- Include HMA repair and dashboard checks in public source CI and retain
+  the framework, transaction and negative-control evidence.
