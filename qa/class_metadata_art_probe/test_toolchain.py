@@ -13,6 +13,26 @@ import toolchain
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_supplied_dexkit_requires_exact_size_hash_and_regular_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            jar = Path(folder) / 'classes.jar'
+            raw = b'D' * 827109
+            jar.write_bytes(raw)
+            pin = hashlib.sha256(raw).hexdigest()
+            expected = {'path': str(jar.resolve()), 'bytes': len(raw), 'sha256': pin}
+            self.assertEqual(build.checked_dexkit_input(jar, pin), expected)
+            for changed in (raw[:-1], raw + b'X', b'X' + raw[1:]):
+                jar.write_bytes(changed)
+                with self.subTest(bytes=len(changed)), self.assertRaises(RuntimeError):
+                    build.checked_dexkit_input(jar, pin)
+                self.assertEqual(jar.read_bytes(), changed)
+            jar.write_bytes(raw)
+            link = Path(folder) / 'symlink.jar'
+            link.symlink_to(jar)
+            for invalid in (link, Path(folder), Path(folder) / 'missing.jar'):
+                with self.subTest(path=str(invalid)), self.assertRaises(RuntimeError):
+                    build.checked_dexkit_input(invalid, pin)
+
     def test_locked_kotlin_runtime_versions_and_dependency_closure(self):
         lock = toolchain.checked_lock()
         self.assertEqual(lock['kotlin_version'], '2.0.20')

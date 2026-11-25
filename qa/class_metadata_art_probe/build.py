@@ -12,6 +12,12 @@ def require(ok, msg):
         raise RuntimeError(msg)
 def digest(p):
     return hashlib.sha256(p.read_bytes()).hexdigest()
+def checked_dexkit_input(path, expected_sha256):
+    path = Path(path)
+    require(path.is_file() and not path.is_symlink(), 'DexKit input must be a regular non-symlink file')
+    require(path.stat().st_size == 827109 and digest(path) == expected_sha256,
+            'Supplied DexKit input differs from the existing compiler lock')
+    return {'path': str(path.resolve()), 'bytes': path.stat().st_size, 'sha256': digest(path)}
 def save(p, value):
     p.write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')
 def run(out, name, args, timeout=180, env=None):
@@ -100,12 +106,13 @@ def main():
     p.add_argument('--sdk',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True)
     p.add_argument('--java-home',type=Path,required=True)
+    p.add_argument('--dexkit-jar',type=Path)
     a=p.parse_args()
     a.out=a.out.resolve(); a.out.mkdir(parents=True,exist_ok=False)
     out=a.out
     lock=json.loads(LOCK.read_bytes())
     require(os.environ.get('GITHUB_REPOSITORY')=='TheKillerMax/WaEnhancerX' and
-            os.environ.get('GITHUB_REF')=='refs/heads/lab/android-emulator-matrix-nightly8-20261124',
+            os.environ.get('GITHUB_REF')=='refs/heads/lab/classmetadata-current-source-20261125',
             'Only reviewed fork lab build allowed')
     require(re.fullmatch('[a-f0-9]{40}',os.environ.get('GITHUB_SHA','')), 'Missing workflow commit')
     require(digest(HERE/'Main.java')==lock['probe_sha256'],'Probe source changed')
@@ -123,8 +130,13 @@ def main():
             all(lock[k+'_sha256'] in fixture_projections[k].values() for k in fixture_paths),
             'Prior runner/fixture pins not retained')
     fixture_checkout={k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}
+    supplied_dexkit = None
+    if a.dexkit_jar is not None:
+        supplied_dexkit = checked_dexkit_input(a.dexkit_jar, lock['dexkit_jar_sha256'])
     kotlin,env,toolchain_receipt=prepare_toolchain(out,a.java_home)
     env.pop('WAEX_QA_DEXKIT_JAR',None)
+    if supplied_dexkit is not None:
+        env['WAEX_QA_DEXKIT_JAR'] = supplied_dexkit['path']
     stdlib=Path(kotlin).resolve().parents[1]/'lib/kotlin-stdlib.jar'
     java=a.java_home/'bin/java'; javac=a.java_home/'bin/javac'
     android_jar=a.sdk/'platforms/android-36/android.jar'; d8=a.sdk/'build-tools/36.0.0/lib/d8.jar'
@@ -140,6 +152,7 @@ def main():
             'probe_sha256':digest(HERE/'Main.java'),'tools_sha256':{str(x):digest(x) for x in (java,javac,stdlib,android_jar,d8)},
             'sources':lock['sources'],'fixture_checkout_sha256':fixture_checkout,'variants':{},'art_executed':False,
             'kotlin_toolchain':toolchain_receipt,'builder_sha256':digest(Path(__file__)),
+            'supplied_dexkit_input':supplied_dexkit,
             'scope':'Complete two production class definitions with explicit host-service boundaries. No app build or hooks.'}
     deps=None
     for variant in VARIANTS:
@@ -166,6 +179,9 @@ def main():
         require({k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}==fixture_checkout,
                 'Receipt fixture changed during compilation')
     verify_after_build(kotlin,toolchain_receipt)
+    if supplied_dexkit is not None:
+        require(checked_dexkit_input(a.dexkit_jar, lock['dexkit_jar_sha256']) == supplied_dexkit,
+                'Supplied DexKit input changed during compilation')
     require(digest(Path(__file__))==report['builder_sha256'],'Build recipe changed')
     save(out/'artifact/artifact-manifest.json',report)
     print('PASS_BUILD_ONLY: both variants, no Android execution')

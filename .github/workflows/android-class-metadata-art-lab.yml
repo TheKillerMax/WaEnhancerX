@@ -2,17 +2,18 @@ name: Lab ClassValue ART linkage
 on:
   workflow_dispatch:
   push:
-    branches: [lab/android-emulator-matrix-nightly8-20261124]
+    branches: [lab/classmetadata-current-source-20261125]
     paths:
       - .github/workflows/android-class-metadata-art-lab.yml
       - qa/class_metadata_art_probe/**
+      - qa/android_emulator_lab_preflight.py
       - qa/android_emulator_lab_pilot.py
       - qa/android_emulator_lab_matrix_lock.json
       - qa/test_android_guest_version.py
 permissions:
   contents: read
 concurrency:
-  group: waex-class-metadata-art-lab
+  group: waex-class-metadata-current-art-lab
   cancel-in-progress: false
 env:
   PYTHONDONTWRITEBYTECODE: '1'
@@ -20,7 +21,7 @@ jobs:
   build:
     if: >-
       github.repository == 'TheKillerMax/WaEnhancerX' &&
-      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.ref == 'refs/heads/lab/classmetadata-current-source-20261125' &&
       github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -35,18 +36,23 @@ jobs:
           lfs: false
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: 9d1a3585f2b44b90e632cd3a2a7e46ef86ebf19d
+          ref: 72174b77e6d102f7550b527ce2c2b83bd320b38a
           path: baseline
           persist-credentials: false
           submodules: false
           lfs: false
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: 8b09642698396c946ed748e6724f167d9f7265a1
+          ref: 7814908a1213d86f05ef5dc068b548d322a24d94
           path: candidate
           persist-credentials: false
           submodules: false
           lfs: false
+      - name: Acquire the existing pinned DexKit input with bounded transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 candidate/qa/prepare_dexkit.py --cache "$RUNNER_TEMP/classmeta-dexkit" --report "$RUNNER_TEMP/classmeta-inputs/dexkit.json"
       - name: Validate receipt oracle and build two immutable DEX probes
         shell: bash
         run: |
@@ -56,7 +62,7 @@ jobs:
           python3 lab/qa/class_metadata_art_probe/test_toolchain.py
           python3 -O lab/qa/class_metadata_art_probe/test_toolchain.py
           python3 lab/qa/class_metadata_art_probe/run.py --host-tests
-          python3 lab/qa/class_metadata_art_probe/build.py --baseline baseline --candidate candidate --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --out "$RUNNER_TEMP/classmeta-build"
+          python3 lab/qa/class_metadata_art_probe/build.py --baseline baseline --candidate candidate --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME_21_X64" --dexkit-jar "$RUNNER_TEMP/classmeta-dexkit/dexkit-2.2.0.jar" --out "$RUNNER_TEMP/classmeta-build"
       - name: Bind the producer manifest to every runtime job
         id: identity
         shell: bash
@@ -80,13 +86,15 @@ jobs:
             ${{ runner.temp }}/classmeta-build/kotlin-toolchain.json
             ${{ runner.temp }}/classmeta-build/*-fixture/result.json
             ${{ runner.temp }}/classmeta-build/*-fixture/*.log
+            ${{ runner.temp }}/classmeta-inputs/*.json
+            ${{ runner.temp }}/classmeta-inputs/*.log
           if-no-files-found: warn
           retention-days: 14
   art:
     needs: build
     if: >-
       github.repository == 'TheKillerMax/WaEnhancerX' &&
-      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.ref == 'refs/heads/lab/classmetadata-current-source-20261125' &&
       github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 30

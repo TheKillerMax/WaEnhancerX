@@ -24,7 +24,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 import xml.etree.ElementTree as ET
 
 REPOSITORY = 'TheKillerMax/WaEnhancerX'
-REF = 'refs/heads/lab/android-emulator-matrix-nightly8-20261124'
+REF = 'refs/heads/lab/classmetadata-current-source-20261125'
 BASE_URL = 'https://dl.google.com/android/repository/'
 INDEX_URL = BASE_URL + 'addons_list-5.xml'
 FEEDS = ('sys-img/android/sys-img2-3.xml', 'sys-img/google_apis/sys-img2-3.xml')
