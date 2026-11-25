@@ -49,6 +49,10 @@ import com.sun.source.util.JavacTask;
 
 public final class WaexJavaSyntaxRunner {
     public static void main(String[] paths) throws Exception {
+        if (paths.length == 2 && paths[0].equals("--source-list")) {
+            paths = java.nio.file.Files.readString(java.nio.file.Path.of(paths[1]),
+                    java.nio.charset.StandardCharsets.UTF_8).split("\\x00", -1);
+        }
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) throw new IllegalStateException("JDK compiler unavailable");
         List<File> files = new ArrayList<>();
@@ -136,6 +140,10 @@ public final class WaexKotlinSyntaxRunner {
     }
 
     public static void main(String[] paths) throws Exception {
+        if (paths.length == 2 && paths[0].equals("--source-list")) {
+            paths = java.nio.file.Files.readString(java.nio.file.Path.of(paths[1]),
+                    java.nio.charset.StandardCharsets.UTF_8).split("\\x00", -1);
+        }
         Disposable disposable = Disposer.newDisposable();
         int errors = 0;
         try {
@@ -205,14 +213,24 @@ def _execute(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[st
                           timeout=TIMEOUT_SECONDS, encoding="utf-8", errors="replace", check=False)
 
 
-def _diagnostics(output: str, root: Path, language: str) -> tuple[list[dict], bool]:
+def _source_list(files: list[Path], working: Path, language: str) -> list[str]:
+    # UTF-8 + NUL is lossless for filesystem paths, including spaces, quotes and
+    # non-ASCII characters. Keep the command below the Windows CreateProcess
+    # limit without depending on the Java launcher's argfile locale/escaping.
+    listing = working / (language + "-sources.args")
+    listing.write_bytes("\0".join(map(str, files)).encode("utf-8"))
+    return ["--source-list", str(listing)]
+
+
+def _diagnostics(output: str, root: Path, language: str,
+                 expected_files: int | None = None) -> tuple[list[dict], bool]:
     errors: list[dict] = []
-    saw_total = False
+    totals: list[tuple[int, int]] = []
     for line in output.splitlines():
         if line.startswith("SYNTAX_TOTAL\t"):
             parts = line.split("\t", 3)
             if len(parts) == 4 and parts[1] == language:
-                saw_total = True
+                totals.append((int(parts[2]), int(parts[3])))
         elif line.startswith("SYNTAX_ERROR\t"):
             parts = line.split("\t", 4)
             if len(parts) != 5 or parts[1] != language:
@@ -224,7 +242,9 @@ def _diagnostics(output: str, root: Path, language: str) -> tuple[list[dict], bo
                 file_label = str(file)
             errors.append({"language": language, "file": file_label,
                            "line": int(parts[3]), "message": parts[4]})
-    return errors, saw_total
+    complete = (len(totals) == 1 and totals[0][1] == len(errors)
+                and (expected_files is None or totals[0][0] == expected_files))
+    return errors, complete
 
 
 def check(root: Path, *, java_only: bool = False) -> tuple[int, dict]:
@@ -261,8 +281,8 @@ def check(root: Path, *, java_only: bool = False) -> tuple[int, dict]:
                 if built.returncode:
                     raise RuntimeError("Cannot compile Java syntax runner: " + built.stderr[-1300:])
                 result = _execute([java_bin, "-Xmx800m", "-cp", temp,
-                                   "WaexJavaSyntaxRunner", *map(str, java_files)], cwd=root)
-                parsed, complete = _diagnostics(result.stdout, root, "java")
+                                   "WaexJavaSyntaxRunner", *_source_list(java_files, working, "java")], cwd=root)
+                parsed, complete = _diagnostics(result.stdout, root, "java", len(java_files))
                 report["syntax_errors"].extend(parsed)
                 if result.returncode or not complete:
                     raise RuntimeError("Java parser failed: " + (result.stderr or result.stdout)[-1300:])
@@ -282,8 +302,8 @@ def check(root: Path, *, java_only: bool = False) -> tuple[int, dict]:
                     raise RuntimeError("Cannot compile Kotlin PSI syntax runner: " + built.stderr[-1500:])
                 result = _execute([java_bin, "-Xmx1200m", "-Djava.awt.headless=true",
                                    "-cp", os.pathsep.join((temp, classpath)),
-                                   "WaexKotlinSyntaxRunner", *map(str, kotlin_files)], cwd=root)
-                parsed, complete = _diagnostics(result.stdout, root, "kotlin")
+                                   "WaexKotlinSyntaxRunner", *_source_list(kotlin_files, working, "kotlin")], cwd=root)
+                parsed, complete = _diagnostics(result.stdout, root, "kotlin", len(kotlin_files))
                 report["syntax_errors"].extend(parsed)
                 if result.returncode or not complete:
                     raise RuntimeError("Kotlin PSI parser failed: " + (result.stderr or result.stdout)[-1500:])
