@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.waenhancer">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <application />
+</manifest>

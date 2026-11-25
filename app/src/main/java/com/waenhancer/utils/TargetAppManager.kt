@@ -47,40 +47,39 @@ data class ModuleActivation(val active: Boolean, val signal: ModuleSignal) {
 /** Result of the one root call that supplies both scope and live processes. */
 internal data class RootProbeResult(val scope: LsposedScopeSnapshot, val runtime: XposedRuntimeSnapshot?)
 
-/** One `su` invocation per refresh: stage the LSPosed scope DB and list processes. */
+/** One `su` invocation per refresh: stage scope and verify current-profile process UIDs. */
 internal object RootProbe {
     private const val PS_BEGIN = "WAEX_PS_BEGIN"
     private const val PS_END = "WAEX_PS_END"
-    private const val MODULE_PACKAGE_NAME = "com.waenhancer"
 
-    /**
-     * Only the target packages and the manager itself are kept. A full process list is 15 KB or more
-     * on a normal phone, but the shared root runner captures at most 8 KB, so the end marker was cut
-     * off and every target fell back to "root process check failed". The manager's own process is
-     * always running, so an empty filtered list still means the probe itself failed.
-     */
-    internal fun processListCommand(): String {
-        val names = (DeclaredWhatsAppTargets.packages() + MODULE_PACKAGE_NAME)
-            .joinToString("|") { it.replace(".", "\\.") }
-        return "(ps -A -o PID,NAME 2>/dev/null || ps 2>/dev/null) | grep -E ' ($names)[[:space:]]*$'"
-    }
+    internal fun processListCommand(expectedUids: Map<String, Int>): String =
+        ProfileProcessProbe.command(expectedUids)
 
     fun run(context: Context): RootProbeResult {
+        val expectedUids = ProfileProcessProbe.expectedUids(context)
+            ?: return RootProbeResult(LsposedScopeReader.parseStaged(context, false), null)
         val script = LsposedScopeReader.stageCommand(context) +
-            "\necho $PS_BEGIN\n${processListCommand()}\necho $PS_END"
+            "\necho $PS_BEGIN\n${processListCommand(expectedUids)}\necho $PS_END"
         val startedAt = SystemClock.elapsedRealtime()
         val output = try { AppRestartHelper.runRootCommand(script).orEmpty() }
             catch (_: RuntimeException) { "" } catch (_: LinkageError) { "" }
         val scope = LsposedScopeReader.parseStaged(context, output.contains(LsposedScopeReader.STAGED_OK_MARKER))
-        return RootProbeResult(scope, parseRuntime(output, startedAt))
+        return RootProbeResult(scope, parseRuntime(output, expectedUids, startedAt)
+            ?.takeIf { ProfileProcessProbe.containsManagerProcess(it) })
     }
 
-    internal fun parseRuntime(output: String, observedAt: Long): XposedRuntimeSnapshot? {
-        val begin = output.indexOf(PS_BEGIN)
-        val end = output.indexOf(PS_END)
-        if (begin < 0 || end < begin) return null // truncated: an incomplete list must not mean "not running"
-        val snapshot = parseProcessList(output.substring(begin + PS_BEGIN.length, end), observedAt)
-        return snapshot.takeIf { it.runningPids.isNotEmpty() }
+    internal fun parseRuntime(
+        output: String,
+        expectedUids: Map<String, Int>,
+        observedAt: Long
+    ): XposedRuntimeSnapshot? {
+        val lines = output.lineSequence().filter { it.isNotBlank() }.toList()
+        val begin = lines.indexOf(PS_BEGIN)
+        if (begin < 0 || lines.count { it == PS_BEGIN } != 1 ||
+            lines.count { it == PS_END } != 1 || lines.lastOrNull() != PS_END) return null
+        val snapshot = parseProcessList(lines.subList(begin + 1, lines.lastIndex).joinToString("\n"),
+            expectedUids, observedAt)
+        return snapshot.takeIf { it.complete }
     }
 }
 

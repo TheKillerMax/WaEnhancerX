@@ -1,0 +1,2 @@
+[Fixes]
+- Verify each process observation against the manager profile, exact package UID, complete records and the current manager PID before reporting target process state.

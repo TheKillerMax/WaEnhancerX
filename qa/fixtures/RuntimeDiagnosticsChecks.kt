@@ -1,6 +1,8 @@
 package com.waenhancer.utils
 
 import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo
+import android.os.Process
 import android.app.Activity
 import de.robv.android.xposed.XposedBridge
 
@@ -132,19 +134,31 @@ fun main(args:Array<String>){
         ck("non-positive report is absent $timestamp",evidence(t=timestamp),InjectionEvidence.NO_REPORT)
     ck("compat helper preserves PID proof",hasCurrentInjection(true,7,7,123,setOf(123),1L),true)
     ck("compat helper rejects different PID",hasCurrentInjection(true,7,7,123,setOf(456),10000L),false)
-    val snap=parseProcessList("PID NAME\n123 com.whatsapp\n456 com.whatsapp\n12 com.whatsapp.w4b\n",1000)
+    val expectedUids=linkedMapOf("com.whatsapp" to 10200,"com.whatsapp.w4b" to 10300,"com.waenhancer" to 10100)
+    fun rows(wa:String="123 456",business:String="",manager:String="1") =
+        "PID|com.whatsapp|10200|$wa\nPID|com.whatsapp.w4b|10300|$business\nPID|com.waenhancer|10100|$manager\n"
+    fun framed(body:String=rows())="WAEX_PS_BEGIN\n${body}WAEX_PS_END\n"
+    val snap=parseProcessList(rows(),expectedUids,1000)
     ck("PID values",snap.pidsFor("com.whatsapp"),setOf(123,456))
-    ck("exhaustive missing target stopped",snap.pidsFor("com.gbwhatsapp"),emptySet<Int>())
-    ck("partial missing target unknown",snap.copy(exhaustive=false).pidsFor("com.gbwhatsapp"),null)
+    ck("explicit queried target stopped",snap.pidsFor("com.whatsapp.w4b"),emptySet<Int>())
+    ck("unqueried target remains unknown",snap.pidsFor("com.gbwhatsapp"),null)
+    ck("full-list model absence remains stopped",snap.copy(exhaustive=true).pidsFor("com.gbwhatsapp"),emptySet<Int>())
     ck("incomplete known target unknown",snap.copy(complete=false).pidsFor("com.whatsapp"),null)
     ck("timestamp records collection start",snap.observedAtElapsed,1000L)
-    val legacy=parseProcessList("USER PID PPID VSIZE RSS WCHAN PC NAME\nu0_a1 41 1 20 30 S 0 com.whatsapp\n",1111)
-    ck("legacy ps PID",legacy.pidsFor("com.whatsapp"),setOf(41))
-    ck("duplicate rows deduplicated",parseProcessList("42 com.whatsapp\n42 com.whatsapp\n").pidsFor("com.whatsapp"),setOf(42))
+    ck("duplicate PIDs deduplicated",parseProcessList(rows("42 42"),expectedUids).pidsFor("com.whatsapp"),setOf(42))
     for(line in listOf("", "bad", "0 com.whatsapp", "-1 com.whatsapp", "abc com.whatsapp",
             "2147483648 com.whatsapp", "12 com.whatsapp:service", "12 com.whatsapp;id",
-            "12 single", "12 1invalid.name", "12 "+"a".repeat(250)+".whatsapp"))
-        ck("malformed process row ignored: $line",parseProcessList(line).runningPids.size,0)
+            "12 single", "12 1invalid.name", "12 "+"a".repeat(250)+".whatsapp",
+            "USER PID PPID VSIZE RSS WCHAN PC NAME\nu0_a1 41 1 20 30 S 0 com.whatsapp"))
+        ck("UID-less/malformed process observation unknown: $line",parseProcessList(line,expectedUids).pidsFor("com.whatsapp"),null)
+    for(bad in listOf(rows().replace("|10200|","|1010200|"),rows().replace("123 456","123 bogus"),
+            rows().replace("123 456","0"),rows().replace("123 456","-1"),rows().replace("123 456","2147483648"),
+            rows()+"PID|com.whatsapp|10200|123\n",rows()+"PID|foreign.package|10200|123\n",
+            rows().replace("PID|com.whatsapp.w4b|10300|\n",""),rows()+"malformed\n")) {
+        val incomplete=parseProcessList(bad,expectedUids)
+        ck("incomplete or foreign observation rejected",incomplete.complete,false)
+        ck("bad observation cannot answer any target",incomplete.pidsFor("com.whatsapp.w4b"),null)
+    }
     var immutable=false
     try{(snap.runningPids as MutableMap).clear()}catch(_:UnsupportedOperationException){immutable=true}
     ck("observations immutable",immutable,true)
@@ -167,14 +181,14 @@ fun main(args:Array<String>){
     ck("unconfigured scope never calls root",Root.calls,beforeUnconfigured)
     LsposedScopeReader.configured=liveScope
     Root.failure=null;Root.advance=4000;SystemClock.time=1000
-    Root.output="WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n123 com.whatsapp\n1 com.waenhancer\nWAEX_PS_END\n"
+    Root.output="WAEX_LSPOSED_DB_OK\n"+framed(rows("123"))
     val observed=RootProbe.run(mod)
     ck("actual root probe preserves current PID",observed.runtime!!.pidsFor("com.whatsapp"),setOf(123))
     ck("root observation starts before collection",observed.runtime.observedAtElapsed,1000L)
     ck("scope result passed through exactly",observed.scope===liveScope,true)
     ck("scope success marker passed to boundary",LsposedScopeReader.parsedStaged,true)
     ck("one shared root invocation",Root.calls,beforeUnconfigured+1)
-    File(args.single()).writeText(RootProbe.processListCommand())
+    File(args.single()).writeText(RootProbe.processListCommand(expectedUids))
     ck("command wraps process output",Root.lastCommand.contains("\necho WAEX_PS_BEGIN\n")&&Root.lastCommand.endsWith("\necho WAEX_PS_END"),true)
     Root.advance=0
     for(output in listOf(null,"","bad","WAEX_PS_BEGIN\n42 com.whatsapp","WAEX_PS_END\nWAEX_PS_BEGIN\n42 com.whatsapp",
@@ -192,8 +206,53 @@ fun main(args:Array<String>){
     try{RootProbe.run(mod)}catch(t:Throwable){escaped=t}
     ck("unexpected root assertion propagates",escaped===fatal,true)
     Root.failure=null
-    Root.output="WAEX_PS_BEGIN\n1 com.waenhancer\nWAEX_PS_END"
-    ck("manager present makes target absence observed",RootProbe.run(mod).runtime!!.pidsFor("com.whatsapp"),emptySet<Int>())
+    Root.output=framed(rows(""))
+    ck("complete owned observation makes target absence observed",RootProbe.run(mod).runtime!!.pidsFor("com.whatsapp"),emptySet<Int>())
+    for(output in listOf(framed().removeSuffix("WAEX_PS_END\n"),framed(rows(manager="")),framed(rows(manager="999")),
+            framed()+"trailing\n","WAEX_PS_BEGIN\n"+framed(),framed()+"WAEX_PS_END\n",
+            "prefix WAEX_PS_BEGIN\n"+rows()+"WAEX_PS_END\n",framed(rows().replace("|10200|","|1010200|")))) {
+        Root.output=output
+        ck("exact complete frame and manager PID required",RootProbe.run(mod).runtime,null)
+    }
+    fun resetIdentity(){
+        Process.uid=10100;Process.pid=1;mod.applicationInfo.uid=10100
+        mod.packageManager.apps.clear()
+        expectedUids.forEach{(pkg,uid)->mod.packageManager.apps[pkg]=ApplicationInfo(pkg,uid)}
+        mod.packageManager.applicationFailure=null
+        Root.output=framed();Root.failure=null
+    }
+    fun rejectedIdentity(label:String,change:()->Unit){
+        resetIdentity();change();val beforeCalls=Root.calls
+        ck(label,RootProbe.run(mod).runtime,null)
+        ck("$label rejects before root",Root.calls,beforeCalls)
+    }
+    rejectedIdentity("context other profile"){mod.applicationInfo.uid=1010100}
+    rejectedIdentity("context other package UID in same profile"){mod.applicationInfo.uid=10101}
+    rejectedIdentity("negative context UID"){mod.applicationInfo.uid=-1}
+    rejectedIdentity("negative process UID"){Process.uid=-1}
+    rejectedIdentity("target other profile"){mod.packageManager.apps["com.whatsapp"]!!.uid=1010200}
+    rejectedIdentity("target package identity mismatch"){mod.packageManager.apps["com.whatsapp"]!!.packageName="foreign.package"}
+    rejectedIdentity("negative target UID"){mod.packageManager.apps["com.whatsapp"]!!.uid=-1}
+    rejectedIdentity("manager metadata UID mismatch"){mod.packageManager.apps["com.waenhancer"]!!.uid=10101}
+    rejectedIdentity("manager metadata missing"){mod.packageManager.apps.remove("com.waenhancer")}
+    for(error in listOf(SecurityException("fixture hidden metadata"),NoClassDefFoundError("fixture PM linkage")))
+        rejectedIdentity("metadata failure ${error.javaClass.simpleName}"){mod.packageManager.applicationFailure=error}
+    resetIdentity();val identityFatal=AssertionError("fixture PM assertion");mod.packageManager.applicationFailure=identityFatal
+    var identityEscaped:Throwable?=null
+    try{RootProbe.run(mod)}catch(t:Throwable){identityEscaped=t}
+    ck("unexpected identity assertion propagates",identityEscaped===identityFatal,true)
+    resetIdentity();mod.packageManager.apps.remove("com.whatsapp")
+    Root.output=framed(rows().replace("PID|com.whatsapp|10200|123 456\n",""))
+    ck("uninstalled target stays unqueried",RootProbe.run(mod).runtime!!.pidsFor("com.whatsapp"),null)
+    ck("uninstalled target excluded from command",Root.lastCommand.contains("pidof 'com.whatsapp'"),false)
+    resetIdentity();Process.uid=1010100;mod.applicationInfo.uid=1010100
+    mod.packageManager.apps.values.forEach{it.uid+=1000000}
+    val workUids=expectedUids.mapValues{it.value+1000000}
+    Root.output=framed(rows().replace("|10200|","|1010200|").replace("|10300|","|1010300|").replace("|10100|","|1010100|"))
+    ck("same work profile retains PIDs",RootProbe.run(mod).runtime!!.pidsFor("com.whatsapp"),setOf(123,456))
+    ck("work profile full UID in script",Root.lastCommand.contains("'1010200'"),true)
+    File(File(args.single()).parentFile,"command-work.sh").writeText(RootProbe.processListCommand(workUids))
+    resetIdentity()
     val app=HookedAppInfo("com.whatsapp","WhatsApp","2.26.40.76",true,true,lastActiveTime=10000,runtimeStatus="READY",bridgeStatus="PROVIDER",processObservedAtElapsed=1000,scopeState=TargetScopeState.IN_SCOPE)
     val stopped=app.copy(isHooked=false,injectionEvidence=InjectionEvidence.PROCESS_STOPPED)
     ck("manager sentinel establishes module",ModuleActivation.resolve(true,emptyList()).signal,ModuleSignal.MANAGER_HOOK)

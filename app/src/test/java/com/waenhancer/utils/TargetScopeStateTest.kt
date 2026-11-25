@@ -44,38 +44,47 @@ class TargetScopeStateTest {
         assertTrue(r.active); assertEquals(ModuleSignal.TARGET_INJECTION, r.signal)
     }
 
-    @Test fun `process list parses modern ps output and skips header`() {
-        val snap = parseProcessList("  PID NAME\n  101 com.example.chat\n  202 com.example.chat:service\n  303 zygote64\n  404 com.example.chat\n", 5L)
+    private val expectedUids = linkedMapOf("com.whatsapp" to 10200,
+        "com.whatsapp.w4b" to 10300, "com.waenhancer" to 10100)
+
+    @Test fun `uid process rows preserve explicit absence and unknown packages`() {
+        val snap = parseProcessList("PID|com.example.chat|10200|101 404\nPID|com.other.app|10300|\n",
+            mapOf("com.example.chat" to 10200, "com.other.app" to 10300), 5L)
         assertEquals(setOf(101, 404), snap.pidsFor("com.example.chat"))
-        assertEquals(emptySet<Int>(), snap.pidsFor("com.other.app")) // exhaustive: absent means not running
+        assertEquals(emptySet<Int>(), snap.pidsFor("com.other.app"))
+        assertEquals(null, snap.pidsFor("com.unqueried.app"))
     }
 
-    @Test fun `process list parses legacy toolbox layout`() {
-        val snap = parseProcessList("USER PID PPID VSIZE RSS WCHAN PC NAME\nu0_a12 777 1 100 50 x 0 S com.example.chat\n", 5L)
-        assertEquals(setOf(777), snap.pidsFor("com.example.chat"))
+    @Test fun `legacy toolbox rows without verified uid stay unknown`() {
+        val snap = parseProcessList("USER PID PPID VSIZE RSS WCHAN PC NAME\nu0_a12 777 1 100 50 x 0 S com.example.chat\n",
+            mapOf("com.example.chat" to 10200), 5L)
+        assertFalse(snap.complete)
+        assertEquals(null, snap.pidsFor("com.example.chat"))
     }
 
     @Test fun `truncated process probe is not treated as nothing running`() {
-        assertEquals(null, RootProbe.parseRuntime("WAEX_PS_BEGIN\n 1 com.a.b\n", 0L))
-        assertEquals(null, RootProbe.parseRuntime("", 0L))
+        assertEquals(null, RootProbe.parseRuntime("WAEX_PS_BEGIN\nPID|com.whatsapp|10200|1\n", expectedUids, 0L))
+        assertEquals(null, RootProbe.parseRuntime("", expectedUids, 0L))
     }
 
-    @Test fun `process probe filters on the shell side and always includes the manager`() {
-        val command = RootProbe.processListCommand()
-        assertTrue(command.contains("com\\.whatsapp\\.w4b"))
-        assertTrue(command.contains("com\\.waenhancer"))
-        assertTrue(command.contains("grep -E"))
+    @Test fun `process command verifies profile uid and includes manager query`() {
+        val command = RootProbe.processListCommand(expectedUids)
+        assertTrue(command.contains("pidof 'com.whatsapp.w4b'"))
+        assertTrue(command.contains("pidof 'com.waenhancer'"))
+        assertTrue(command.contains("/proc/\$pid/status"))
+        assertTrue(command.contains("set -f"))
+        assertTrue(command.contains("'10300'"))
     }
 
-    @Test fun `filtered process output with a target and the manager parses`() {
-        val snap = RootProbe.parseRuntime("WAEX_PS_BEGIN\n 4242 com.whatsapp\n 99 com.waenhancer\nWAEX_PS_END\n", 0L)
+    @Test fun `complete queried rows parse without overclaiming other packages`() {
+        val snap = RootProbe.parseRuntime("WAEX_PS_BEGIN\nPID|com.whatsapp|10200|4242\nPID|com.whatsapp.w4b|10300|\nPID|com.waenhancer|10100|99\nWAEX_PS_END\n", expectedUids, 0L)
         assertEquals(setOf(4242), snap?.pidsFor("com.whatsapp"))
         assertEquals(emptySet<Int>(), snap?.pidsFor("com.whatsapp.w4b"))
+        assertEquals(null, snap?.pidsFor("com.unqueried.app"))
     }
 
-    @Test fun `complete process probe yields snapshot`() {
-        val snap = RootProbe.parseRuntime("WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n PID NAME\n 9 com.a.b\nWAEX_PS_END\n", 0L)
-        assertEquals(setOf(9), snap?.pidsFor("com.a.b"))
+    @Test fun `omitted queried row never becomes a complete process observation`() {
+        assertEquals(null, RootProbe.parseRuntime("WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\nPID|com.whatsapp|10200|9\nWAEX_PS_END\n", expectedUids, 0L))
     }
 
     @Test fun `scoped app outside the supported list is never a target`() {

@@ -121,7 +121,9 @@ class RuntimeResourcesTest {
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--root',type=Path,default=Path.cwd());ap.add_argument('--out',type=Path,required=True)
  ap.add_argument('--public-apk-cache',type=Path,help='Optional directory containing hash-verified 2.0.3 debug.apk and release.apk')
+ ap.add_argument('--offline',action='store_true',help='Require the public APK cache and existing Gradle dependency cache')
  a=ap.parse_args()
+ if a.offline and not a.public_apk_cache:ap.error('--offline requires --public-apk-cache')
  root=a.root.resolve();out=a.out.resolve();out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir();project=out/'fixture';project.mkdir();apks=out/'apks';apks.mkdir()
  pins={'debug':'c4531d92851c5f251614e8af822f340737981adeb7128341463f8897e3d42114','release':'f19d64239b493785b48540dce068a32a295f33bd33b18e48b46d168896c4ac0f'}
  for variant,digest in pins.items():
@@ -180,7 +182,7 @@ dependencies {
  # The real detector's signature and fail-closed scope path reference both
  # LsposedScopeReader and LsposedScopeSnapshot. Compile their production source
  # instead of substituting a scope-always-true test double.
- files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','xposed/core/VersionGuard.kt','xposed/bridge/client/HookProviderIpc.java']
+ files=['utils/AndroidUserScope.java','utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','xposed/core/VersionGuard.kt','xposed/bridge/client/HookProviderIpc.java']
  if (root/'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java').exists():files+=['utils/DeclaredWhatsAppTargets.java']
  for name in files:
   p=root/'app/src/main/java/com/waenhancer'/name
@@ -235,6 +237,7 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  bash=shutil.which('bash')
  if not bash:raise RuntimeError('Compatible bash executable required for Gradle wrapper')
  cmd=[bash,(root/'gradlew').as_posix(),'-p',str(project),'--no-daemon',':probe:testDebugUnitTest']
+ if a.offline:cmd.append('--offline')
  with (e/'framework-build.log').open('w') as log:
   result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=720)
  for p in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(p,e/p.name)
