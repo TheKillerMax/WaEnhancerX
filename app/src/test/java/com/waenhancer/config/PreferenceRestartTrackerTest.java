@@ -1,5 +1,11 @@
 package com.waenhancer.config;
 
+import android.content.SharedPreferences;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -74,7 +80,7 @@ public class PreferenceRestartTrackerTest {
         PreferenceRestartTracker.onPreferenceChanged(prefs, "com.whatsapp:anti_revoke");
 
         assertTrue(prefs.getBoolean("com.whatsapp:need_restart", false));
-        assertEquals(java.util.Collections.singleton("anti_revoke"),
+        assertEquals(Collections.singleton("anti_revoke"),
                 prefs.getStringSet("com.whatsapp:pending_restart_changes", null));
 
         // Universal restart keys should not be affected
@@ -88,7 +94,7 @@ public class PreferenceRestartTrackerTest {
         // Changing setting for WA Business only affects WA Business
         PreferenceRestartTracker.onPreferenceChanged(prefs, "com.whatsapp.w4b:floating_bottom_bar");
         assertTrue(prefs.getBoolean("com.whatsapp.w4b:need_restart", false));
-        assertEquals(java.util.Collections.singleton("floating_bottom_bar"),
+        assertEquals(Collections.singleton("floating_bottom_bar"),
                 prefs.getStringSet("com.whatsapp.w4b:pending_restart_changes", null));
     }
 
@@ -98,19 +104,19 @@ public class PreferenceRestartTrackerTest {
         PreferenceRestartTracker.onPreferenceChanged(prefs, "anti_revoke");
 
         assertTrue(prefs.getBoolean("need_restart", false));
-        assertEquals(java.util.Collections.singleton("anti_revoke"),
+        assertEquals(Collections.singleton("anti_revoke"),
                 prefs.getStringSet("pending_restart_changes", null));
 
         assertFalse(prefs.contains("com.whatsapp:need_restart"));
         assertFalse(prefs.contains("com.whatsapp.w4b:need_restart"));
     }
 
-    private static class FakeSharedPreferences implements android.content.SharedPreferences {
-        private final java.util.Map<String, Object> map = new java.util.HashMap<>();
+    private static class FakeSharedPreferences implements SharedPreferences {
+        private final Map<String, Object> map = new HashMap<>();
 
         @Override
-        public java.util.Map<String, ?> getAll() {
-            return new java.util.HashMap<>(map);
+        public Map<String, ?> getAll() {
+            return new HashMap<>(map);
         }
 
         @Override
@@ -120,9 +126,9 @@ public class PreferenceRestartTrackerTest {
         }
 
         @Override
-        public java.util.Set<String> getStringSet(String key, java.util.Set<String> defValues) {
+        public Set<String> getStringSet(String key, Set<String> defValues) {
             Object v = map.get(key);
-            return v instanceof java.util.Set ? new java.util.HashSet<>((java.util.Set<String>) v) : defValues;
+            return v instanceof Set ? new HashSet<>((Set<String>) v) : defValues;
         }
 
         @Override
@@ -166,8 +172,8 @@ public class PreferenceRestartTrackerTest {
         public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
 
         private class FakeEditor implements Editor {
-            private final java.util.Map<String, Object> changes = new java.util.HashMap<>();
-            private final java.util.Set<String> removals = new java.util.HashSet<>();
+            private final Map<String, Object> changes = new HashMap<>();
+            private final Set<String> removals = new HashSet<>();
             private boolean clearAll = false;
 
             @Override
@@ -178,8 +184,8 @@ public class PreferenceRestartTrackerTest {
             }
 
             @Override
-            public Editor putStringSet(String key, java.util.Set<String> values) {
-                changes.put(key, values == null ? null : new java.util.HashSet<>(values));
+            public Editor putStringSet(String key, Set<String> values) {
+                changes.put(key, values == null ? null : new HashSet<>(values));
                 removals.remove(key);
                 return this;
             }

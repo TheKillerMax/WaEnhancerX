@@ -1,5 +1,6 @@
 package com.waenhancer.theme
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -86,6 +87,6 @@ class ThemePackageTest {
     }
 
     private object ArchiveFixture {
-        fun extract(input: ByteArrayInputStream, target: java.io.File) = ThemeArchive.extract(input, target)
+        fun extract(input: ByteArrayInputStream, target: File) = ThemeArchive.extract(input, target)
     }
 }

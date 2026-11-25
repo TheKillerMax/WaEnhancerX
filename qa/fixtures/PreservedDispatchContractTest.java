@@ -1,5 +1,8 @@
 package com.waenhancer.audit;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 
 import android.content.Context;
@@ -194,10 +197,10 @@ public class PreservedDispatchContractTest {
     private void awaitPreservationQueue() throws Exception {
         Field field=PreserveDeleteForMeHook.class.getDeclaredField("preservationExecutor");
         field.setAccessible(true);
-        java.util.concurrent.ExecutorService worker=(java.util.concurrent.ExecutorService)field.get(null);
+        ExecutorService worker=(ExecutorService)field.get(null);
         // A no-op submitted after a capture is a FIFO completion barrier, not a
         // production main-thread wait or permission to treat enqueue as persistence.
-        worker.submit(() -> {}).get(15,java.util.concurrent.TimeUnit.SECONDS);
+        worker.submit(() -> {}).get(15,TimeUnit.SECONDS);
     }
 
     private boolean captureAndAwait() throws Exception {
@@ -497,12 +500,12 @@ public class PreservedDispatchContractTest {
         }
     }
     public static class BlockingProvider extends HookProvider {
-        static final java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1);
-        static final java.util.concurrent.CountDownLatch release=new java.util.concurrent.CountDownLatch(1);
+        static final CountDownLatch entered=new CountDownLatch(1);
+        static final CountDownLatch release=new CountDownLatch(1);
         @Override public Bundle call(String method,String arg,Bundle extras) {
             if (!"record_preserved_message".equals(method)) return super.call(method,arg,extras);
             entered.countDown();
-            try {if(!release.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Provider barrier not released");}
+            try {if(!release.await(10,TimeUnit.SECONDS))throw new AssertionError("Provider barrier not released");}
             catch(InterruptedException e){Thread.currentThread().interrupt();throw new AssertionError(e);}
             return super.call(method,arg,extras);
         }
@@ -513,7 +516,7 @@ public class PreservedDispatchContractTest {
         FixtureRunnable owner=new FixtureRunnable(context);
         try {
             XC_MethodHook.MethodHookParam param=beginRun(owner);
-            assertTrue("Worker must enter provider",BlockingProvider.entered.await(5,java.util.concurrent.TimeUnit.SECONDS));
+            assertTrue("Worker must enter provider",BlockingProvider.entered.await(5,TimeUnit.SECONDS));
             assertFalse(owner.originalExecuted);assertFalse(param.resultWasSet);
             owner.run();XposedBridge.fireAfter(param);
             assertTrue(owner.originalExecuted);assertEquals(0,sourceRows());

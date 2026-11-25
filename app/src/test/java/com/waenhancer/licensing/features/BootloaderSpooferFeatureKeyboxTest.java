@@ -1,5 +1,6 @@
 package com.waenhancer.licensing.features;
 
+import org.junit.Assert;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -25,7 +26,7 @@ public class BootloaderSpooferFeatureKeyboxTest {
         conn.setReadTimeout(10000);
 
         int responseCode = conn.getResponseCode();
-        org.junit.Assert.assertEquals("Keybox endpoint must return 200", 200, responseCode);
+        Assert.assertEquals("Keybox endpoint must return 200", 200, responseCode);
 
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {

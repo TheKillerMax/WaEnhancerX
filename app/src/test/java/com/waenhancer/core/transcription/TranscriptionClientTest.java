@@ -1,5 +1,6 @@
 package com.waenhancer.core.transcription;
 
+import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -114,19 +115,19 @@ public class TranscriptionClientTest {
     public void modelDiscoveryReadsOpenAiListWithSpeechModelsFirst() throws Exception {
         FakeTransport transport = new FakeTransport().reply(200,
                 "{\"object\":\"list\",\"data\":[{\"id\":\"llama3\"},{\"id\":\"whisper-1\"},{\"id\":\"gpt-4o-transcribe\"}]}");
-        java.util.List<String> models = new TranscriptionClient(transport)
+        List<String> models = new TranscriptionClient(transport)
                 .listModels("https://host/stt/v1/audio/transcriptions", "k");
         assertEquals("GET https://host/stt/v1/models", transport.urls.get(0));
         assertEquals("Bearer k", transport.headers.get(0).get("Authorization"));
-        assertEquals(java.util.Arrays.asList("gpt-4o-transcribe", "whisper-1", "llama3"), models);
+        assertEquals(Arrays.asList("gpt-4o-transcribe", "whisper-1", "llama3"), models);
     }
 
     @Test
     public void modelDiscoveryAcceptsOtherShapesAndExplainsMissingList() throws Exception {
-        java.util.List<String> models = new TranscriptionClient(new FakeTransport()
+        List<String> models = new TranscriptionClient(new FakeTransport()
                 .reply(200, "{\"models\":[{\"name\":\"base\"},{\"name\":\"small\"}]}"))
                 .listModels("https://h/v1", "");
-        assertEquals(java.util.Arrays.asList("base", "small"), models);
+        assertEquals(Arrays.asList("base", "small"), models);
         try {
             new TranscriptionClient(new FakeTransport().reply(404, "not found")).listModels("https://h/v1", "k");
             fail();

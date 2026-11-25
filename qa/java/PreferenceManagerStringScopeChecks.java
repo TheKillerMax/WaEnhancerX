@@ -1,5 +1,7 @@
 package test;
 
+import android.content.pm.ApplicationInfo;
+import java.io.File;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -92,8 +94,8 @@ public final class PreferenceManagerStringScopeChecks {
             unexpected++; throw new AssertionError("Unknown preference store");
         }
         @Override public ContentResolver getContentResolver() { unexpected++; throw new AssertionError("Getter used resolver"); }
-        @Override public android.content.pm.ApplicationInfo getApplicationInfo() { unexpected++; throw new AssertionError("Getter requested filesystem identity"); }
-        @Override public java.io.File getFilesDir() { unexpected++; throw new AssertionError("Getter touched filesystem"); }
+        @Override public ApplicationInfo getApplicationInfo() { unexpected++; throw new AssertionError("Getter requested filesystem identity"); }
+        @Override public File getFilesDir() { unexpected++; throw new AssertionError("Getter touched filesystem"); }
     }
     static WaexPreferenceManager manager(Ctx c) {
         WaexPreferenceManager m = new WaexPreferenceManager(c);

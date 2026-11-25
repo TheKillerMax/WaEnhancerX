@@ -1,5 +1,6 @@
 package com.waenhancer.fixture
 
+import java.util.Locale
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
@@ -98,7 +99,7 @@ private class LayoutProbe(
 class ManagerLayoutTest {
     @Test fun spanishCounterPreservesTheRefreshActionAtNarrowWidth() {
         LayoutProbe(272, 1f) { CounterFragment() }.use { probe ->
-            val counter = probe.text(String.format(java.util.Locale.ROOT,
+            val counter = probe.text(String.format(Locale.ROOT,
                 FixtureLabels.forLanguage("es").getValue(R.string.injected_hooks_active_count), 58, 58))
             val layout = probe.layout(counter)
             assertTrue("The counter stays bounded", layout.lineCount in 1..2)

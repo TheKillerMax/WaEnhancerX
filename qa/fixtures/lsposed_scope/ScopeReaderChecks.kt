@@ -1,5 +1,6 @@
 package com.waenhancer.utils
 
+import java.io.File
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabase.ScopeRow
@@ -116,7 +117,7 @@ object ScopeReaderChecks {
             fixture(1_010_191, ScopeRow(4, MODULE, true, "com.whatsapp", 10)) {
                 expect(setOf("com.whatsapp"))
                 listOf("waex_lsposed_scope.db", "waex_lsposed_scope.db-wal", "waex_lsposed_scope.db-shm")
-                    .forEach { java.io.File(cacheDir, it).writeText("synthetic") }
+                    .forEach { File(cacheDir, it).writeText("synthetic") }
                 val snap = LsposedScopeReader.parseStaged(this, false)
                 require(!snap.isLive && snap.packages.isEmpty() && snap.moduleEnabled == null)
                 require(snap.source == LsposedScopeSnapshot.Source.UNAVAILABLE)

@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.utils;
 
+import com.waenhancer.utils.AndroidUserScope;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -97,12 +98,12 @@ public final class TestRestartTargetPolicy {
                 .contains("--user 11 -n 'com.whatsapp/com.whatsapp.Launcher'"), "relative launcher normalized");
         check(RestartTargetPolicy.launchCommand("com.whatsapp", scope, "androidx.activity.ComponentActivity", 0)
                 .contains("--user 0 -n 'com.whatsapp/androidx.activity.ComponentActivity'"), "library activity stays in target package");
-        check(com.waenhancer.utils.AndroidUserScope.userIdForUid(12345) == 0, "primary user UID");
-        check(com.waenhancer.utils.AndroidUserScope.userIdForUid(1012345) == 10, "work profile UID");
-        check(com.waenhancer.utils.AndroidUserScope.userIdForUid(1112345) == 11, "secondary profile UID");
-        check(com.waenhancer.utils.AndroidUserScope.userIdForUid(Integer.MAX_VALUE) == 21474, "UID upper bound");
+        check(AndroidUserScope.userIdForUid(12345) == 0, "primary user UID");
+        check(AndroidUserScope.userIdForUid(1012345) == 10, "work profile UID");
+        check(AndroidUserScope.userIdForUid(1112345) == 11, "secondary profile UID");
+        check(AndroidUserScope.userIdForUid(Integer.MAX_VALUE) == 21474, "UID upper bound");
         boolean invalidUid = false;
-        try { com.waenhancer.utils.AndroidUserScope.userIdForUid(-1); }
+        try { AndroidUserScope.userIdForUid(-1); }
         catch (IllegalArgumentException expected) { invalidUid = true; }
         check(invalidUid, "negative UID refused");
 
