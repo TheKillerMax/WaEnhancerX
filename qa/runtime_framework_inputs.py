@@ -22,7 +22,19 @@ def kotlin_string(value):
     return json.dumps(str(value), ensure_ascii=False).replace('$', r'\$')
 
 
-def prepare(bundle, destination, run_id, run_attempt, head_sha):
+def prepare(bundle, destination, run_id, run_attempt, head_sha, *,
+            consumer='runtime', project='runtime-fixture', runner=None):
+    consumers = {'runtime': ('runtime-fixture', 'verify_runtime_framework.py'),
+                 'stability': ('stability-fixture', 'verify_stability_framework.py'),
+                 'interface-scale': ('interface-scale-fixture', 'verify_interface_scale_framework.py')}
+    if type(consumer) is not str or consumer not in consumers or project != consumers[consumer][0]:
+        raise ValueError('Unknown or inconsistent framework consumer/project')
+    expected_runner = QA / consumers[consumer][1]
+    if runner is None and consumer != 'runtime':
+        raise ValueError('An explicit runner is required for this framework consumer')
+    runner = expected_runner if runner is None else Path(runner).resolve()
+    if runner != expected_runner:
+        raise ValueError('Framework consumer has a different executing runner')
     bundle, destination = Path(bundle).absolute(), Path(destination).absolute()
     lock = QA / 'framework_dependency_lock.json'
     origin = identity(run_id, run_attempt, head_sha)
@@ -53,8 +65,11 @@ def prepare(bundle, destination, run_id, run_attempt, head_sha):
             'source_url': 'https://repo.maven.apache.org/maven2/org/robolectric/nativeruntime-dist-compat/1.0.19/' + POM.name},
         'sdk_directory': str(bundle / 'sdk-jars'), 'sdk_resolution': 'offline',
         'source_sha256': {str(path.relative_to(QA.parent)).replace('\\', '/'): sha(path) for path in (
-            QA / 'verify_runtime_framework.py', Path(__file__).resolve(), QA / 'framework_dependency_bundle.py', lock, POM)},
+            runner, Path(__file__).resolve(), QA / 'framework_dependency_bundle.py', lock, POM)},
         'scope': 'Exact native module and three SDKs supplied locally; other Gradle dependencies are unchanged.'}
+    if consumer != 'runtime':
+        record.update(schema='WAEX_GRADLE_FRAMEWORK_INPUTS_V1', consumer=consumer,
+                      project_name=project, runner=runner.relative_to(QA.parent).as_posix())
     return record
 
 
@@ -70,9 +85,9 @@ dependencyResolutionManagement {
   google(); mavenCentral()
  }
 }
-rootProject.name="runtime-fixture"
+rootProject.name=PROJECT_NAME
 include(":probe")
-'''.replace('uri(URI)', 'uri(' + uri + ')')
+'''.replace('uri(URI)', 'uri(' + uri + ')').replace('PROJECT_NAME', kotlin_string(record.get('project_name', 'runtime-fixture')))
 
 
 def test_configuration(record, evidence):

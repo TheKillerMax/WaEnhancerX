@@ -17,10 +17,26 @@ def main():
     ap.add_argument('--sdk',type=int,choices=range(24,38),help='Run one runtime API; default preserves API34')
     ap.add_argument('--mode',choices=['all','update','filter'],default='all',
                     help='all runs the current updater and filter suites; on-demand runtime refresh has its separate source/JVM suite')
+    ap.add_argument('--offline',action='store_true',help='Use the existing Gradle dependency cache only')
+    ap.add_argument('--framework-bundle',type=Path,help='Closed 39-file framework bundle from this CI run, attempt and head')
+    ap.add_argument('--bundle-run-id');ap.add_argument('--bundle-run-attempt');ap.add_argument('--bundle-head-sha')
     a=ap.parse_args();root=a.root.resolve();out=a.out.resolve()
+    origin=(a.bundle_run_id,a.bundle_run_attempt,a.bundle_head_sha)
+    if (a.framework_bundle and not all(origin)) or (not a.framework_bundle and any(origin)):
+        ap.error('--framework-bundle requires explicit --bundle-run-id, --bundle-run-attempt and --bundle-head-sha')
+    if a.framework_bundle:
+        import runtime_framework_inputs
+        runtime_framework_inputs.identity(*origin)
+        if a.sdk is not None and a.sdk not in (24,28,34):
+            ap.error('The closed framework bundle supplies SDK24, SDK28 and SDK34 only')
     sdk_levels=[a.sdk] if a.sdk is not None else [34]
     executed_fixture_sha256={}
     out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir()
+    inputs=None
+    if a.framework_bundle:
+        inputs=runtime_framework_inputs.prepare(a.framework_bundle,out,*origin,
+                    consumer='stability',project='stability-fixture',runner=Path(__file__))
+        (e/'framework-inputs-before.json').write_text(json.dumps(inputs,indent=2)+'\n',encoding='utf-8')
     p=out/'fixture';p.mkdir();v=tomllib.loads((root/'gradle/libs.versions.toml').read_text())['versions']
     # Compose's BOM does not select the experimental Material3 APIs used by
     # the actual wavy progress indicators. Resolve the *app's* explicit pin.
@@ -29,6 +45,10 @@ def main():
     if len(expressive_pins)!=1:
         raise ValueError('Expected exactly one explicit app Material3 dependency')
     (p/'settings.gradle.kts').write_text('pluginManagement{repositories{google();mavenCentral();gradlePluginPortal()}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\nrootProject.name="stability-fixture"\ninclude(":probe")\n')
+    if inputs:
+        settings=runtime_framework_inputs.settings(inputs)
+        (p/'settings.gradle.kts').write_text(settings,encoding='utf-8')
+        (e/'settings.gradle.kts').write_text(settings,encoding='utf-8')
     (p/'gradle.properties').write_text('android.useAndroidX=true\nandroid.builtInKotlin=false\nandroid.newDsl=false\norg.gradle.jvmargs=-Xmx2g\n')
     probe=p/'probe';probe.mkdir()
     def write(path,text):
@@ -63,9 +83,11 @@ dependencies {
 }
 '''
     for key,val in {'AGP':v['androidGradlePlugin'],'KOTLIN':v['kotlin'],'BOM':v['androidxComposeBom'],'MATERIAL3':expressive_pins[0],'LIFE':v['androidxLifecycle'],'CORO':v['coroutines'],'CORE':v['androidxCore'],'OKHTTP':v['okhttp']}.items():build=build.replace(key,val)
+    if inputs:build='import java.security.MessageDigest\nimport java.io.File\n'+build+runtime_framework_inputs.test_configuration(inputs,e)
     write('build.gradle.kts',build)
     write('src/main/AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
-    identity={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')}
+    identity=dict(inputs['source_sha256']) if inputs else {}
+    identity.update({p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')})
     # Upstream 1b029ec88 removed RuntimeObservationClock and its periodic heartbeat.
     # Current refresh/coalescing is covered by test_runtime_observation_clock.py.
     modes=['update','filter'] if a.mode=='all' else [a.mode]
@@ -158,6 +180,8 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     bash=shutil.which('bash')
     if not bash:raise RuntimeError('Compatible bash required for Gradle wrapper')
     cmd=[bash,(root/'gradlew').as_posix(),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
+    if a.offline:cmd.append('--offline')
+    (e/'command.json').write_text(json.dumps(cmd,indent=2)+'\n',encoding='utf-8')
     with (e/'framework-build.log').open('w') as log:
         result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900,env=runtime_env(a.sdk))
     for f in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(f,e/f.name)
@@ -169,5 +193,6 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     (e/'result.json').write_text(json.dumps(summary,indent=2))
     if result.returncode or counts != [sum(expected[m] for m in modes),0,0,0]:
         print((e/'framework-build.log').read_text()[-22000:]);raise RuntimeError('Stability framework failed: '+str(summary))
+    if inputs:runtime_framework_inputs.finish(inputs,e)
     print('PASS: '+json.dumps(summary))
 if __name__=='__main__':main()

@@ -398,6 +398,7 @@ jobs:
     name: Extracted renderer / Android framework / native pixels
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    needs: preserved-dispatch-framework
     steps:
       - uses: actions/checkout@v4
         with:
@@ -425,22 +426,61 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Download the current-run verified framework graph
+        if: steps.presence.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-presence-framework-bundle
+      - name: Reuse the exact Android 16 instrumented SDK
+        if: steps.presence.outputs.present == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/waex-presence-sdk-jars/android-all-instrumented-16-robolectric-13921718-i7.jar
+          key: waex-presence-sdk36-${{ runner.os }}-${{ hashFiles('qa/presence_framework_sdks.json') }}
+      - name: Verify the same-run graph and prepare Android 28, 34 and 36
+        id: presence_inputs
+        if: steps.presence.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_prepare_presence_framework.py --out "$RUNNER_TEMP/waex-presence-inputs/controls"
+          python3 qa/prepare_presence_framework.py \
+            --bundle "$RUNNER_TEMP/waex-presence-framework-bundle" \
+            --out "$RUNNER_TEMP/waex-presence-sdk-jars" \
+            --report "$RUNNER_TEMP/waex-presence-inputs/before.json" \
+            --run-id "${{ github.run_id }}" --run-attempt "${{ github.run_attempt }}" --head-sha "${{ github.sha }}"
       - name: Run required framework tests for the merged renderer
         if: steps.presence.outputs.present == 'true'
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/test_presence_runner_controls.py
-          python3 qa/android_presence_row_test.py --out "$RUNNER_TEMP/waex-android-rows" --mutations
+          python3 qa/android_presence_row_test.py --out "$RUNNER_TEMP/waex-android-rows" --mutations \
+            --deps "$RUNNER_TEMP/waex-presence-framework-bundle/deps" \
+            --sdk-dir "$RUNNER_TEMP/waex-presence-sdk-jars"
           python3 qa/mutate_presence_rows.py \
-            "$RUNNER_TEMP/waex-android-row-mutations" "$RUNNER_TEMP/waex-android-rows/deps"
+            "$RUNNER_TEMP/waex-android-row-mutations" "$RUNNER_TEMP/waex-presence-framework-bundle/deps" \
+            --sdk-dir "$RUNNER_TEMP/waex-presence-sdk-jars"
           echo 'Extracted production renderer passed Android framework/Skia tests. NOT an APK build, WhatsApp binder or LSPosed test.'
+      - name: Recheck all shared inputs after the renderer consumers
+        if: always() && steps.presence.outputs.present == 'true' && steps.presence_inputs.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_presence_framework.py \
+            --bundle "$RUNNER_TEMP/waex-presence-framework-bundle" \
+            --out "$RUNNER_TEMP/waex-presence-sdk-jars" \
+            --report "$RUNNER_TEMP/waex-presence-inputs/after.json" --offline \
+            --run-id "${{ github.run_id }}" --run-attempt "${{ github.run_attempt }}" --head-sha "${{ github.sha }}"
       - name: Preserve source identities and text-only rendering evidence
         if: always() && steps.presence.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: android-presence-row-evidence
           path: |
+            ${{ runner.temp }}/waex-presence-inputs/**/*.json
+            ${{ runner.temp }}/waex-presence-inputs/**/*.log
             ${{ runner.temp }}/waex-android-rows/*.json
             ${{ runner.temp }}/waex-android-rows/*.log
             ${{ runner.temp }}/waex-android-rows/*/*.log
@@ -523,6 +563,7 @@ jobs:
 
   interface-scale-framework:
     name: Interface size / complete theme / Android density and font scale
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -537,23 +578,41 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Retrieve dependencies from the successful producer in this run attempt
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify exact dependency bytes and CI origin before interface tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-interface-dependency-bundle.json"
       - name: Require whole-theme scaling and accessibility regression tests
         shell: bash
         run: |
           set -euo pipefail
           test -f qa/fixtures/InterfaceScaleThemeTest.kt
-          python3 qa/verify_interface_scale_framework.py --out "$RUNNER_TEMP/waex-interface-scale"
+          python3 qa/verify_interface_scale_framework.py --out "$RUNNER_TEMP/waex-interface-scale" \
+            --framework-bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA"
       - name: Preserve source identities, dependency hashes and framework results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: interface-scale-framework-evidence
-          path: ${{ runner.temp }}/waex-interface-scale/evidence
+          path: |
+            ${{ runner.temp }}/waex-interface-dependency-bundle.json
+            ${{ runner.temp }}/waex-interface-scale/evidence
           retention-days: 14
           if-no-files-found: error
 
   stability-framework:
     name: Stability / real Android Views and Compose runtime
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -584,6 +643,25 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Retrieve dependencies from the successful producer in this run attempt
+        if: steps.modes.outputs.modes != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify exact dependency bytes, CI origin and consumer boundaries
+        if: steps.modes.outputs.modes != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-stability-dependency-bundle.json"
+          python3 qa/test_gradle_framework_consumers.py \
+            --out "$RUNNER_TEMP/waex-gradle-consumer-controls" \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            2>&1 | tee "$RUNNER_TEMP/waex-gradle-consumer-controls.log"
       - name: Execute compiled production sources with real framework dependencies
         if: steps.modes.outputs.modes != ''
         shell: bash
@@ -591,18 +669,24 @@ jobs:
           MODES: ${{ steps.modes.outputs.modes }}
         run: |
           set -euo pipefail
+          bundle=(--framework-bundle "$RUNNER_TEMP/waex-shared-framework"
+                  --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA")
           if [[ "$MODES" == ' update clock filter' ]]; then
-            python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all"
+            python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" "${bundle[@]}"
           else
             for mode in $MODES; do
-              python3 qa/verify_stability_framework.py --mode "$mode" --out "$RUNNER_TEMP/waex-stability/$mode"
+              python3 qa/verify_stability_framework.py --mode "$mode" --out "$RUNNER_TEMP/waex-stability/$mode" "${bundle[@]}"
             done
           fi
       - uses: actions/upload-artifact@v4
         if: always() && steps.modes.outputs.modes != ''
         with:
           name: stability-framework-evidence
-          path: ${{ runner.temp }}/waex-stability/*/evidence
+          path: |
+            ${{ runner.temp }}/waex-stability-dependency-bundle.json
+            ${{ runner.temp }}/waex-gradle-consumer-controls/result.json
+            ${{ runner.temp }}/waex-gradle-consumer-controls.log
+            ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
 

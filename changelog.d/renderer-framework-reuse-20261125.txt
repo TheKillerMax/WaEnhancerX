@@ -1,0 +1,2 @@
+[Fixes]
+Reuse the verified current-run framework graph for the renderer and its mutation suites. Verify and cache the separate Android 16 SDK without changing the Android 28, 34 or 36 scenarios.

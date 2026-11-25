@@ -1,0 +1,2 @@
+[Fixes]
+Reuse the verified framework inputs from the same CI run, attempt and source head for Stability and Interface Scale. Preserve Runtime defaults, original native-runtime metadata and all existing test oracles while verifying the bytes on the actual Gradle Test classpath.
