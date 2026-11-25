@@ -1,0 +1,3 @@
+[Fixes]
+- Cover concurrent HMA checks, verified backups and guarded recovery with
+  compiled Android framework regression scenarios.
