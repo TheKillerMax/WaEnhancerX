@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.core.db
 
+import java.util.concurrent.ConcurrentHashMap
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -184,7 +185,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         committed?.let { history -> cacheKey(rowId, validKeyId)?.let { cacheHistory(it, history) } }
     }
 
-    private val originalKeyCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val originalKeyCache = ConcurrentHashMap<String, String>()
 
     /**
      * An edited message's row carries the edit's own key; WhatsApp keeps the key of the

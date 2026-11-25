@@ -1,0 +1,2 @@
+[Fixes]
+- Restore the source import gate for hook and host bridge classes without changing their logic.

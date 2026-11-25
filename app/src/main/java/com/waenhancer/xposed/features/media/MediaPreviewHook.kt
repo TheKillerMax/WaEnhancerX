@@ -1,6 +1,12 @@
 package com.waenhancer.xposed.features.media
 
 
+import android.app.Activity
+import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.graphics.drawable.RippleDrawable
+import java.lang.reflect.Method
+import java.util.concurrent.ConcurrentHashMap
 import com.waenhancer.app.R
 import com.waenhancer.utils.UiText
 import android.R as AndroidR
@@ -93,7 +99,7 @@ class MediaPreviewHook(
     private var currentMediaPlayer: MediaPlayer? = null
     private var currentSpeed: Float = 1.0f
     private var lastProgressPostAt: Long = 0L
-    private val hookedGetViews: MutableSet<java.lang.reflect.Method> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val hookedGetViews: MutableSet<Method> = ConcurrentHashMap.newKeySet()
 
     override fun hook() {
         if (!isEnabled("media_preview", isEnabled("enable_media_preview", true))) return
@@ -120,7 +126,7 @@ class MediaPreviewHook(
         val tracked = ActivityTracker.getCurrentActivity()
         val host = list.context
         val inConversation = (tracked != null && HostClassNames.simpleNameContains(tracked.javaClass, "Conversation")) ||
-            (host is android.app.Activity && HostClassNames.simpleNameContains(host.javaClass, "Conversation"))
+            (host is Activity && HostClassNames.simpleNameContains(host.javaClass, "Conversation"))
         if (!inConversation) return
 
         var adapter: ListAdapter? = adapterIn
@@ -346,7 +352,7 @@ class MediaPreviewHook(
     /** Dark translucent circle + white eye, matching WhatsApp's forward button and the CC button. */
     private fun createSideButton(context: Context, size: Int): ImageButton {
         val night = (context.resources.configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val circle = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(if (night) 0xFF0F181D.toInt() else 0x66000000)
@@ -355,8 +361,8 @@ class MediaPreviewHook(
             shape = GradientDrawable.OVAL
             setColor(Color.WHITE)
         }
-        val ripple = android.graphics.drawable.RippleDrawable(
-            android.content.res.ColorStateList.valueOf(Color.argb(60, 255, 255, 255)), circle, mask
+        val ripple = RippleDrawable(
+            ColorStateList.valueOf(Color.argb(60, 255, 255, 255)), circle, mask
         )
         return ImageButton(context).apply {
             background = ripple
@@ -1472,7 +1478,7 @@ class MediaPreviewHook(
         private const val KIND_NONE = 0
         private const val KIND_IMAGE = 1
         private const val KIND_VIDEO = 2
-        private val rowKindCache = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+        private val rowKindCache = ConcurrentHashMap<Int, Int>()
         private const val SIDE_BTN_SIZE_DP = 32f
         private const val SIDE_BTN_MARGIN_DP = 6f
         private val KEY_ID_REGEX = Regex("(?:messageId|messageID|keyId|id)=([A-Za-z0-9_-]{6,})")

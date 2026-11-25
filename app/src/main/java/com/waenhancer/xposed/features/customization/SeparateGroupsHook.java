@@ -575,14 +575,14 @@ public final class SeparateGroupsHook extends BaseFeature {
                         if (sContextIndex >= 0) args[sContextIndex] = ctx;
                         args[sIntIndex] = cIndex;
                         args[sBadgeIndex] = chatsBadge;
-                        de.robv.android.xposed.XposedBridge.invokeOriginalMethod(sTabBadgeMethod, target, args);
+                        XposedBridge.invokeOriginalMethod(sTabBadgeMethod, target, args);
                     }
                     if (gIndex >= 0 && groupsBadge != null) {
                         Object[] args = new Object[pTypes.length];
                         if (sContextIndex >= 0) args[sContextIndex] = ctx;
                         args[sIntIndex] = gIndex;
                         args[sBadgeIndex] = groupsBadge;
-                        de.robv.android.xposed.XposedBridge.invokeOriginalMethod(sTabBadgeMethod, target, args);
+                        XposedBridge.invokeOriginalMethod(sTabBadgeMethod, target, args);
                     }
                 } catch (Throwable t) {
                     XposedBridge.log(TAG + " error applying badges: " + t);

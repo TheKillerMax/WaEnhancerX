@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.features.privacy;
 
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,7 +47,7 @@ final class LockedContactFilterPolicy {
         if (values == null) return;
         for (String value : values) {
             if (value == null) continue;
-            String clean = value.trim().toLowerCase(java.util.Locale.ROOT);
+            String clean = value.trim().toLowerCase(Locale.ROOT);
             if (!clean.isEmpty()) target.add(clean);
         }
     }

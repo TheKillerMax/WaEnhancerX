@@ -1,5 +1,8 @@
 package com.waenhancer.xposed.features.privacy;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * A manual read allowance only exempts an actual read stanza. It must never
  * bypass delivery hiding or Ghost Mode (both expressed by hideDelivery=true).
@@ -21,7 +24,7 @@ final class ExplicitReadReceiptPolicy {
     private static final class JobGrant {
         final String recipient;
         final String[] ids;
-        JobGrant(String recipient, java.util.Set<String> ids) {
+        JobGrant(String recipient, Set<String> ids) {
             this.recipient = recipient;
             this.ids = ids.toArray(new String[0]);
         }
@@ -30,7 +33,7 @@ final class ExplicitReadReceiptPolicy {
     static Object captureJobGrant(String recipient, Object[] authorizedArguments) {
         String exact = ReceiptJidPolicy.canonical(recipient);
         if (exact == null || "status@broadcast".equals(exact) || authorizedArguments == null) return null;
-        java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+        Set<String> ids = new LinkedHashSet<>();
         for (Object argument : authorizedArguments) {
             if (!(argument instanceof String[])) continue;
             for (String id : (String[]) argument) {

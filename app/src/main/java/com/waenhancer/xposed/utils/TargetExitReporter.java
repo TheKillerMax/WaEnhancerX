@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.utils;
 
+import android.os.Process;
+import java.util.Arrays;
 import android.app.ActivityManager;
 import android.app.ApplicationExitInfo;
 import android.content.Context;
@@ -32,7 +34,7 @@ public final class TargetExitReporter {
                 ? context.getApplicationContext() : context;
         Thread worker = new Thread(() -> {
             try {
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
                 Api30.report(app, target, consentAt);
             } catch (Throwable ignored) {
                 // Telemetry is optional; a failed OS query or provider call must not disrupt WA.
@@ -75,12 +77,12 @@ public final class TargetExitReporter {
             }
             Bundle data = new Bundle();
             data.putString("package", target);
-            data.putLongArray("exit_times", java.util.Arrays.copyOf(timestamps, count));
-            data.putIntArray("exit_pids", java.util.Arrays.copyOf(pids, count));
-            data.putIntArray("exit_reasons", java.util.Arrays.copyOf(reasons, count));
-            data.putIntArray("exit_statuses", java.util.Arrays.copyOf(statuses, count));
-            data.putLongArray("exit_pss_kib", java.util.Arrays.copyOf(pss, count));
-            data.putLongArray("exit_rss_kib", java.util.Arrays.copyOf(rss, count));
+            data.putLongArray("exit_times", Arrays.copyOf(timestamps, count));
+            data.putIntArray("exit_pids", Arrays.copyOf(pids, count));
+            data.putIntArray("exit_reasons", Arrays.copyOf(reasons, count));
+            data.putIntArray("exit_statuses", Arrays.copyOf(statuses, count));
+            data.putLongArray("exit_pss_kib", Arrays.copyOf(pss, count));
+            data.putLongArray("exit_rss_kib", Arrays.copyOf(rss, count));
             // Existing unstable provider route: no crash-thread IPC, no retry on ambiguity.
             HookProviderIpc.call(context, "report_target_exit_history", target, data);
         }

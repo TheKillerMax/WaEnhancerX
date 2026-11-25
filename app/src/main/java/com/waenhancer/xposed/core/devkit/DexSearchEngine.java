@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.core.devkit;
 
+import android.os.Build;
+import com.waenhancer.xposed.MainHook;
 import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,12 +52,12 @@ public final class DexSearchEngine {
         } catch (Throwable ignored) { HookErrors.swallowed("DexSearchEngine", ignored); }
 
         try {
-            String modulePath = com.waenhancer.xposed.MainHook.sModulePath;
+            String modulePath = MainHook.sModulePath;
             if (modulePath != null) {
                 File baseApk = new File(modulePath);
                 File parent = baseApk.getParentFile();
                 if (parent != null) {
-                    for (String abi : android.os.Build.SUPPORTED_ABIS) {
+                    for (String abi : Build.SUPPORTED_ABIS) {
                         File libFile = new File(parent, "lib/" + abi + "/libdexkit.so");
                         if (libFile.exists()) {
                             System.load(libFile.getAbsolutePath());

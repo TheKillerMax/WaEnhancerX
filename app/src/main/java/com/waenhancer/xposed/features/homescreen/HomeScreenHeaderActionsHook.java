@@ -898,7 +898,7 @@ public class HomeScreenHeaderActionsHook extends BaseFeature {
                 Toast.makeText(current,
                         UiText.get(R.string.waex_ui_restarting_whatsapp_short, "Restarting WhatsApp…"),
                         Toast.LENGTH_SHORT).show();
-                com.waenhancer.xposed.utils.WhatsAppProcessRestarter.restart(current);
+                WhatsAppProcessRestarter.restart(current);
             } catch (RuntimeException failure) {
                 XposedBridge.log(TAG + " Restart failed: " + failure.getClass().getSimpleName());
                 if (canRestart(current)) showRestartUnavailable(current);

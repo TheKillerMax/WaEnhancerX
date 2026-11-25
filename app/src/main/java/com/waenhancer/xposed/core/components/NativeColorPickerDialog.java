@@ -121,7 +121,7 @@ public final class NativeColorPickerDialog {
 
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(content);
-        new com.waenhancer.xposed.core.components.WaexBottomSheet(activity)
+        new WaexBottomSheet(activity)
                 .setTitle("Choose color")
                 .setView(scroll)
                 .setPositiveButton(activity.getString(android.R.string.ok), (d, which) -> {

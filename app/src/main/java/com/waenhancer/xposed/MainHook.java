@@ -1,5 +1,7 @@
 package com.waenhancer.xposed;
 
+import android.webkit.WebView;
+import java.util.function.Consumer;
 import android.app.Activity;
 import androidx.annotation.NonNull;
 import android.app.Application;
@@ -306,7 +308,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                         if (isDebuggableRequested) {
                                             context.getApplicationInfo().flags |= ApplicationInfo.FLAG_DEBUGGABLE;
                                             try {
-                                                android.webkit.WebView.setWebContentsDebuggingEnabled(true);
+                                                WebView.setWebContentsDebuggingEnabled(true);
                                             } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
                                         }
                                     } catch (Throwable t) {
@@ -352,7 +354,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
             }
 
             Runnable[] pendingInit = new Runnable[1];
-            java.util.function.Consumer<Context> initializeTargetFromContext = (Context targetCtx) -> {
+            Consumer<Context> initializeTargetFromContext = (Context targetCtx) -> {
                 if (targetCtx == null) return;
                 Context appContext = targetCtx.getApplicationContext() != null ? targetCtx.getApplicationContext() : targetCtx;
                 if (!TARGET_INITIALIZED.compareAndSet(false, true)) {

@@ -1,5 +1,16 @@
 package com.waenhancer.xposed.features.media;
 
+import android.app.Dialog;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.text.TextUtils;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.Spinner;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import com.waenhancer.app.R;
 import com.waenhancer.utils.UiText;
 
@@ -84,11 +95,11 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
     private static final long SEEN_ON_DISK_MS = 60_000;
 
     /** getView methods already hooked. */
-    private final java.util.Set<Method> hookedGetViews =
-            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+    private final Set<Method> hookedGetViews =
+            Collections.synchronizedSet(new HashSet<>());
     private WeakReference<ListView> listViewRef = new WeakReference<>(null);
     private boolean readyRefreshPending;
-    private volatile android.app.Dialog currentSheet;
+    private volatile Dialog currentSheet;
     private final AtomicBoolean disabled = new AtomicBoolean(false);
 
     // Cached resource IDs (looked up once — getIdentifier is slow)
@@ -335,9 +346,9 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
         GradientDrawable rippleMask = new GradientDrawable();
         rippleMask.setShape(GradientDrawable.OVAL);
         rippleMask.setColor(Color.WHITE);
-        android.graphics.drawable.RippleDrawable background =
-                new android.graphics.drawable.RippleDrawable(
-                        android.content.res.ColorStateList.valueOf(Color.argb(60, 255, 255, 255)),
+        RippleDrawable background =
+                new RippleDrawable(
+                        ColorStateList.valueOf(Color.argb(60, 255, 255, 255)),
                         circle, rippleMask);
 
         CaptionDrawable icon = new CaptionDrawable(dp(ctx, 22), Color.WHITE);
@@ -346,7 +357,7 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
         btn.setBackground(background);
         btn.setImageDrawable(icon);
         btn.setPadding(0, 0, 0, 0);
-        btn.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        btn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         btn.setContentDescription("Transcribe voice note");
 
         ViewGroup.LayoutParams lp = new ViewGroup.MarginLayoutParams(sizePx, sizePx);
@@ -651,13 +662,13 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
             }
         }
 
-        android.widget.Spinner spinner = new android.widget.Spinner(activity, android.widget.Spinner.MODE_DROPDOWN);
+        Spinner spinner = new Spinner(activity, Spinner.MODE_DROPDOWN);
         List<String> labels = new ArrayList<>();
         for (LocaleOption opt : WHATSAPP_LOCALES) {
             labels.add(opt.label);
         }
 
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<String>(
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 activity, android.R.layout.simple_spinner_item, labels) {
             @NonNull
             @Override
@@ -666,7 +677,7 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
                 view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 view.setTextColor(themeTextColor(activity));
                 view.setSingleLine(true);
-                view.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                view.setEllipsize(TextUtils.TruncateAt.END);
                 int padH = dp(activity, 10);
                 int padV = dp(activity, 4);
                 view.setPadding(padH, padV, padH, padV);
@@ -697,11 +708,11 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
         int padV = dp(activity, 2);
         spinner.setPadding(padH, padV, padH, padV);
 
-        spinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             private boolean isFirstCall = true;
 
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (isFirstCall) {
                     isFirstCall = false;
                     return;
@@ -717,7 +728,7 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
             }
 
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         return spinner;
@@ -729,8 +740,8 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
 
     private static boolean isDarkTheme(Context ctx) {
         try {
-            int mode = ctx.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
-            return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+            int mode = ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+            return mode == Configuration.UI_MODE_NIGHT_YES;
         } catch (Throwable ignored) {
             return false;
         }
@@ -758,7 +769,7 @@ public final class VoiceNoteRowTranscriptHook extends BaseFeature {
     }
 
     private void dismissCurrentSheet() {
-        android.app.Dialog sheet = currentSheet;
+        Dialog sheet = currentSheet;
         currentSheet = null;
         if (sheet != null && sheet.isShowing()) {
             try { sheet.dismiss(); } catch (Throwable ignored) { HookErrors.swallowed("VoiceNoteRowTranscriptHook", ignored); }
