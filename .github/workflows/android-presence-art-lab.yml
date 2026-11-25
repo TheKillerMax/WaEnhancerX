@@ -63,8 +63,8 @@ jobs:
           for target in ('api24', 'api25', 'api26'):
               checked_lock(Path('lab/qa/android_emulator_lab_matrix_lock.json'), target)
           PY
-          python3 lab/qa/presence_art_probe/test_presence_art_host.py
-          python3 lab/qa/test_presence_art_lab.py
+          python3 lab/qa/presence_art_probe/test_presence_art_host.py --out "$RUNNER_TEMP/presence-art-host-controls" 2>&1 | tee "$RUNNER_TEMP/presence-art-host-controls.log"
+          python3 lab/qa/test_presence_art_lab.py 2>&1 | tee "$RUNNER_TEMP/presence-art-lab-controls.log"
       - name: Build one APK with existing JDK21 and SDK36
         shell: bash
         run: |
@@ -102,7 +102,11 @@ jobs:
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
         with:
           name: presence-art-build-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/presence-art-build/reports/
+          path: |
+            ${{ runner.temp }}/presence-art-build/reports/
+            ${{ runner.temp }}/presence-art-host-controls/result.json
+            ${{ runner.temp }}/presence-art-host-controls.log
+            ${{ runner.temp }}/presence-art-lab-controls.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 9
