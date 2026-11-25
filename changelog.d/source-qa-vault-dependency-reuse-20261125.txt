@@ -1,0 +1,2 @@
+[Fixes]
+- Source QA vault checks verify and reuse the framework bundle from the successful producer in the same run, attempt and source head, preserving all 33 row identity and SQLite lifecycle cases while avoiding a repeated SDK download.

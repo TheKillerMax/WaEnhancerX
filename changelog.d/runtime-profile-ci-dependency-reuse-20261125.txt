@@ -1,0 +1,2 @@
+[Fixes]
+- Source QA profile checks reuse the verified framework dependencies from the successful producer in the same run and attempt, avoiding a second instrumented Android SDK download. The public runtime driver, 36 framework cases, 26 unit consumers and behavioral negative controls remain unchanged.

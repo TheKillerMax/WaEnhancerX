@@ -456,6 +456,7 @@ jobs:
 
   runtime-framework:
     name: Runtime policies / Android resource tables / API compile
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -478,14 +479,45 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Retrieve dependencies from the successful producer in this run attempt
+        if: steps.runtime.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify exact dependency bytes and CI origin before runtime resource tests
+        if: steps.runtime.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-runtime-dependency-bundle.json"
+          python3 qa/test_runtime_framework_inputs.py \
+            --out "$RUNNER_TEMP/waex-runtime-framework-controls" \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            2>&1 | tee "$RUNNER_TEMP/waex-runtime-input-controls.log"
       - name: Compile public utilities and observation clock; test compiled version resources
         if: steps.runtime.outputs.present == 'true'
-        run: python3 qa/verify_runtime_framework.py --out "$RUNNER_TEMP/waex-runtime-framework"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/verify_runtime_framework.py \
+            --out "$RUNNER_TEMP/waex-runtime-framework" \
+            --framework-bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --bundle-run-id "$GITHUB_RUN_ID" \
+            --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --bundle-head-sha "$GITHUB_SHA"
       - uses: actions/upload-artifact@v4
         if: always() && steps.runtime.outputs.present == 'true'
         with:
           name: runtime-framework-evidence
-          path: ${{ runner.temp }}/waex-runtime-framework/evidence
+          path: |
+            ${{ runner.temp }}/waex-runtime-dependency-bundle.json
+            ${{ runner.temp }}/waex-runtime-framework-controls/result.json
+            ${{ runner.temp }}/waex-runtime-input-controls.log
+            ${{ runner.temp }}/waex-runtime-framework/evidence
           retention-days: 14
           if-no-files-found: error
 
@@ -576,6 +608,7 @@ jobs:
 
   preserved-vault-framework:
     name: Preserved vault / row identity and Android SQLite compatibility
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -593,14 +626,34 @@ jobs:
           kotlinc -version
           mvn -version
           test -f qa/fixtures/PreservedStoreCompatibilityTest.java
-      - name: Exercise 33 row identity and schema lifecycle cases
-        run: python3 qa/android_preserved_store_test.py --out "$RUNNER_TEMP/waex-preserved-vault"
+      - name: Retrieve dependencies from the successful producer in this run attempt
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify exact dependency bytes, run, attempt and source head before Vault
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-vault-dependency-bundle.json"
+      - name: Exercise 33 row identity and schema lifecycle cases offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/android_preserved_store_test.py \
+            --out "$RUNNER_TEMP/waex-preserved-vault" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
       - name: Preserve source identities and Android SQLite results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: preserved-vault-framework-evidence
           path: |
+            ${{ runner.temp }}/waex-vault-dependency-bundle.json
             ${{ runner.temp }}/waex-preserved-vault/*.json
             ${{ runner.temp }}/waex-preserved-vault/*.log
           retention-days: 14
@@ -761,6 +814,7 @@ jobs:
 
   runtime-reporting-framework:
     name: Profile UID evidence / bounded reporting / Android API 24, 28, 34
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -785,19 +839,35 @@ jobs:
           test -f qa/runtime_profile_toolchain/toolchain-lock.json
           test -f app/src/main/java/com/waenhancer/xposed/core/RuntimeReportDispatcher.java
           test -f app/src/main/java/com/waenhancer/config/PreferenceSyncPolicy.java
+      - name: Retrieve the framework dependencies already verified by this run
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify dependency bytes and origin before profile framework tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-runtime-reporting-dependency-bundle.json"
       - name: Verify runtime evidence, shared bounded reporting and causal negative controls
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/run_runtime_reporting_ci.py \
             --out "$RUNNER_TEMP/waex-runtime-reporting" \
-            --java-home "$JAVA_HOME"
+            --java-home "$JAVA_HOME" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
       - name: Preserve source, compiler, framework and negative-control evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: runtime-reporting-framework-evidence
           path: |
+            ${{ runner.temp }}/waex-runtime-reporting-dependency-bundle.json
             ${{ runner.temp }}/waex-runtime-reporting/*.json
             ${{ runner.temp }}/waex-runtime-reporting/*.log
             ${{ runner.temp }}/waex-runtime-reporting/toolchain/*.json

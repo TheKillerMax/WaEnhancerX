@@ -1,0 +1,2 @@
+[Fixes]
+Runtime framework CI reuses the verified native runtime and Android SDKs from its same-run dependency producer. The native module retains its original Maven metadata, and Gradle records the exact resolved bytes before executing the unchanged resource tests.
