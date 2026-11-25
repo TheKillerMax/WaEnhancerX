@@ -1,0 +1,2 @@
+[Fixes]
+- Keep diagnostic telemetry from triggering configuration reloads and report package/hook registration success only after persistence succeeds.

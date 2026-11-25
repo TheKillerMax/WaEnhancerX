@@ -238,10 +238,13 @@ public class HookProvider extends ContentProvider {
                             extras != null ? extras.getInt("boot_count", -1) : -1);
                     editor.putInt("runtime_pid_" + pkg, callerPid);
                     editor.putString("runtime_status_" + pkg, "INJECTED");
-                    editor.commit();
-                    context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
+                    boolean committed = editor.commit();
+                    if (committed) {
+                        context.getContentResolver().notifyChange(
+                                Uri.parse("content://" + AUTHORITY + "/runtime_health"), null);
+                    }
                     Bundle result = new Bundle();
-                    result.putBoolean("success", true);
+                    result.putBoolean("success", committed);
                     return result;
                 }
             }
@@ -272,8 +275,6 @@ public class HookProvider extends ContentProvider {
                                 bridgeStatus, error != null, callerPid);
                         context.getContentResolver().notifyChange(
                                 Uri.parse("content://" + AUTHORITY + "/runtime_health"), null);
-                        context.getContentResolver().notifyChange(
-                                Uri.parse("content://" + AUTHORITY + "/preferences"), null);
                     }
                     Bundle result = new Bundle();
                     result.putBoolean("success", committed);
@@ -298,7 +299,7 @@ public class HookProvider extends ContentProvider {
                     if (committed) {
                         DiagnosticsRecorder.recordHookSummary(context, pkg, hooksJson);
                         context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/injected_hooks"), null);
-                        context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/preferences"), null);
+                        context.getContentResolver().notifyChange(Uri.parse("content://" + AUTHORITY + "/runtime_health"), null);
                     }
                     Bundle result = new Bundle();
                     result.putBoolean("success", committed);
