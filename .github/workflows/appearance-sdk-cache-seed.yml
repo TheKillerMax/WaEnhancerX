@@ -1,0 +1,207 @@
+name: Seed reviewed Appearance SDK cache
+
+on:
+  push:
+    branches: ['integration/android-matrix-nightly8-20261124']
+    paths: ['.github/workflows/appearance-sdk-cache-seed.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: appearance-sdk-cache-seed-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Record the historical producer separately from this cache consumer
+        env:
+          APPEARANCE_CACHE_KEY: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYSEED'
+          import hashlib, json, os, re
+          from pathlib import Path
+          evidence = Path(os.environ['RUNNER_TEMP']) / 'waex-appearance-sdk-seed-evidence'
+          evidence.mkdir(parents=True, exist_ok=False)
+          pins = {
+              'qa/framework_dependency_lock.json': '8fa74776e9ef20fdee5773a058235c4d0203a750cba1a4f9aed8d2d4e4e8924f',
+              'qa/framework_dependency_bundle.py': '14784e136796cf54c37cb77bdca3346bec489e2580bba73dc1dc65cdacecf31b',
+              'qa/prepare_robolectric_sdks.py': '29bd84f588637c5f9550db7f3fd18256acb2e7fd7c1667a58b9dcfe93a51ba1e',
+              'qa/maven_dependencies.py': 'a0afd31e7fa74c4d10c55b50f84f5388ab67a9e76fc9eff769649edc51270795',
+              'qa/run_runtime_reporting_ci.py': 'cdfed89eabcdba77503b03aa8bea0949df30eebdf926cdf812aa5276df24ab1c',
+              'qa/runtime_profile_toolchain/toolchain.py': '67c31cb9b4ffb2f45f83aa7c4186ded17d804ae92c710c0206daa0c7b5600b23',
+              'qa/runtime_profile_toolchain/toolchain-lock.json': '22cbe8b32257e65cb65e1c894d7b5daa3c42d3a6fcfcaaf4c2207f36163b896d',
+              '.github/workflows/appearance-hooks-qa.yml': '9f59ad993d7b2cbbe435afc00e39d3a96f9c5ede6ac10ceaf95a498d407503bf',
+          }
+          record = {'schema': 1, 'accepted': False,
+              'producer': {'run_id': '45581309675', 'run_attempt': '1',
+                  'head_sha': 'dca0283d759e367580babec4bd93955ce01dc716',
+                  'artifact_name': 'hma-framework-dependencies-45581309675-1',
+                  'bundle_manifest_sha256': 'd98dc65bf3699143d04f82fc2e96528a98ccf36ff907d74b3165662e2cc1489d'},
+              'consumer': {key: os.environ.get(key) for key in (
+                  'GITHUB_REPOSITORY', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_SHA',
+                  'GITHUB_REF', 'GITHUB_EVENT_NAME', 'GITHUB_WORKFLOW_REF', 'GITHUB_WORKFLOW_SHA')},
+              'cache_key': os.environ['APPEARANCE_CACHE_KEY'],
+              'cache_path': str(Path(os.environ['RUNNER_TEMP']) / 'waex-appearance-hooks/sdk-jars'),
+              'seed_workflow_sha256': hashlib.sha256(Path('.github/workflows/appearance-sdk-cache-seed.yml').read_bytes()).hexdigest(),
+              'source_sha256': {}}
+          try:
+              if os.environ['GITHUB_REF'] != 'refs/heads/integration/android-matrix-nightly8-20261124':
+                  raise ValueError('This one-off seed belongs only to the reviewed integration branch')
+              if os.environ['GITHUB_EVENT_NAME'] not in ('push', 'workflow_dispatch'):
+                  raise ValueError('Unexpected seed event')
+              for key in ('GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT'):
+                  if not re.fullmatch(r'[1-9][0-9]*', os.environ[key]):
+                      raise ValueError('Invalid consumer identity: ' + key)
+              if not re.fullmatch(r'[0-9a-f]{40}', os.environ['GITHUB_SHA']):
+                  raise ValueError('Invalid consumer source head')
+              if not re.fullmatch(r'waex-sdk3-Linux-[0-9a-f]{64}', record['cache_key']):
+                  raise ValueError('The lock must be available before the cache key is evaluated')
+              for name, expected in pins.items():
+                  actual = hashlib.sha256(Path(name).read_bytes()).hexdigest()
+                  record['source_sha256'][name] = actual
+                  if actual != expected:
+                      raise ValueError('Reviewed source identity mismatch: ' + name)
+              record['accepted'] = True
+          except (KeyError, OSError, ValueError) as error:
+              record['error'] = str(error)
+          (evidence / 'context.json').write_text(json.dumps(record, indent=2) + '\n')
+          if not record['accepted']:
+              raise SystemExit(1)
+          PYSEED
+      - name: Download the already produced graph from its explicit historical run
+        timeout-minutes: 5
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '45581309675'
+          repository: ${{ github.repository }}
+          name: hma-framework-dependencies-45581309675-1
+          path: ${{ runner.temp }}/waex-appearance-sdk-seed-bundle
+      - name: Verify all 39 identities before creating any cache entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-appearance-sdk-seed-bundle" \
+            --run-id '45581309675' --run-attempt '1' \
+            --head-sha 'dca0283d759e367580babec4bd93955ce01dc716' \
+            --report "$RUNNER_TEMP/waex-appearance-sdk-seed-evidence/bundle-verification.json"
+          printf '%s  %s\n' 'd98dc65bf3699143d04f82fc2e96528a98ccf36ff907d74b3165662e2cc1489d' \
+            "$RUNNER_TEMP/waex-appearance-sdk-seed-bundle/bundle.json" | sha256sum --check --strict
+          python3 qa/prepare_robolectric_sdks.py --offline \
+            --cache "$RUNNER_TEMP/waex-appearance-sdk-seed-bundle/sdk-jars" \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-appearance-sdk-seed-evidence/sdk-stage.json"
+      - name: Save only the three verified SDKs under the exact Appearance cache key
+        id: save
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
+          key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Remove this job's staged links before checking the saved cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEMPTY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          staged = json.loads((root / 'waex-appearance-sdk-seed-evidence/sdk-stage.json').read_bytes())
+          target = root / 'waex-appearance-hooks/sdk-jars'
+          names = {item['name'] for item in staged['files']}
+          if not staged['accepted'] or len(names) != 3 or target.is_symlink():
+              raise ValueError('Refusing to clear an unverified staging directory')
+          if {item.name for item in target.iterdir()} != names:
+              raise ValueError('Unexpected file in the SDK staging directory')
+          for item in target.iterdir():
+              item.unlink()
+          target.rmdir()
+          PYEMPTY
+      - name: Require an exact cache hit with the same path and compression contract
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
+          key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+          fail-on-cache-miss: true
+      - name: Rehash the SDK bytes retrieved from cache without a network fallback
+        id: roundtrip
+        run: |
+          python3 qa/prepare_robolectric_sdks.py --offline \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-appearance-sdk-seed-evidence/sdk-cache-roundtrip.json"
+      - name: Record whether the complete seed and cache roundtrip were accepted
+        if: always()
+        env:
+          CACHE_SAVE_OUTCOME: ${{ steps.save.outcome }}
+          CACHE_RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+          ROUNDTRIP_OUTCOME: ${{ steps.roundtrip.outcome }}
+        shell: bash
+        run: |
+          python3 - <<'PYRECEIPT'
+          import hashlib, json, os
+          from pathlib import Path
+          evidence = Path(os.environ['RUNNER_TEMP']) / 'waex-appearance-sdk-seed-evidence'
+          evidence.mkdir(parents=True, exist_ok=True)
+          receipts = {}
+          for name in ('context', 'bundle-verification', 'sdk-stage', 'sdk-cache-roundtrip'):
+              path = evidence / (name + '.json')
+              receipts[name] = json.loads(path.read_bytes()) if path.exists() else {}
+          context, bundle, stage, roundtrip = (receipts[name] for name in receipts)
+          def sdk_ok(record, source):
+              return (record.get('accepted') is True and record.get('offline') is True
+                  and record.get('network_requests') == 0 and record.get('worker_closed') is True
+                  and record.get('supervisor_exit') == 0 and len(record.get('files', [])) == 3
+                  and record.get('lock_sha256') == context.get('source_sha256', {}).get('qa/framework_dependency_lock.json')
+                  and all(row.get('verified') is True and row.get('source') == source
+                          and row.get('attempts') == [] for row in record['files']))
+          accepted = (context.get('accepted') is True and bundle.get('accepted') is True
+              and bundle.get('verified_files') == 39 and bundle.get('total_bytes') == 685831012
+              and bundle.get('network_requests') == 0 and bundle.get('native_runtime_required') is True
+              and bundle.get('origin') == {key: context.get('producer', {}).get(key)
+                  for key in ('run_id', 'run_attempt', 'head_sha')}
+              and bundle.get('lock_sha256') == context.get('source_sha256', {}).get('qa/framework_dependency_lock.json')
+              and bundle.get('manifest_sha256') == context.get('producer', {}).get('bundle_manifest_sha256')
+              and sdk_ok(stage, 'verified_cache') and sdk_ok(roundtrip, 'existing_destination')
+              and os.environ.get('CACHE_SAVE_OUTCOME') == 'success'
+              and os.environ.get('CACHE_RESTORE_OUTCOME') == 'success'
+              and os.environ.get('CACHE_HIT') == 'true' and os.environ.get('ROUNDTRIP_OUTCOME') == 'success')
+          result = {'schema': 1, 'accepted': accepted, 'producer': context.get('producer'),
+              'consumer': context.get('consumer'), 'cache_key': context.get('cache_key'),
+              'cache_path': context.get('cache_path'),
+              'action_outcomes': {key: os.environ.get(key) for key in (
+                  'CACHE_SAVE_OUTCOME', 'CACHE_RESTORE_OUTCOME', 'CACHE_HIT', 'ROUNDTRIP_OUTCOME')},
+              'receipt_sha256': {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                  for path in evidence.glob('*.json') if path.name != 'result.json'},
+              'scope': 'Historical artifact transport and offline cache roundtrip; no Android test was run here'}
+          (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result))
+          if not accepted:
+              raise SystemExit(1)
+          PYRECEIPT
+      - name: Preserve the source provenance, byte verification and cache roundtrip receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appearance-sdk-cache-seed-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-appearance-sdk-seed-evidence/*.json
+            ${{ runner.temp }}/waex-appearance-sdk-seed-evidence/*.log
+          if-no-files-found: error
+          retention-days: 14

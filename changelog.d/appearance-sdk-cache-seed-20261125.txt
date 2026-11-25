@@ -1,0 +1,2 @@
+[Fixes]
+Add a bounded, one-off Appearance SDK cache seed from an explicitly identified Source QA artifact, verifying all 39 dependency files and an offline cache roundtrip before accepting the seed.
