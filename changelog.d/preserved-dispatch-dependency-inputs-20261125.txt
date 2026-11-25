@@ -1,0 +1,2 @@
+[Fixes]
+Reuse the verified framework and Android SDK caches in the preserved-message CI producer, with bounded exact-URL recovery when absent, instead of resolving the Maven plugin again. Preserve its 105 API 24/28/34 cases and 39-file bundle origin checks; adapt only the three SDK paths for the unchanged bundle creator and retain before/after integrity receipts.

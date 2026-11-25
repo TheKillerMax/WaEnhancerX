@@ -764,23 +764,113 @@ jobs:
         run: |
           set -euo pipefail
           kotlinc -version
-          mvn -version
           test -f qa/maven_dependencies.py
           test -f qa/fixtures/PreservedDispatchContractTest.java
-      - name: Exercise 84 persistence and callback cases on Android API 24, 28 and 34
-        run: python3 qa/android_preserved_dispatch_test.py --out "$RUNNER_TEMP/waex-preserved-dispatch"
+      - name: Restore the shared verified framework graph
+        id: preserved-framework-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
+          key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Restore the shared verified Android SDKs
+        id: preserved-sdk-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
+          key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Verify or prepare the locked 36 dependencies and 3 SDKs before the producer
+        id: preserved-inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_framework_dependencies.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch-inputs/framework-before.json"
+          python3 qa/prepare_robolectric_sdks.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch-inputs/sdks-before.json"
+      - name: Save verified framework inputs when the exact shared cache was absent
+        if: steps.preserved-framework-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
+          key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Save verified SDK inputs when the exact shared cache was absent
+        if: steps.preserved-sdk-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
+          key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Exercise 105 persistence and callback cases on Android API 24, 28 and 34
+        run: |
+          python3 qa/android_preserved_dispatch_test.py \
+            --out "$RUNNER_TEMP/waex-preserved-dispatch" \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars"
+      - name: Rehash the producer inputs after the attempted Android gate
+        if: always() && steps.preserved-inputs.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_framework_dependencies.py --offline \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch-inputs/framework-after.json"
+          python3 qa/prepare_robolectric_sdks.py --offline \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch-inputs/sdks-after.json"
       - name: Verify dependency transfer rejects corrupt or mismatched bundles
         run: |
           python3 qa/test_framework_dependency_bundle.py \
             --out "$RUNNER_TEMP/waex-framework-bundle-controls" \
             --report "$RUNNER_TEMP/waex-preserved-dispatch/dependency-bundle-controls.json"
+      - name: Adapt the three verified SDK paths for the unchanged bundle creator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            "$RUNNER_TEMP/waex-preserved-sdk-view" \
+            "$RUNNER_TEMP/waex-preserved-dispatch/sdk-view.json" <<'PYSDKVIEW'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd() / 'qa'))
+          from framework_dependency_bundle import LOCK, checked, load_lock, sha
+          sdks, view, report = map(Path, sys.argv[1:])
+          if sdks.is_symlink() or not sdks.is_dir():
+              raise ValueError('Expected the verified flat SDK directory')
+          if view.exists() or view.is_symlink() or report.exists() or report.is_symlink():
+              raise ValueError('Use new SDK view and receipt paths')
+          if (view.resolve().is_relative_to(sdks.resolve())
+                  or sdks.resolve().is_relative_to(view.resolve())
+                  or report.resolve().is_relative_to(sdks.resolve())
+                  or report.resolve().is_relative_to(view.resolve())):
+              raise ValueError('SDK inputs, view and receipt must be separate')
+          items = [item for item in load_lock(LOCK) if item['directory'] == 'sdk-jars']
+          if len(items) != 3 or {path.name for path in sdks.iterdir()} != {item['name'] for item in items}:
+              raise ValueError('Expected exactly the three locked SDK inputs')
+          for item in items:
+              checked(sdks / item['name'], item)
+          view.mkdir(parents=True)
+          for item in items:
+              target = view / item['maven_path']
+              target.parent.mkdir(parents=True, exist_ok=True)
+              os.link(sdks / item['name'], target)
+              checked(target, item)
+          result = {'schema': 1, 'accepted': True, 'network_requests': 0,
+              'lock_sha256': sha(LOCK), 'source_layout': 'flat SDK directory',
+              'destination_layout': 'locked Maven paths, without invoking Maven',
+              'mode': 'hardlink', 'files': [{key: item[key] for key in
+                  ('name', 'maven_path', 'bytes', 'sha256')} for item in items]}
+          report.parent.mkdir(parents=True, exist_ok=True)
+          report.write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result))
+          PYSDKVIEW
       - name: Stage the complete dependency graph already exercised by this job
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/framework_dependency_bundle.py create \
-            --deps "$RUNNER_TEMP/waex-preserved-dispatch/deps" \
-            --maven-repo "$HOME/.m2/repository" \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --maven-repo "$RUNNER_TEMP/waex-preserved-sdk-view" \
             --bundle "$RUNNER_TEMP/waex-shared-framework" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
             --report "$RUNNER_TEMP/waex-preserved-dispatch/dependency-bundle.json"
@@ -800,6 +890,8 @@ jobs:
           path: |
             ${{ runner.temp }}/waex-preserved-dispatch/*.json
             ${{ runner.temp }}/waex-preserved-dispatch/*.log
+            ${{ runner.temp }}/waex-preserved-dispatch-inputs/*.json
+            ${{ runner.temp }}/waex-preserved-dispatch-inputs/*.log
           retention-days: 14
           if-no-files-found: error
 
