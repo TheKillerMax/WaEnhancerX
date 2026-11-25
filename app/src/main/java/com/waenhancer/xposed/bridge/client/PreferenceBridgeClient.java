@@ -102,6 +102,10 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         if (pending == null) return;
         try {
             pending.get();
+        } catch (InterruptedException interrupted) {
+            // A cancelled startup waiter must not install features from an unauthoritative snapshot.
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Initial preference sync interrupted", interrupted);
         } catch (Throwable t) {
             XposedBridge.log("[WAEX] PreferenceBridgeClient: Initial preference sync failed: "
                     + t.getClass().getSimpleName());
@@ -364,7 +368,8 @@ public final class PreferenceBridgeClient implements SharedPreferences {
         }
     }
 
-    private void requestRefresh() {
+    /** Coalesces live refresh signals on the existing ordered preference worker. */
+    public void requestRefresh() {
         refreshGeneration.incrementAndGet();
         if (!refreshScheduled.compareAndSet(false, true)) return;
         ioExecutor.execute(() -> {

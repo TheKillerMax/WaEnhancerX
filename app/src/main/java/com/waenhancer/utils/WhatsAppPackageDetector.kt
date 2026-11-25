@@ -146,6 +146,18 @@ object WhatsAppPackageDetector {
         runtimeStatus: String,
         bridgeStatus: String,
         error: String? = null
+    ) = reportRuntimeHealth(context, packageName, runtimeStatus, bridgeStatus, error,
+        System.currentTimeMillis())
+
+    /** Keep the original observation time when optional reports wait for delivery. */
+    @JvmStatic
+    fun reportRuntimeHealth(
+        context: Context,
+        packageName: String,
+        runtimeStatus: String,
+        bridgeStatus: String,
+        error: String?,
+        observedAtMillis: Long
     ) {
         var accepted = false
         try {
@@ -154,7 +166,7 @@ object WhatsAppPackageDetector {
                 putString("runtime_status", runtimeStatus)
                 putString("bridge_status", bridgeStatus)
                 putString("error", error)
-                putLong("timestamp", System.currentTimeMillis())
+                putLong("timestamp", observedAtMillis)
                 putInt("boot_count", currentBootCount(context))
             }
             accepted = HookProviderIpc.call(
@@ -172,7 +184,7 @@ object WhatsAppPackageDetector {
                 context.sendBroadcast(Intent("com.waenhancer.ACTION_TARGET_APP_ACTIVE").apply {
                     setPackage(MODULE_PACKAGE)
                     putExtra("PACKAGE", packageName)
-                    putExtra("TIMESTAMP", System.currentTimeMillis())
+                    putExtra("TIMESTAMP", observedAtMillis)
                 })
             } catch (_: Throwable) {}
         }

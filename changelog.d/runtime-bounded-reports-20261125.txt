@@ -1,0 +1,2 @@
+[Fixes]
+- Share bounded startup and hook-catalog report delivery, preserve observation order and timestamps, and keep live preference refresh asynchronous while honoring interrupted initial synchronization.

@@ -33,20 +33,22 @@ def code_without_comments_or_literals(text):
   i+=1
  return ''.join(result)
 def terminal_present(text):
- # The current MainHook finishes registration on the startup thread and queues only
- # the report for deferred IPC. Both stages and the queuing boundary must exist.
+ # Snapshot capture runs on the caller; the real registry submits IPC to MainHook's
+ # shared deferred dispatcher. A second independent queue would break READY order.
  executable = code_without_comments_or_literals(text)
+ shared = re.search(r'FeatureRegistry\s+registry\s*=\s*new FeatureRegistry\('
+                    r'appContext,\s*lpparam\.classLoader,\s*bridgeClient,\s*RUNTIME_REPORTS\);', executable)
  pattern = (r'registry\.initializeAll\(\);\s*'
             r'logStartupStage\(\s*,\s*installStart\);\s*'
             r'logStartupStage\(\s*,\s*initStart\);\s*'
-            r'queueDeferred\(\(\)\s*->\s*registry\.reportInjectedHooks\(appContext,\s*packageName\)\);')
- return bool(re.search(pattern, executable))
-sequence='registry.initializeAll(); logStartupStage("startup", installStart); logStartupStage("total", initStart); queueDeferred(() -> registry.reportInjectedHooks(appContext, packageName));'
+            r'registry\.reportInjectedHooks\(appContext,\s*packageName\);')
+ return bool(shared and re.search(pattern, executable))
+sequence='FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient, RUNTIME_REPORTS); registry.initializeAll(); logStartupStage("startup", installStart); logStartupStage("total", initStart); registry.reportInjectedHooks(appContext, packageName);'
 assert not terminal_present('/* '+sequence+' */'),'Comment falsely accepted as executable code'
 assert not terminal_present('String text="'+sequence.replace('"', '\\\"')+'";'),'String falsely accepted as executable code'
-assert not terminal_present('registry.initializeAll(); registry.reportInjectedHooks(appContext, packageName);'),'Synchronous main-thread report falsely accepted'
-if not terminal_present(main):raise RuntimeError('MainHook missing deferred terminal report after startup, outside comments/literals')
-if not re.search(r'HOOK_REPORT_EXECUTOR\.execute\(\(\)\s*->\s*\{',code_without_comments_or_literals(source)):
+assert not terminal_present(sequence.replace(', RUNTIME_REPORTS','')),'Independent catalogue dispatcher falsely accepted'
+if not terminal_present(main):raise RuntimeError('MainHook missing terminal report on the shared dispatcher, outside comments/literals')
+if not re.search(r'hookReports\.submitLatest\(RuntimeReportDispatcher\.Kind\.HOOKS,\s*\(\)\s*->\s*\{',code_without_comments_or_literals(source)):
  raise RuntimeError('FeatureRegistry hook report must be dispatched off the caller thread')
 def extract(anchor):
  start=source.index(anchor);brace=source.index('{',start);depth=0;state='code';i=brace
@@ -71,9 +73,12 @@ def extract(anchor):
  raise RuntimeError('Unterminated source block: '+anchor)
 anchors=['public static final class FeatureEntry','public void initializeAll()','private void install(FeatureEntry entry)','private void installLocked(FeatureEntry entry)','private int countEnabledStartupFeatures()','private static boolean isEntryEnabled(FeatureEntry entry)','private void markDisabled(FeatureEntry entry)','public boolean hasFailures()','public void reportInjectedHooks(']
 parts=[extract(x) for x in anchors]
+queue_field=source[source.index('    private static final RuntimeReportDispatcher HOOK_REPORTS ='):source.index('    public void reportInjectedHooks(')]
+dispatcher=a.source_root/'app/src/main/java/com/waenhancer/xposed/core/RuntimeReportDispatcher.java'
 slow_match=re.search(r'private static final long SLOW_HOOK_LOG_MS\s*=\s*(\d+)L;',source)
 if not slow_match:raise RuntimeError('Production slow-hook threshold missing')
 fixtures=r'''
+package com.waenhancer.xposed.core;
 import java.util.*;import java.util.concurrent.atomic.AtomicBoolean;
 public class StartupReportChecks {
  @interface NonNull {}
@@ -119,20 +124,29 @@ public class StartupReportChecks {
  }
  static class JSONObject extends LinkedHashMap<String,Object> {}
  static class JSONArray {
-  static List<Map<String,Object>> serialized; final List<Map<String,Object>> rows=new ArrayList<>();
+  static final Map<String,List<Map<String,Object>>> transport=new java.util.concurrent.ConcurrentHashMap<>();
+  static final java.util.concurrent.atomic.AtomicInteger ids=new java.util.concurrent.atomic.AtomicInteger();
+  final List<Map<String,Object>> rows=new ArrayList<>();
   void put(JSONObject j){rows.add(new LinkedHashMap<>(j));}
-  public String toString(){serialized=new ArrayList<>(rows);return "EXPLICIT_JSON_TRANSPORT_FIXTURE";}
+  public String toString(){String token="EXPLICIT_JSON_TRANSPORT_FIXTURE_"+ids.incrementAndGet();transport.put(token,new ArrayList<>(rows));return token;}
  }
  static class Context {
-  int reports,rowsSerialized,accepted;boolean fail;List<Map<String,Object>> last;
+  volatile int reports,rowsSerialized,accepted;boolean fail;volatile List<Map<String,Object>> last;
+  final java.util.concurrent.atomic.AtomicInteger entries=new java.util.concurrent.atomic.AtomicInteger();
+  volatile boolean block;
+  final java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);
   Context getContentResolver(){return this;}
   Object call(Uri u,String method,String arg,Bundle extras){
    if(!"register_injected_hooks".equals(method))throw new AssertionError("Unexpected endpoint");
    if(!"fixture.whatsapp".equals(arg)||!arg.equals(extras.get("package")))throw new AssertionError("Target mismatch");
    if(!extras.containsKey("timestamp")||!extras.containsKey("hooking_mode"))throw new AssertionError("Missing protocol metadata");
-   reports++;rowsSerialized+=JSONArray.serialized.size();
+   reports=entries.incrementAndGet();
+   List<Map<String,Object>> snapshot=JSONArray.transport.get(extras.get("hooks_json"));
+   if(snapshot==null)throw new AssertionError("Unknown JSON transport token");
+   rowsSerialized+=snapshot.size();
+   if(block){entered.countDown();try{if(!release.await(5,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("Fixture release missing");}catch(InterruptedException e){throw new AssertionError(e);}}
    if(fail)throw new IllegalStateException("provider unavailable");
-   last=new ArrayList<>(JSONArray.serialized);accepted++;return null;
+   last=new ArrayList<>(snapshot);accepted++;return null;
   }
  }
  // The production IPC helper's unstable Binder lifecycle is exercised separately
@@ -142,9 +156,16 @@ public class StartupReportChecks {
    return context.call(Uri.parse("content://com.waenhancer.hookprovider"),method,arg,extras);
   }
  }
- // The fixture drains the real async report operation synchronously for deterministic counts.
- // Thread scheduling is separately protected by the executable source guard above.
- static final java.util.concurrent.Executor HOOK_REPORT_EXECUTOR=Runnable::run;
+ // Existing operation-count oracles use the complete dispatcher with a direct Executor.
+ // The second harness below preserves the production worker field to test blocked delivery.
+ static final RuntimeReportDispatcher HOOK_REPORTS=new RuntimeReportDispatcher(Runnable::run,f->{throw new AssertionError(f);});
+ static class ProductionAsyncReports {
+  final List<FeatureEntry> features=new ArrayList<>();final String hookingMode="fixture";
+  __ASYNC_FIELD__
+  private final RuntimeReportDispatcher hookReports=HOOK_REPORTS;
+  __ASYNC_REPORT__
+ }
+ final RuntimeReportDispatcher hookReports=HOOK_REPORTS;
  final List<FeatureEntry> features=new ArrayList<>();final LazyHookCoordinator lazyHooks=new LazyHookCoordinator();
  final Context reportingContext=new Context();final String reportingPackage="fixture.whatsapp",hookingMode="fixture";
  void applyUiPreHooks(){}
@@ -210,19 +231,35 @@ public class StartupReportChecks {
    ok(r.reportingContext.reports==2 && "DISABLED".equals(r.reportingContext.last.get(0).get("status")),"WAITING opt-out not published");
    r.install(e);ok(r.reportingContext.reports==2,"unchanged DISABLED republished");
   });
+  test("production registry queue is bounded behind blocked IPC",()->{
+   ProductionAsyncReports r=new ProductionAsyncReports();Context context=new Context();context.block=true;
+   FeatureEntry e=new FeatureEntry("latest","Fixture",Installation.STARTUP,null,()->true,()->new BaseFeature("latest",false));r.features.add(e);
+   e.status="INITIALIZING";r.reportInjectedHooks(context,"fixture.whatsapp");
+   try{
+    ok(context.entered.await(3,java.util.concurrent.TimeUnit.SECONDS),"production worker never reached controlled IPC");
+    for(int i=0;i<1000;i++){e.status="STATE_"+i;r.reportInjectedHooks(context,"fixture.whatsapp");}
+    ok(context.entries.get()==1,"registry spawned workers while IPC was blocked");
+    context.block=false;context.release.countDown();
+    long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(3);
+    while(context.accepted<2&&System.nanoTime()<deadline)Thread.onSpinWait();
+    ok(context.accepted==2&&context.entries.get()==2,"registry backlog was lost or not coalesced");
+    ok("STATE_999".equals(context.last.get(0).get("status")),"latest immutable catalogue was not delivered");
+   }catch(InterruptedException error){throw new AssertionError(error);}finally{context.block=false;context.release.countDown();}
+  });
   test("leases balanced",()->ok(DexSearchEngine.INSTANCE.acquisitions==DexSearchEngine.INSTANCE.releases,"Dex lease leak"));
   System.out.println("RESULT cases="+cases+" checks="+checks+" failures="+failures);
   if(failures!=0)throw new AssertionError("REGRESSION "+failures);
  }
 }
-'''.replace('__PRODUCTION__','\n'.join(parts)).replace('__SLOW_HOOK_MS__',slow_match.group(1))
+'''.replace('__PRODUCTION__','\n'.join(parts)).replace('__SLOW_HOOK_MS__',slow_match.group(1)).replace('__ASYNC_FIELD__',queue_field).replace('__ASYNC_REPORT__',parts[-1])
 f=a.out/'StartupReportChecks.java';f.write_text(fixtures,encoding='utf-8');classes=a.out/'classes';classes.mkdir()
 for tool in ['javac','java']:
  if not shutil.which(tool):raise RuntimeError(tool+' unavailable')
-c=subprocess.run(['javac','--release','17','-encoding','UTF-8','-d',str(classes),str(f)],capture_output=True,timeout=60);(a.out/'compile.log').write_bytes(c.stdout+c.stderr)
+c=subprocess.run(['javac','--release','17','-encoding','UTF-8','-d',str(classes),str(f),str(dispatcher)],capture_output=True,timeout=60);(a.out/'compile.log').write_bytes(c.stdout+c.stderr)
 if c.returncode:raise RuntimeError('COMPILE_FAILED '+c.stderr.decode(errors='replace')[-2000:])
-r=subprocess.run(['java','-cp',str(classes),'StartupReportChecks'],capture_output=True,timeout=30);(a.out/'behavior.log').write_bytes(r.stdout+r.stderr)
+print('COMPILE_OK: registry spans and complete runtime dispatcher',flush=True)
+r=subprocess.run(['java','-cp',str(classes),'com.waenhancer.xposed.core.StartupReportChecks'],capture_output=True,timeout=30);(a.out/'behavior.log').write_bytes(r.stdout+r.stderr)
 s=r.stdout.decode(errors='replace');m=re.search(r'RESULT cases=(\d+) checks=(\d+) failures=(\d+)',s)
 if not m:raise RuntimeError('No completed result')
-result={'source_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'main_sha256':hashlib.sha256(main.encode('utf-8')).hexdigest(),'source_guard_negative_cases':3,'source':str(p),'extracted_production_blocks':len(parts),'cases':int(m[1]),'checks':int(m[2]),'failures':int(m[3]),'compile_exit':c.returncode,'behavior_exit':r.returncode,'scope':'exact production methods, deferred-report source guard; explicit IPC/JSON/feature/Dex/progress excluded or fail-closed; not full registry nor runtime benchmark'}
+result={'dispatcher_sha256':hashlib.sha256(dispatcher.read_bytes()).hexdigest(),'production_queue_field_sha256':hashlib.sha256(queue_field.encode()).hexdigest(),'source_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'main_sha256':hashlib.sha256(main.encode('utf-8')).hexdigest(),'source_guard_negative_cases':3,'source':str(p),'extracted_production_blocks':len(parts),'cases':int(m[1]),'checks':int(m[2]),'failures':int(m[3]),'compile_exit':c.returncode,'behavior_exit':r.returncode,'scope':'exact production methods and queue field, complete dispatcher, deferred-report source guard; explicit IPC/JSON/feature/Dex/progress excluded or fail-closed; not full registry nor runtime benchmark'}
 (a.out/'result.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8');print(s);print(json.dumps(result));raise SystemExit(r.returncode)

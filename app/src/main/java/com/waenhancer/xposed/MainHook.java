@@ -32,6 +32,8 @@ import com.waenhancer.utils.WhatsAppPackageDetector;
 import com.waenhancer.xposed.bridge.client.HookProviderIpc;
 import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
 import com.waenhancer.xposed.core.FeatureRegistry;
+import com.waenhancer.xposed.core.RuntimeReportDispatcher;
+import com.waenhancer.xposed.core.RuntimeReportDispatcher.Kind;
 import com.waenhancer.xposed.core.RestartPromptController;
 import com.waenhancer.xposed.core.VersionGuard;
 import com.waenhancer.xposed.core.components.WaexBottomSheet;
@@ -46,9 +48,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
@@ -75,9 +74,20 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     private static volatile PreferenceBridgeClient sPreferenceBridge;
     private static final AtomicBoolean TARGET_INITIALIZED = new AtomicBoolean(false);
     private static final AtomicBoolean INJECTION_TOAST_SHOWN = new AtomicBoolean(false);
-    private static volatile String sRuntimeStatus = "INJECTED";
-    private static volatile String sBridgeStatus = "PENDING";
-    private static volatile String sRuntimeError;
+    private static volatile RuntimeState sRuntimeState = new RuntimeState("INJECTED", "PENDING", null);
+
+    private static final class RuntimeState {
+        final String status;
+        final String bridge;
+        final String error;
+        final long observedAtMillis;
+        RuntimeState(String status, String bridge, String error) {
+            this.status = status;
+            this.bridge = bridge;
+            this.error = error;
+            this.observedAtMillis = System.currentTimeMillis();
+        }
+    }
     public static volatile String sModulePath;
     private String mModulePath;
 
@@ -375,7 +385,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 // which may have to cold-start the WAEX process, so none of them may run on this
                 // thread. They are queued and sent from one background thread once a screen shows.
                 installDeferredReporting(appContext);
-                queueDeferred(() -> {
+                queueDeferred(Kind.PACKAGE, () -> {
                     try {
                         WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
                     } catch (Throwable t) {
@@ -384,12 +394,6 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                     }
                 });
                 reportTargetRuntime(appContext, packageName, "INJECTED", "PENDING", null);
-                queueDeferred(() -> {
-                    try {
-                        HookProviderIpc.call(appContext,
-                                "request_update_check", packageName, null);
-                    } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
-                });
 
                 try {
                     IntentFilter filter = new IntentFilter("com.waenhancer.WHATSAPP.RESTART");
@@ -453,7 +457,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         BroadcastReceiver prefsReceiver = new BroadcastReceiver() {
                             @Override
                             public void onReceive(Context context, Intent intent) {
-                                bridgeClient.syncPreferences();
+                                bridgeClient.requestRefresh();
                             }
                         };
                         if (Build.VERSION.SDK_INT >= 33) {
@@ -494,13 +498,13 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             }
                         }
                         long registryStart = System.nanoTime();
-                        FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
+                        FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient, RUNTIME_REPORTS);
                         logStartupStage("FeatureRegistry constructor", registryStart);
                         long installStart = System.nanoTime();
                         registry.initializeAll();
                         logStartupStage("initializeAll (startup features)", installStart);
                         logStartupStage("TOTAL target init (main thread)", initStart);
-                        queueDeferred(() -> registry.reportInjectedHooks(appContext, packageName));
+                        registry.reportInjectedHooks(appContext, packageName);
                         registerHookReportReceiver(appContext, packageName, registry);
                         reportTargetRuntime(
                                 appContext,
@@ -530,6 +534,12 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                     XposedBridge.log("[WAEX] Error initializing FeatureRegistry: " + t.getMessage());
                     showInjectionErrorSheet(t, packageName, lpparam.processName);
                 }
+                queueDeferred(Kind.UPDATE_CHECK, () -> {
+                    try {
+                        HookProviderIpc.call(appContext,
+                                "request_update_check", packageName, null);
+                    } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
+                });
             };
 
             // Reuse an initializer from the Application and Instrumentation entry points.
@@ -620,13 +630,9 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (!packageName.equals(intent.getStringExtra("PKG"))) return;
-                    Thread worker = new Thread(() -> {
-                        try {
-                            registry.reportInjectedHooks(appContext, packageName);
-                        } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
-                    }, "WAEX-HookReport");
-                    worker.setDaemon(true);
-                    worker.start();
+                    try {
+                        registry.reportInjectedHooks(appContext, packageName);
+                    } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
                 }
             };
             if (Build.VERSION.SDK_INT >= 33) {
@@ -645,12 +651,11 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                                             String error) {
         Context appContext = context.getApplicationContext() != null
                 ? context.getApplicationContext() : context;
-        // In-process state is updated immediately; only the provider IPC is deferred.
-        sRuntimeStatus = runtimeStatus;
-        sBridgeStatus = bridgeStatus;
-        sRuntimeError = error;
-        queueDeferred(() -> WhatsAppPackageDetector.reportRuntimeHealth(
-                appContext, packageName, runtimeStatus, bridgeStatus, error));
+        // Publish one coherent observation immediately; only its delivery is deferred.
+        RuntimeState state = new RuntimeState(runtimeStatus, bridgeStatus, error);
+        sRuntimeState = state;
+        queueDeferred(Kind.HEALTH, () -> WhatsAppPackageDetector.reportRuntimeHealth(
+                appContext, packageName, state.status, state.bridge, state.error, state.observedAtMillis));
     }
 
     /** Startup profiling: one log line per stage, tagged so it can be grepped from the Xposed log. */
@@ -660,41 +665,19 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     // ── Deferred, off-main-thread reporting ─────────────────────────────────────────────────
-    private static final ExecutorService REPORT_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "WAEX-Report");
-                t.setDaemon(true);
-                t.setPriority(Thread.MIN_PRIORITY);
-                return t;
-            });
-    private static final ConcurrentLinkedQueue<Runnable> DEFERRED_REPORTS =
-            new ConcurrentLinkedQueue<>();
-    private static final AtomicBoolean REPORTING_RELEASED =
-            new AtomicBoolean(false);
-    private static final AtomicBoolean REPORTING_INSTALLED =
-            new AtomicBoolean(false);
+    private static final RuntimeReportDispatcher RUNTIME_REPORTS = new RuntimeReportDispatcher(
+            failure -> XposedBridge.log("[WAEX] Runtime report delivery failed: "
+                    + failure.getClass().getSimpleName()), false);
+    private static final AtomicBoolean REPORTING_INSTALLED = new AtomicBoolean(false);
     private static final long REPORTING_FALLBACK_MS = 5_000L;
 
-    /** Runs {@code task} on the reporting thread; held back until WhatsApp is on screen. */
-    private static void queueDeferred(Runnable task) {
-        if (REPORTING_RELEASED.get()) {
-            REPORT_EXECUTOR.execute(task);
-        } else {
-            DEFERRED_REPORTS.add(task);
-            // Lost race: released between the check and the add, so drain now.
-            if (REPORTING_RELEASED.get()) drainDeferred();
-        }
-    }
-
-    private static void drainDeferred() {
-        Runnable task;
-        while ((task = DEFERRED_REPORTS.poll()) != null) {
-            REPORT_EXECUTOR.execute(task);
-        }
+    /** Latest optional task per kind, held until the current first-visible/fallback release. */
+    private static void queueDeferred(Kind kind, Runnable task) {
+        RUNTIME_REPORTS.submitLatest(kind, task);
     }
 
     private static void releaseDeferredReporting() {
-        if (REPORTING_RELEASED.compareAndSet(false, true)) drainDeferred();
+        RUNTIME_REPORTS.release();
     }
 
     /**

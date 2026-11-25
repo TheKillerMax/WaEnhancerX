@@ -102,8 +102,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Orchestrates and registers all modular hooks in WAEX and reports injected status.
@@ -117,6 +115,7 @@ public final class FeatureRegistry {
     private final String hookingMode;
     private final Map<String, String> customizedInstallations = new HashMap<>();
     private final SharedPreferences prefs;
+    private final RuntimeReportDispatcher hookReports;
 
     @FunctionalInterface
     private interface FeatureFactory {
@@ -179,6 +178,14 @@ public final class FeatureRegistry {
     }
 
     public FeatureRegistry(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
+        this(context, classLoader, prefs, HOOK_REPORTS);
+    }
+
+    /** Share the target's report worker so inventory delivery precedes its READY observation. */
+    public FeatureRegistry(@NonNull Context context, @NonNull ClassLoader classLoader,
+                           @NonNull SharedPreferences prefs, @NonNull RuntimeReportDispatcher hookReports) {
+        if (hookReports == null) throw new IllegalArgumentException("Report dispatcher required");
+        this.hookReports = hookReports;
         this.prefs = prefs;
         this.reportingContext = context.getApplicationContext() != null
                 ? context.getApplicationContext() : context;
@@ -858,13 +865,9 @@ public final class FeatureRegistry {
 
     private static final long SLOW_HOOK_LOG_MS = 15L;
 
-    private static final ExecutorService HOOK_REPORT_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "WAEX-HookReportIpc");
-                t.setDaemon(true);
-                t.setPriority(Thread.MIN_PRIORITY);
-                return t;
-            });
+    private static final RuntimeReportDispatcher HOOK_REPORTS = new RuntimeReportDispatcher(
+            failure -> XposedBridge.log("[WAEX] Hook inventory delivery failed: "
+                    + failure.getClass().getSimpleName()));
 
     public void reportInjectedHooks(@NonNull Context context, @NonNull String packageName) {
         try {
@@ -889,7 +892,7 @@ public final class FeatureRegistry {
 
             // The JSON snapshot above is built on the caller; the cross-process call is not, because
             // lazy installs report from the UI thread while a screen is opening.
-            HOOK_REPORT_EXECUTOR.execute(() -> {
+            hookReports.submitLatest(RuntimeReportDispatcher.Kind.HOOKS, () -> {
                 try {
                     HookProviderIpc.call(context, "register_injected_hooks", packageName, extras);
                 } catch (Throwable t) {
