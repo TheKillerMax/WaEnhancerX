@@ -18,6 +18,8 @@ import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
 
+from kotlin_compiler import compiler_command
+
 ROOT = Path(__file__).resolve().parents[1]
 BASE = Path('app/src/main/java/com/waenhancer')
 SOURCES = [BASE / name for name in (
@@ -98,7 +100,7 @@ def main():
     stage, classes = out / 'sources', out / 'classes'
     stage.mkdir()
     classes.mkdir()
-    identities, fixtures = {}, {}
+    identities, fixtures = {'qa/kotlin_compiler.py': digest(ROOT/'qa/kotlin_compiler.py')}, {}
     java_sources, kotlin_sources = [], []
     production = list(SOURCES)
     if (root / OPTIONAL_BASELINE_SOURCE).exists():
@@ -159,7 +161,7 @@ public class FileProvider {
     # must depend only on its Android/OkHttp APIs and Kotlin runtime, without skip flags.
     production_cp = os.pathsep.join([str(classes), *[str(path) for path in jar_paths
         if path.name.startswith(('android-all-', 'okhttp-', 'okio-', 'kotlin-stdlib'))]])
-    run([compiler, '-jvm-target', '17', '-language-version', '2.0', '-classpath', production_cp,
+    run([*compiler_command(compiler), '-jvm-target', '17', '-language-version', '2.0', '-classpath', production_cp,
          '-d', str(classes), *map(str, kotlin_sources)], out / 'kotlinc-production.log')
     run(['javac', '--release', '17', '-cp', runtime_cp, '-d', str(classes), str(test_dest)],
         out / 'javac-tests.log')

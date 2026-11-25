@@ -1,5 +1,7 @@
 package com.waenhancer.xposed.features.homescreen;
 
+import com.waenhancer.fixture.HomeExternalBoundaries;
+import de.robv.android.xposed.XposedBridge;
 import android.app.Activity;
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -141,6 +143,7 @@ public class HomeRestartLifecycleTest {
 
     @Before public void before() throws Exception {
         context = RuntimeEnvironment.getApplication();
+        HomeExternalBoundaries.calls.set(0);
         WhatsAppProcessRestarter.reset();
         WaexBottomSheet.reset();
         RejectableView.target = null;
@@ -149,7 +152,7 @@ public class HomeRestartLifecycleTest {
         RejectableHandler.throwRemaining = 0;
         RejectableHandler.accepted.set(0);
         RejectableHandler.attempted.set(0);
-        de.robv.android.xposed.XposedBridge.logs.clear();
+        XposedBridge.logs.clear();
         AcknowledgingProvider.entered = new CountDownLatch(1);
         AcknowledgingProvider.release = new CountDownLatch(1);
         AcknowledgingProvider.completed = new CountDownLatch(1);
@@ -180,6 +183,8 @@ public class HomeRestartLifecycleTest {
         resetPending();
         WaexBottomSheet.reset();
         RejectableView.target = null;
+        assertEquals("No contact or host JID lookup belongs to the restart contract",
+                0, HomeExternalBoundaries.calls.get());
     }
 
     private static void resetPending() throws Exception {
@@ -479,10 +484,10 @@ public class HomeRestartLifecycleTest {
         AcknowledgingProvider.release.countDown();
         assertTrue(AcknowledgingProvider.completed.await(2, TimeUnit.SECONDS));
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-        while (de.robv.android.xposed.XposedBridge.logs.stream().noneMatch(s -> s.contains("Could not enqueue restart"))
+        while (XposedBridge.logs.stream().noneMatch(s -> s.contains("Could not enqueue restart"))
                 && System.nanoTime() < deadline) Thread.sleep(1L);
         assertTrue("A secondary cleanup exception hid the posting failure",
-                de.robv.android.xposed.XposedBridge.logs.stream().anyMatch(s -> s.contains("Could not enqueue restart")));
+                XposedBridge.logs.stream().anyMatch(s -> s.contains("Could not enqueue restart")));
         assertEquals(0, WhatsAppProcessRestarter.calls.size());
         RejectableHandler.throwRemaining = 0;
         call(hook, "forceRestartWhatsApp", activity);

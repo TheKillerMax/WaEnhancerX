@@ -4,9 +4,9 @@
 Uses public Robolectric 4.17, actual DexKit 2.2 and OkHttp 4.12 APIs, Kotlin
 2.0.20 and JDK 17+. Optional paths reuse existing dependencies and offline SDK
 JARs; otherwise Maven and pinned public downloads bootstrap them. Android classes,
-BaseFeature and HKDFv3 are real; network/host/Xposed/text/tint boundaries are
+BaseFeature, HookRegistrar, ViewHookDispatcher, privacy/JID model, bridge and HKDFv3 are real; network/host/Xposed/text/tint boundaries are
 explicit fixtures. No host injection, network download or media decoder is
-certified by these lifecycle tests.
+certified by these lifecycle tests. Contact privacy and host JID lookup boundaries\nare fail-loud and their zero invocation count is asserted after every test.
 """
 import argparse
 import hashlib
@@ -20,11 +20,21 @@ import subprocess
 import urllib.request
 import zipfile
 
+from kotlin_compiler import compiler_command
+
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_TESTS = 36
+EXPECTED_TESTS = 60  # PR90: all 20 lifecycle methods on API 24, 28 and 34.
 JAVA = Path('app/src/main/java/com/waenhancer')
 SOURCES = [JAVA/'xposed/features/media/MediaPreviewHook.kt',
-           JAVA/'xposed/core/BaseFeature.kt', JAVA/'xposed/utils/HKDFv3.kt']
+           JAVA/'xposed/core/BaseFeature.kt', JAVA/'xposed/utils/HKDFv3.kt',
+           JAVA/'xposed/core/HookRegistrar.java', JAVA/'xposed/core/ViewHookDispatcher.java',
+           JAVA/'xposed/utils/HookErrors.java', JAVA/'xposed/utils/HostClassNames.java',
+           JAVA/'xposed/utils/HostResourceIds.java', JAVA/'xposed/core/privacy/PrivacyPrefs.java',
+           JAVA/'xposed/core/privacy/PrivacyToggle.java', JAVA/'xposed/core/wa/WaJid.java',
+           JAVA/'xposed/bridge/client/PreferenceBridgeClient.java',
+           JAVA/'xposed/bridge/client/HookProviderIpc.java', JAVA/'config/PreferenceSchema.java',
+           JAVA/'config/DndPreferencePolicy.java']
+AUXILIARY_SOURCES = [JAVA/'config/PreferenceRestartTracker.java']
 MAVEN_CENTRAL = 'https://repo.maven.apache.org/maven2'
 DEXKIT_URL = MAVEN_CENTRAL + '/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
 DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
@@ -123,7 +133,7 @@ def find_kotlin():
         home = Path(compiler).resolve().parents[1]
     else:
         raise RuntimeError('Kotlin 2.0.20 is required: set KOTLIN_HOME or place kotlinc on PATH')
-    binary = home / 'bin/kotlinc'
+    binary = home / ('bin/kotlinc.bat' if os.name == 'nt' else 'bin/kotlinc')
     if not binary.is_file() or not (home / 'lib/kotlin-stdlib.jar').is_file():
         raise RuntimeError('Kotlin installation lacks bin/kotlinc or lib/kotlin-stdlib.jar: ' + str(home))
     return home, binary
@@ -166,6 +176,13 @@ def main():
         dest=stage/relative;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(root/relative,dest)
         identities[str(relative)]=hashlib.sha256(dest.read_bytes()).hexdigest()
+    identities['qa/kotlin_compiler.py']=hashlib.sha256((ROOT/'qa/kotlin_compiler.py').read_bytes()).hexdigest()
+    tracker=root/JAVA/'config/PreferenceRestartTracker.java'
+    tracker_text=tracker.read_text()
+    for name,value in [('NEED_RESTART','need_restart'),('PENDING_CHANGES','pending_restart_changes')]:
+        if not re.search(r'public static final String\s+'+name+r'\s*=\s*"'+value+r'";',tracker_text):
+            raise RuntimeError('Restart fixture constant drift: '+name)
+    identities[str(tracker.relative_to(root))]=hashlib.sha256(tracker.read_bytes()).hexdigest()
     fixture=ROOT/'qa/fixtures/media_preview/runtime_doubles.py'
     stubs=runpy.run_path(str(fixture))['STUBS']
     identities[str(fixture.relative_to(ROOT))]=hashlib.sha256(fixture.read_bytes()).hexdigest()
@@ -185,9 +202,11 @@ def main():
     api_cp=production_cp+os.pathsep+str(http_api_jar)
     non_network=[p for p in stub_sources if 'okhttp3' not in p.parts]
     run(['javac','--release','17','-cp',api_cp,'-d',str(api_classes),*map(str,non_network)],out/'javac-api-adapters.log')
-    run([str(kotlin_compiler),'-jvm-target','17','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-real-http-api.log')
+    run([*compiler_command(kotlin_compiler, kotlin_home),'-jvm-target','17','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-real-http-api.log')
+    run(['javac','--release','17','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*[str(stage/p) for p in SOURCES if p.suffix=='.java']],out/'javac-real-http-production.log')
     run(['javac','--release','17','-cp',cp,'-d',str(classes),*map(str,stub_sources)],out/'javac-doubles.log')
-    run([str(kotlin_compiler),'-jvm-target','17','-cp',str(classes)+os.pathsep+production_cp,'-d',str(classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-production.log')
+    run([*compiler_command(kotlin_compiler, kotlin_home),'-jvm-target','17','-cp',str(classes)+os.pathsep+production_cp,'-d',str(classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-production.log')
+    run(['javac','--release','17','-cp',str(classes)+os.pathsep+cp,'-d',str(classes),*[str(stage/p) for p in SOURCES if p.suffix=='.java']],out/'javac-production.log')
     test=ROOT/'qa/fixtures/media_preview/MediaPreviewLifecycleTest.java'
     identities[str(test.relative_to(ROOT))]=hashlib.sha256(test.read_bytes()).hexdigest()
     staged_test=stage/test.name

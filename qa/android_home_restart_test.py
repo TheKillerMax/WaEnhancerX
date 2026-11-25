@@ -17,17 +17,23 @@ import shutil
 import subprocess
 import zipfile
 
+from kotlin_compiler import compiler_command
+
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TESTS = 57
 SOURCES = [Path(p) for p in (
  'app/src/main/java/com/waenhancer/xposed/features/homescreen/HomeScreenHeaderActionsHook.java',
  'app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt',
  'app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java',
+ 'app/src/main/java/com/waenhancer/xposed/bridge/client/HookProviderIpc.java',
  'app/src/main/java/com/waenhancer/config/PreferenceSchema.java',
  'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java',
  'app/src/main/java/com/waenhancer/xposed/utils/HostResourceIds.java',
  'app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java',
  'app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java',
+ 'app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java',
+ 'app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java',
+ 'app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java',
  'app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java',
  'app/src/main/java/com/waenhancer/xposed/features/privacy/ArchivedChatsPreferencePolicy.java',
 )]
@@ -228,6 +234,40 @@ SERVICES.update({
   public static Object removeAdditionalInstanceField(Object o,String n){throw unsupported();}
  }''',
 })
+# The restart contract does not query contacts or discover host JID classes.
+# Compile the real privacy model and WaJid. These external endpoints fail loudly
+# and a fixture counter is checked after every test, including swallowed errors.
+SERVICES.update({
+ 'com/waenhancer/fixture/HomeExternalBoundaries.java': '''package com.waenhancer.fixture;
+ public final class HomeExternalBoundaries {
+  public static final java.util.concurrent.atomic.AtomicInteger calls=new java.util.concurrent.atomic.AtomicInteger();
+  public static AssertionError unsupported(String name) {
+   calls.incrementAndGet();return new AssertionError("Outside home restart fixture: "+name);
+  }
+ }''',
+ 'com/waenhancer/xposed/features/privacy/CustomPrivacyHook.java': '''package com.waenhancer.xposed.features.privacy;
+ public final class CustomPrivacyHook {
+  public static org.json.JSONObject getContactPrivacy(android.content.Context c,android.content.SharedPreferences p,String jid) {
+   throw com.waenhancer.fixture.HomeExternalBoundaries.unsupported("contact privacy lookup");
+  }
+ }''',
+ 'com/waenhancer/utils/ContactNameResolver.java': '''package com.waenhancer.utils;
+ public final class ContactNameResolver {
+  public static final ContactNameResolver INSTANCE=new ContactNameResolver();
+  public String resolveLidToPhone(android.content.Context c,String lid) {
+   throw com.waenhancer.fixture.HomeExternalBoundaries.unsupported("LID lookup");
+  }
+  public String resolvePhoneToLid(android.content.Context c,String phone) {
+   throw com.waenhancer.fixture.HomeExternalBoundaries.unsupported("phone lookup");
+  }
+ }''',
+ 'com/waenhancer/xposed/core/wa/WaTargets.java': '''package com.waenhancer.xposed.core.wa;
+ public final class WaTargets {
+  public static Class<?> jidClass(android.content.Context c,ClassLoader l) {
+   throw com.waenhancer.fixture.HomeExternalBoundaries.unsupported("host JID discovery");
+  }
+ }''',
+})
 POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
 <modelVersion>4.0.0</modelVersion><groupId>org.waex.qa</groupId>
 <artifactId>home-restart-qa-only</artifactId><version>1</version>
@@ -286,7 +326,7 @@ def main():
     stage, classes = out / 'sources', out / 'classes'
     classes.mkdir(parents=True, exist_ok=True)
     sources = []
-    identities = {}
+    identities = {'qa/kotlin_compiler.py': hashlib.sha256((ROOT/'qa/kotlin_compiler.py').read_bytes()).hexdigest()}
     service_identities = {}
     tracker = root / 'app/src/main/java/com/waenhancer/config/PreferenceRestartTracker.java'
     tracker_source = tracker.read_text()
@@ -325,7 +365,7 @@ def main():
         cp += os.pathsep + str(kotlin_runtime)
     android = deps / 'android-all-14-robolectric-10818077.jar'
     production_cp = os.pathsep.join([str(android), str(kotlin_runtime)])
-    run([compiler, '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes),
+    run([*compiler_command(compiler), '-jvm-target', '17', '-classpath', production_cp, '-d', str(classes),
          *[str(p) for p in sources if p.name != 'HomeRestartLifecycleTest.java']], out / 'kotlinc.log')
     run(['javac', '--release', '17', '-cp', str(classes) + os.pathsep + cp, '-d', str(classes),
          *[str(p) for p in sources if p.suffix == '.java']], out / 'javac.log')
@@ -371,7 +411,7 @@ def main():
                'tests': tests, 'failures': failures, 'assertion_failures': assertions,
                'assertion_failure_types': {name: assertion_types.count(name) for name in sorted(set(assertion_types))},
                'expected_assertion_failures': expected_failures, 'accepted_result': valid,
-               'limits': 'Complete production HomeScreenHeaderActionsHook, BaseFeature, PreferenceBridgeClient and policies on Robolectric API 24/28/34. Android Activity, View, Handler and ContentResolver are framework implementations; targeted callback-post failure injection is declared in the fixture. Host lookup, confirmation presentation, menu resources, localization and process termination are explicit fixtures. No app is restarted; no host APK or LSPosed execution.'}
+               'limits': 'Complete production HomeScreenHeaderActionsHook, BaseFeature, PreferenceBridgeClient, PrivacyPrefs, PrivacyToggle, WaJid and policies on Robolectric API 24/28/34. Android Activity, View, Handler and ContentResolver are framework implementations; targeted callback-post failure injection is declared in the fixture. Host lookup, confirmation presentation, menu resources, localization and process termination are explicit fixtures. Contact privacy and host JID lookups are fail-loud boundaries with zero calls asserted after every test. No app is restarted; no host APK or LSPosed execution.'}
     (out / 'result.json').write_text(json.dumps(summary, indent=2))
     if not valid:
         print(junit[-18000:])

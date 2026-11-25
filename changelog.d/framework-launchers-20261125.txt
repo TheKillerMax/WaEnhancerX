@@ -1,0 +1,2 @@
+[Fixes]
+- Restore Windows framework QA launchers and current privacy/provider compilation inputs while preserving their Android framework assertions.

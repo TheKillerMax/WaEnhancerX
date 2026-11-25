@@ -223,7 +223,7 @@ import kotlinx.coroutines.launch
     # fixture. No app dependency or metadata compatibility check is bypassed.
     compile_jars = [p for p in jars if not p.name.startswith('test-parameter-injector-')]
     compile_cp = os.pathsep.join(map(str, [classes]+compile_jars))
-    framework.run([str(compiler), '-jvm-target', '17', '-Xplugin='+str(args.compose_plugin),
+    framework.run([*framework.compiler_command(compiler, kotlin_home), '-jvm-target', '17', '-Xplugin='+str(args.compose_plugin),
         '-cp', compile_cp, '-d', str(classes), str(fragment_file), str(label_source),
         *[str(stage/p) for p in snapshots if p.parent == DESIGN], *map(str, tests)], out/'kotlinc-compose.log', timeout=300)
     command = ['java', '-Xmx1g', '-Dwaex.fixture.fonts='+str(stage/'fonts')]
@@ -246,7 +246,7 @@ import kotlinx.coroutines.launch
         'layout_ranges': {str(NAV): nav_range, str(DASH): counter_range}, 'scope': __doc__}
     result['qa_sha256'] = {str(p.relative_to(ROOT)): sha(p) for p in
         [Path(__file__), FIXTURE/'dependencies.txt', ROOT/'qa/android_media_preview_test.py',
-         ROOT/'qa/maven_dependencies.py']}
+         ROOT/'qa/maven_dependencies.py', ROOT/'qa/kotlin_compiler.py']}
     (out/'result.json').write_text(json.dumps(result, indent=2)+'\n')
     if not valid:
         print(log[-22000:])
@@ -279,7 +279,7 @@ def main():
             'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compose-compiler-plugin/'+
             COMPOSE_PLUGIN_VERSION+'/kotlin-compose-compiler-plugin-'+COMPOSE_PLUGIN_VERSION+'.jar',
             out/'compiler/kotlin-compose-compiler-plugin.jar', COMPOSE_PLUGIN_SHA256, 4*1024*1024)
-    actual = subprocess.run([str(compiler), '-version'], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True).stdout
+    actual = subprocess.run([*framework.compiler_command(compiler, home), '-version'], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True).stdout
     if 'kotlinc-jvm '+version['kotlin']+' ' not in actual:
         raise RuntimeError('The compiler must match the checkout: '+actual)
     (out/'toolchain.json').write_text(json.dumps({'compiler_version_output': actual,
