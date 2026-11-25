@@ -68,6 +68,33 @@ pilot. The separately reviewed neutral SQLite probe can be added after boot
 evidence is available, using one identical APK/SHA throughout the matrix.
 Boot success does not establish WAEX, WhatsApp or LSPosed compatibility.
 
+## API 24 page-size command compatibility
+
+The first real pilot run, [45521579068](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45521579068),
+reached `sys.boot_completed=1` on API 24 after 17.006 seconds. Its subsequent
+`getconf PAGE_SIZE` command returned 127 with `/system/bin/sh: getconf: not found`.
+That original receipt remains `BLOCKED`. The API 35 16 KiB target passed its full
+boot gate using `getconf=16384`; neither target installed an APK.
+
+The correction permits a fallback only for that exact missing-command result,
+API 24, x86_64 and a reviewed 4096-byte target. Nougat Bionic implements both
+page-size `sysconf` queries through `getauxval(AT_PAGESZ)`. The job therefore reads
+the first 64 bytes of `/system/bin/cat`, verifies an ELF64 little-endian x86_64
+executable, then reads that exact executable's `/proc/self/auxv`. Both commands
+use `adb exec-out` to avoid PTY newline conversion. Parsing requires complete
+64-bit tag/value pairs, unique tags, a final `AT_NULL` and one `AT_PAGESZ=4096`.
+Wrong architecture, truncated input, duplicate tags, missing values and other
+command failures stay blocked. No package, binary, privilege or device setting
+is installed or changed for this read.
+
+This fallback is forbidden on the simulated 16 KiB image: its kernel AUXV can
+describe 4 KiB, so only the application-facing `getconf` result satisfies that
+target. The report records the observation method and raw-input hashes.
+
+`python3 qa/test_android_emulator_pilot_pages.py` exercises the narrow fallback,
+malformed inputs and refusal on API 35. Its optional Linux host AUXV comparison
+is host evidence; it does not count as an Android rerun.
+
 ## Primary contracts
 
 - [SDK package installation](https://developer.android.com/tools/sdkmanager)
@@ -75,6 +102,10 @@ Boot success does not establish WAEX, WhatsApp or LSPosed compatibility.
 - [Emulator acceleration and command-line options](https://developer.android.com/studio/run/emulator-commandline)
 - [Explicit ADB target selection](https://developer.android.com/tools/adb)
 - [x86_64 application-facing 16 KiB simulation](https://android-developers.googleblog.com/2024/08/adding-16-kb-page-size-to-android.html)
+- [Nougat Bionic sysconf](https://android.googlesource.com/platform/bionic.git/+/nougat-release/libc/bionic/sysconf.cpp),
+  inspected at commit `7cdb481dfe626524c93e4b6a1aae4621b1beedbc`, blob `125b3c92fd2038c8c0caab0dae418040e9420b93`.
+- [Nougat Bionic getauxval](https://android.googlesource.com/platform/bionic.git/+/nougat-release/libc/bionic/getauxval.cpp)
+- [Android shell utility availability by release](https://android.googlesource.com/platform/system/core/+/refs/heads/main/shell_and_utilities/README.md)
 
 These workflow changes remain separate from product and default-branch changes.
 A future PR targeting nightly needs the separate protected-path R5 review.

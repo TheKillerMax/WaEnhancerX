@@ -9,6 +9,7 @@ import re
 import shutil
 import signal
 import socket
+import struct
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -93,6 +94,49 @@ def invoke(out, name, command, env, timeout=30, input_bytes=None, required=True)
 def properties(path):
     return {key.strip(): value.strip() for line in path.read_text(encoding='utf-8').splitlines()
             if '=' in line and not line.lstrip().startswith('#') for key, value in [line.split('=', 1)]}
+
+
+def api24_auxv_page_size(elf, raw):
+    # Read the exact /system/bin/cat executable's ELF header before parsing its AUXV.
+    require(len(elf) == 64 and elf[:7] == b'\x7fELF\x02\x01\x01',
+            'AUXV reader is not a complete ELF64 little-endian executable')
+    require(struct.unpack_from('<HHI', elf, 16) in ((2, 62, 1), (3, 62, 1)) and
+            struct.unpack_from('<H', elf, 52)[0] == 64, 'AUXV reader ELF machine/version/header is invalid')
+    require(0 < len(raw) <= 8192 and len(raw) % 16 == 0, 'AUXV is empty, oversized or truncated')
+    pairs = list(struct.iter_unpack('<QQ', raw))
+    require(pairs[-1] == (0, 0), 'AUXV lacks its terminal AT_NULL')
+    values = {}
+    for tag, value in pairs[:-1]:
+        require(tag != 0 and tag not in values, 'AUXV contains an early terminator or duplicate tag')
+        values[tag] = value
+    require(values.get(6) == 4096, 'API 24 AUXV AT_PAGESZ is missing or differs from 4096')
+    return 4096
+
+
+def application_page_size(out, adb, env, guest, expected_page_size):
+    command, value = invoke(out, 'guest-application_page_size_bytes',
+                            [str(adb), '-s', 'emulator-5580', 'shell', 'getconf', 'PAGE_SIZE'],
+                            env, required=False)
+    if command['failure'] is None and command['returncode'] == 0:
+        require(re.fullmatch(r'[1-9][0-9]*', value.strip()), 'getconf returned an invalid page size')
+        require(value.strip() == str(expected_page_size), 'getconf page size differs from the reviewed target')
+        return value.strip(), {'method': 'getconf_PAGE_SIZE'}
+    require(guest['sdk'] == '24' and guest['abi'] == 'x86_64' and expected_page_size == 4096 and
+            command['failure'] is None and command['returncode'] == 127 and
+            value.strip() == '/system/bin/sh: getconf: not found',
+            'Page-size command failed; only the observed API 24 missing-getconf case has a fallback')
+    # exec-out transports binary bytes without a PTY/ONLCR conversion. No root or APK.
+    invoke(out, 'guest-auxv-reader-elf',
+           [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/head', '-c', '64', '/system/bin/cat'], env)
+    invoke(out, 'guest-api24-auxv',
+           [str(adb), '-s', 'emulator-5580', 'exec-out', '/system/bin/cat', '/proc/self/auxv'], env)
+    elf_path, auxv_path = out / 'guest-auxv-reader-elf.log', out / 'guest-api24-auxv.log'
+    size = api24_auxv_page_size(elf_path.read_bytes(), auxv_path.read_bytes())
+    return str(size), {'method': 'API24_Bionic_sysconf_AT_PAGESZ', 'reader': '/system/bin/cat',
+                       'reader_elf_class': 64, 'reader_endian': 'little', 'pointer_bytes': 8,
+                       'reader_elf_header_sha256': sha256_file(elf_path),
+                       'auxv_bytes': auxv_path.stat().st_size, 'auxv_sha256': sha256_file(auxv_path),
+                       'scope': 'API 24 only; never a fallback for simulated 16 KiB images'}
 
 
 def package_identity(path, expected):
@@ -253,10 +297,13 @@ def main():
         for key, arguments in {
             'sdk': ['getprop', 'ro.build.version.sdk'], 'release': ['getprop', 'ro.build.version.release'],
             'abi': ['getprop', 'ro.product.cpu.abi'], 'fingerprint': ['getprop', 'ro.build.fingerprint'],
-            'application_page_size_bytes': ['getconf', 'PAGE_SIZE'], 'package_manager': ['pm', 'path', 'android'],
+            'package_manager': ['pm', 'path', 'android'],
         }.items():
             _, value = invoke(out, 'guest-' + key, [str(tools['adb']), '-s', 'emulator-5580', 'shell', *arguments], env)
             guest[key] = value.strip()
+        guest['application_page_size_bytes'], page_observation = application_page_size(
+            out, tools['adb'], env, guest, entry['application_page_size_bytes'])
+        save(out, 'application-page-size-observation.json', page_observation)
         save(out, 'guest-identity.json', guest)
         require(guest['sdk'] == str(TARGETS[args.target][0]), 'Booted Android API differs from target')
         require(guest['abi'] == 'x86_64', 'Booted ABI differs from target')
