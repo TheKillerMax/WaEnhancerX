@@ -1,0 +1,2 @@
+[Fixes]
+Bound floating-bar layout work to attached containers and release pending callbacks on screen disposal. Avoid idle redraws and nested WAEX transitions while preserving host backgrounds. Recover missing or denied overlay settings routes through App info and localized optional-permission guidance.
