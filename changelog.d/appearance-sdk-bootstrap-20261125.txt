@@ -1,0 +1,2 @@
+[Fixes]
+Appearance QA prepares the canonical Robolectric SDK bytes once with verified cache reuse, bounded transient retries and an external worker deadline. Corrupt identities and server retry intervals beyond the budget fail before Android consumers start, preserving infrastructure failures as evidence.
