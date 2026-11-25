@@ -366,7 +366,7 @@ with tempfile.TemporaryDirectory(prefix='waex_backup_binary_') as workspace:
     commands = {tool: shutil.which(tool) for tool in ('javac', 'kotlinc', 'java')}
     if not all(commands.values()):
         raise FileNotFoundError(f'Missing JVM tools: {[k for k, v in commands.items() if not v]}')
-    kotlin_lib = Path(commands['kotlinc']).parent.parent / 'lib'
+    kotlin_lib = Path(commands['kotlinc']).resolve().parent.parent / 'lib'
     stdlib = kotlin_lib / 'kotlin-stdlib.jar'
     if not stdlib.is_file():
         raise FileNotFoundError(f'Missing compiler-matched Kotlin standard library: {stdlib}')
