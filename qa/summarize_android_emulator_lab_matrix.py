@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 import re
 
 from android_emulator_lab_matrix import TARGETS, checked_lock
-from android_emulator_lab_pilot import guest_version_identity, require
+from android_emulator_lab_pilot import guest_version_identity, require, validate_guest_readiness
 from android_emulator_lab_preflight import context_check, save, sha256_file
 from validate_android_sqlite_probe import validate
 
@@ -49,6 +49,10 @@ def validate_row(path, lock, lock_sha, run_id, attempt, head, apk_sha, build_sha
         require(type(result.get(key)) is type(value) and result[key] == value,
                 'Target result mismatch: ' + key)
     entry = lock['targets'][target]
+    if entry['image']['api'] >= 36:
+        ready = json.loads((path.parent / 'guest-readiness.json').read_text(encoding='utf-8'))
+        require(result.get('guest_readiness') == ready, 'Readiness receipt differs from controller')
+        validate_guest_readiness(ready)
     guest = result['guest']
     require(guest.get('abi') == 'x86_64' and
             guest.get('application_page_size_bytes') == str(entry['application_page_size_bytes']),

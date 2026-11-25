@@ -25,8 +25,10 @@ def verify_artifact(folder, expected_sha):
     require(not apk.is_symlink() and not manifest.is_symlink(), 'Artifact symlink rejected')
     value = json.loads(manifest.read_text(encoding='utf-8'))
     lock = checked_lock()
-    require(value['schema'] == 'WAEX_ART_BUILD_V1' and value['status'] == 'PASS_BUILD_ONLY'
-            and value['source_revision'] == SOURCE and value['probe_revision'] == lock['probe_revision']
+    require(value['schema'] == 'WAEX_ART_BUILD_V2' and value['status'] == 'PASS_BUILD_ONLY'
+            and value['source_revision'] == SOURCE
+            and value.get('probe_origin_revision') == lock['probe_origin_revision']
+            and value['probe_revision'] == value['workflow_commit']
             and value['workflow_commit'] == os.environ.get('GITHUB_SHA')
             and value['lock_sha256'] == digest(LOCK)
             and value['renderer_harness_sha256'] == lock['renderer_harness_sha256'],
@@ -49,6 +51,19 @@ def validate_receipt(receipt, api, expected_sha, directory):
     require(receipt['cleanup']['status'] == 'PASS' and receipt['cleanup']['verified_absent'] is True
             and receipt['instrumentation_finish_verified'] is True
             and receipt['all_seven_png_phases_present'] is True, 'ART finish/phases/cleanup incomplete')
+    cleanup = receipt['cleanup']
+    require(cleanup.get('identity_verified') is True and cleanup.get('apk_sha256') == expected_sha
+            and cleanup.get('package') == PACKAGE, 'Cleanup lacked a fresh matching APK identity')
+    readbacks = receipt.get('readbacks', {})
+    require(set(readbacks) == {'installed', 'cleanup-installed'}, 'Both installed APK readbacks required')
+    for identity in readbacks.values():
+        require(identity.get('sha256') == expected_sha and identity.get('matches_producer') is True
+                and type(identity.get('bytes')) is int and 0 < identity['bytes'] <= 2 * 1024**2
+                and identity.get('method') in ('adb_pull', 'adb_exec_out_cat_api24'),
+                'Readback identity/method differs')
+        require(identity['method'] != 'adb_exec_out_cat_api24' or api == 24, 'Legacy fallback escaped API24')
+    require(readbacks['installed']['bytes'] == readbacks['cleanup-installed']['bytes'] == cleanup.get('apk_bytes'),
+            'Readback lengths differ')
     require(receipt['device_counts'] == {'tests': 4, 'passed': 4, 'failures': 0, 'errors': 0, 'skipped': 0},
             'ART cases did not all pass')
     pngs = receipt['png_sha256']
@@ -90,7 +105,7 @@ def main(argv=None):
         ctx.result['apk_install_attempted'] = attempted
         ctx.result['apk_installed'] = receipt.get('installed_apk_sha256') == args.apk_sha256
         readbacks = []
-        for name in ('installed.apk', 'ambiguous-installed.apk'):
+        for name in ('installed.apk', 'ambiguous-installed.apk', 'cleanup-installed.apk'):
             path = report_dir / name
             if path.is_file():
                 row = {'name': name, 'bytes': path.stat().st_size, 'sha256': digest(path)}

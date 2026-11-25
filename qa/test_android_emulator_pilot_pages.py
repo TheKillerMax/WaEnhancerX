@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Host controls for the API 24-28 page-size fallback; no ADB or emulator execution."""
+"""Host controls for page-size fallback and bounded guest readiness; no ADB or emulator execution."""
 import os
+import json
 from pathlib import Path
 import platform
 import struct
@@ -125,6 +126,149 @@ class PageSizeControls(unittest.TestCase):
             header = stream.read(64)
         actual = pilot.legacy_auxv_page_size(header, Path('/proc/self/auxv').read_bytes())
         self.assertEqual(actual, os.sysconf('SC_PAGE_SIZE'))
+
+
+
+class GuestReadinessControls(unittest.TestCase):
+    def sample(self, elapsed, pid='700', user='RUNNING_UNLOCKED'):
+        values = {'boot': '1', 'pid_before': pid, 'pid_after': pid,
+                  'package': 'package:/system/framework/framework-res.apk', 'user': user}
+        return {'elapsed_ms': elapsed, 'checks': {key: {'returncode': 0, 'failure': None, 'text': value}
+                                                 for key, value in values.items()}}
+
+    def receipt(self):
+        return {'schema_version': 1, 'status': 'PASS', 'horizon_ms': 15000,
+                'future_stability_claimed': False, 'system_server_pid': '700',
+                'observations': [self.sample(1000), self.sample(8500), self.sample(16000)]}
+
+    def exercise(self, mode):
+        clock = [0.0]
+        calls = []
+        class OwnedProcess:
+            def poll(self):
+                return None
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory); log = out / 'emulator.log'; log.write_bytes(b'')
+            def invoke(output, name, command, env, **kwargs):
+                calls.append((name, command, kwargs))
+                index, key = name.removeprefix('guest-ready-').split('-', 1)
+                index = int(index); row = self.sample(0)['checks'][key].copy()
+                if mode == 'transient':
+                    if index < 2 and key == 'package':
+                        row.update(returncode=20, text="cmd: Can't find service: package")
+                    if index == 2 and key == 'user':
+                        row['text'] = 'RUNNING_UNLOCKING'
+                if mode == 'pid_change' and index >= 3 and key.startswith('pid_'):
+                    row['text'] = '900'
+                if mode == 'locked' and key == 'user':
+                    row['text'] = 'RUNNING_LOCKED'
+                if mode == 'broken_pipe' and key == 'package':
+                    row.update(returncode=20, text='cmd: Failure calling service package: Broken pipe (32)')
+                if mode == 'ambiguous_timeout' and key == 'package':
+                    row['failure'] = 'transport timeout'
+                if mode == 'multiple_pids' and key.startswith('pid_'):
+                    row['text'] = '700 701'
+                clock[0] += 0.05
+                return {'returncode': row['returncode'], 'failure': row['failure']}, row['text']
+            with patch.object(pilot, 'invoke', invoke), patch.object(pilot, 'guard_space', return_value=32 * 1024**3), \
+                    patch.object(pilot.time, 'monotonic', side_effect=lambda: clock[0]), \
+                    patch.object(pilot.time, 'sleep', side_effect=lambda delay: clock.__setitem__(0, clock[0] + delay)):
+                if mode in ('locked', 'broken_pipe', 'ambiguous_timeout', 'multiple_pids'):
+                    with self.assertRaisesRegex(RuntimeError, 'deadline'):
+                        pilot.wait_for_guest_ready(out, '/sdk/adb', {}, OwnedProcess(), out, log, 0)
+                    result = json.loads((out / 'guest-readiness.json').read_text())
+                    self.assertEqual(result['status'], 'BLOCKED')
+                    self.assertLessEqual(clock[0], 420.25)
+                else:
+                    result = pilot.wait_for_guest_ready(out, '/sdk/adb', {}, OwnedProcess(), out, log, 0)
+                    self.assertEqual(result, json.loads((out / 'guest-readiness.json').read_text()))
+        self.assertTrue(all(command[1:4] == ['-s', 'emulator-5580', 'shell'] for _, command, _ in calls))
+        self.assertTrue(all(command[4:] in list(pilot.READY_COMMANDS.values()) for _, command, _ in calls))
+        return result
+
+    def test_waits_for_package_and_user_beyond_boot_property(self):
+        result = self.exercise('transient')
+        self.assertEqual(result['status'], 'PASS')
+        self.assertFalse(result['future_stability_claimed'])
+        self.assertGreaterEqual(result['observations'][-1]['elapsed_ms'], 30000)
+        self.assertEqual(result['observations'][0]['checks']['package']['returncode'], 20)
+        self.assertEqual(result['observations'][2]['checks']['user']['text'], 'RUNNING_UNLOCKING')
+
+    def test_pid_change_restarts_observation_horizon(self):
+        result = self.exercise('pid_change')
+        self.assertEqual(result['system_server_pid'], '900')
+        tail = [row for row in result['observations'] if pilot.ready_pid(row) == '900']
+        self.assertGreaterEqual(tail[-1]['elapsed_ms'] - tail[0]['elapsed_ms'], 15000)
+        self.assertGreaterEqual(result['observations'][-1]['elapsed_ms'], 30000)
+
+    def test_locked_or_ambiguous_guest_hits_total_deadline(self):
+        for mode in ('locked', 'broken_pipe', 'ambiguous_timeout', 'multiple_pids'):
+            with self.subTest(mode=mode):
+                self.exercise(mode)
+
+    def test_receipt_rejects_false_pass_short_horizon_and_restart(self):
+        self.assertEqual(pilot.validate_guest_readiness(self.receipt())['status'], 'PASS')
+        mutations = [
+            lambda value: value.update(status='BLOCKED'),
+            lambda value: value.update(future_stability_claimed=True),
+            lambda value: value.update(observations=value['observations'][-1:]),
+            lambda value: value['observations'][-1].update(elapsed_ms=15999),
+            lambda value: value['observations'][1].update(elapsed_ms=1000),
+            lambda value: value['observations'][-1].update(elapsed_ms=420000),
+            lambda value: value['observations'][1]['checks']['pid_before'].update(text='900'),
+            lambda value: value['observations'][-1]['checks']['user'].update(text='RUNNING_UNLOCKED extra'),
+            lambda value: value['observations'][-1]['checks']['package'].update(returncode=20),
+            lambda value: value['observations'][-1]['checks']['package'].update(failure='timeout'),
+        ]
+        for mutate in mutations:
+            value = self.receipt(); mutate(value)
+            with self.subTest(value=value), self.assertRaises(RuntimeError):
+                pilot.validate_guest_readiness(value)
+
+    def test_diagnostics_preserve_errors_and_total_budget(self):
+        clock, calls = [0.0], []
+        class OwnedProcess:
+            def poll(self):
+                return None
+        with tempfile.TemporaryDirectory() as directory:
+            def invoke(out, name, command, env, **kwargs):
+                calls.append((command, kwargs['timeout']))
+                clock[0] += kwargs['timeout']
+                if len(calls) == 1:
+                    raise OSError('original diagnostic failure')
+                return {'returncode': 20, 'failure': None}, 'service unavailable'
+            with patch.object(pilot, 'invoke', invoke), \
+                    patch.object(pilot.time, 'monotonic', side_effect=lambda: clock[0]):
+                value = pilot.capture_guest_diagnostics(Path(directory), '/sdk/adb', {}, OwnedProcess())
+            self.assertEqual(value['status'], 'PARTIAL')
+            self.assertIn('OSError: original diagnostic failure', value['errors'][0])
+            self.assertLessEqual(value['elapsed_seconds'], 45)
+            self.assertTrue(all(timeout <= 6 for _, timeout in calls))
+            self.assertTrue(all(command[1:3] == ['-s', 'emulator-5580'] for command, _ in calls))
+            self.assertFalse(any('install' in command or 'root' in command or 'su' in command for command, _ in calls))
+
+
+        clock[0] = 0.0; calls.clear()
+        def delayed_close(out, name, command, env, **kwargs):
+            calls.append(name)
+            clock[0] += kwargs['timeout'] + (20.5 if len(calls) == 8 else 0)
+            return {'returncode': -9 if len(calls) == 8 else 0,
+                    'failure': 'deadline and final child closure' if len(calls) == 8 else None}, ''
+        with tempfile.TemporaryDirectory() as directory, patch.object(pilot, 'invoke', delayed_close), \
+                patch.object(pilot.time, 'monotonic', side_effect=lambda: clock[0]):
+            value = pilot.capture_guest_diagnostics(Path(directory), '/sdk/adb', {}, OwnedProcess())
+        self.assertEqual(value['status'], 'PARTIAL')
+        self.assertEqual(value['acquisition_budget_seconds'], 45)
+        self.assertEqual(value['elapsed_seconds'], 65.5)
+
+    def test_diagnostics_do_not_read_an_exited_owned_emulator(self):
+        class ExitedProcess:
+            def poll(self):
+                return 1
+        with tempfile.TemporaryDirectory() as directory, patch.object(pilot, 'invoke') as invoke:
+            value = pilot.capture_guest_diagnostics(Path(directory), '/sdk/adb', {}, ExitedProcess())
+            self.assertEqual(value['status'], 'PARTIAL')
+            invoke.assert_not_called()
 
 
 if __name__ == '__main__':

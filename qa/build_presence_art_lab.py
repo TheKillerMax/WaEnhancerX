@@ -44,14 +44,22 @@ def verify_files(root, pins):
 
 def checked_lock():
     lock = json.loads(LOCK.read_text(encoding='utf-8'))
-    require(lock['schema'] == 'WAEX_ART_LAB_V1' and lock['source_revision'] == SOURCE,
+    require(lock['schema'] == 'WAEX_ART_LAB_V2' and lock['source_revision'] == SOURCE,
             'ART lock source/schema differs')
+    require(lock.get('probe_origin_revision') == 'c2fd668da20f8620112d649b34224559cab30942'
+            and lock.get('probe_revision_source') == 'workflow_commit' and 'probe_revision' not in lock,
+            'ART probe origin/revision policy differs')
     require(len(lock['probe_sources']) == 8 and len(lock['source_files']) == 7,
             'ART source closure changed')
     require(lock['targets'] == ['api24', 'api25', 'api26'], 'ART target set changed')
     require(sum(row['bytes'] for row in lock['jars']) == 429605 and len(lock['jars']) == 2,
             'Public JAR closure differs')
     return lock
+
+
+def probe_provenance(lock, workflow_commit):
+    require(re.fullmatch(r'[a-f0-9]{40}', workflow_commit or ''), 'Exact workflow commit required')
+    return {'probe_origin_revision': lock['probe_origin_revision'], 'probe_revision': workflow_commit}
 
 
 def verify_jar(path, pin):
@@ -119,10 +127,13 @@ def main():
     artifact = out / 'artifact'; artifact.mkdir()
     deps = out / 'deps'; deps.mkdir()
     build = out / 'offline-builder'
-    result = {'schema': 'WAEX_ART_BUILD_V1', 'status': 'BLOCKED', 'source_revision': SOURCE,
+    result = {'schema': 'WAEX_ART_BUILD_V2', 'status': 'BLOCKED', 'source_revision': SOURCE,
               'workflow_commit': os.environ['GITHUB_SHA'], 'lock_sha256': digest(LOCK),
               'installed': False, 'art_execution': 'NOT_RUN', 'acquisitions': []}
     try:
+        result.update(probe_provenance(lock, result['workflow_commit']))
+        require(tool(['git', '-C', HERE.parent, 'rev-parse', 'HEAD'], os.environ) == result['workflow_commit'],
+                'Probe checkout differs from the workflow commit')
         require(shutil.disk_usage(out).free >= 20 * 1024**3, 'Keep 20 GiB free')
         require(tool(['git', '-C', source, 'rev-parse', 'HEAD'], os.environ) == SOURCE,
                 'Source checkout revision differs')
@@ -182,7 +193,7 @@ def main():
         result.update(status='PASS_BUILD_ONLY', package=PACKAGE, expected_tests=4, min_sdk=24, target_sdk=28,
                       ephemeral_key_absent=True,
                       renderer_harness_sha256=lock['renderer_harness_sha256'],
-                      probe_revision=lock['probe_revision'], apk={'bytes': apk.stat().st_size, 'sha256': digest(apk)})
+                      apk={'bytes': apk.stat().st_size, 'sha256': digest(apk)})
         save(artifact / 'artifact-manifest.json', result)
     except Exception as error:
         result['error'] = {'type': type(error).__name__, 'message': str(error)}

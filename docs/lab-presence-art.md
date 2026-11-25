@@ -30,8 +30,13 @@ SQLite and JNI probes have their own evidence and acceptance criteria.
 
 The source/oracles are checked out at
 c52f064bad7ba32445f8515bc2f0421618438975. Seven exact LF source hashes are pinned.
-The eight V3 files were published and verified at
-c2fd668da20f8620112d649b34224559cab30942. The positive extracted renderer harness
+The eight V3 files originated at
+c2fd668da20f8620112d649b34224559cab30942. The launcher and its host controls now
+have a reviewed API24 readback/cleanup delta; the other six probe files retain
+their original hashes. The lock records that origin separately. Each new build
+records probe_revision as its actual workflow commit, verifies the laboratory
+Git HEAD against that commit and checks all eight current file hashes. These
+new bytes are not attributed to the unchanged c2fd revision. The positive extracted renderer harness
 must retain SHA256
 241385367b8ff949679f330c5632245e4eb8e3a6b1b191074b7d2313fd1cf63a.
 
@@ -63,6 +68,23 @@ the package must initially be absent. Readback copies matching the built QA
 APK are removed from reports after their identities are recorded. A mismatched
 readback is preserved outside uploaded reports and causes failure.
 
+The observed API24 adb pull failure has a narrow alternate transport: only
+return code 1, empty stdout, the exact recorded remote-object diagnostic and
+/data/app/org.waex.qa.presence.host-<validated suffix>/base.apk, with no partial
+destination, permit exec-out /system/bin/cat. Its bytes are captured without
+text conversion, with a 60-second capture deadline and an observed 8 MiB output bound;
+stderr is bounded separately. A killed capture child has up to five additional
+seconds to be reaped; this is not a 60-second bound for the whole launcher. Acceptance still requires the producer's exact
+length (at most 2 MiB) and SHA256. Other APIs, diagnostics, paths, partial copies,
+timeouts and size/hash mismatches remain failures. The shared controller has
+already verified the API24 row's 4096-byte application page size.
+
+Every uninstall requires a new package-path query and matching complete
+readback, including after an install that reported Success. An unknown or
+mismatched current APK is not removed. This corrects the former host fixture
+expectation that confirmed installation alone justified removing a mismatched
+APK. No root, permission/SELinux changes or alternate device selection occur.
+
 Reports contain bounded logs, JSON receipts, PNG files and manifests. The APK
 artifact is separate; keys, SDKs, images, private partitions and caches are
 never uploaded. Build success means PASS_BUILD_ONLY; it is not an ART PASS.
@@ -73,8 +95,11 @@ The per-row final receipt is presence-art-lab-result.json.
 Run python3 qa/test_presence_art_lab.py for six host control groups. They cover
 all JAR checksums, one-request behavior, HTTP429, source mutations, complete
 ART receipts and artifact provenance. Synthetic inputs are explicitly not
-Android APKs or an Android execution. The unchanged V3 launcher has eighteen
-additional host controls. Both suites run before build acquisition in CI.
+Android APKs or an Android execution. The launcher retains all eighteen original host scenarios, with the
+installed_mismatch cleanup expectation corrected explicitly, and adds literal
+API24/path/error guards, both readback identities and binary size/time controls.
+Both suites run before build acquisition in CI. Host controls remain synthetic;
+actual Android results must be obtained separately.
 
 This wrapper was reconstructed as a new reviewed version after the scratch
 executor disconnected. No earlier wrapper's host PASS is attributed to these

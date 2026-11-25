@@ -125,9 +125,9 @@ def sqlite_action(bundle, apk_sha256, build_receipt_sha256, lock):
                  'package_absent_after_cleanup': False}
         attempted = False
 
-        def adb(name, *arguments, timeout=30):
+        def adb(name, *arguments, timeout=30, required=True):
             return invoke(context.out, name, [str(context.adb), '-s', context.serial, *arguments],
-                          context.env, timeout=timeout)
+                          context.env, timeout=timeout, required=required)
 
         def packages(name):
             _, output = adb(name, 'shell', 'pm', 'list', 'packages', PACKAGE)
@@ -143,10 +143,33 @@ def sqlite_action(bundle, apk_sha256, build_receipt_sha256, lock):
             installed_path = lines[0].removeprefix('package:')
             require('..' not in PurePosixPath(installed_path).parts, 'Unsafe installed APK path')
             readback = context.work / (prefix + '-base.apk')
-            adb(prefix + '-pull', 'pull', installed_path, str(readback), timeout=60)
+            require(not readback.exists(), 'Installed APK read-back destination already exists')
+            pull, output = adb(prefix + '-pull', 'pull', installed_path, str(readback),
+                               timeout=60, required=False)
+            require(pull['failure'] is None, 'Installed APK pull was interrupted or exceeded its bound')
+            method = 'adb_pull'
+            if pull['returncode'] != 0:
+                # STATv1 has no errno: this message alone does not prove ENOENT.
+                # Use the already-authorized shell read only for this observed API24 case.
+                require(context.api == 24 and context.application_page_size_bytes == 4096
+                        and pull['returncode'] == 1 and not readback.exists()
+                        and output.strip() == "adb: error: remote object '" + installed_path + "' does not exist"
+                        and re.fullmatch(r'/data/app/' + re.escape(PACKAGE) + r'-[A-Za-z0-9_-]+/base\.apk',
+                                         installed_path),
+                        'Installed APK pull failed without the reviewed API24 read-back condition')
+                name = prefix + '-exec-out'
+                command, _ = adb(name, 'exec-out', '/system/bin/cat', installed_path,
+                                 timeout=60, required=False)
+                readback = context.out / (name + '.log')
+                require(command['failure'] is None and command['returncode'] == 0,
+                        'API24 binary APK read-back failed')
+                method = 'adb_exec_out_cat_api24'
             require(readback.is_file(), 'Installed APK read-back is missing')
+            size = readback.stat().st_size
+            require(0 < apk.stat().st_size <= 2 * 1024 ** 2 and size == apk.stat().st_size,
+                    'Installed APK read-back size differs from the bounded producer APK')
             actual = sha256_file(readback)
-            phase[prefix + '_identity'] = {'bytes': readback.stat().st_size, 'sha256': actual}
+            phase[prefix + '_identity'] = {'bytes': size, 'sha256': actual, 'method': method}
             require(actual == apk_sha256, 'Installed APK differs; a different APK will not be uninstalled')
             context.result['apk_installed'] = True
             readback.unlink()

@@ -110,6 +110,138 @@ def invoke(out, name, command, env, timeout=30, input_bytes=None, required=True)
     return result, text
 
 
+
+READY_BOOT_SECONDS = 420
+READY_HORIZON_MS = 15000
+READY_COMMANDS = {
+    'boot': ['getprop', 'sys.boot_completed'],
+    'pid_before': ['pidof', 'system_server'],
+    'package': ['pm', 'path', 'android'],
+    'user': ['am', 'get-started-user-state', '0'],
+    'pid_after': ['pidof', 'system_server'],
+}
+
+
+def ready_pid(observation):
+    checks = observation.get('checks', {})
+    if set(checks) != set(READY_COMMANDS):
+        return None
+    if any(type(row.get('returncode')) is not int or row['returncode'] != 0
+           or row.get('failure') is not None or not isinstance(row.get('text'), str)
+           or len(row['text']) > 1024 for row in checks.values()):
+        return None
+    pid = checks['pid_before']['text']
+    if (not re.fullmatch(r'[1-9][0-9]*', pid) or checks['pid_after']['text'] != pid
+            or checks['boot']['text'] != '1'
+            or checks['package']['text'] != 'package:/system/framework/framework-res.apk'
+            or checks['user']['text'] != 'RUNNING_UNLOCKED'):
+        return None
+    return pid
+
+
+def validate_guest_readiness(value):
+    require(value.get('schema_version') == 1 and value.get('status') == 'PASS'
+            and value.get('horizon_ms') == READY_HORIZON_MS
+            and value.get('future_stability_claimed') is False, 'Incomplete guest readiness receipt')
+    observations = value.get('observations', [])
+    require(isinstance(observations, list) and len(observations) >= 3, 'Readiness needs three observations')
+    previous = -1
+    for row in observations:
+        elapsed = row.get('elapsed_ms')
+        require(type(elapsed) is int and previous < elapsed < READY_BOOT_SECONDS * 1000,
+                'Readiness observation time is outside the total boot budget')
+        previous = elapsed
+    pid = ready_pid(observations[-1])
+    require(pid is not None, 'Last readiness sample is incomplete')
+    matching = []
+    for row in reversed(observations):
+        if ready_pid(row) != pid:
+            break
+        matching.append(row)
+    require(len(matching) >= 3 and matching[0]['elapsed_ms'] - matching[-1]['elapsed_ms'] >= READY_HORIZON_MS,
+            'Package/user/PID observations did not span the bounded readiness horizon')
+    require(value.get('system_server_pid') == pid, 'Readiness PID differs')
+    return value
+
+
+def wait_for_guest_ready(out, adb, env, process, work, emulator_log, started):
+    report = {'schema_version': 1, 'status': 'BLOCKED', 'horizon_ms': READY_HORIZON_MS,
+              'future_stability_claimed': False, 'observations': []}
+    try:
+        while True:
+            require(process.poll() is None, 'Emulator exited while observing guest readiness')
+            require(time.monotonic() - started < READY_BOOT_SECONDS, 'Android readiness deadline exceeded')
+            require(emulator_log.stat().st_size <= LOG_LIMIT, 'Emulator log exceeded 8 MiB')
+            guard_space(work)
+            checks = {}
+            index = len(report['observations'])
+            for key, arguments in READY_COMMANDS.items():
+                remaining = READY_BOOT_SECONDS - (time.monotonic() - started)
+                require(remaining > 0, 'Android readiness deadline exceeded')
+                command, text = invoke(out, 'guest-ready-' + str(index) + '-' + key,
+                                       [str(adb), '-s', 'emulator-5580', 'shell', *arguments], env,
+                                       timeout=min(10, remaining), required=False)
+                checks[key] = {'returncode': command['returncode'], 'failure': command['failure'],
+                               'text': text.strip() if len(text) <= 1024 else '<output exceeds 1024 bytes>'}
+            row = {'elapsed_ms': int(round((time.monotonic() - started) * 1000)), 'checks': checks}
+            report['observations'].append(row)
+            pid = ready_pid(row)
+            matching = []
+            for previous in reversed(report['observations']):
+                if pid is None or ready_pid(previous) != pid:
+                    break
+                matching.append(previous)
+            if (len(matching) >= 3
+                    and matching[0]['elapsed_ms'] - matching[-1]['elapsed_ms'] >= READY_HORIZON_MS):
+                report.update(status='PASS', system_server_pid=pid)
+                return validate_guest_readiness(report)
+            save(out, 'guest-readiness.json', report)
+            remaining = READY_BOOT_SECONDS - (time.monotonic() - started)
+            require(remaining > 0, 'Android readiness deadline exceeded')
+            time.sleep(min(5, remaining))
+    except Exception as error:
+        report.update(status='BLOCKED', error=type(error).__name__ + ': ' + str(error))
+        raise
+    finally:
+        save(out, 'guest-readiness.json', report)
+
+
+def capture_guest_diagnostics(out, adb, env, process):
+    report = {'status': 'PARTIAL', 'acquisition_budget_seconds': 45,
+              'command_shutdown_grace_seconds': 20, 'poll_interval_seconds': 0.5,
+              'commands': {}, 'errors': []}
+    started = time.monotonic()
+    commands = {
+        'crash': ['logcat', '-b', 'crash', '-d', '-v', 'threadtime', '-t', '300'],
+        'system': ['logcat', '-b', 'system', '-d', '-v', 'threadtime', '-t', '700'],
+        'events': ['logcat', '-b', 'events', '-d', '-v', 'threadtime', '-t', '500'],
+        'user': ['shell', 'am', 'get-started-user-state', '0'],
+        'pid': ['shell', 'pidof', 'system_server'],
+        'memory': ['shell', 'cat', '/proc/meminfo'],
+        'data-space': ['shell', 'df', '-k', '/data'],
+        'properties': ['shell', 'getprop'],
+    }
+    for name, command in commands.items():
+        remaining = 45 - (time.monotonic() - started)
+        if remaining <= 0 or process.poll() is not None:
+            report['errors'].append('Diagnostic budget exhausted or owned emulator exited')
+            break
+        try:
+            observed, _ = invoke(out, 'guest-diagnostic-' + name,
+                                 [str(adb), '-s', 'emulator-5580', *command], env,
+                                 timeout=min(6, remaining), required=False)
+            report['commands'][name] = observed
+            if observed['failure'] is not None or observed['returncode'] != 0:
+                report['errors'].append(name + ': ' + str(observed['failure'] or observed['returncode']))
+        except Exception as error:
+            report['errors'].append(name + ': ' + type(error).__name__ + ': ' + str(error))
+    if not report['errors'] and len(report['commands']) == len(commands):
+        report['status'] = 'COLLECTED'
+    report['elapsed_seconds'] = round(time.monotonic() - started, 3)
+    save(out, 'guest-diagnostics.json', report)
+    return report
+
+
 def properties(path):
     return {key.strip(): value.strip() for line in path.read_text(encoding='utf-8').splitlines()
             if '=' in line and not line.lstrip().startswith('#') for key, value in [line.split('=', 1)]}
@@ -347,7 +479,7 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
         timeline = []
         while True:
             require(emulator_process.poll() is None, 'Emulator exited before boot: ' + str(emulator_process.returncode))
-            require(time.monotonic() - started < 420, 'Android boot deadline exceeded')
+            require(time.monotonic() - started < READY_BOOT_SECONDS, 'Android boot deadline exceeded')
             require(emulator_log.stat().st_size <= LOG_LIMIT, 'Emulator log exceeded 8 MiB')
             free = guard_space(work)
             command_result, output = invoke(out, 'adb-boot-latest', [str(tools['adb']), '-s', 'emulator-5580',
@@ -359,6 +491,9 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
             if complete:
                 break
             time.sleep(5)
+        if expected['api'] >= 36:
+            result['guest_readiness'] = wait_for_guest_ready(out, tools['adb'], env, emulator_process,
+                                                            work, emulator_log, started)
         guest = {}
         for key, arguments in {
             'sdk': ['getprop', 'ro.build.version.sdk'], 'release': ['getprop', 'ro.build.version.release'],
@@ -396,6 +531,11 @@ def main(argv=None, *, targets=None, read_lock=checked_lock, boot_action=None, p
     finally:
         if emulator_process is not None:
             result['emulator_exit_before_cleanup'] = emulator_process.poll()
+            if targets[args.target][0] >= 36:
+                try:
+                    result['guest_diagnostics'] = capture_guest_diagnostics(out, tools['adb'], env, emulator_process)
+                except Exception as error:
+                    result['guest_diagnostic_error'] = type(error).__name__ + ': ' + str(error)
             stop_owned(emulator_process)
             result['owned_emulator_reaped'] = emulator_process.poll() is not None
         if emulator_stream is not None:

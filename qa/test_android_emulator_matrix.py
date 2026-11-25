@@ -132,6 +132,7 @@ class MatrixControls(unittest.TestCase):
                 calls.append((name, command))
                 self.assertEqual(command[1:3], ['-s', 'emulator-5580'])
                 value = ''
+                metadata = {'returncode': 0, 'failure': None}
                 if name.startswith('sqlite-package-'):
                     value = 'package:' + matrix.PACKAGE + '\n' if installed else ''
                 elif name == 'sqlite-install':
@@ -140,9 +141,42 @@ class MatrixControls(unittest.TestCase):
                         raise RuntimeError('simulated transport loss after installing')
                     value = 'Success\n'
                 elif name.endswith('-path'):
-                    value = 'package:/data/app/org.lab.waex.qa.sqlite-test/base.apk\n'
+                    package = 'org.other' if mode == 'legacy-wrong-package-path' else matrix.PACKAGE
+                    value = 'package:/data/app/' + package + '-1/base.apk\n'
                 elif name.endswith('-pull'):
-                    Path(command[-1]).write_bytes(b'different APK' if mode == 'wrong-installed-hash' else apk.read_bytes())
+                    if mode.startswith('legacy-'):
+                        self.assertIs(kwargs.get('required'), False)
+                        metadata['returncode'] = 1
+                        value = "adb: error: remote object '" + command[-2] + "' does not exist\n"
+                        if mode == 'legacy-unrelated-error':
+                            value = 'adb: error: permission denied\n'
+                        elif mode == 'legacy-extra-output':
+                            value += 'unexpected extra diagnostic\n'
+                        elif mode == 'legacy-pull-timeout':
+                            metadata.update(returncode=-15, failure='deadline exceeded')
+                        elif mode == 'legacy-partial-pull':
+                            Path(command[-1]).write_bytes(b'partial')
+                        elif mode == 'legacy-pull-zero-without-file':
+                            metadata['returncode'] = 0
+                    else:
+                        Path(command[-1]).write_bytes(b'different APK' if mode == 'wrong-installed-hash' else apk.read_bytes())
+                elif name.endswith('-exec-out'):
+                    self.assertEqual(command[3:], ['exec-out', '/system/bin/cat',
+                                                  '/data/app/' + matrix.PACKAGE + '-1/base.apk'])
+                    self.assertIs(kwargs.get('required'), False)
+                    raw = apk.read_bytes()
+                    if mode == 'legacy-wrong-size':
+                        raw += b'!'
+                    elif mode == 'legacy-wrong-hash':
+                        raw = b'!' + raw[1:]
+                    elif mode == 'legacy-cat-failure' or (mode == 'legacy-cleanup-cat-failure'
+                                                         and name.startswith('sqlite-before-uninstall')):
+                        raw = b'cat: permission denied\n'
+                        metadata['returncode'] = 1
+                    elif mode == 'legacy-cat-timeout':
+                        metadata.update(returncode=-15, failure='deadline exceeded')
+                    (output / (name + '.log')).write_bytes(raw)
+                    return metadata, raw.decode('utf-8', errors='replace')
                 elif name == 'sqlite-instrumentation':
                     receipt = fixture()
                     receipt.update(sdk=api, application_page_size_bytes=pages, run_nonce=nonce)
@@ -155,13 +189,13 @@ class MatrixControls(unittest.TestCase):
                     installed = False; value = 'Success\n'
                 else:
                     raise AssertionError(name)
-                (out / (name + '.log')).write_text(value, encoding='utf-8')
-                return {'returncode': 0, 'failure': None}, value
+                (output / (name + '.log')).write_text(value, encoding='utf-8')
+                return metadata, value
 
             with patch.object(matrix, 'verified_probe', return_value=(apk, build, {})), \
                     patch.object(matrix, 'invoke', invoke), patch.object(matrix.secrets, 'token_hex', return_value=nonce):
                 action = matrix.sqlite_action(work, apk_sha, build_sha, {})
-                if mode == 'success':
+                if mode == 'success' or (mode == 'legacy-readback' and api == 24 and pages == 4096):
                     phase = action(context)
                     self.assertEqual(phase['status'], 'PASS')
                     self.assertEqual(phase['checks'], 280)
@@ -203,6 +237,48 @@ class MatrixControls(unittest.TestCase):
                 if mode == 'uninstall-failure':
                     self.assertTrue(installed)
                     self.assertFalse(phase['package_absent_after_cleanup'])
+
+    def test_api24_legacy_pull_fallback_preserves_both_full_hash_checks(self):
+        phase, calls, result, installed = self.lifecycle('legacy-readback')
+        self.assertEqual(phase['status'], 'PASS')
+        self.assertTrue(phase['package_absent_after_cleanup'])
+        self.assertFalse(installed)
+        for prefix in ('sqlite-installed', 'sqlite-before-uninstall'):
+            self.assertEqual(calls.count(prefix + '-pull'), 1)
+            self.assertEqual(calls.count(prefix + '-exec-out'), 1)
+            identity = phase[prefix + '_identity']
+            self.assertEqual(identity['sha256'], phase['apk_sha256'])
+            self.assertEqual(identity['method'], 'adb_exec_out_cat_api24')
+        self.assertEqual(calls.count('sqlite-instrumentation'), 1)
+        self.assertEqual(calls.count('sqlite-uninstall'), 1)
+        self.assertTrue(result['apk_installed'])
+
+    def test_api24_readback_does_not_relax_other_failures_or_sdk_bounds(self):
+        for mode in ('legacy-unrelated-error', 'legacy-extra-output', 'legacy-pull-timeout',
+                     'legacy-partial-pull', 'legacy-pull-zero-without-file', 'legacy-wrong-package-path',
+                     'legacy-wrong-size', 'legacy-wrong-hash', 'legacy-cat-failure',
+                     'legacy-cat-timeout', 'legacy-cleanup-cat-failure'):
+            with self.subTest(mode=mode):
+                phase, calls, _, installed = self.lifecycle(mode)
+                self.assertEqual(phase['status'], 'BLOCKED')
+                self.assertTrue(installed)
+                self.assertFalse(phase['package_absent_after_cleanup'])
+                self.assertNotIn('sqlite-uninstall', calls)
+                if mode != 'legacy-cleanup-cat-failure':
+                    self.assertNotIn('sqlite-instrumentation', calls)
+                else:
+                    self.assertIn('sqlite-instrumentation', calls)
+                    self.assertEqual(phase['checks'], 280)
+                if mode in ('legacy-unrelated-error', 'legacy-extra-output', 'legacy-pull-timeout',
+                            'legacy-partial-pull', 'legacy-pull-zero-without-file', 'legacy-wrong-package-path'):
+                    self.assertFalse(any(name.endswith('-exec-out') for name in calls))
+        for api, pages in ((25, 4096), (35, 16384), (24, 16384)):
+            with self.subTest(api=api, pages=pages):
+                phase, calls, _, installed = self.lifecycle('legacy-readback', api=api, pages=pages)
+                self.assertEqual(phase['status'], 'BLOCKED')
+                self.assertTrue(installed)
+                self.assertFalse(any(name.endswith('-exec-out') for name in calls))
+                self.assertNotIn('sqlite-uninstall', calls)
 
 
 if __name__ == '__main__':

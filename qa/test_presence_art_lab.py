@@ -73,7 +73,11 @@ class ArtLabControls(unittest.TestCase):
                 (root / ('phase_' + str(index) + '.png')).write_bytes(b'\x89PNG\r\n\x1a\nHOST CONTROL')
             receipt = {'status': 'PASS', 'failure': None, 'api': 24, 'serial': 'emulator-5580',
                        'apk_sha256': 'a' * 64, 'installed_apk_sha256': 'a' * 64,
-                       'initially_absent': True, 'cleanup': {'status': 'PASS', 'verified_absent': True},
+                       'initially_absent': True,
+                       'cleanup': {'status': 'PASS', 'verified_absent': True, 'identity_verified': True,
+                                   'apk_sha256': 'a' * 64, 'apk_bytes': 1024, 'package': build.PACKAGE},
+                       'readbacks': {name: {'sha256': 'a' * 64, 'bytes': 1024, 'matches_producer': True,
+                                            'method': 'adb_pull'} for name in ('installed', 'cleanup-installed')},
                        'instrumentation_finish_verified': True, 'all_seven_png_phases_present': True,
                        'device_counts': {'tests': 4, 'passed': 4, 'failures': 0, 'errors': 0, 'skipped': 0},
                        'device_result_sha256': build.digest(root / 'device-result.json'),
@@ -83,7 +87,10 @@ class ArtLabControls(unittest.TestCase):
                          ('initially_absent', False), ('installed_apk_sha256', 'b' * 64),
                          ('serial', 'physical-phone'), ('cleanup', {'status': 'PASS', 'verified_absent': False}),
                          ('device_counts', {'tests': 3, 'passed': 3, 'failures': 0, 'errors': 0, 'skipped': 1}),
-                         ('device_result_sha256', 'c' * 64)]
+                         ('device_result_sha256', 'c' * 64), ('readbacks', {}),
+                         ('cleanup', {'status': 'PASS', 'verified_absent': True, 'identity_verified': False}),
+                         ('cleanup', {**receipt['cleanup'], 'apk_sha256': 'b' * 64}),
+                         ('cleanup', {**receipt['cleanup'], 'apk_bytes': 1025})]
             for key, value in mutations:
                 with self.subTest(key=key), self.assertRaises(RuntimeError):
                     bad = copy.deepcopy(receipt); bad[key] = value
@@ -95,8 +102,8 @@ class ArtLabControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {'GITHUB_SHA': 'd' * 40}):
             root = Path(temp); apk = root / 'presence-art-positive.apk'
             apk.write_bytes(b'HOST PROTOCOL ONLY; NOT AN APK'); lock = build.checked_lock()
-            receipt = {'schema': 'WAEX_ART_BUILD_V1', 'status': 'PASS_BUILD_ONLY',
-                       'source_revision': build.SOURCE, 'probe_revision': lock['probe_revision'],
+            receipt = {'schema': 'WAEX_ART_BUILD_V2', 'status': 'PASS_BUILD_ONLY',
+                       'source_revision': build.SOURCE, **build.probe_provenance(lock, 'd' * 40),
                        'workflow_commit': 'd' * 40, 'lock_sha256': build.digest(build.LOCK),
                        'renderer_harness_sha256': lock['renderer_harness_sha256'],
                        'package': build.PACKAGE, 'expected_tests': 4, 'min_sdk': 24, 'target_sdk': 28,
@@ -107,7 +114,9 @@ class ArtLabControls(unittest.TestCase):
             with self.assertRaises(RuntimeError): art.verify_artifact(root, '0' * 64)
             for key, value in [('workflow_commit', 'e' * 40), ('lock_sha256', 'f' * 64),
                                ('ephemeral_key_absent', False), ('source_revision', '0' * 40),
-                               ('expected_tests', 3), ('installed', True)]:
+                               ('expected_tests', 3), ('installed', True),
+                               ('probe_revision', lock['probe_origin_revision']),
+                               ('probe_origin_revision', '0' * 40)]:
                 with self.subTest(key=key), self.assertRaises(RuntimeError):
                     bad = copy.deepcopy(receipt); bad[key] = value; build.save(manifest, bad)
                     art.verify_artifact(root, build.digest(apk))

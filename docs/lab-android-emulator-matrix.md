@@ -23,6 +23,55 @@ source hashes, existing tools, and build SDK metadata. A ready lock authorizes
 the proposed experiment; it does not claim an expanded boot or SQLite PASS.
 No execution of the 21-target matrix is implied by the two pilot successes.
 
+
+## First complete matrix run and the next experiment
+
+[Run 45532867332](https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45532867332)
+at commit a744a9d2982fe3dfb3ee5f7eb904caf513e732c7 completed with 24 artifacts.
+All artifact hashes were checked against the browser receipts. Fourteen rows
+passed: APIs 25-36 plus the API 35/API 36 simulated 16 KiB rows. Seven stayed
+BLOCKED: API 24, both 36.1 rows and all four 37.x rows. The original build ran
+22 Linux host controls and produced one 16785-byte APK with SHA-256
+56fc775204059304ffbce7ebb32e3ee8ad9b204a660cc18bd0556222f0185d1b.
+
+API 24 failed installed-APK readback before instrumentation. Four modern rows
+observed a missing package service after sys.boot_completed; API 36.1 also
+reported a broken pipe during install. API 37 and 37.1-16k reached instrumentation
+but could not open their own database because the cache directory did not exist;
+both verified removal afterward. These are distinct observed failures, without
+a demonstrated common cause. No SQLite oracle failure or RAM/SELinux cause is
+inferred from those messages.
+
+For API 36 and later, the next controller waits for package access, user 0 state
+RUNNING_UNLOCKED and one unchanged system_server PID before and after each
+sample. At least three matching observations must span 15 seconds. This remains
+inside the original 420-second total boot budget; failed samples or a changed PID
+reset that observation window. It is a bounded precondition, not a guarantee
+against later service crashes. No installation is retried.
+
+AOSP Android 16 sets sys.boot_completed before allowing user unlocking through
+UserController.onBootComplete. The prior flag alone therefore did not establish
+credential-encrypted storage readiness. Existing artifacts do not contain guest
+logcat, user state, PID history or guest disk usage, so they cannot distinguish
+CE delay, system_server restart or resource failure conclusively. The probe
+already calls Context.getCacheDir, which attempts directory creation; its SQL
+and 280 checks remain unchanged.
+
+Before terminating a modern owned AVD, the controller now attempts bounded crash,
+system and events logcat snapshots, user/PID, memory, /data space and properties.
+Diagnostic acquisition has a 45-second budget; each command gets at most 6 seconds.
+The final child shutdown can add 20 seconds plus 0.5-second polling: up to 65.5
+seconds of declared waits, with the job timeout still enforced. Logs retain the
+8 MiB bound. The total boot acquisition budget is 420 seconds; a late sample is
+rejected even if command shutdown takes additional time. Diagnostic failures are
+recorded separately and cannot replace the original failure or prevent owned
+emulator cleanup. RAM 2048 MiB, two CPU cores and the inherited heap setting are
+unchanged. The same callback, catalog and APK producer contract remain in use.
+
+These changes are candidates for a new complete 21-row run at one commit. The
+first run retains its original source pins, 22 controls and BLOCKED result.
+
+
 ## Exact selected catalog
 
 Each row has its own fresh runner and AVD. There are 15 normal rows and six
@@ -128,6 +177,15 @@ binary is never removed. Ambiguous installation and cleanup failures remain
 BLOCKED; an acknowledged uninstall and verified absence are required for PASS.
 Only verified temporary read-back APK copies are deleted.
 
+For API 24 with 4096-byte pages only, a pull with the exact observed missing-object
+message and exit 1 may be followed by binary exec-out cat of the validated
+/data/app path of this package. Transport failures, partial pull files, additional
+error output, other SDKs and other page sizes do not permit that fallback.
+The expected producer APK must be at most 2 MiB; the read-back must match its exact
+size and SHA-256 before instrumentation and again before uninstall. The original
+8 MiB transfer bound and 60-second deadline remain. No PTY, root or policy change
+is used. This adaptation does not classify the original errno or SELinux cause.
+
 The final summary rechecks every file manifest, GitHub run/attempt/commit,
 controller and lock hash, bootstrap result, the single producer APK and receipt,
 guest major/minor identity, instrumentation transcript and all validator oracles.
@@ -166,9 +224,16 @@ Run the controls on Linux with the reviewed preflight module available:
     python3 qa/test_android_emulator_matrix.py
     python3 qa/test_android_sqlite_probe.py
 
-The two real boot pilots validate only empty guest startup and identity. The
-expanded matrix, the first Linux SQLite build, the 21 Android SQLite executions,
-ART presence and real JNI loading each require their own subsequent receipts.
+The current host suites contain 14 page/readiness controls, 9 matrix controls and
+7 SQLite controls. On Windows, 29 pass and the original Linux AUXV comparison is
+explicitly skipped; the existing workflow must run all 30 on Linux before build.
+The readiness controls model missing services, locked users, changed PIDs,
+deadlines and incomplete diagnostic collection. They are simulated host evidence.
+
+The first matrix run established its Linux producer and 14 successful SQLite
+rows, with 7 blocked rows. Complete 21-row acceptance requires a new common run
+and commit; successes from different runs are not combined. ART presence and
+JNI loading remain separate experiments with their own receipts.
 
 ## Primary references
 
@@ -182,3 +247,8 @@ ART presence and real JNI loading each require their own subsequent receipts.
 - [GitHub Linux runner KVM announcement](https://github.blog/changelog/2024-02-22-github-hosted-runners-linux-x64-runners-now-support-hardware-acceleration-for-android-emulators/)
 - [GitHub hosted runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 - [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+
+- [AOSP Android 16 boot-completed ordering](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/am/ActivityManagerService.java)
+- [AOSP Android 16 user unlock transition](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/am/UserController.java)
+- [AOSP Android 16 get-started-user-state command](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/am/ActivityManagerShellCommand.java)
+- [AOSP credential-encrypted storage availability](https://source.android.com/docs/security/features/encryption/file-based)
