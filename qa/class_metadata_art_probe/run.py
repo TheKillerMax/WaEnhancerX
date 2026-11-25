@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the neutral ClassValue linkage probe only inside the existing owned Linux AVD."""
-import argparse, hashlib, json, os, re, secrets, sys, unittest
+import argparse, hashlib, json, os, re, secrets, sys, tempfile, unittest
 from pathlib import Path
 QA = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(QA))
@@ -40,6 +40,20 @@ class HostTests(unittest.TestCase):
                         lines+['java.lang.AssertionError: hidden failure']]:
             with self.subTest(damaged=damaged),self.assertRaises(RuntimeError):
                 validate_output('\n'.join(damaged),n,'candidate',24)
+    def test_exact_line_ending_projections_and_negatives(self):
+        from build import verify_text_pin
+        lf=b'first\nsecond\n'; crlf=lf.replace(b'\n',b'\r\n')
+        projections={'lf':hashlib.sha256(lf).hexdigest(),'crlf':hashlib.sha256(crlf).hexdigest()}
+        with tempfile.TemporaryDirectory() as folder:
+            f=Path(folder)/'source.java'
+            for raw in (lf,crlf):
+                f.write_bytes(raw)
+                self.assertEqual(verify_text_pin(f,projections),hashlib.sha256(raw).hexdigest())
+            for raw in (lf[:-1],lf+b'\n',lf.replace(b'first',b'first '),b'first\r\nsecond\n',
+                        b'first\rsecond\r',b'\xef\xbb\xbf'+lf,lf.replace(b'second',b'other')):
+                f.write_bytes(raw)
+                with self.subTest(raw=raw),self.assertRaises(RuntimeError):
+                    verify_text_pin(f,projections)
     def test_variant_boundary(self):
         n='a'*32
         with self.assertRaises(RuntimeError):
@@ -62,11 +76,21 @@ def main():
     require(re.fullmatch('[a-f0-9]{64}',a.manifest_sha256) and digest(manifest)==a.manifest_sha256,'Independent producer manifest hash differs')
     built=json.loads(manifest.read_bytes())
     lock=json.loads((HERE/'lock.json').read_bytes())
-    require(built['schema']=='WAEX_CLASS_METADATA_ART_BUILD_V1' and built['status']=='PASS_BUILD_ONLY' and
+    require(built['schema']=='WAEX_CLASS_METADATA_ART_BUILD_V2' and built['status']=='PASS_BUILD_ONLY' and
             built['workflow_commit']==os.environ.get('GITHUB_SHA') and built['run_id']==os.environ.get('GITHUB_RUN_ID') and
             built['attempt']==os.environ.get('GITHUB_RUN_ATTEMPT') and built['lock_sha256']==digest(HERE/'lock.json') and
             built['probe_sha256']==digest(HERE/'Main.java') and built['sources']==lock['sources'] and built['art_executed'] is False,'Producer provenance differs')
     require(set(built['variants'])==set(VARIANTS),'Producer variants differ')
+    require(lock['schema']=='WAEX_CLASS_METADATA_ART_LOCK_V2','Wrong source lock schema')
+    def verify_checkout(actual, projections, prior):
+        require(set(actual)==set(projections)==set(prior),'Checkout receipt coverage differs')
+        require(all(set(projections[k])=={'lf','crlf'} and prior[k] in projections[k].values()
+                    and actual[k] in projections[k].values() for k in projections),'Checkout receipt hash differs')
+    verify_checkout(built['fixture_checkout_sha256'],lock['fixture_checkout_sha256_by_projection'],
+                    {'runner':lock['runner_sha256'],'fixture':lock['fixture_sha256']})
+    for v in VARIANTS:
+        entry=lock['sources'][v]
+        verify_checkout(built['variants'][v]['checkout_source_sha256'],entry['checkout_sha256_by_projection'],entry['pins'])
     for v in VARIANTS:
         p=folder/(v+'-art-probe.jar'); identity=built['variants'][v]
         require(not p.is_symlink() and digest(p)==identity['jar_sha256'] and p.stat().st_size==identity['jar_bytes'] and

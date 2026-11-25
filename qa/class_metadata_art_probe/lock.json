@@ -1,5 +1,5 @@
 {
-  "schema": "WAEX_CLASS_METADATA_ART_LOCK_V1",
+  "schema": "WAEX_CLASS_METADATA_ART_LOCK_V2",
   "sources": {
     "baseline": {
       "commit": "9d1a3585f2b44b90e632cd3a2a7e46ef86ebf19d",
@@ -22,6 +22,80 @@
         "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279",
         "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827",
         "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+      },
+      "checkout_sha256_by_projection": {
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": {
+          "lf": "3c2a7a92f141507539384cc5b9f4c2f59cc4e3c07db65ee746740ffb2dabf1cf",
+          "crlf": "40ae8541ae37bbca439cbf99e3669883d5e686a845945cb8dbec1e66b2f69589"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": {
+          "lf": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+          "crlf": "3ae94a7fcd461549bdc1c88504f698f9473fe9773b9bcfda1317e8aa668ba285"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": {
+          "lf": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+          "crlf": "28d320b447105cc0a96d58e3bbcc5626e438de95c83daf617fcb76f583e03701"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": {
+          "lf": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+          "crlf": "d4b491c084c8699c5e037869c244408e574e35bbc0f652a8d9173e129e2c53ab"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": {
+          "lf": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+          "crlf": "31e5cc1b885c4ba09557d4643fa59522370750bdea1ca183ba6296e18a157df8"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": {
+          "lf": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+          "crlf": "330720a6c7c2a12859f11bb1c6ec3f7e41b4889bd565c1d2d17a89e61b0e68a2"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": {
+          "lf": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+          "crlf": "295ef7ac45c9aeb673c429daa247387f19d264a6da58a6c7d7ba5bd3dd72625e"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": {
+          "lf": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+          "crlf": "1c4d22fcd7bc6b6a941e953c3f53841ea51b0701ff85e82742a02ecc3ee6f672"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": {
+          "lf": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+          "crlf": "728f2c4ff5abf9381a5582bbd36de59c2c3ddc8caa4fd0e0e887ec03104f3272"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": {
+          "lf": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+          "crlf": "ee7fcdb8834e7c41ef4c3a1a49a5b822aa15afefdcb5078adf79a1d953a92053"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": {
+          "lf": "0cdfe5f32c79a50418dbb2e63bdc5988537f75bc065a3e6c887eb3e9a5e233e1",
+          "crlf": "1266d8916be7a7f6ee6c8d6407e8382e533ecda40b74cd6352e658543c4767f3"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": {
+          "lf": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+          "crlf": "fa932220e5ca9ac26d69cd184a62dd2dee8093e300683a3c5c48ee3d859d53d9"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": {
+          "lf": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+          "crlf": "2aa643826a9e2257def79c3178b74c502a60a880677f36c1f961cf262e081d8f"
+        },
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": {
+          "lf": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+          "crlf": "4d27d089aada2b75d0bcd6119a09307e5a67014bfb0649993ae5134423cf6347"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": {
+          "lf": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+          "crlf": "28591d2ca7722191fed73c13e688464cc8921b53956996daf0d173c333b938ba"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": {
+          "lf": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+          "crlf": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": {
+          "lf": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+          "crlf": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": {
+          "lf": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8",
+          "crlf": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+        }
       }
     },
     "candidate": {
@@ -45,11 +119,95 @@
         "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279",
         "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827",
         "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+      },
+      "checkout_sha256_by_projection": {
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": {
+          "lf": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+          "crlf": "728f2c4ff5abf9381a5582bbd36de59c2c3ddc8caa4fd0e0e887ec03104f3272"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": {
+          "lf": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+          "crlf": "ee7fcdb8834e7c41ef4c3a1a49a5b822aa15afefdcb5078adf79a1d953a92053"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": {
+          "lf": "88e275846e30c00fd8341eae77eb5973a714a1d8d09d0a0e9ecb8c93342b7d9d",
+          "crlf": "50e04d09ba45a99dced74110b8d8979ed74ea9bd3e9380dc998159b35ffe7f7f"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": {
+          "lf": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+          "crlf": "fa932220e5ca9ac26d69cd184a62dd2dee8093e300683a3c5c48ee3d859d53d9"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": {
+          "lf": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+          "crlf": "2aa643826a9e2257def79c3178b74c502a60a880677f36c1f961cf262e081d8f"
+        },
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": {
+          "lf": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+          "crlf": "4d27d089aada2b75d0bcd6119a09307e5a67014bfb0649993ae5134423cf6347"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": {
+          "lf": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+          "crlf": "28591d2ca7722191fed73c13e688464cc8921b53956996daf0d173c333b938ba"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": {
+          "lf": "e76094b4dcfc65d1c31adbaee7a0ab27dc477f4a358d004c901364d43ce8945d",
+          "crlf": "0f822a6a4b529325b8a76fb434e38ed8952b6cce63ef23218384606dfdcd767d"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": {
+          "lf": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+          "crlf": "3ae94a7fcd461549bdc1c88504f698f9473fe9773b9bcfda1317e8aa668ba285"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": {
+          "lf": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+          "crlf": "28d320b447105cc0a96d58e3bbcc5626e438de95c83daf617fcb76f583e03701"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": {
+          "lf": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+          "crlf": "d4b491c084c8699c5e037869c244408e574e35bbc0f652a8d9173e129e2c53ab"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": {
+          "lf": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+          "crlf": "31e5cc1b885c4ba09557d4643fa59522370750bdea1ca183ba6296e18a157df8"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": {
+          "lf": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+          "crlf": "330720a6c7c2a12859f11bb1c6ec3f7e41b4889bd565c1d2d17a89e61b0e68a2"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": {
+          "lf": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+          "crlf": "295ef7ac45c9aeb673c429daa247387f19d264a6da58a6c7d7ba5bd3dd72625e"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": {
+          "lf": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+          "crlf": "1c4d22fcd7bc6b6a941e953c3f53841ea51b0701ff85e82742a02ecc3ee6f672"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": {
+          "lf": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+          "crlf": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": {
+          "lf": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+          "crlf": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": {
+          "lf": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8",
+          "crlf": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+        }
       }
     }
   },
   "runner_sha256": "31e094f5835a1119a624ff2e488951d94941a54b99a5f274470af5d4c234be70",
   "fixture_sha256": "d05d084f3564dda41c5c909a327c5ac0762f5d9d12692f086b9629a14a13a8e1",
   "dexkit_jar_sha256": "195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1",
-  "probe_sha256": "a4d35eb6ba25990b1a8bfdcfe967c5f869f3c89e7edf6c78aa6d22d20f0fa593"
+  "probe_sha256": "a4d35eb6ba25990b1a8bfdcfe967c5f869f3c89e7edf6c78aa6d22d20f0fa593",
+  "fixture_checkout_sha256_by_projection": {
+    "runner": {
+      "lf": "31e094f5835a1119a624ff2e488951d94941a54b99a5f274470af5d4c234be70",
+      "crlf": "510f5920d06fbe0627c8cebbb454a89055582b0a9359fe90aace3232fd0a9fab"
+    },
+    "fixture": {
+      "lf": "d20388d759cbf2b042a3a5fdd5d93e6b2d7e857a54f642d6ebbfd9206688a1e7",
+      "crlf": "d05d084f3564dda41c5c909a327c5ac0762f5d9d12692f086b9629a14a13a8e1"
+    }
+  }
 }

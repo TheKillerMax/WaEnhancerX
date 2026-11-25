@@ -19,10 +19,25 @@ def run(out, name, args, timeout=180, env=None):
     (out/(name+'.stderr.log')).write_bytes(result.stderr)
     require(result.returncode == 0, name+' failed: '+result.stderr.decode(errors='replace')[-2000:])
     return result.stdout.decode(errors='replace').strip()
-def verify_sources(root, pins):
-    for rel, sha in pins.items():
-        p = root / rel
-        require(p.is_file() and not p.is_symlink() and digest(p)==sha, 'Source mismatch: '+rel)
+def verify_text_pin(path, projections):
+    require(path.is_file() and not path.is_symlink(), 'Source missing/not regular: '+str(path))
+    require(set(projections)=={'lf','crlf'} and
+            all(re.fullmatch('[a-f0-9]{64}',v) for v in projections.values()), 'Invalid text pin')
+    raw=path.read_bytes()
+    require(not raw.startswith(b'\xef\xbb\xbf'), 'Unexpected UTF-8 BOM: '+str(path))
+    raw.decode('utf-8',errors='strict')
+    lf=raw.replace(b'\r\n',b'\n')
+    require(b'\r' not in lf and raw in (lf,lf.replace(b'\n',b'\r\n')),
+            'Mixed/bare carriage returns: '+str(path))
+    observed=hashlib.sha256(raw).hexdigest()
+    require(observed in projections.values() and hashlib.sha256(lf).hexdigest()==projections['lf'],
+            'Source mismatch: '+str(path)+' actual='+observed)
+    return observed
+def verify_sources(root, entry):
+    pins=entry['pins']; projections=entry['checkout_sha256_by_projection']
+    require(set(pins)==set(projections), 'Source projection coverage differs')
+    require(all(pins[rel] in projections[rel].values() for rel in pins), 'Prior exact pins not retained')
+    return {rel:verify_text_pin(root/rel,projections[rel]) for rel in pins}
 def compile_dex(out, variant, classes, probe_classes, deps, java, d8, android_jar):
     class_inputs, excluded = {}, []
     dst = out / (variant+'-classes.jar')
@@ -83,13 +98,20 @@ def main():
             'Only reviewed fork lab build allowed')
     require(re.fullmatch('[a-f0-9]{40}',os.environ.get('GITHUB_SHA','')), 'Missing workflow commit')
     require(digest(HERE/'Main.java')==lock['probe_sha256'],'Probe source changed')
+    require(lock['schema']=='WAEX_CLASS_METADATA_ART_LOCK_V2','Wrong source lock schema')
+    checked={}
     for variant in VARIANTS:
         root=getattr(a,variant).resolve()
         require(run(out,variant+'-git',['git','-C',root,'rev-parse','HEAD'])==lock['sources'][variant]['commit'], 'Source revision mismatch')
-        verify_sources(root,lock['sources'][variant]['pins'])
+        checked[variant]=verify_sources(root,lock['sources'][variant])
     runner=a.candidate/'qa/test_receipt_stanza_runtime.py'
     fixture=a.candidate/'qa/fixtures/ReceiptStanzaRuntimeChecks.java'
-    require(digest(runner)==lock['runner_sha256'] and digest(fixture)==lock['fixture_sha256'],'Receipt fixture changed')
+    fixture_paths={'runner':runner,'fixture':fixture}
+    fixture_projections=lock['fixture_checkout_sha256_by_projection']
+    require(set(fixture_projections)==set(fixture_paths) and
+            all(lock[k+'_sha256'] in fixture_projections[k].values() for k in fixture_paths),
+            'Prior runner/fixture pins not retained')
+    fixture_checkout={k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}
     env=os.environ.copy()
     env['PATH']=str(a.java_home/'bin')+os.pathsep+env['PATH']
     env.pop('WAEX_QA_DEXKIT_JAR',None)
@@ -104,11 +126,11 @@ def main():
     run(out,'kotlin-version',[kotlin,'-version'],env=env)
     compiled=out/'probe-classes';compiled.mkdir()
     run(out,'probe-javac',[javac,'--release','8','-encoding','UTF-8','-classpath',android_jar,'-d',compiled,HERE/'Main.java'],env=env)
-    report={'schema':'WAEX_CLASS_METADATA_ART_BUILD_V1','status':'PASS_BUILD_ONLY',
+    report={'schema':'WAEX_CLASS_METADATA_ART_BUILD_V2','status':'PASS_BUILD_ONLY',
             'workflow_commit':os.environ['GITHUB_SHA'],'run_id':os.environ.get('GITHUB_RUN_ID'),
             'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'lock_sha256':digest(LOCK),
             'probe_sha256':digest(HERE/'Main.java'),'tools_sha256':{str(x):digest(x) for x in (java,javac,stdlib,android_jar,d8)},
-            'sources':lock['sources'],'variants':{},'art_executed':False,
+            'sources':lock['sources'],'fixture_checkout_sha256':fixture_checkout,'variants':{},'art_executed':False,
             'scope':'Complete two production class definitions with explicit host-service boundaries. No app build or hooks.'}
     deps=None
     for variant in VARIANTS:
@@ -119,7 +141,7 @@ def main():
         require(result['result']=='PASS' and result['scenarios']==101 and result['checks']==702 and
                 result['failed_scenarios']==0 and result['resource_lookup_boundary_rejected'] is True and
                 result['complete_hook_compiled'] is True and result['complete_base_feature_compiled'] is True and
-                pins==lock['sources'][variant]['pins'],'Receipt contract or source pins differ')
+                pins==checked[variant],'Receipt contract or source pins differ')
         dexkit=receipt/'dexkit-2.2.0.jar'
         require(digest(dexkit)==lock['dexkit_jar_sha256'],'DexKit JAR mismatch')
         if deps is None:
@@ -129,8 +151,11 @@ def main():
         result_dex=compile_dex(out,variant,receipt/'classes',compiled,deps,java,d8,android_jar)
         result_dex['receipt_sha256']=digest(receipt/'result.json')
         result_dex['host_scenarios']=101;result_dex['host_checks']=702
+        result_dex['checkout_source_sha256']=checked[variant]
         report['variants'][variant]=result_dex
-        verify_sources(root,lock['sources'][variant]['pins'])
+        require(verify_sources(root,lock['sources'][variant])==checked[variant], 'Checkout changed during compilation')
+        require({k:verify_text_pin(p,fixture_projections[k]) for k,p in fixture_paths.items()}==fixture_checkout,
+                'Receipt fixture changed during compilation')
     save(out/'artifact/artifact-manifest.json',report)
     print('PASS_BUILD_ONLY: both variants, no Android execution')
     return 0

@@ -13,3 +13,7 @@ The new ClassValue workflow compiles the full two class definitions at exact bas
 ## Validation
 
 Local host controls retain the original checks, add byte-preservation and rejection cases, and use an import-only fcntl sentinel on Windows. The Linux runtime matrix and the ClassValue runtime workflow remain the independent acceptance tests. Review results by their exact commit and attempt; never merge rows from different commits.
+
+### Follow-up: ClassValue source identity
+
+The initial Linux build (45553277154) rejected HideReceiptsHook.java before compilation. The reviewed Windows baseline bytes use CRLF; independent Code UI readback of the exact baseline commit plus its final LF matches the derived LF SHA-256. Retain every original reviewed SHA-256 and pin both complete byte representations, generated from the reviewed bytes. Reject changed content, mixed line endings, BOM, added or removed final newline, and unpinned hashes. Compile the actual exact-commit checkout without rewriting it; record every observed raw SHA-256 and require the original fixture receipts to agree with those actual raw hashes. The runtime validator checks the full observed checkout hash map against these precomputed pins. No linkage result has yet been claimed.
