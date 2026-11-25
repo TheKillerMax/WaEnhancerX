@@ -1,0 +1,935 @@
+{
+  "schema_version": 1,
+  "ready": true,
+  "reason": "Real preflight and both corrected boot pilots verified; permits the isolated 21-target experiment after source review. Expanded Android/SQLite execution is still pending.",
+  "preflight": {
+    "status": "PASS",
+    "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45520358898",
+    "head_sha": "9067ca002f8b687fb9ac61fee1b8c5ac116fb3cb",
+    "report_sha256": {
+      "preflight-result.json": "e0f8f10f91d0ea2c3b03b05087a3abf447bf2ddfd42b01b1cb9c05ef1a10c8f2",
+      "catalog.json": "9bb10ef1832e0776e6f2d568c4835eb5f7a9534973ac32d5ce42480776772a90",
+      "tool-identities.json": "18689c9d53949e85db1d7db0d1967a04d7f64ddda33dac382efaffce662f7d57",
+      "installed-component-properties.json": "ad4617f3875f070bf86efc8415ddb7823cd7ab94bd8e460cdfddc92dcfbb02f4"
+    },
+    "bootstrap_result_sha256": "b2efe100bec868b1901c81294f402f487e200677c827b84ccfb1f35d7b98a4bf",
+    "bootstrap_status": "PASS",
+    "runner_image": "20261116.133.1"
+  },
+  "tool_sha256": {
+    "sdkmanager": "e4c60d8de64e1b32acfc9c366fccb45180273be024bf4119c2dda3ffda28691c",
+    "emulator": "5c48296df39c35bad694a361312e3c9915e47d4061eed475b061c98625599173",
+    "adb": "a902be8f45c6c62e76c9efaf6947a0fa747c9cabd89a2ac8e0d16ecb30b3ed01",
+    "java": "a2195ae9f8a91b82f53df7e1d1b9a650937ebbabbf67d0240c6378b4fbd9990b"
+  },
+  "targets": {
+    "api24": {
+      "image": {
+        "path": "system-images;android-24;google_apis;x86_64",
+        "api": 24,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          27,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-24_r27.zip",
+            "download_bytes": 1119800108,
+            "checksum_type": "sha1",
+            "checksum": "46d09c0723b77ddba00f2281099a2c44a88ac971"
+          }
+        ],
+        "dependencies": []
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api25": {
+      "image": {
+        "path": "system-images;android-25;google_apis;x86_64",
+        "api": 25,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          18,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-25_r18.zip",
+            "download_bytes": 1298264628,
+            "checksum_type": "sha1",
+            "checksum": "0da7b5bca8ff5deff45b942f61f081e038271ba6"
+          }
+        ],
+        "dependencies": []
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api26": {
+      "image": {
+        "path": "system-images;android-26;google_apis;x86_64",
+        "api": 26,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          16,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-26_r16.zip",
+            "download_bytes": 980740438,
+            "checksum_type": "sha1",
+            "checksum": "0eb13cc91cf164b617eaf85e4030289cb18189de"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              26,
+              1,
+              3
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api27": {
+      "image": {
+        "path": "system-images;android-27;default;x86_64",
+        "api": 27,
+        "minor": 0,
+        "tag": "default",
+        "abi": "x86_64",
+        "revision": [
+          1,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-27_r01.zip",
+            "download_bytes": 491675204,
+            "checksum_type": "sha1",
+            "checksum": "2878261011a59ca3de29dc5b457a495fdb268d60"
+          }
+        ],
+        "dependencies": []
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api28": {
+      "image": {
+        "path": "system-images;android-28;google_apis;x86_64",
+        "api": 28,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          11,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-28_r11.zip",
+            "download_bytes": 1102721597,
+            "checksum_type": "sha1",
+            "checksum": "1d93bd994e29c4e9bbe71fd9c278addc5418cbee"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              29,
+              1,
+              12
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api29": {
+      "image": {
+        "path": "system-images;android-29;google_apis;x86_64",
+        "api": 29,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          13,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-29_r13.zip",
+            "download_bytes": 1314706136,
+            "checksum_type": "sha1",
+            "checksum": "50c2953ab13f312ed797a961577ee74a911d087d"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              30,
+              8,
+              2
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api30": {
+      "image": {
+        "path": "system-images;android-30;google_apis;x86_64",
+        "api": 30,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          16,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-30_r16.zip",
+            "download_bytes": 1438186618,
+            "checksum_type": "sha1",
+            "checksum": "6ae21030eaadc041078444d3798e4b399f3e787d"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              30,
+              8,
+              0
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api31": {
+      "image": {
+        "path": "system-images;android-31;default;x86_64",
+        "api": 31,
+        "minor": 0,
+        "tag": "default",
+        "abi": "x86_64",
+        "revision": [
+          5,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-31_r05.zip",
+            "download_bytes": 657246510,
+            "checksum_type": "sha1",
+            "checksum": "58bff3cb182c79bbfe3980fe77b87b51b9f7ad71"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              31,
+              2,
+              7
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api32": {
+      "image": {
+        "path": "system-images;android-32;default;x86_64",
+        "api": 32,
+        "minor": 0,
+        "tag": "default",
+        "abi": "x86_64",
+        "revision": [
+          2,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/android/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/android/x86_64-32_r02.zip",
+            "download_bytes": 667541890,
+            "checksum_type": "sha1",
+            "checksum": "238452e27d6854d153b6ed119fa783189598eac4"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              29,
+              1,
+              11
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api33": {
+      "image": {
+        "path": "system-images;android-33;google_apis;x86_64",
+        "api": 33,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          17,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-33_r17.zip",
+            "download_bytes": 1707857511,
+            "checksum_type": "sha1",
+            "checksum": "2b96f5bd5c79bfe1cc645e70b3e630b5755d9711"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              30,
+              7,
+              3
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api34": {
+      "image": {
+        "path": "system-images;android-34;google_apis;x86_64",
+        "api": 34,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          14,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-34_r14.zip",
+            "download_bytes": 1563721130,
+            "checksum_type": "sha1",
+            "checksum": "e0f6c9a0691aa27bd597d0deb1bcfdc943ac8ca7"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              34,
+              2,
+              16
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api35": {
+      "image": {
+        "path": "system-images;android-35;google_apis;x86_64",
+        "api": 35,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          9,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-35_r09.zip",
+            "download_bytes": 1738815903,
+            "checksum_type": "sha1",
+            "checksum": "0103e6dab21290c4b9d16550a3ce99476f884eef"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              33,
+              1,
+              24
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api36": {
+      "image": {
+        "path": "system-images;android-36;google_apis;x86_64",
+        "api": 36,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          7,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36_r07.zip",
+            "download_bytes": 1895447397,
+            "checksum_type": "sha1",
+            "checksum": "c6bf44bdcd885bb902b4ba752d111a073ad7a817"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              35,
+              4,
+              9
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api37": {
+      "image": {
+        "path": "system-images;android-37.0;google_apis;x86_64",
+        "api": 37,
+        "minor": 0,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          8,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-37.0_r08.zip",
+            "download_bytes": 2143899425,
+            "checksum_type": "sha1",
+            "checksum": "a266cfbcf4d6c769b166c0af4d68eff0e4f4a5e3"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              37,
+              2,
+              11
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api36.1": {
+      "image": {
+        "path": "system-images;android-36.1;google_apis;x86_64",
+        "api": 36,
+        "minor": 1,
+        "tag": "google_apis",
+        "abi": "x86_64",
+        "revision": [
+          4,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-36.1_r04.zip",
+            "download_bytes": 1960532087,
+            "checksum_type": "sha1",
+            "checksum": "15261872d5f0ae4b5728faefd0380d51b61a5b23"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              35,
+              4,
+              9
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 4096,
+      "minimum_free_bytes": 17179869184
+    },
+    "api35-16k": {
+      "image": {
+        "path": "system-images;android-35;google_apis_ps16k;x86_64",
+        "api": 35,
+        "minor": 0,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          5,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-35_r05.zip",
+            "download_bytes": 1696342085,
+            "checksum_type": "sha1",
+            "checksum": "d709cf26b375abecfbbf5803afd20749ddfa2865"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              33,
+              1,
+              24
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    },
+    "api36-16k": {
+      "image": {
+        "path": "system-images;android-36;google_apis_ps16k;x86_64",
+        "api": 36,
+        "minor": 0,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          7,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-36_r07.zip",
+            "download_bytes": 1849428145,
+            "checksum_type": "sha1",
+            "checksum": "dd783282e84bf475a02eba6777c79fc5695e1583"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              35,
+              4,
+              9
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    },
+    "api36.1-16k": {
+      "image": {
+        "path": "system-images;android-36.1;google_apis_ps16k;x86_64",
+        "api": 36,
+        "minor": 1,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          4,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-36.1_r04.zip",
+            "download_bytes": 1913923004,
+            "checksum_type": "sha1",
+            "checksum": "d812164d3704c2d5846d34e0a4d2c61cb1224a02"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              35,
+              4,
+              9
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    },
+    "api37-16k": {
+      "image": {
+        "path": "system-images;android-37.0;google_apis_ps16k;x86_64",
+        "api": 37,
+        "minor": 0,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          8,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-37.0_r08.zip",
+            "download_bytes": 2081411720,
+            "checksum_type": "sha1",
+            "checksum": "3e04f6c168a573640e63fdd8afd71a3c4d947f64"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              37,
+              2,
+              11
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    },
+    "api37.1-16k": {
+      "image": {
+        "path": "system-images;android-37.1;google_apis_ps16k;x86_64",
+        "api": 37,
+        "minor": 1,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          9,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-37.1_r09.zip",
+            "download_bytes": 2178012675,
+            "checksum_type": "sha1",
+            "checksum": "35c0da1cd298f3426a5b48233f59515097446a28"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              36,
+              5,
+              11
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    },
+    "api37.2-16k": {
+      "image": {
+        "path": "system-images;android-37.2;google_apis_ps16k;x86_64",
+        "api": 37,
+        "minor": 2,
+        "tag": "google_apis_ps16k",
+        "abi": "x86_64",
+        "revision": [
+          7,
+          0,
+          0
+        ],
+        "source_metadata": "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-3.xml",
+        "license_id": "android-sdk-license",
+        "license_text_sha1": "24333f8a63b6825ea9c5514f83c2829b004d1fee",
+        "license_xml_text_sha1": "efa68a6b3c661d18699d5c026771d5911cdc2f83",
+        "license_hash_method": "sdk_TrimStringAdapter_then_sha1_utf8",
+        "license_already_accepted": true,
+        "archives": [
+          {
+            "url": "https://dl.google.com/android/repository/sys-img/google_apis/x86_64-ps16k-37.2_r07.zip",
+            "download_bytes": 2433862944,
+            "checksum_type": "sha1",
+            "checksum": "19653fc402b2bafb02d1619006970318820e3431"
+          }
+        ],
+        "dependencies": [
+          {
+            "path": "emulator",
+            "min_revision": [
+              36,
+              5,
+              11
+            ]
+          }
+        ]
+      },
+      "application_page_size_bytes": 16384,
+      "minimum_free_bytes": 17179869184
+    }
+  },
+  "source_sha256": {
+    "qa/android_emulator_lab_preflight.py": "095e06cc348e6d6cd895a8f4ee1bbec7770cb2b9c1fee5822002e1cf11c99923",
+    "qa/android_emulator_lab_bootstrap.py": "4a2d8d8e06e1ee8e07c39db3007a656083230f99274a4a7048be6a4638529940",
+    "qa/android_emulator_lab_pilot.py": "ae4f06035fd73fab0dcfcfaf9ab240eb5886e951752e4c06d403a851640599c0",
+    "qa/android_emulator_lab_matrix.py": "85e39b7788c50357b5e7a5c0d3f3fa605c634c899cb4b97cb1201aae8a287abf",
+    "qa/summarize_android_emulator_lab_matrix.py": "9f070cc84673d8a884ab7ffa834f4fcb21c88660f2f9ccdcb096cc176a1fd567",
+    "qa/build_android_sqlite_probe.py": "c1745496c4e39f3398570e22235132adb1af21fe3f55deb31e111a160b053fb1",
+    "qa/validate_android_sqlite_probe.py": "f5883c5953bf3f0f30c8290bebc8d28025cb11990c7a7d1dd0075a60255a56c8",
+    "qa/test_android_sqlite_probe.py": "daf478e5ee1478413d8f4ce9fae6c3d7011606c682b1645a05050a24b28ddaea",
+    "qa/ANDROID_SQLITE_PROBE.md": "c26138b6243e23fef954951b7b6233b3db1c8f438f7a1b66a213c10d58721f9f",
+    "qa/android_sqlite_probe/AndroidManifest.xml": "2c12d587718c34b340782889fb5eb851c6cce5e3909f4dd7917550cf62bae1a7",
+    "qa/android_sqlite_probe/SqliteProbeInstrumentation.java": "8bade158995281abe492c56046e875b74343d7bf31bd58b81b0977400e508d85"
+  },
+  "phase": "extended_android_runtime_matrix",
+  "build_sdk_metadata_sha256": {
+    "platforms/android-36/package.xml": "066e7bbe3a49c506af0f6cdf07dad262e487e823ca096aec74fa3ada377d1e03",
+    "platforms/android-36/source.properties": "72291ff6611dbfc46fdfb6de2821c4a62c87befa5200713847eda426e3a501c2",
+    "build-tools/36.0.0/package.xml": "531aeef4af6fc79796abc58da5b1024c4b7f7acf5b04018ed05118ea0e8772c9",
+    "build-tools/36.0.0/source.properties": "7dee6632e9ad6cb111da2bb99d747211e27927061b1276d040bb1d71fded5ebb"
+  },
+  "boot_pilot": {
+    "api24": {
+      "status": "PASS",
+      "android_booted": true,
+      "guest": {
+        "sdk": "24",
+        "release": "7.0",
+        "abi": "x86_64",
+        "fingerprint": "Android/sdk_google_phone_x86_64/generic_x86_64:7.0/NYC/6696031:userdebug/dev-keys",
+        "package_manager": "package:/system/framework/framework-res.apk",
+        "application_page_size_bytes": "4096"
+      },
+      "owned_emulator_reaped": true,
+      "license_files_unchanged": true,
+      "apk_installed": false,
+      "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45526368865",
+      "head_sha": "2bce24e4310add9318c83fc5922bb425e71a1f53",
+      "artifact_bytes": 49880,
+      "artifact_sha256": "6ac7fc9845d1bb95c42037859966df3faa572003fcd1fdaba2772f63afecf5ce",
+      "pilot_result_sha256": "eb1dd9643dd27e28ce186866b07bf803650659a57024b227982d13ad980bde09",
+      "source_sha256": "bb26f745f7334fc300013626ec96b7ab7a4c0c71d2f67535fc870a431de3b1f0",
+      "manifest_files_verified": 74,
+      "page_observation": {
+        "method": "API24_Bionic_sysconf_AT_PAGESZ",
+        "reader": "/system/bin/cat",
+        "reader_identity": {
+          "full_executable_bytes": 356192,
+          "full_executable_sha256": "e3a1b45ece23fd25f135f1dbc86bdfbcb4aa22b88bdaecfd5cc83e08aab47106",
+          "retained_bytes": 64,
+          "capture": "exec-out /system/bin/cat /system/bin/cat; only the ELF header is retained"
+        },
+        "reader_elf_class": 64,
+        "reader_endian": "little",
+        "pointer_bytes": 8,
+        "reader_elf_header_sha256": "78a5b57454ac36760ef6bf9abcc2d7cd7006e8d81397fabf33f578d99d64c2ab",
+        "auxv_bytes": 304,
+        "auxv_sha256": "00115602b9a7e48551234cd2e3cfbe51f46984355594b0e8053854ac5ef8914e",
+        "scope": "API 24 only; never a fallback for simulated 16 KiB images"
+      }
+    },
+    "api35-16k": {
+      "status": "PASS",
+      "android_booted": true,
+      "guest": {
+        "sdk": "35",
+        "release": "15",
+        "abi": "x86_64",
+        "fingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:15/AE3A.240806.043/12960925:userdebug/dev-keys",
+        "package_manager": "package:/system/framework/framework-res.apk",
+        "application_page_size_bytes": "16384"
+      },
+      "owned_emulator_reaped": true,
+      "license_files_unchanged": true,
+      "apk_installed": false,
+      "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45526368865",
+      "head_sha": "2bce24e4310add9318c83fc5922bb425e71a1f53",
+      "artifact_bytes": 49984,
+      "artifact_sha256": "f80e757b33437c37f6cd5a6e3a7a9930c53e7f2a1ad3485917f7d71a482085ea",
+      "pilot_result_sha256": "9a0e718c1c38b46770f42c147aec07cacfa17d2d71478871d3fa5fea3dfdc4c8",
+      "source_sha256": "bb26f745f7334fc300013626ec96b7ab7a4c0c71d2f67535fc870a431de3b1f0",
+      "manifest_files_verified": 69,
+      "page_observation": {
+        "method": "getconf_PAGE_SIZE"
+      }
+    }
+  },
+  "catalog_evidence": {
+    "run_url": "https://github.com/TheKillerMax/WaEnhancerX/actions/runs/45520358898",
+    "head_sha": "9067ca002f8b687fb9ac61fee1b8c5ac116fb3cb",
+    "catalog_sha256": "9bb10ef1832e0776e6f2d568c4835eb5f7a9534973ac32d5ce42480776772a90",
+    "selected_targets": 21,
+    "normal_targets": 15,
+    "simulated_16k_targets": 6,
+    "scope": "Stable, already-accepted image metadata only; expanded runtime remains untested."
+  }
+}

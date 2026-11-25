@@ -1,0 +1,204 @@
+name: Android emulator lab matrix
+
+on:
+  push:
+    branches:
+      - lab/android-emulator-matrix-nightly8-20261124
+    paths:
+      - .github/workflows/android-emulator-lab-matrix.yml
+      - qa/android_emulator_lab_matrix_lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-lab-matrix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      apk_sha256: ${{ steps.probe.outputs.apk_sha256 }}
+      build_receipt_sha256: ${{ steps.probe.outputs.build_receipt_sha256 }}
+      matrix: ${{ steps.probe.outputs.matrix }}
+    steps:
+      - name: Checkout the reviewed lab commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Verify reviewed context and source lock before building
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          from pathlib import Path
+          import os
+          from android_emulator_lab_preflight import context_check
+          from android_emulator_lab_matrix import checked_lock
+          context_check(os.environ)
+          checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), 'api24')
+          PY
+      - name: Run all host counterchecks on Linux before building
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            python3 qa/test_android_emulator_pilot_pages.py
+            python3 qa/test_android_emulator_matrix.py
+            python3 qa/test_android_sqlite_probe.py
+          } 2>&1 | tee "$RUNNER_TEMP/waex-sqlite-host-controls.log"
+      - name: Build one neutral APK with an ephemeral signing key
+        run: |
+          python3 qa/build_android_sqlite_probe.py \
+            --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME" \
+            --out "$RUNNER_TEMP/waex-sqlite-build"
+      - name: Verify producer identity and publish immutable job outputs
+        id: probe
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          from pathlib import Path
+          import json, os
+          from android_emulator_lab_matrix import TARGETS, checked_lock, verified_probe
+          from android_emulator_lab_preflight import sha256_file
+          lock, _ = checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), 'api24')
+          bundle = Path(os.environ['RUNNER_TEMP']) / 'waex-sqlite-build'
+          apk_sha = sha256_file(bundle / 'sqlite-probe.apk')
+          receipt_sha = sha256_file(bundle / 'build-result.json')
+          verified_probe(bundle, apk_sha, receipt_sha, lock)
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as stream:
+              stream.write('apk_sha256=' + apk_sha + '\n')
+              stream.write('build_receipt_sha256=' + receipt_sha + '\n')
+              stream.write('matrix=' + json.dumps({'target': sorted(TARGETS)}) + '\n')
+          PY
+      - name: Preserve the unique APK for all target jobs
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-sqlite-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-sqlite-build/sqlite-probe.apk
+            ${{ runner.temp }}/waex-sqlite-build/build-result.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve host controls and producer logs on failure
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-sqlite-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-sqlite-host-controls.log
+            ${{ runner.temp }}/waex-sqlite-build/build-result.json
+            ${{ runner.temp }}/waex-sqlite-build/logs/
+          if-no-files-found: warn
+          retention-days: 1
+
+  sqlite:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.build.outputs.matrix) }}
+    env:
+      TARGET: ${{ matrix.target }}
+      APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
+      BUILD_RECEIPT_SHA256: ${{ needs.build.outputs.build_receipt_sha256 }}
+    steps:
+      - name: Checkout the same reviewed commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Fetch the single producer APK and receipt
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: android-lab-sqlite-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-sqlite-input
+      - name: Verify exact target and producer artifact before bootstrap
+        run: |
+          PYTHONPATH=qa python3 - <<'PY'
+          from pathlib import Path
+          import os
+          from android_emulator_lab_preflight import context_check
+          from android_emulator_lab_matrix import checked_lock, verified_probe
+          context_check(os.environ)
+          lock, _ = checked_lock(Path('qa/android_emulator_lab_matrix_lock.json'), os.environ['TARGET'])
+          verified_probe(Path(os.environ['RUNNER_TEMP']) / 'waex-sqlite-input',
+                         os.environ['APK_SHA256'], os.environ['BUILD_RECEIPT_SHA256'], lock)
+          PY
+      - name: Bootstrap this fresh Linux runner
+        run: |
+          python3 qa/android_emulator_lab_bootstrap.py \
+            --out "$RUNNER_TEMP/waex-matrix-bootstrap-$TARGET"
+      - name: Boot the reviewed image and run the neutral SQLite probe
+        run: |
+          python3 qa/android_emulator_lab_matrix.py \
+            --target "$TARGET" --lock qa/android_emulator_lab_matrix_lock.json \
+            --apk-dir "$RUNNER_TEMP/waex-sqlite-input" \
+            --apk-sha256 "$APK_SHA256" --build-receipt-sha256 "$BUILD_RECEIPT_SHA256" \
+            --out "$RUNNER_TEMP/waex-matrix-$TARGET"
+      - name: Preserve target evidence even on a failed boot or probe
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-sqlite-runtime-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-matrix-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/waex-matrix-bootstrap-${{ matrix.target }}/
+          if-no-files-found: warn
+          retention-days: 1
+
+  summary:
+    needs: [build, sqlite]
+    if: >-
+      always() &&
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/android-emulator-matrix-nightly8-20261124' &&
+      github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APK_SHA256: ${{ needs.build.outputs.apk_sha256 }}
+      BUILD_RECEIPT_SHA256: ${{ needs.build.outputs.build_receipt_sha256 }}
+      BUILD_JOB_RESULT: ${{ needs.build.result }}
+    steps:
+      - name: Checkout the reviewed validation code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Fetch each target artifact into a separate directory
+        if: needs.build.result == 'success'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: android-lab-sqlite-runtime-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-matrix-collected
+          merge-multiple: false
+      - name: Require all 21 current-run receipts
+        if: always()
+        run: |
+          python3 qa/summarize_android_emulator_lab_matrix.py \
+            --reports "$RUNNER_TEMP/waex-matrix-collected" \
+            --lock qa/android_emulator_lab_matrix_lock.json \
+            --apk-sha256 "$APK_SHA256" --build-receipt-sha256 "$BUILD_RECEIPT_SHA256" \
+            --build-job-result "$BUILD_JOB_RESULT" --out "$RUNNER_TEMP/waex-matrix-summary"
+      - name: Preserve the complete coverage table
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: android-lab-sqlite-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-matrix-summary/
+          if-no-files-found: error
+          retention-days: 1
