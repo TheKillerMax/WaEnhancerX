@@ -1,0 +1,2 @@
+[Fixes]
+HMA CI reuses the complete pinned framework and Android SDK dependencies already exercised by the preserved-message job in the same run, attempt and source commit. It rejects altered or incomplete artifacts before testing, avoiding the duplicate native-runtime download that exhausted the dependency deadline after HTTP 429.

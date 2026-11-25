@@ -632,6 +632,29 @@ jobs:
           test -f qa/fixtures/PreservedDispatchContractTest.java
       - name: Exercise 84 persistence and callback cases on Android API 24, 28 and 34
         run: python3 qa/android_preserved_dispatch_test.py --out "$RUNNER_TEMP/waex-preserved-dispatch"
+      - name: Verify dependency transfer rejects corrupt or mismatched bundles
+        run: |
+          python3 qa/test_framework_dependency_bundle.py \
+            --out "$RUNNER_TEMP/waex-framework-bundle-controls" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch/dependency-bundle-controls.json"
+      - name: Stage the complete dependency graph already exercised by this job
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py create \
+            --deps "$RUNNER_TEMP/waex-preserved-dispatch/deps" \
+            --maven-repo "$HOME/.m2/repository" \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-preserved-dispatch/dependency-bundle.json"
+      - name: Share verified framework dependencies with HMA in this run attempt
+        uses: actions/upload-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
       - name: Preserve source identities and acknowledgement results
         if: always()
         uses: actions/upload-artifact@v4
@@ -645,6 +668,7 @@ jobs:
 
   hma-config-framework:
     name: HMA scoped repair / Android API 24, 28, 34 / checked shell writes
+    needs: preserved-dispatch-framework
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -677,13 +701,27 @@ jobs:
           test -f qa/fixtures/HmaContractTest.java
           test -f qa/fixtures/RootCommandBoundedChecks.java
           test -f qa/fixtures/hma_command_service.py
+      - name: Retrieve dependencies from the successful producer in this run attempt
+        uses: actions/download-artifact@v4
+        with:
+          name: hma-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-shared-framework
+      - name: Verify exact dependency bytes, run, attempt and source head before HMA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-shared-framework" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-hma-dependency-bundle.json"
       - name: Verify complete diagnostics, bounded reads and target-local atomic replacements
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/android_hma_test.py \
             --out "$RUNNER_TEMP/waex-hma-framework" \
-            --maven-repo "$RUNNER_TEMP/waex-hma-maven-cache"
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
           echo 'Complete public HMA classes passed framework and temporary-file shell checks. No real su, Android config, HMA service, SELinux or LSPosed injection was exercised.'
       - name: Reject caller, scope, ownership and transaction regressions
         shell: bash
@@ -691,8 +729,8 @@ jobs:
           set -euo pipefail
           python3 qa/mutate_hma_repairs.py \
             --out "$RUNNER_TEMP/waex-hma-negative-controls" \
-            --deps "$RUNNER_TEMP/waex-hma-framework/deps" \
-            --maven-repo "$RUNNER_TEMP/waex-hma-maven-cache"
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
       - name: Verify compiled recovery commands and preserve upstream hardening contracts
         shell: bash
         env:
@@ -706,6 +744,7 @@ jobs:
         with:
           name: hma-config-framework-evidence
           path: |
+            ${{ runner.temp }}/waex-hma-dependency-bundle.json
             ${{ runner.temp }}/waex-hma-negative-controls/**/*.json
             ${{ runner.temp }}/waex-hma-negative-controls/**/*.log
             ${{ runner.temp }}/waex-hma-framework/*.json
