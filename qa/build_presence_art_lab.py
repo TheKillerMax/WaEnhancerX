@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 
 from android_emulator_lab_pilot import invoke, require
+from presence_art_probe.build_presence_art_probe import compiler_contract, require_quiet_d8
 
 HERE = Path(__file__).resolve().parent
 LOCK = HERE / 'presence_art_lab_lock.json'
@@ -44,7 +45,7 @@ def verify_files(root, pins):
 
 def checked_lock():
     lock = json.loads(LOCK.read_text(encoding='utf-8'))
-    require(lock['schema'] == 'WAEX_ART_LAB_V2' and lock['source_revision'] == SOURCE,
+    require(lock['schema'] == 'WAEX_ART_LAB_V3' and lock['source_revision'] == SOURCE,
             'ART lock source/schema differs')
     require(lock.get('probe_origin_revision') == 'c2fd668da20f8620112d649b34224559cab30942'
             and lock.get('probe_revision_source') == 'workflow_commit' and 'probe_revision' not in lock,
@@ -54,7 +55,38 @@ def checked_lock():
     require(lock['targets'] == ['api24', 'api25', 'api26'], 'ART target set changed')
     require(sum(row['bytes'] for row in lock['jars']) == 429605 and len(lock['jars']) == 2,
             'Public JAR closure differs')
+    require(set(lock['toolchain_source_sha256']) == {
+                'qa/class_metadata_art_probe/toolchain.py',
+                'qa/class_metadata_art_probe/toolchain-lock.json'}, 'Compiler source closure differs')
+    verify_files(HERE.parent, lock['toolchain_source_sha256'])
     return lock
+
+
+def validate_toolchain_receipt(value):
+    module, recipe = compiler_contract()
+    require(value['schema'] == recipe['schema']
+            and value['lock_sha256'] == digest(module.LOCK)
+            and value['helper_sha256'] == digest(Path(module.__file__))
+            and value['artifacts'] == recipe['artifacts'], 'Compiler receipt recipe differs')
+    require(re.fullmatch(r'info: kotlinc-jvm 2\.0\.20 \(JRE 21(?:[.+][^)]*)?\)', value['kotlin_version_output'])
+            and re.fullmatch(r'[a-f0-9]{64}', value['launcher_sha256']), 'Compiler receipt version/launcher differs')
+    java = value['java']
+    require(java['properties']['java.specification.version'] == '21'
+            and re.fullmatch(r'javac 21(?:\.[^\s]+)?', java['javac_version'])
+            and set(java['files_sha256']) == {'bin/java', 'bin/javac', 'release', 'lib/modules',
+                                            'lib/ct.sym', 'lib/server/libjvm.so'}
+            and all(re.fullmatch(r'[a-f0-9]{64}', pin) for pin in java['files_sha256'].values()),
+            'Compiler receipt JDK21 identity differs')
+    return value
+
+
+def validate_d8_receipt(value):
+    require(set(value) == {'stdout', 'stderr'}
+            and all(type(row.get('bytes')) is int for row in value.values())
+            and value == {stream: {'file': 'd8.' + stream + '.log', 'bytes': 0,
+                              'sha256': hashlib.sha256(b'').hexdigest()}
+                      for stream in ('stdout', 'stderr')}, 'D8 diagnostics were not empty')
+    return value
 
 
 def probe_provenance(lock, workflow_commit):
@@ -127,8 +159,11 @@ def main():
     artifact = out / 'artifact'; artifact.mkdir()
     deps = out / 'deps'; deps.mkdir()
     build = out / 'offline-builder'
-    result = {'schema': 'WAEX_ART_BUILD_V2', 'status': 'BLOCKED', 'source_revision': SOURCE,
+    result = {'schema': 'WAEX_ART_BUILD_V3', 'status': 'BLOCKED', 'source_revision': SOURCE,
               'workflow_commit': os.environ['GITHUB_SHA'], 'lock_sha256': digest(LOCK),
+              'run_id': os.environ['GITHUB_RUN_ID'], 'attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'builder_sha256': digest(Path(__file__)),
+              'toolchain_source_sha256': lock['toolchain_source_sha256'],
               'installed': False, 'art_execution': 'NOT_RUN', 'acquisitions': []}
     try:
         result.update(probe_provenance(lock, result['workflow_commit']))
@@ -141,19 +176,18 @@ def main():
                 'Source checkout is modified')
         verify_files(source, lock['source_files'])
         verify_files(HERE.parent, lock['probe_sources'])
-        java_home = args.java_home.resolve()
-        env = dict(os.environ, JAVA_HOME=str(java_home), JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=2',
-                   PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=str(source / 'qa'))
+        toolchain, recipe = compiler_contract()
+        kotlin, env, toolchain_receipt = toolchain.prepare(out, args.java_home)
+        validate_toolchain_receipt(toolchain_receipt)
+        result['kotlin_toolchain'] = toolchain_receipt
+        java_home = Path(toolchain_receipt['java']['java_home'])
+        env.update(PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=str(source / 'qa'))
         java_version = tool([java_home / 'bin/java', '-version'], env)
-        require(re.search(r'\bversion "21[.]', java_version), 'Existing JDK21 required')
-        kotlin_exe = shutil.which('kotlinc')
-        require(kotlin_exe is not None, 'Preinstalled Kotlin CLI required')
-        kotlin_home = Path(kotlin_exe).resolve().parent.parent
-        kotlin_version = tool([kotlin_exe, '-version'], env)
-        require('kotlinc-jvm 2.4.21 ' in kotlin_version, 'Expected observed Kotlin 2.4.21')
-        jars = sorted((kotlin_home / 'lib').glob('*.jar'))
-        require(jars and (kotlin_home / 'lib/kotlin-stdlib.jar').is_file(), 'Kotlin closure missing')
+        kotlin_home = kotlin.parents[1]
+        kotlin_version = toolchain_receipt['kotlin_version_output']
+        jars = [kotlin_home / 'lib' / row['file'] for row in recipe['artifacts']]
         inputs = [java_home / 'bin/java', java_home / 'bin/javac',
+                  java_home / 'bin/jar', java_home / 'bin/keytool',
                   args.sdk / 'platforms/android-36/android.jar',
                   args.sdk / 'build-tools/36.0.0/aapt2',
                   args.sdk / 'build-tools/36.0.0/zipalign',
@@ -183,6 +217,17 @@ def main():
                 'Builder source closure differs from lock')
         require(len(built['oracles']) == 2 and all(row['assertion_text_preserved'] for row in built['oracles']),
                 'Original pixel assertions were not preserved')
+        require(built['compiler']['recipe_sha256'] == toolchain_receipt['lock_sha256']
+                and built['compiler']['helper_sha256'] == toolchain_receipt['helper_sha256']
+                and built['compiler']['kotlin_version'] == toolchain_receipt['kotlin_version_output']
+                and built['compiler']['files'] == {row['file']: {'bytes': row['bytes'], 'sha256': row['sha256']}
+                                                    for row in recipe['artifacts']},
+                'Offline builder compiler differs from the prepared closure')
+        diagnostics = require_quiet_d8(build)
+        require(built['d8_diagnostics'] == diagnostics, 'Offline D8 receipt differs from raw streams')
+        result['d8_diagnostics'] = validate_d8_receipt(diagnostics)
+        toolchain.verify_after_build(kotlin, toolchain_receipt)
+        require(result['tools']['files'] == {str(p): digest(p) for p in inputs}, 'Build tool changed during compilation')
         verify_files(source, lock['source_files'])
         verify_files(HERE.parent, lock['probe_sources'])
         apk = build / 'presence-art-positive.apk'
@@ -200,6 +245,10 @@ def main():
     finally:
         (build / 'qa-only.jks').unlink(missing_ok=True)
         result['ephemeral_key_absent'] = not (build / 'qa-only.jks').exists()
+        for name in ('kotlin-toolchain.json', 'kotlin-version.stdout.log', 'kotlin-version.stderr.log'):
+            path = out / name
+            if path.is_file():
+                shutil.copyfile(path, reports / name)
         if build.exists():
             for path in sorted(build.glob('*')):
                 if path.is_file() and path.suffix in ('.json', '.log'):

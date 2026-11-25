@@ -1,5 +1,5 @@
 {
-  "schema": "WAEX_ART_LAB_V2",
+  "schema": "WAEX_ART_LAB_V3",
   "source_revision": "c52f064bad7ba32445f8515bc2f0421618438975",
   "targets": [
     "api24",
@@ -20,8 +20,8 @@
     "qa/presence_art_probe/AndroidManifest.xml": "3d9ddf84ab6a7fa8de3a0186a696206da75eb49a98a9229ec3f5204252d9659d",
     "qa/presence_art_probe/PresenceActivity.java": "dd7e8a2e0f20aff43e852c6b319678f20df718f7bfbb206ca0860e270f116080",
     "qa/presence_art_probe/PresenceInstrumentation.kt.in": "ccd4302683c903a1b9f144e25fbd5a68cf75c8e581933812b35dcd86e66ced55",
-    "qa/presence_art_probe/README.md": "5cad75d949661785914d44f389fdf25aab7da040f440ee28fb11681547d68397",
-    "qa/presence_art_probe/build_presence_art_probe.py": "6686c6b3a326cd9dab1cb7206278086058ff7e6e84bc93abb4c1857b4da37e52",
+    "qa/presence_art_probe/README.md": "2f559fd4f5bb282bbf23644d605aef758abf26d7dd959186414bda773b6b2b9c",
+    "qa/presence_art_probe/build_presence_art_probe.py": "456b3fd3dc59b59eba544e694a3ece38aa26aceac5656a54ad357187c83d3f3c",
     "qa/presence_art_probe/res/values/ids.xml": "6169d9e3b53174e8e20e2e6d5a7bb1d7beaea15b1a3c10657c4f952be32919e8",
     "qa/presence_art_probe/run_presence_art_probe.py": "db67cbac9bc52a5fb5c295b53b0cb32fa6abb7d4587f3fd09e2b7b5160c5f0e5",
     "qa/presence_art_probe/test_presence_art_host.py": "e3f2c64c466aae0af8042dc43114e5ad787a7226e2f7090ae1e9ae21ed72b37d"
@@ -49,5 +49,9 @@
     }
   ],
   "probe_origin_revision": "c2fd668da20f8620112d649b34224559cab30942",
-  "probe_revision_source": "workflow_commit"
+  "probe_revision_source": "workflow_commit",
+  "toolchain_source_sha256": {
+    "qa/class_metadata_art_probe/toolchain.py": "67c31cb9b4ffb2f45f83aa7c4186ded17d804ae92c710c0206daa0c7b5600b23",
+    "qa/class_metadata_art_probe/toolchain-lock.json": "22cbe8b32257e65cb65e1c894d7b5daa3c42d3a6fcfcaaf4c2207f36163b896d"
+  }
 }

@@ -10,7 +10,10 @@ on:
       - qa/android_presence_art_lab.py
       - qa/presence_art_lab_lock.json
       - qa/test_presence_art_lab.py
+      - qa/test_presence_art_toolchain.py
       - qa/presence_art_probe/**
+      - qa/class_metadata_art_probe/toolchain.py
+      - qa/class_metadata_art_probe/toolchain-lock.json
       - qa/android_emulator_lab_pilot.py
       - qa/android_emulator_lab_matrix.py
       - qa/android_emulator_lab_matrix_lock.json
@@ -65,6 +68,10 @@ jobs:
           PY
           python3 lab/qa/presence_art_probe/test_presence_art_host.py --out "$RUNNER_TEMP/presence-art-host-controls" 2>&1 | tee "$RUNNER_TEMP/presence-art-host-controls.log"
           python3 lab/qa/test_presence_art_lab.py 2>&1 | tee "$RUNNER_TEMP/presence-art-lab-controls.log"
+          python3 lab/qa/test_presence_art_toolchain.py 2>&1 | tee "$RUNNER_TEMP/presence-art-toolchain-controls.log"
+          PYTHONOPTIMIZE=1 python3 lab/qa/presence_art_probe/test_presence_art_host.py --out "$RUNNER_TEMP/presence-art-host-controls-optimized" 2>&1 | tee "$RUNNER_TEMP/presence-art-host-controls-optimized.log"
+          PYTHONOPTIMIZE=1 python3 lab/qa/test_presence_art_lab.py 2>&1 | tee "$RUNNER_TEMP/presence-art-lab-controls-optimized.log"
+          PYTHONOPTIMIZE=1 python3 lab/qa/test_presence_art_toolchain.py 2>&1 | tee "$RUNNER_TEMP/presence-art-toolchain-controls-optimized.log"
       - name: Build one APK with existing JDK21 and SDK36
         shell: bash
         run: |
@@ -84,8 +91,10 @@ jobs:
           report = json.loads((root / 'artifact-manifest.json').read_text())
           apk = root / 'presence-art-positive.apk'
           sha = hashlib.sha256(apk.read_bytes()).hexdigest()
-          assert report['status'] == 'PASS_BUILD_ONLY' and report['ephemeral_key_absent'] is True
-          assert sha == report['apk']['sha256'] and apk.stat().st_size == report['apk']['bytes']
+          if report['status'] != 'PASS_BUILD_ONLY' or report['ephemeral_key_absent'] is not True:
+              raise RuntimeError('Build status or ephemeral key evidence differs')
+          if sha != report['apk']['sha256'] or apk.stat().st_size != report['apk']['bytes']:
+              raise RuntimeError('Independent build job APK identity differs')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
               stream.write('apk_sha256=' + sha + '\n')
           PY
@@ -107,6 +116,11 @@ jobs:
             ${{ runner.temp }}/presence-art-host-controls/result.json
             ${{ runner.temp }}/presence-art-host-controls.log
             ${{ runner.temp }}/presence-art-lab-controls.log
+            ${{ runner.temp }}/presence-art-toolchain-controls.log
+            ${{ runner.temp }}/presence-art-host-controls-optimized/result.json
+            ${{ runner.temp }}/presence-art-host-controls-optimized.log
+            ${{ runner.temp }}/presence-art-lab-controls-optimized.log
+            ${{ runner.temp }}/presence-art-toolchain-controls-optimized.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 9

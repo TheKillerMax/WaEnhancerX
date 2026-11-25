@@ -57,13 +57,22 @@ tools 36.0.0, JUnit 4.13.2, Hamcrest core 1.3. The builder downloads nothing,
 does not run project Gradle, creates a QA-only signing key and deletes that key
 after signing (including a failed signing attempt). It never installs.
 
+The Kotlin home must have exactly the nine regular JARs specified by
+`qa/class_metadata_art_probe/toolchain-lock.json`, including the compiler's
+reflect 1.6.10 dependency. The laboratory builder prepares this closed home from
+the pinned Maven Central bytes. A full Kotlin distribution with extra plugins
+does not satisfy this contract. The Presence lock also pins the unchanged
+ClassValue helper and its lock before importing them. Java and native javac must
+both report version 21 from the selected JDK. Inherited Java/Kotlin options are
+cleared; the offline JVM commands retain an explicit two-processor limit.
+
 ```sh
 python build_presence_art_probe.py \
   --source-root /path/to/reviewed/waex-source \
   --out /new/evidence/presence-positive \
   --sdk /path/to/android-sdk \
   --java-home /path/to/jdk21 \
-  --kotlin-home /path/to/kotlinc-2.0.20 \
+  --kotlin-home /path/to/closed-kotlin-2.0.20 \
   --deps /path/to/existing/junit-and-hamcrest \
   --reference-harness /path/to/executed/RendererHarness.kt
 ```
@@ -71,6 +80,9 @@ python build_presence_art_probe.py \
 `source-manifest.json` pins production inputs and oracle strings. The successful
 `build-result.json` adds tool/JAR/APK hashes and marks `art_execution: NOT_RUN`.
 Compilation and signing success do not certify a device result.
+Every command has separate raw stdout/stderr logs and hashes. D8 succeeds only
+when both streams are empty, without removing or filtering diagnostics. Compiler
+and tool inputs are checked again before a successful build result is written.
 
 `--variant wrong-dot-color` and `--variant keep-dot-visible` create separate
 causal negative candidates. They retain the same oracles. They have not been

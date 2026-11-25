@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import build_presence_art_lab as build
 import android_presence_art_lab as art
+from test_presence_art_toolchain import toolchain_fixture, d8_fixture
 
 
 class Response(io.BytesIO):
@@ -99,12 +100,17 @@ class ArtLabControls(unittest.TestCase):
             with self.assertRaises(RuntimeError): art.validate_receipt(receipt, 24, 'a' * 64, root)
 
     def test_artifact_requires_same_workflow_lock_and_independent_digest(self):
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {'GITHUB_SHA': 'd' * 40}):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {
+                'GITHUB_SHA': 'd' * 40, 'GITHUB_RUN_ID': '123456', 'GITHUB_RUN_ATTEMPT': '1'}):
             root = Path(temp); apk = root / 'presence-art-positive.apk'
             apk.write_bytes(b'HOST PROTOCOL ONLY; NOT AN APK'); lock = build.checked_lock()
-            receipt = {'schema': 'WAEX_ART_BUILD_V2', 'status': 'PASS_BUILD_ONLY',
+            receipt = {'schema': 'WAEX_ART_BUILD_V3', 'status': 'PASS_BUILD_ONLY',
                        'source_revision': build.SOURCE, **build.probe_provenance(lock, 'd' * 40),
                        'workflow_commit': 'd' * 40, 'lock_sha256': build.digest(build.LOCK),
+                       'run_id': '123456', 'attempt': '1',
+                       'builder_sha256': build.digest(Path(build.__file__)),
+                       'toolchain_source_sha256': lock['toolchain_source_sha256'],
+                       'kotlin_toolchain': toolchain_fixture(), 'd8_diagnostics': d8_fixture(),
                        'renderer_harness_sha256': lock['renderer_harness_sha256'],
                        'package': build.PACKAGE, 'expected_tests': 4, 'min_sdk': 24, 'target_sdk': 28,
                        'installed': False, 'art_execution': 'NOT_RUN', 'ephemeral_key_absent': True,
@@ -116,7 +122,8 @@ class ArtLabControls(unittest.TestCase):
                                ('ephemeral_key_absent', False), ('source_revision', '0' * 40),
                                ('expected_tests', 3), ('installed', True),
                                ('probe_revision', lock['probe_origin_revision']),
-                               ('probe_origin_revision', '0' * 40)]:
+                               ('probe_origin_revision', '0' * 40), ('run_id', '123457'), ('attempt', '2'),
+                               ('builder_sha256', '0' * 64), ('toolchain_source_sha256', {})]:
                 with self.subTest(key=key), self.assertRaises(RuntimeError):
                     bad = copy.deepcopy(receipt); bad[key] = value; build.save(manifest, bad)
                     art.verify_artifact(root, build.digest(apk))

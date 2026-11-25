@@ -32,7 +32,8 @@ The source/oracles are checked out at
 c52f064bad7ba32445f8515bc2f0421618438975. Seven exact LF source hashes are pinned.
 The eight V3 files originated at
 c2fd668da20f8620112d649b34224559cab30942. The launcher and its host controls now
-have a reviewed API24 readback/cleanup delta; the other six probe files retain
+have a reviewed API24 readback/cleanup delta. The offline builder and its README
+now describe the fixed compiler closure; the remaining four probe files retain
 their original hashes. The lock records that origin separately. Each new build
 records probe_revision as its actual workflow commit, verifies the laboratory
 Git HEAD against that commit and checks all eight current file hashes. These
@@ -40,19 +41,36 @@ new bytes are not attributed to the unchanged c2fd revision. The positive extrac
 must retain SHA256
 241385367b8ff949679f330c5632245e4eb8e3a6b1b191074b7d2313fd1cf63a.
 
-The Linux builder uses the runner's existing JDK21, SDK platform36, build
-tools36.0.0 and Kotlin CLI2.4.21, recording actual tool/JAR hashes. It does not
+The Linux builder prepares Kotlin 2.0.20 from the unchanged ClassValue toolchain
+helper and lock, whose two source hashes are pinned in the Presence lock. The
+compiler home contains exactly nine Maven Central JARs with fixed sizes and
+SHA256 hashes, including stdlib 2.0.20 and the compiler's reflect 1.6.10 dependency.
+The compiler runs with an explicit classpath. Runner Kotlin installations and
+bundled compiler plugins are not selected. The builder uses the runner's existing
+JDK21, SDK platform36 and build tools36.0.0, recording actual tool/JAR hashes.
+JAVA_HOME and PATH refer to that same JDK; inherited Java/Kotlin option variables
+are cleared. The offline build keeps ActiveProcessorCount=2 as explicit JVM
+arguments. The JDK patch and its native java/javac identity are observed and
+recorded; equal APK bytes across JDK patches are not promised. It does not
 alter the default JDK17 environment of boot jobs, because that Java binary is
 part of the successful preflight identity. It does not invoke project Gradle,
 use private modules, accept licenses, install SDK components or use a production
 signing key. The temporary QA key is removed in finally.
 
-Only junit4.13.2 and hamcrest-core1.3 are acquired:429605 bytes total. Each gets
+In addition to the nine compiler inputs, junit4.13.2 and hamcrest-core1.3 are
+acquired:429605 bytes total for these two test dependencies. Each gets
 one request to its pinned canonical Maven Central URL, with exact size and
 SHA1/SHA256/SHA512 checks. A redirect or HTTP429 stops the build without retry.
 The official sidecars provide SHA1. SHA256 and SHA512 were computed from bytes
 whose size and SHA1 matched those official records; their official SHA512
 sidecars returned404. The lock records that distinction.
+
+Both raw D8 output streams must be empty. Any diagnostic, whitespace or binary
+byte blocks the build; no warning patterns are filtered. Reports retain separate
+stdout/stderr files and their exact lengths and hashes, the nine compiler input
+pins, Kotlin/JDK versions and the helper/lock identities. The artifact consumer
+requires the same workflow commit, run ID and attempt, current builder and lock,
+the qualified compiler receipt and the empty D8 receipt before boot.
 
 ## Artifacts and execution
 
@@ -98,7 +116,11 @@ ART receipts and artifact provenance. Synthetic inputs are explicitly not
 Android APKs or an Android execution. The launcher retains all eighteen original host scenarios, with the
 installed_mismatch cleanup expectation corrected explicitly, and adds literal
 API24/path/error guards, both readback identities and binary size/time controls.
-Both suites run before build acquisition in CI. Host controls remain synthetic;
+Run python3 qa/test_presence_art_toolchain.py for eleven additional control groups
+covering the closed compiler recipe, changed or extra JARs, injected environment
+options, compiler/JDK receipts, raw D8 output, separate command logs and deadlines.
+All three suites run normally and with PYTHONOPTIMIZE=1 before build acquisition
+in CI, preserving their outputs even when a control fails. Host controls remain synthetic;
 actual Android results must be obtained separately.
 
 This wrapper was reconstructed as a new reviewed version after the scratch

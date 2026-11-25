@@ -9,7 +9,8 @@ import sys
 
 from android_emulator_lab_pilot import main as boot_main, invoke, require
 from android_emulator_lab_matrix import TARGETS, checked_lock as matrix_lock
-from build_presence_art_lab import LOCK, SOURCE, PACKAGE, checked_lock, digest, save, verify_files
+from build_presence_art_lab import (LOCK, SOURCE, PACKAGE, checked_lock, digest, save, verify_files,
+                                    validate_toolchain_receipt, validate_d8_receipt)
 
 ART_TARGETS = {name: TARGETS[name] for name in ('api24', 'api25', 'api26')}
 LIMITS = ('Four original/neutral ART Canvas cases and seven PNG observations on API24/25/26 only. '
@@ -25,14 +26,23 @@ def verify_artifact(folder, expected_sha):
     require(not apk.is_symlink() and not manifest.is_symlink(), 'Artifact symlink rejected')
     value = json.loads(manifest.read_text(encoding='utf-8'))
     lock = checked_lock()
-    require(value['schema'] == 'WAEX_ART_BUILD_V2' and value['status'] == 'PASS_BUILD_ONLY'
+    require(value['schema'] == 'WAEX_ART_BUILD_V3' and value['status'] == 'PASS_BUILD_ONLY'
             and value['source_revision'] == SOURCE
             and value.get('probe_origin_revision') == lock['probe_origin_revision']
             and value['probe_revision'] == value['workflow_commit']
             and value['workflow_commit'] == os.environ.get('GITHUB_SHA')
+            and re.fullmatch(r'[0-9]+', value['run_id'] or '')
+            and re.fullmatch(r'[1-9][0-9]*', value['attempt'] or '')
+            and value['run_id'] == os.environ.get('GITHUB_RUN_ID')
+            and value['attempt'] == os.environ.get('GITHUB_RUN_ATTEMPT')
             and value['lock_sha256'] == digest(LOCK)
             and value['renderer_harness_sha256'] == lock['renderer_harness_sha256'],
             'Artifact provenance differs')
+    require(value['builder_sha256'] == digest(Path(__file__).with_name('build_presence_art_lab.py'))
+            and value['toolchain_source_sha256'] == lock['toolchain_source_sha256'],
+            'Artifact compiler/builder provenance differs')
+    validate_toolchain_receipt(value['kotlin_toolchain'])
+    validate_d8_receipt(value['d8_diagnostics'])
     require(value['package'] == PACKAGE and value['expected_tests'] == 4
             and value['min_sdk'] == 24 and value['target_sdk'] == 28
             and value['installed'] is False and value['art_execution'] == 'NOT_RUN'

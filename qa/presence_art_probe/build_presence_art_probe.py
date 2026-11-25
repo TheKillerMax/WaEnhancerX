@@ -143,6 +143,103 @@ def argfile(path,values):
         return '"'+s.replace('"','\\"')+'"'
     write(path,'\n'.join(token(x) for x in values)+'\n')
 
+def compiler_contract():
+    """Reuse the reviewed ClassValue recipe without selecting a runner Kotlin installation."""
+    root = HERE.parent.parent
+    lock = json.loads((HERE.parent / 'presence_art_lab_lock.json').read_bytes())
+    pins = lock['toolchain_source_sha256']
+    expected = {'qa/class_metadata_art_probe/toolchain.py',
+                'qa/class_metadata_art_probe/toolchain-lock.json'}
+    if set(pins) != expected:
+        raise RuntimeError('Unexpected compiler recipe source closure')
+    for relative, expected_sha in pins.items():
+        path = root / relative
+        if path.is_symlink() or not path.is_file() or sha(path.read_bytes()) != expected_sha:
+            raise RuntimeError('Compiler recipe source changed: ' + relative)
+    path = root / 'qa/class_metadata_art_probe/toolchain.py'
+    spec = importlib.util.spec_from_file_location('presence_reviewed_kotlin_toolchain', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, module.checked_lock()
+
+
+def verify_compiler_home(home, recipe):
+    lib = Path(home) / 'lib'
+    rows = recipe['artifacts']
+    if not lib.is_dir() or {p.name for p in lib.iterdir()} != {row['file'] for row in rows}:
+        raise RuntimeError('Compiler home must contain exactly the nine pinned JARs')
+    identities = {}
+    for row in rows:
+        path = lib / row['file']
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != row['bytes']:
+            raise RuntimeError('Compiler JAR size/type differs: ' + row['file'])
+        actual = sha(path.read_bytes())
+        if actual != row['sha256']:
+            raise RuntimeError('Compiler JAR hash differs: ' + row['file'])
+        identities[row['file']] = {'bytes': path.stat().st_size, 'sha256': actual}
+    return identities
+
+
+def compiler_command(java, home, recipe):
+    return [str(java), '-XX:ActiveProcessorCount=2', '-Xmx512M', '-Xms128M', '--add-opens=java.base/java.util=ALL-UNNAMED',
+            '-Dkotlin.home=' + str(home), '-cp',
+            os.pathsep.join(str(Path(home) / 'lib' / row['file']) for row in recipe['artifacts']),
+            'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-kotlin-home', str(home)]
+
+
+def clean_java_environment(java_home, option_names):
+    env = dict(os.environ)
+    removed = [name for name in option_names if name in env]
+    for name in option_names:
+        env.pop(name, None)
+    env['JAVA_HOME'] = str(java_home)
+    env['PATH'] = str(Path(java_home) / 'bin') + os.pathsep + env.get('PATH', '')
+    return env, removed
+
+
+def java_properties(text):
+    return dict(re.findall(r'^[ \t]*(java\.[a-z.]+) = ([^\r\n]+)\r?$', text, re.M))
+
+
+def require_quiet_d8(out):
+    streams = {}
+    for stream in ('stdout', 'stderr'):
+        path = out / ('d8.' + stream + '.log')
+        raw = path.read_bytes()
+        streams[stream] = {'file': path.name, 'bytes': len(raw), 'sha256': sha(raw)}
+    if any(row['bytes'] for row in streams.values()):
+        raise RuntimeError('D8 must have empty stdout and stderr; retained diagnostics are not filtered')
+    return streams
+
+
+def run_build_command(out, commands, name, command, env, timeout=120):
+    start = time.monotonic()
+    command = list(map(str, command))
+    timeout_error = None
+    code = None
+    with (out / (name + '.stdout.log')).open('wb') as stdout, (out / (name + '.stderr.log')).open('wb') as stderr:
+        try:
+            process = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
+                                     env=env, timeout=timeout)
+            code = process.returncode
+        except subprocess.TimeoutExpired as error:
+            timeout_error = error
+    receipt = {'name': name, 'command': command, 'exit_code': code,
+               'seconds': round(time.monotonic() - start, 3), 'stdin': 'closed',
+               'failure': 'deadline exceeded' if timeout_error else None}
+    for stream in ('stdout', 'stderr'):
+        raw = (out / (name + '.' + stream + '.log')).read_bytes()
+        receipt[stream] = {'bytes': len(raw), 'sha256': sha(raw)}
+    commands.append(receipt)
+    write(out / 'commands.json', json.dumps(commands, indent=2) + '\n')
+    print(name + ' exit=' + str(code), flush=True)
+    if timeout_error:
+        raise timeout_error
+    if code != 0:
+        raise RuntimeError(name + ' failed; see retained stdout/stderr logs')
+    return receipt
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source-root',type=Path,required=True)
@@ -164,6 +261,8 @@ def main():
     write(out/'source-manifest.json',json.dumps(report,indent=2)+'\n')
     if a.generate_only:
         print(json.dumps({'generated':str(out),'source_contracts':'PASS','installed':False}));return
+    recipe_module, recipe = compiler_contract()
+    compiler_files = verify_compiler_home(a.kotlin_home, recipe)
     suffix='.exe' if os.name=='nt' else ''
     java=a.java_home/'bin'/('java'+suffix);javac=a.java_home/'bin'/('javac'+suffix)
     jar=a.java_home/'bin'/('jar'+suffix);keytool=a.java_home/'bin'/('keytool'+suffix)
@@ -173,28 +272,43 @@ def main():
     required=[java,javac,jar,keytool,bt/('aapt2'+suffix),bt/('zipalign'+suffix),bt/'lib/d8.jar',bt/'lib/apksigner.jar',android,*jars]
     if any(not x.is_file() for x in required):raise RuntimeError('Missing offline build input: '+str([str(x) for x in required if not x.is_file()]))
     report['build_input_sha256']={str(x):sha(x.read_bytes()) for x in required}
-    env=dict(os.environ,JAVA_HOME=str(a.java_home),JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=2')
+    env, cleared_options = clean_java_environment(a.java_home.resolve(), recipe_module.JAVA_ENV_OPTIONS)
     commands=[]
     def run(name,cmd,timeout=120):
-        start=time.monotonic();cmd=list(map(str,cmd))
-        with (out/(name+'.log')).open('w',encoding='utf-8') as stream:
-            result=subprocess.run(cmd,stdout=stream,stderr=subprocess.STDOUT,env=env,timeout=timeout)
-        receipt={'name':name,'command':cmd,'exit_code':result.returncode,'seconds':round(time.monotonic()-start,3)}
-        commands.append(receipt);write(out/'commands.json',json.dumps(commands,indent=2)+'\n')
-        print(name+' exit='+str(result.returncode),flush=True)
-        if result.returncode:raise RuntimeError(name+' failed; see '+str(out/(name+'.log')))
+        return run_build_command(out, commands, name, cmd, env, timeout)
+    run('java-version', [java, '-XX:ActiveProcessorCount=2', '-XshowSettings:properties', '-version'])
+    java_text = ((out / 'java-version.stdout.log').read_bytes() + (out / 'java-version.stderr.log').read_bytes()).decode('utf-8')
+    properties = java_properties(java_text)
+    if properties.get('java.specification.version') != '21' or Path(properties.get('java.home', '')).resolve() != a.java_home.resolve():
+        raise RuntimeError('Offline builder must use the selected JDK21')
+    run('javac-version', [javac, '-J-XX:ActiveProcessorCount=2', '-version'])
+    javac_version = ((out / 'javac-version.stdout.log').read_bytes() + (out / 'javac-version.stderr.log').read_bytes()).decode('utf-8').strip()
+    if not re.fullmatch(r'javac 21(?:\.[^\s]+)?', javac_version):
+        raise RuntimeError('Offline builder javac must be version21')
+    kotlin_command = compiler_command(java, a.kotlin_home, recipe)
+    run('kotlin-version', kotlin_command + ['-version'])
+    kotlin_version = ((out / 'kotlin-version.stdout.log').read_bytes() + (out / 'kotlin-version.stderr.log').read_bytes()).decode('utf-8').strip()
+    if not re.fullmatch(r'info: kotlinc-jvm 2\.0\.20 \(JRE 21(?:[.+][^)]*)?\)', kotlin_version):
+        raise RuntimeError('Offline Kotlin compiler or JRE version differs')
+    report['compiler'] = {'recipe_sha256': recipe_module.digest(recipe_module.LOCK),
+                          'helper_sha256': recipe_module.digest(Path(recipe_module.__file__)),
+                          'kotlin_version': kotlin_version, 'javac_version': javac_version,
+                          'java_home': str(a.java_home.resolve()), 'java_properties': properties,
+                          'files': compiler_files, 'cleared_environment_names': cleared_options,
+                          'command_prefix': kotlin_command}
     classes=out/'classes';classes.mkdir();dex=out/'dex';dex.mkdir()
     run('aapt2-compile',[bt/('aapt2'+suffix),'compile','--dir',HERE/'res','-o',out/'resources.zip'])
     unsigned=out/'resources.apk'
     run('aapt2-link',[bt/('aapt2'+suffix),'link','--manifest',HERE/'AndroidManifest.xml','-I',android,'-o',unsigned,out/'resources.zip'])
     java_sources=[root/x for x in JAVA_PRODUCTION]+list((out/'generated').rglob('*.java'))+[HERE/'PresenceActivity.java']
     argfile(out/'javac.args',['--release','17','-encoding','UTF-8','-classpath',android,'-d',classes,*java_sources])
-    run('javac',[javac,'@'+str(out/'javac.args')])
+    run('javac',[javac,'-J-XX:ActiveProcessorCount=2','@'+str(out/'javac.args')])
     argfile(out/'kotlinc.args',[out/'generated/RendererHarness.kt',out/'generated/PresenceInstrumentation.kt',
         '-jvm-target','17','-no-stdlib','-no-reflect','-classpath',os.pathsep.join(map(str,[android,classes,*jars])),'-d',classes])
-    run('kotlinc',[java,'-Dkotlin.home='+str(a.kotlin_home),'-cp',a.kotlin_home/'lib/*','org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','@'+str(out/'kotlinc.args')])
-    run('jar',[jar,'--create','--file',out/'app-classes.jar','-C',classes,'.'])
-    run('d8',[java,'-cp',bt/'lib/d8.jar','com.android.tools.r8.D8','--min-api','24','--lib',android,'--output',dex,out/'app-classes.jar',*jars])
+    run('kotlinc',kotlin_command + ['@'+str(out/'kotlinc.args')])
+    run('jar',[jar,'-J-XX:ActiveProcessorCount=2','--create','--file',out/'app-classes.jar','-C',classes,'.'])
+    run('d8',[java,'-XX:ActiveProcessorCount=2','-cp',bt/'lib/d8.jar','com.android.tools.r8.D8','--min-api','24','--lib',android,'--output',dex,out/'app-classes.jar',*jars])
+    report['d8_diagnostics'] = require_quiet_d8(out)
     unaligned=out/'unaligned.apk';shutil.copyfile(unsigned,unaligned)
     with zipfile.ZipFile(unaligned,'a',compression=zipfile.ZIP_DEFLATED) as z:
         dexes=sorted(dex.glob('classes*.dex'))
@@ -204,18 +318,25 @@ def main():
     apk=out/('presence-art-'+a.variant+'.apk')
     key=out/'qa-only.jks'
     try:
-        run('qa-only-key',[keytool,'-genkeypair','-noprompt','-keystore',key,'-storetype','JKS',
+        run('qa-only-key',[keytool,'-J-XX:ActiveProcessorCount=2','-genkeypair','-noprompt','-keystore',key,'-storetype','JKS',
             '-storepass','android','-keypass','android','-alias','androiddebugkey','-dname','CN=WAEX Public QA,O=Android,C=US',
             '-keyalg','RSA','-keysize','2048','-validity','3650'])
-        run('sign',[java,'-jar',bt/'lib/apksigner.jar','sign','--ks',key,'--ks-key-alias','androiddebugkey',
+        run('sign',[java,'-XX:ActiveProcessorCount=2','-jar',bt/'lib/apksigner.jar','sign','--ks',key,'--ks-key-alias','androiddebugkey',
             '--ks-pass','pass:android','--key-pass','pass:android','--out',apk,out/'aligned.apk'])
     finally:
         key.unlink(missing_ok=True)
-    run('verify',[java,'-jar',bt/'lib/apksigner.jar','verify','--verbose','--print-certs',apk])
+    run('verify',[java,'-XX:ActiveProcessorCount=2','-jar',bt/'lib/apksigner.jar','verify','--verbose','--print-certs',apk])
     run('badging',[bt/('aapt2'+suffix),'dump','badging',apk])
     after={path:sha((root/path).read_bytes()) for path in report['inputs']}
     report['source_changes']=[path for path in report['inputs'] if report['inputs'][path]['raw_sha256']!=after[path]]
     if report['source_changes']:raise RuntimeError('Inputs changed during APK build')
+    if report['build_input_sha256'] != {str(path):sha(path.read_bytes()) for path in required}:
+        raise RuntimeError('Offline build tools or dependency inputs changed during build')
+    if verify_compiler_home(a.kotlin_home, recipe) != compiler_files:
+        raise RuntimeError('Compiler inputs changed during build')
+    after_module, after_recipe = compiler_contract()
+    if after_recipe != recipe or after_module.digest(Path(after_module.__file__)) != report['compiler']['helper_sha256']:
+        raise RuntimeError('Compiler recipe changed during build')
     report.update(build_status='PASS',installed=False,art_execution='NOT_RUN',qa_signing_key_retained=key.exists(),apk=str(apk),apk_bytes=apk.stat().st_size,
                   apk_sha256=sha(apk.read_bytes()),commands=commands,free_bytes_after=shutil.disk_usage(out).free)
     write(out/'build-result.json',json.dumps(report,indent=2)+'\n')
