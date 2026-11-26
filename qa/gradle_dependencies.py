@@ -43,17 +43,30 @@ PREPARATION_TASK = r'''
 tasks.register("waexPrepareDependencyCache") {
  notCompatibleWithConfigurationCache("Resolves this isolated fixture's classpaths")
  doLast {
+  fun modules(configuration: org.gradle.api.artifacts.Configuration) =
+   configuration.incoming.artifactView {
+    isLenient = false
+    // Android unit-test classpaths contain the library's own output variants.
+    // Those are built once by the consumer, never by dependency preparation.
+    componentFilter { it is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+   }.artifacts.artifacts.also { artifacts ->
+    check(artifacts.all {
+     it.id.componentIdentifier is org.gradle.api.artifacts.component.ModuleComponentIdentifier && it.file.isFile
+    }) { "Dependency preparation requires resolved published module artifacts" }
+   }
   val required = listOf("debugCompileClasspath", "debugRuntimeClasspath",
     "debugUnitTestCompileClasspath", "debugUnitTestRuntimeClasspath")
   required.forEach { name ->
    val configuration = configurations.getByName(name)
    check(configuration.isCanBeResolved) { "Unresolvable required configuration: $name" }
-   check(configuration.resolve().isNotEmpty()) { "Empty required configuration: $name" }
+   val artifacts = modules(configuration)
+   check(artifacts.isNotEmpty()) { "Empty required module configuration: $name" }
+   println("WAEX_DEPENDENCY_MODULES[$name]=${artifacts.size}")
   }
   listOf("kotlinCompilerClasspath", "kotlinCompilerPluginClasspathDebug",
-    "kotlinCompilerPluginClasspathDebugUnitTest", "androidApis", "androidJdkImage")
+    "kotlinCompilerPluginClasspathDebugUnitTest")
    .mapNotNull { configurations.findByName(it) }.filter { it.isCanBeResolved }
-   .forEach { it.resolve() }
+   .forEach { modules(it) }
   println("WAEX_DEPENDENCIES_PREPARED=1")
  }
 }
