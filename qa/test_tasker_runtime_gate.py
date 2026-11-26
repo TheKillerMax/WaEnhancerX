@@ -9,8 +9,10 @@ this does not validate native injection, provider refresh latency or Tasker UI.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 
@@ -19,10 +21,29 @@ HOOK = Path("app/src/main/java/com/waenhancer/xposed/features/automation/TaskerI
 BASE = Path("app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt")
 POLICY = Path("app/src/main/java/com/waenhancer/xposed/features/automation/TaskerMessagePolicy.java")
 
+PRIVACY = Path("app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java")
+
 STUBS = {
+    # Tasker must not initialize or evaluate the unrelated lazy privacy service.
+    # Any call is an explicit fixture failure, not an assumed privacy result.
+    "PrivacyPrefs.kt": r'''package com.waenhancer.xposed.core.privacy
+import android.content.Context
+import android.content.SharedPreferences
+class PrivacyPrefs private constructor() {
+    companion object {
+        @JvmStatic fun of(context: Context, prefs: SharedPreferences): PrivacyPrefs =
+            throw AssertionError("Privacy service is outside Tasker callback fixture")
+    }
+}
+''',
     "Content.kt": r'''package android.content
 import android.net.Uri
-interface SharedPreferences { fun getBoolean(key: String, fallback: Boolean): Boolean }
+interface SharedPreferences {
+    fun contains(key: String): Boolean
+    fun getBoolean(key: String, fallback: Boolean): Boolean
+    fun getString(key: String, fallback: String?): String?
+    fun getInt(key: String, fallback: Int): Int
+}
 open class Context(val packageName: String = "com.whatsapp") {
     val receivers = mutableListOf<Triple<BroadcastReceiver, IntentFilter, Int?>>()
     val broadcasts = mutableListOf<Intent>()
@@ -87,12 +108,16 @@ object ActivityTracker { var current: Activity? = null; fun getCurrentActivity()
 import java.lang.reflect.Method
 open class XC_MethodHook {
     open fun beforeHookedMethod(param: MethodHookParam) {}
+    class Unhook { fun unhook() {} }
     class MethodHookParam(val args: Array<Any?>) { var result: Any? = null }
 }
 object XposedBridge {
     val hooks = mutableListOf<Pair<Method, XC_MethodHook>>()
     val logs = mutableListOf<String>()
-    fun hookMethod(method: Method, callback: XC_MethodHook) { hooks.add(method to callback) }
+    fun hookMethod(method: Method, callback: XC_MethodHook): XC_MethodHook.Unhook {
+        hooks.add(method to callback)
+        return XC_MethodHook.Unhook()
+    }
     fun log(message: String) { logs.add(message) }
 }
 object XposedHelpers {
@@ -132,6 +157,41 @@ class FindMethod {
     "StringMatchType.kt": r'''package org.luckypray.dexkit.query.enums
 enum class StringMatchType { Contains }
 ''',
+    "Lifecycle.kt": r'''package com.waenhancer.xposed.core
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
+import java.lang.reflect.Method
+// BaseFeature is real production code. Ownership and view dispatch are
+// explicit compile-only boundaries outside the Tasker scenario.
+object HookRegistrar {
+    private val owners = mutableSetOf<BaseFeature>()
+    val BRIDGE = Bridge()
+    val HELPERS = Helpers()
+    fun registerOwner(owner: BaseFeature) { owners.add(owner) }
+    fun unregisterOwner(owner: BaseFeature) { owners.remove(owner) }
+    fun begin(owner: BaseFeature) { check(owners.contains(owner)) }
+    fun end(owner: BaseFeature) { check(owners.contains(owner)) }
+    class Bridge {
+        fun hookMethod(method: Method, callback: XC_MethodHook) = XposedBridge.hookMethod(method, callback)
+        fun log(text: String) = XposedBridge.log(text)
+    }
+    class Helpers {
+        fun getObjectField(owner: Any, field: String): Any? = XposedHelpers.getObjectField(owner, field)
+    }
+}
+object ViewHookDispatcher {
+    fun unregister(owner: BaseFeature) { throw AssertionError("View hooks outside Tasker fixture") }
+}
+''',
+    # Logging is a separate boundary; production HookErrors has dedicated source QA.
+    "HookErrors.kt": r'''package com.waenhancer.xposed.utils
+object HookErrors {
+    fun swallowed(site: String, failure: Throwable) {
+        throw AssertionError("Unexpected swallowed error at $site", failure)
+    }
+}
+''',
 }
 
 TEST = r'''package fixture
@@ -151,6 +211,11 @@ import de.robv.android.xposed.XposedHelpers
 class Prefs : SharedPreferences {
     var value: Any? = true
     var failure: RuntimeException? = null
+    override fun contains(key: String): Boolean = key == "tasker_integration"
+    override fun getString(key: String, fallback: String?): String? =
+        if (key == "module_config_mode") "Universal" else fallback
+    override fun getInt(key: String, fallback: Int): Int =
+        throw AssertionError("Unexpected Tasker preference integer read: $key")
     override fun getBoolean(key: String, fallback: Boolean): Boolean {
         check(key == "tasker_integration")
         failure?.let { throw it }
@@ -285,6 +350,9 @@ fun main() {
 
 
 def execute(source_root, output, allow_failure):
+    privacy_source = (source_root / PRIVACY).read_text(encoding="utf-8")
+    if not re.search(r"public\s+static\s+PrivacyPrefs\s+of\(\s*@NonNull\s+Context\s+context,\s*@NonNull\s+SharedPreferences\s+prefs\s*\)", privacy_source):
+        raise AssertionError("PrivacyPrefs factory contract changed; review explicit boundary")
     output.mkdir(parents=True, exist_ok=True)
     classes = output / "classes"
     classes.mkdir()
@@ -292,9 +360,12 @@ def execute(source_root, output, allow_failure):
     fixtures.mkdir()
     for name, contents in {**STUBS, "Checks.kt": TEST}.items():
         (fixtures / name).write_text(contents, encoding="utf-8")
+    executable = {tool: shutil.which(tool) for tool in ("java", "javac", "kotlinc")}
+    if not all(executable.values()):
+        raise FileNotFoundError(f"Missing JVM tool(s): {[tool for tool, found in executable.items() if not found]}")
     commands = [
-        ["javac", "--release", "17", "-d", str(classes), str(source_root / POLICY)],
-        ["kotlinc", "-jvm-target", "17", "-classpath", str(classes), "-include-runtime",
+        [executable["javac"], "--release", "17", "-d", str(classes), str(source_root / POLICY)],
+        [executable["kotlinc"], "-jvm-target", "17", "-classpath", str(classes), "-include-runtime",
          "-d", str(output / "tasker.jar"), str(source_root / BASE), str(source_root / HOOK),
          *map(str, sorted(fixtures.glob("*.kt")))],
     ]
@@ -305,7 +376,7 @@ def execute(source_root, output, allow_failure):
         (output / "compile.log").write_text("\n".join(compile_logs), encoding="utf-8")
         if result.returncode:
             raise AssertionError("Production compilation failed; see " + str(output / "compile.log"))
-    result = subprocess.run(["java", "-cp", str(output / "tasker.jar") + ":" + str(classes),
+    result = subprocess.run([executable["java"], "-cp", os.pathsep.join((str(output / "tasker.jar"), str(classes))),
                              "fixture.ChecksKt"], capture_output=True, text=True, timeout=20)
     log = result.stdout + result.stderr
     (output / "tests.log").write_text(log, encoding="utf-8")
@@ -317,6 +388,7 @@ def execute(source_root, output, allow_failure):
         "sources": {str(path): hashlib.sha256((source_root / path).read_bytes()).hexdigest()
                     for path in (HOOK, BASE, POLICY)},
         "fixture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "compile_only_privacy_factory_source_sha256": hashlib.sha256((source_root / PRIVACY).read_bytes()).hexdigest(),
         "compile_exit_codes": [0, 0], "test_exit_code": result.returncode,
         "total": int(summary[1]), "failed": int(summary[2]),
         "boundaries": "Android/Xposed/DexKit/preferences/main-looper doubles; no Android or external broadcast",

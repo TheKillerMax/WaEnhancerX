@@ -5,6 +5,7 @@
 negative control. This is a JVM allocation/work bound, not Android FPS.
 """
 import argparse
+import os
 import subprocess
 import shutil
 import tempfile
@@ -28,7 +29,7 @@ with tempfile.TemporaryDirectory() as folder:
     temp = Path(folder)
     implementation = temp / 'EditHistoryDiff.kt'
     implementation.write_text(source)
-    subprocess.run([shutil.which('kotlinc.bat') or shutil.which('kotlinc') or 'kotlinc', str(implementation), str(fixture), '-jvm-target', '17', '-include-runtime', '-d', str(temp / 'checks.jar')], check=True)
+    subprocess.run([shutil.which('kotlinc.bat' if os.name == 'nt' else 'kotlinc') or 'kotlinc', str(implementation), str(fixture), '-jvm-target', '17', '-include-runtime', '-d', str(temp / 'checks.jar')], check=True)
     subprocess.run(['java', '-Xmx64m', '-jar', str(temp / 'checks.jar'), args.scenario], check=True, timeout=35)
 
 hook = root / 'app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt'

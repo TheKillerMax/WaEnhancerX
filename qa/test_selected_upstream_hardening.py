@@ -26,7 +26,11 @@ job_hook = declaration(receipts, "    private void hookSendReadReceiptJob()")
 assert "msg.arg1 == 419" in dispatch
 assert "msg.arg1 == 89" not in dispatch
 assert "msg.arg1 == 419 || msg.arg1 == 89" not in receipts
-assert "if (shouldHideDeliveryReceipt(target)) param.setResult(null)" in job_hook
+assert "boolean hideDelivery = shouldHideDeliveryReceipt(target);" in job_hook
+delivery_veto = declaration(job_hook, "                        if (hideDelivery) {")
+assert "param.setResult(null);" in delivery_veto and "return;" in delivery_veto
+assert "UnsentReadLedger.track(context, target, participant," in delivery_veto
+assert "ReceiptJobExecutionPolicy.isExecutionCall(" in job_hook
 
 props = (JAVA / "xposed/features/customization/PropsOverrideHook.java").read_text()
 assert "findCentralResolver(booleanGetter)" in props
@@ -50,7 +54,10 @@ assert "private fun shellQuote" in hma
 
 calls = (JAVA / "xposed/features/privacy/CallPrivacyHook.java").read_text()
 block = declaration(calls, "    private boolean shouldBlockCall(String callerJid)")
-assert "resolveLidToPhone(context, callerJid)" in block
+assert "ContactIdentityPolicy.canonicalJid(callerJid) == null" in block
+assert "ContactIdentityPolicy.phoneUser(WaJid.phoneJidFor(context, callerJid))" in block
+jid = (JAVA / "xposed/core/wa/WaJid.java").read_text()
+assert "return isLid(raw) ? LID_TO_PHONE.resolve(context, raw) : null;" in declaration(jid, "    public static String phoneJidFor(")
 assert "findContactPrivacy(callerJid, phoneJid)" in block
 identity = declaration(calls, "    private JSONObject findContactPrivacy(")
 assert "getContactPrivacy(prefs, rawJid)" in identity

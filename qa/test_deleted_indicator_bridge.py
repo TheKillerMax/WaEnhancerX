@@ -60,6 +60,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
+import com.waenhancer.xposed.utils.HookErrors;
 import java.util.*;
 import java.lang.reflect.Proxy;
 public final class IndicatorBridgeChecks {
@@ -90,6 +91,7 @@ public final class IndicatorBridgeChecks {
         final Resolver resolver;
         Ctx(Map<String, Object> values) { resolver = new Resolver(values); }
         public ContentResolver getContentResolver() { return resolver; }
+        public String getPackageName() { return "example.fixture.indicator"; }
     }
     static SharedPreferences strict(Map<String, Object> values) {
         return (SharedPreferences)Proxy.newProxyInstance(IndicatorBridgeChecks.class.getClassLoader(),
@@ -146,5 +148,7 @@ with tempfile.TemporaryDirectory() as folder:
         path.write_text(text)
         paths.append(str(path))
     subprocess.run(["javac", "--release", "17", "-d", folder, *paths,
-                    str(src / "xposed/bridge/client/PreferenceBridgeClient.java")], check=True)
+                    str(src / "xposed/bridge/client/PreferenceBridgeClient.java"),
+                    str(src / "config/PreferenceSchema.java"),
+                    str(src / "xposed/utils/HookErrors.java")], check=True)
     subprocess.run(["java", "-cp", folder, "test.IndicatorBridgeChecks", args.scenario], check=True)
