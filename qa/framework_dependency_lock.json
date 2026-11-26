@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "robolectric": "4.17",
+  "sdk_levels": [
+    24,
+    28,
+    34
+  ],
+  "sources": "Existing verified Windows and Linux public Maven dependencies; no version changes. AAR entries identify their extracted classes.jar.",
+  "files": [
+    {
+      "name": "android-all-14-robolectric-10818077.jar",
+      "bytes": 137666235,
+      "sha256": "6be2218c6a53fe3c57bc22ebdc723edcb7270a8a6f187545708aa5c0ed813977",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all/14-robolectric-10818077/android-all-14-robolectric-10818077.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "annotations-4.17.jar",
+      "bytes": 30437,
+      "sha256": "9d9158ccaa34c8ea175fe95b4900eef743bea2eddb4528735aa81dac5310aeba",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/annotations/4.17/annotations-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "asm-9.10.1.jar",
+      "bytes": 126151,
+      "sha256": "ed825d10ab1399c8c0cb669e688cf0c8c82629b4c8399b58352b68e92ca10fcb",
+      "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "asm-commons-9.10.1.jar",
+      "bytes": 74840,
+      "sha256": "6d0abefb7cbf972ea16edb37ec14835372505063a45f976ab7ea889ed9497895",
+      "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "asm-tree-9.10.1.jar",
+      "bytes": 51958,
+      "sha256": "3dfb0d5b6a106cd40b5b250e39935fbf2f927f4477546a5369a3ac609cf0506b",
+      "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "auto-value-annotations-1.11.1.jar",
+      "bytes": 7492,
+      "sha256": "6c61a11420a5cddf3313888e9d335d5eedfbeb9a8da26591470fbfe61f5bf859",
+      "url": "https://repo.maven.apache.org/maven2/com/google/auto/value/auto-value-annotations/1.11.1/auto-value-annotations-1.11.1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "bcprov-jdk18on-1.85.jar",
+      "bytes": 10321819,
+      "sha256": "20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.85/bcprov-jdk18on-1.85.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "conscrypt-openjdk-uber-2.6.2.jar",
+      "bytes": 7548583,
+      "sha256": "f8a8f5020c66abc53a3d33cbc855ef8fc06187fa652fb3c0eda6c94e4335b2e9",
+      "url": "https://repo.maven.apache.org/maven2/org/conscrypt/conscrypt-openjdk-uber/2.6.2/conscrypt-openjdk-uber-2.6.2.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "error_prone_annotations-2.47.0.jar",
+      "bytes": 20254,
+      "sha256": "5364bc6f22e72e98195e406a58d3ba1c09ffa11dea0729592cb870dc2de4056d",
+      "url": "https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.47.0/error_prone_annotations-2.47.0.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "espresso-idling-resource-3.7.0-classes.jar",
+      "bytes": 5300,
+      "sha256": "93c407fc96a558103d8033c28cbfe8a5ee14439929318b4e9cc426a2b4ffac8c",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/test/espresso/espresso-idling-resource/3.7.0/espresso-idling-resource-3.7.0.aar",
+      "directory": "deps",
+      "archive_member": "classes.jar",
+      "archive_sha256": "5ff62326b49c308c1d060466ae3cf4aa0e3deaf9295f077a6886048dda3e9b14"
+    },
+    {
+      "name": "failureaccess-1.0.3.jar",
+      "bytes": 10763,
+      "sha256": "cbfc3906b19b8f55dd7cfd6dfe0aa4532e834250d7f080bd8d211a3e246b59cb",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "guava-33.6.0-jre.jar",
+      "bytes": 3064793,
+      "sha256": "dc573e1fca4fd5454f4a5fd3d7da2df03002876a4175bafc14a95980dd7713b3",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "hamcrest-core-1.3.jar",
+      "bytes": 45024,
+      "sha256": "66fdef91e9739348df7a096aa384a5685f4e875584cce89386a7a47251c4d8e9",
+      "url": "https://repo.maven.apache.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "icu4j-78.3.jar",
+      "bytes": 15156073,
+      "sha256": "e962c1758d9659ea1e1fbab99c58683f654d304e1126ace19aaabfe39e0edb25",
+      "url": "https://repo.maven.apache.org/maven2/com/ibm/icu/icu4j/78.3/icu4j-78.3.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "j2objc-annotations-3.1.jar",
+      "bytes": 16762,
+      "sha256": "84d3a150518485f8140ea99b8a985656749629f6433c92b80c75b36aba3b099b",
+      "url": "https://repo.maven.apache.org/maven2/com/google/j2objc/j2objc-annotations/3.1/j2objc-annotations-3.1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "javax.annotation-api-1.3.2.jar",
+      "bytes": 26586,
+      "sha256": "e04ba5195bcd555dc95650f7cc614d151e4bcd52d29a10b8aa2197f3ab89ab9b",
+      "url": "https://repo.maven.apache.org/maven2/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "javax.inject-1.jar",
+      "bytes": 2497,
+      "sha256": "91c77044a50c481636c32d916fd89c9118a72195390452c81065080f957de7ff",
+      "url": "https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "jspecify-1.0.0.jar",
+      "bytes": 3819,
+      "sha256": "1fad6e6be7557781e4d33729d49ae1cdc8fdda6fe477bb0cc68ce351eafdfbab",
+      "url": "https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "junit-4.13.2.jar",
+      "bytes": 384581,
+      "sha256": "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3",
+      "url": "https://repo.maven.apache.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "junit-4.17.jar",
+      "bytes": 20201,
+      "sha256": "33b836ebbfdf91ea24a6b074b859b97c8afbc6fe163751fc0cda9fa673d218e5",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/junit/4.17/junit-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
+      "bytes": 2199,
+      "sha256": "b372a037d4230aa57fbeffdef30fd6123f9c0c2db85d0aced00c91b974f33f99",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "monitor-1.8.0-classes.jar",
+      "bytes": 119278,
+      "sha256": "343391452abb133d044d8e5665ef2e2e670412a5c8a0f0ee992db9ecea7c7896",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/test/monitor/1.8.0/monitor-1.8.0.aar",
+      "directory": "deps",
+      "archive_member": "classes.jar",
+      "archive_sha256": "56cb7496a06d9f2dca7d3ff76c50a8a30bd18e00a24a3b267d5a31437b278e67"
+    },
+    {
+      "name": "nativeruntime-4.17.jar",
+      "bytes": 57442,
+      "sha256": "d79187d1241f3b7cc7a3338678874329aa0d6de9fc7bc9f8a1d7b350d9d777fd",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/nativeruntime/4.17/nativeruntime-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "nativeruntime-dist-compat-1.0.19.jar",
+      "bytes": 159144356,
+      "sha256": "33e0a0982b3ba599763af250b86eb8d67ab6c186c2fa2c5e823ee003bdcd4ed8",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/nativeruntime-dist-compat/1.0.19/nativeruntime-dist-compat-1.0.19.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "pluginapi-4.17.jar",
+      "bytes": 10776,
+      "sha256": "10b0c220c058458b52387d30f2790a66c597ad3e47e7bfbcff32993d5f3fa81c",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/pluginapi/4.17/pluginapi-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "plugins-maven-dependency-resolver-4.17.jar",
+      "bytes": 15547,
+      "sha256": "a833b576c740a3e387e849e777d0a97aab41a2ababcf6f87c7e54dfcace88d0c",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/plugins-maven-dependency-resolver/4.17/plugins-maven-dependency-resolver-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "resources-4.17.jar",
+      "bytes": 410029,
+      "sha256": "56a68e8e0f79a0a57ba50fa04a3b688794478e1f1e86a060d98332da01177118",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/resources/4.17/resources-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "robolectric-4.17.jar",
+      "bytes": 172497,
+      "sha256": "69e5bc128ba8d1fbb09d36bfb8a617018d6a3a418f77d44b36e7aca6747f14ea",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/robolectric/4.17/robolectric-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "sandbox-4.17.jar",
+      "bytes": 124624,
+      "sha256": "afd922c4b79db9b38d6eba6bd3e3e8ff2c4b01d5baf43c1178455cbfacaecc1e",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/sandbox/4.17/sandbox-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "shadowapi-4.17.jar",
+      "bytes": 16879,
+      "sha256": "18a94a1fd24ddd37cfc57cbf5cca7b90a9afab3e32fcdce17be20f3fa3179d04",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/shadowapi/4.17/shadowapi-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "shadows-framework-4.17.jar",
+      "bytes": 5010444,
+      "sha256": "ee580073a51a045e3950280c16e7d07382cd47f9049053a01f7a6d1dcc6a0527",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/shadows-framework/4.17/shadows-framework-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "snakeyaml-2.6.jar",
+      "bytes": 340068,
+      "sha256": "c8f7a98e7394adda02f6317249710e4d1b4c7a25aa8c7eace0c2eea52eb8bf85",
+      "url": "https://repo.maven.apache.org/maven2/org/yaml/snakeyaml/2.6/snakeyaml-2.6.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "sqlite4java-1.0.392.jar",
+      "bytes": 132506,
+      "sha256": "243a64470fda0e86a6fddeb0af4c7aa9426ce84e68cbfe18d75ee5da4b7e0b92",
+      "url": "https://repo.maven.apache.org/maven2/com/almworks/sqlite4java/sqlite4java/1.0.392/sqlite4java-1.0.392.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "test-parameter-injector-1.22.jar",
+      "bytes": 129359,
+      "sha256": "ff534578f2e3dc6030d1f4a6896df3d20573644858c6ade878efb75d2a36504b",
+      "url": "https://repo.maven.apache.org/maven2/com/google/testparameterinjector/test-parameter-injector/1.22/test-parameter-injector-1.22.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "utils-4.17.jar",
+      "bytes": 52555,
+      "sha256": "7b34ee3139de81e4eb3e35877e028aa0f9eb2b08e3e1f50eefb93ca825dafcaa",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/utils/4.17/utils-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "utils-reflector-4.17.jar",
+      "bytes": 23566,
+      "sha256": "f80de68e0f8538b6204576af42eeea9e6806426dcf313558d7df16d4cabc4f41",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/utils-reflector/4.17/utils-reflector-4.17.jar",
+      "directory": "deps"
+    },
+    {
+      "name": "android-all-instrumented-14-robolectric-10818077-i7.jar",
+      "bytes": 151142227,
+      "sha256": "3fdac2d463f431c6b8d83b9d0ca739e795de75fffedee648c6761bd4bd864701",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/14-robolectric-10818077-i7/android-all-instrumented-14-robolectric-10818077-i7.jar",
+      "directory": "sdk-jars",
+      "maven_path": "org/robolectric/android-all-instrumented/14-robolectric-10818077-i7/android-all-instrumented-14-robolectric-10818077-i7.jar"
+    },
+    {
+      "name": "android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar",
+      "bytes": 88212080,
+      "sha256": "57dc8d57a5d69adacf3aa4306aefbf147bd1621da347e20f3cf1f41c88a5dd49",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/7.0.0_r1-robolectric-r1-i7/android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar",
+      "directory": "sdk-jars",
+      "maven_path": "org/robolectric/android-all-instrumented/7.0.0_r1-robolectric-r1-i7/android-all-instrumented-7.0.0_r1-robolectric-r1-i7.jar"
+    },
+    {
+      "name": "android-all-instrumented-9-robolectric-4913185-2-i7.jar",
+      "bytes": 106130412,
+      "sha256": "dbb1c88987b54cef3132695a1b4d2f4851ba06286a6fa7d15772f98fd1f0cdf7",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/9-robolectric-4913185-2-i7/android-all-instrumented-9-robolectric-4913185-2-i7.jar",
+      "directory": "sdk-jars",
+      "maven_path": "org/robolectric/android-all-instrumented/9-robolectric-4913185-2-i7/android-all-instrumented-9-robolectric-4913185-2-i7.jar"
+    }
+  ]
+}

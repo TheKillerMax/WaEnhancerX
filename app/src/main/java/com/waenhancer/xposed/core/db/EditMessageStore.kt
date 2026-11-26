@@ -1,5 +1,6 @@
 package com.waenhancer.xposed.core.db
 
+import java.util.concurrent.ConcurrentHashMap
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -124,6 +125,32 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         writer.execute { recordTransition(rowId, keyId, previousMessage, newMessage, timestamp) }
     }
 
+    /** Resolve edited-row aliases on the existing writer before persisting a bound snapshot. */
+    fun recordBoundSnapshotAsync(
+        rowId: Long,
+        keyId: String?,
+        currentMessage: String,
+        timestamp: Long,
+        resolveAlias: Boolean,
+        onAliasUnresolved: (() -> Unit)? = null
+    ) {
+        if (currentMessage.isBlank() || (rowId <= 0 && keyId.isNullOrBlank())) return
+        writer.execute {
+            val resolution = if (resolveAlias && !keyId.isNullOrBlank()) resolveOriginalKeyWithStatus(keyId) else null
+            val resolvedKey = resolution?.keyId ?: keyId
+            val resolvedRow = if (resolvedKey != keyId) 0L else rowId
+            try {
+                recordTransition(resolvedRow, resolvedKey, null, currentMessage, timestamp)
+            } finally {
+                // Retain this attempt's outcome: a concurrent history click may
+                // populate the shared alias cache after our lookup failed.
+                if (resolution?.definitive == false) {
+                    onAliasUnresolved?.invoke()
+                }
+            }
+        }
+    }
+
     @Synchronized
     fun recordTransition(
         rowId: Long,
@@ -184,7 +211,8 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         committed?.let { history -> cacheKey(rowId, validKeyId)?.let { cacheHistory(it, history) } }
     }
 
-    private val originalKeyCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val originalKeyCache = ConcurrentHashMap<String, String>()
+    private data class OriginalKeyResolution(val keyId: String, val definitive: Boolean)
 
     /**
      * An edited message's row carries the edit's own key; WhatsApp keeps the key of the
@@ -192,7 +220,11 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
      * Returns [keyId] unchanged when the message was never edited or cannot be resolved.
      */
     fun resolveOriginalKey(keyId: String): String {
-        originalKeyCache[keyId]?.let { return it.ifEmpty { keyId } }
+        return resolveOriginalKeyWithStatus(keyId).keyId
+    }
+
+    private fun resolveOriginalKeyWithStatus(keyId: String): OriginalKeyResolution {
+        originalKeyCache[keyId]?.let { return OriginalKeyResolution(it.ifEmpty { keyId }, true) }
         var resolved = ""
         var definitive = false
         try {
@@ -215,7 +247,7 @@ class EditMessageStore private constructor(private val context: Context) : SQLit
         // An edit gives the row a new key, so a definitive miss for this key stays a miss.
         // Never cache a miss caused by a failed read.
         if (definitive) originalKeyCache[keyId] = resolved
-        return resolved.ifEmpty { keyId }
+        return OriginalKeyResolution(resolved.ifEmpty { keyId }, definitive)
     }
 
     fun getCurrentMessageFromWhatsApp(rowId: Long, keyId: String?): String {

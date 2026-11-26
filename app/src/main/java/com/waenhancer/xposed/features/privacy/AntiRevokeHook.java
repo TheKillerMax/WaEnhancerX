@@ -2587,7 +2587,32 @@ public class AntiRevokeHook extends BaseFeature {
     }
 
     private boolean isAntiRevokeStatusEnabled() {
-        return isEnabled("antirevokestatus", false);
+        return isAntiRevokeStatusEnabled(context, prefs);
+    }
+
+    /** Shared by feature registration and live status hooks; this setting is STRING in the schema. */
+    public static boolean isAntiRevokeStatusEnabled(Context context, SharedPreferences prefs) {
+        try {
+            Map<String, ?> values = prefs.getAll();
+            String key = "antirevokestatus";
+            if (!values.containsKey(key)) {
+                String packageName = context.getPackageName();
+                if (packageName == null || packageName.isEmpty()) return false;
+                key = packageName + ":" + key;
+            }
+            Object value = values.get(key);
+            if (value instanceof Boolean) return (Boolean) value;
+            if (value instanceof String) {
+                return "1".equals(value) || "true".equalsIgnoreCase((String) value);
+            }
+            // Keep legacy binary numeric preferences without truncating arbitrary numbers.
+            if (value instanceof Integer || value instanceof Long) {
+                return ((Number) value).longValue() == 1L;
+            }
+        } catch (RuntimeException | LinkageError error) {
+            HookErrors.swallowed("AntiRevokeHook", error);
+        }
+        return false;
     }
 
     private boolean isColorDeletedMessagesEnabled() {

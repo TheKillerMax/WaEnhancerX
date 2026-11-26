@@ -13,17 +13,14 @@ import re
 import shutil
 import subprocess
 import tempfile
-import urllib.request
-import zipfile
 import xml.etree.ElementTree as ET
+
+from prepare_dexkit import DEFAULT_CACHE, DEXKIT_SHA256, acquire
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = Path('app/src/main/java/com/waenhancer/xposed/features/customization')
 SOURCES = [BASE / name for name in ('PropsOverrideHook.java', 'StatusStyleHook.java', 'NewSettingsStyleHook.java')]
 FIXTURE = Path('qa/fixtures/status_style/StatusStyleHookChecks.java')
-DEXKIT_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
-DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
-DEXKIT_URL = 'https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
 EXPECTED_CHECKS = 83
 
 STUBS = {
@@ -99,24 +96,15 @@ public static void hookAllMethods(Class<?> c,String name,XC_MethodHook hook){} p
 
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
-def dexkit(out):
-    with urllib.request.urlopen(DEXKIT_URL, timeout=30) as response:
-        data = response.read(4 * 1024 * 1024 + 1)
-    if len(data) > 4 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != DEXKIT_AAR_SHA256:
-        raise RuntimeError('DexKit AAR size or identity mismatch')
-    aar = out / 'dexkit-2.2.0.aar'; aar.write_bytes(data)
-    with zipfile.ZipFile(aar) as archive:
-        if archive.namelist().count('classes.jar') != 1 or archive.getinfo('classes.jar').file_size > 2 * 1024 * 1024:
-            raise RuntimeError('DexKit classes.jar missing, duplicated or oversized')
-        classes = archive.read('classes.jar')
-    jar = out / 'dexkit-2.2.0.jar'; jar.write_bytes(classes)
-    return jar
+def dexkit(out, cache=DEFAULT_CACHE):
+    return acquire(cache, out / 'dexkit-bootstrap.json')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, default=ROOT)
     parser.add_argument('--out', type=Path)
     parser.add_argument('--dexkit-jar', type=Path)
+    parser.add_argument('--dexkit-cache', type=Path, default=DEFAULT_CACHE)
     parser.add_argument('--kotlin-stdlib', type=Path)
     args = parser.parse_args()
     root = args.source_root.resolve()
@@ -143,7 +131,7 @@ def main():
         if values is None or [item.text for item in values] != ['1', '0', '3', '9']:
             raise RuntimeError('Published choices changed; review the hook acceptance matrix')
         try:
-            jar = args.dexkit_jar.resolve() if args.dexkit_jar else dexkit(out)
+            jar = args.dexkit_jar.resolve() if args.dexkit_jar else dexkit(out, args.dexkit_cache)
             if not jar.is_file() or sha(jar) != DEXKIT_SHA256:
                 raise RuntimeError('Pinned real DexKit 2.2.0 classes.jar required')
             compiler = shutil.which('kotlinc')

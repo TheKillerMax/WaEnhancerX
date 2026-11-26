@@ -11,6 +11,18 @@ import argparse, hashlib, json, os, subprocess, tempfile
 ROOT = Path(__file__).resolve().parents[1]
 STUBS = {
     'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
+    'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
+    'android/os/RemoteException.java': 'package android.os; public class RemoteException extends Exception {}',
+    'android/content/ContentProviderClient.java': '''package android.content; import android.os.*;
+    public final class ContentProviderClient implements AutoCloseable {
+      private final Context.ContentResolver resolver; private boolean closed;
+      public ContentProviderClient(Context.ContentResolver r){resolver=r;}
+      public Bundle call(String method,String arg,Bundle extras) throws RemoteException {
+        if(closed)throw new AssertionError("Provider used after close");
+        return resolver.call(null,method,arg,extras);
+      }
+      public void close(){if(closed)throw new AssertionError("Provider closed twice");closed=true;resolver.closes++;}
+    }''',
     'android/net/Uri.java': 'package android.net; public class Uri {public static Uri parse(String value){return new Uri();}}',
     'android/os/Build.java': '''package android.os; public final class Build {
       public static class VERSION {public static int SDK_INT=34;}
@@ -37,12 +49,18 @@ STUBS = {
     public class Context {public final ContentResolver resolver=new ContentResolver();
       public ContentResolver getContentResolver(){return resolver;} public Context getApplicationContext(){return this;}
       public String getPackageName(){return "com.whatsapp";}
-      public static class ContentResolver {public final List<ParcelFileDescriptor> files=new ArrayList<>(); public int deletes,creates; public boolean fail;
+      public static class ContentResolver {public final List<ParcelFileDescriptor> files=new ArrayList<>(); public int deletes,creates,finishes,acquires,closes; public boolean fail;
+        public ContentProviderClient acquireUnstableContentProviderClient(Uri uri){acquires++;return new ContentProviderClient(this);}
         public Bundle call(Uri uri,String method,String argument,Bundle request){
           if(method.equals("create_call_recording")){creates++;if(fail)return null;
             Bundle result=new Bundle(); ParcelFileDescriptor fd=new ParcelFileDescriptor();files.add(fd);
             result.values.put("descriptor",fd);result.putString("path","private/"+request.getString("name"));return result;}
           if(method.equals("delete_call_recording")){deletes++;return new Bundle();}
+          if(method.equals("finish_call_recording")){
+            if(request.getString("call_id")==null || !(request.values.get("ended_at") instanceof Long) ||
+               !(request.values.get("successful") instanceof Boolean))throw new AssertionError("Invalid finish metadata");
+            finishes++;return new Bundle();
+          }
           throw new AssertionError("Unexpected IPC operation: "+method);
         }
       }
@@ -183,7 +201,9 @@ def main():
         target=directory/'stubs'/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(content)
         sources.append(str(target))
     media=args.root/'app/src/main/java/com/waenhancer/xposed/features/media'
-    production=[media/'CallRecordingHook.java']
+    production=[media/'CallRecordingHook.java',
+                args.root/'app/src/main/java/com/waenhancer/xposed/bridge/client/HookProviderIpc.java',
+                args.root/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java']
     contract=media/'CallRecordingEventContract.java'
     if contract.exists():production.append(contract)
     recording_files=args.root/'app/src/main/java/com/waenhancer/calls/RecordingOutputFiles.java'
