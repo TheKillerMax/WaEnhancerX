@@ -14,9 +14,9 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import urllib.request
 import zipfile
 
+from prepare_dexkit import DEFAULT_CACHE, acquire
 from test_call_recording_lifecycle import STUBS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,8 +35,6 @@ FIXTURE = Path('qa/fixtures/CallRecordingAudioAndroidTest.java')
 EXPECTED_TESTS = 81
 
 DEXKIT_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
-DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
-DEXKIT_URL = 'https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
 POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
 <modelVersion>4.0.0</modelVersion><groupId>org.waex.qa</groupId>
 <artifactId>call-recording-audio-qa-only</artifactId><version>1</version>
@@ -55,33 +53,8 @@ def digest(path):
 
 
 def bootstrap_dexkit(out):
-    """Fetch a pinned public API dependency; never load or extract native libraries."""
-    limit = 4 * 1024 * 1024
-    with urllib.request.urlopen(DEXKIT_URL, timeout=30) as response:
-        length = response.headers.get('Content-Length')
-        if length is not None and int(length) > limit:
-            raise RuntimeError('DexKit archive exceeds the 4 MiB bootstrap limit')
-        data = response.read(limit + 1)
-    if len(data) > limit or hashlib.sha256(data).hexdigest() != DEXKIT_AAR_SHA256:
-        raise RuntimeError('DexKit 2.2.0 public AAR identity mismatch')
-    archive_path = out / 'dexkit-2.2.0.aar'
-    archive_path.write_bytes(data)
-    with zipfile.ZipFile(archive_path) as archive:
-        if archive.namelist().count('classes.jar') != 1:
-            raise RuntimeError('DexKit API JAR is missing or duplicated')
-        info = archive.getinfo('classes.jar')
-        if info.file_size > 2 * 1024 * 1024:
-            raise RuntimeError('DexKit API JAR exceeds the 2 MiB extraction limit')
-        classes = archive.read(info)  # Checks the ZIP entry CRC as well as the pinned SHA below.
-    target = out / 'dexkit-2.2.0.jar'
-    target.write_bytes(classes)
-    if digest(target) != DEXKIT_SHA256:
-        raise RuntimeError('DexKit 2.2.0 public classes.jar identity mismatch')
-    (out / 'dexkit-bootstrap.json').write_text(json.dumps({
-        'url': DEXKIT_URL, 'aar_bytes': len(data), 'aar_sha256': DEXKIT_AAR_SHA256,
-        'classes_jar_bytes': len(classes), 'classes_jar_sha256': DEXKIT_SHA256,
-        'native_libraries_extracted_or_loaded': False}, indent=2) + '\n')
-    return target
+    """Reuse verified public API acquisition; only transport may retry."""
+    return acquire(DEFAULT_CACHE, out / 'dexkit-bootstrap.json')
 
 
 def run(command, log, allow_failure=False):
