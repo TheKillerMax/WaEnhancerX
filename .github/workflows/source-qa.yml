@@ -1030,6 +1030,11 @@ jobs:
             --bundle "$RUNNER_TEMP/waex-shared-framework" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
             --report "$RUNNER_TEMP/waex-dispatch-dependency-bundle.json"
+      - name: Restore pinned DexKit bytes for independent verification by Dispatch
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
       - name: Exercise 105 persistence and callback cases on Android API 24, 28 and 34
         shell: bash
         run: |
