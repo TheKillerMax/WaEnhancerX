@@ -264,9 +264,10 @@ public class CallRecordingLifecycleChecks {
         }
         try(Fixture f=new Fixture()) {
             f.preferences.values.put("call_recording_use_root",true);MediaRecorder.rejectedSources.add(4);
+            f.preferences.values.put("call_recording_allow_mic_fallback",true);
             f.active("A");
             check(MediaRecorder.instances.get(0).source==4 && MediaRecorder.instances.get(1).source==7,
-                    "The existing preferred-call-source to microphone fallback changed");
+                    "Explicitly enabled call-source to microphone fallback changed");
         }
         try(Fixture f=new Fixture()) {
             f.context.resolver.fail=true;f.state(CallState.CALLING,CallState.ACTIVE,"A");f.sound();f.scheduler.drain();
