@@ -830,6 +830,14 @@ jobs:
             --out "$RUNNER_TEMP/waex-gradle-consumer-controls" \
             --bundle "$RUNNER_TEMP/waex-shared-framework" \
             2>&1 | tee "$RUNNER_TEMP/waex-gradle-consumer-controls.log"
+      - name: Verify dependency retries cannot run tests or hide permanent failures
+        if: steps.modes.outputs.modes != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -O qa/test_gradle_dependencies.py \
+            --out "$RUNNER_TEMP/waex-gradle-dependency-controls" \
+            2>&1 | tee "$RUNNER_TEMP/waex-gradle-dependency-controls.log"
       - name: Execute compiled production sources with real framework dependencies
         if: steps.modes.outputs.modes != ''
         shell: bash
@@ -863,6 +871,8 @@ jobs:
             ${{ runner.temp }}/waex-stability-dependency-bundle*.json
             ${{ runner.temp }}/waex-gradle-consumer-controls/result.json
             ${{ runner.temp }}/waex-gradle-consumer-controls.log
+            ${{ runner.temp }}/waex-gradle-dependency-controls
+            ${{ runner.temp }}/waex-gradle-dependency-controls.log
             ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
