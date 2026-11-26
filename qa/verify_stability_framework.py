@@ -15,6 +15,9 @@ def main():
     ap.add_argument('--out',type=Path,required=True)
     ap.add_argument('--mode',choices=['all','update','filter','clock'],default='all')
     a=ap.parse_args();root=a.root.resolve();out=a.out.resolve()
+    clock = root/'app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt'
+    if a.mode == 'clock' and not clock.is_file():
+        ap.error('--mode clock requires RuntimeObservationClock.kt; no clock suite ran')
     out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir()
     p=out/'fixture';p.mkdir();v=tomllib.loads((root/'gradle/libs.versions.toml').read_text())['versions']
     # Compose's BOM does not select the experimental Material3 APIs used by
@@ -61,11 +64,16 @@ dependencies {
     write('build.gradle.kts',build)
     write('src/main/AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
     identity={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')}
-    modes=['update','filter','clock'] if a.mode=='all' else [a.mode]
-    sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','utils/AndroidUserScope.java',
+    # Keep the original clock suite on revisions with its implementation.
+    modes = ['update', 'filter'] if a.mode == 'all' else [a.mode]
+    if a.mode == 'all' and clock.is_file():
+        modes.append('clock')
+    sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','xposed/utils/HookErrors.java','utils/AndroidUserScope.java',
                        'config/PreferenceStores.java','config/PreferenceSchema.java','ui/components/NetworkErrorSheet.kt','ui/components/WaexModalBottomSheet.kt','ui/components/WaexProgressIndicator.kt',
-                       'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt'],
-             'filter':['xposed/features/customization/FilterItemsHook.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java'],
+                       'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt','ui/designsystem/WaexColors.kt'],
+             'filter':['xposed/features/customization/FilterItemsHook.kt','xposed/features/customization/LayoutPassThrottle.kt',
+                       'model/FilterItem.kt','xposed/core/ViewHookDispatcher.java',
+                       'xposed/utils/HostResourceIds.java','xposed/utils/HookErrors.java'],
              'clock':['ui/components/RuntimeObservationClock.kt','utils/InjectionEvidence.kt']}
     expected={'update':12,'filter':3,'clock':1}
     for mode in modes:
@@ -93,14 +101,25 @@ dependencies {
     theme='''package com.waenhancer.ui.designsystem
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 object WaexTheme {
- val colors @Composable get()=MaterialTheme.colorScheme
+ val colors @Composable get()=COLOR_EXPRESSION
  val typography @Composable get()=FixtureTypography(MaterialTheme.typography)
 EXTRA_UPDATE_TOKENS
 }
 class FixtureTypography(val t:androidx.compose.material3.Typography){val headlineMd get()=t.headlineMedium;val bodyMd get()=t.bodyMedium}
 '''
-    write('src/main/java/com/waenhancer/ui/designsystem/WaexTheme.kt',theme.replace('EXTRA_UPDATE_TOKENS',update_theme))
+    colors_expr = ('if (isSystemInDarkTheme()) darkColors else lightColors'
+                   if 'update' in modes else 'MaterialTheme.colorScheme')
+    theme = theme.replace('COLOR_EXPRESSION', colors_expr)
+    write('src/main/java/com/waenhancer/ui/designsystem/WaexTheme.kt',
+          theme.replace('EXTRA_UPDATE_TOKENS', update_theme))
+    if 'update' in modes and 'filter' not in modes:
+        write('src/main/java/de/robv/android/xposed/XposedBridge.java','''package de.robv.android.xposed;
+public final class XposedBridge {
+    public static void log(String message) { System.err.println(message); }
+}
+''')
     if 'filter' in modes:
         write('src/main/res/values/ids.xml','<resources><item name="fixture_target" type="id"/><item name="fixture_other" type="id"/></resources>')
         write('src/main/java/com/waenhancer/xposed/core/BaseFeature.kt','''package com.waenhancer.xposed.core
@@ -119,7 +138,7 @@ public class XC_MethodHook {public static class MethodHookParam {public Object t
         write('src/main/java/de/robv/android/xposed/XposedBridge.java','''package de.robv.android.xposed;
 import java.util.Set;
 public class XposedBridge {
- public static void log(String s) {}
+ public static void log(String s) { System.err.println(s); }
  public static Set<Object> hookAllMethods(Class<?> cls,String method,XC_MethodHook hook) {
   throw new AssertionError("Unexpected actual Xposed method installation in test fixture");
  }
