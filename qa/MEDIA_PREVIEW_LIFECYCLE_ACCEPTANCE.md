@@ -2,6 +2,18 @@
 
 ## Source and integration
 
+The 2026-11-26 reconciliation retains nightly `c089458569564c241e6e2cddbd5a4de301299f28`.
+Its BaseFeature now exposes a lazy PrivacyPrefs factory. MediaPreviewHook does not
+use this privacy path: the lifecycle fixture declares a throwing, counting factory
+boundary and checks that every scenario leaves it unused. Privacy decisions are
+outside this suite. Earlier test counts below remain historical evidence.
+
+The reconciled source passed 60/60 JUnit executions on API 24/28/34 and compiled
+against the pinned DexKit/OkHttp APIs. All five production mutations completed
+60 executions each and failed the intended assertions (3, 3, 3, 6 and 3).
+The current factory boundary remained unused in every scenario. These results
+cover the local source tree; public CI and device acceptance remain separate.
+
 The 2026-11-21 reconciliation merges original PR head `f053f19bbd0c043b9779603ac9ff8dc638317df0` with nightly `9972e49fac9bfb650c25ee31fde0da9425b67175`. It retains the current ListView/setAdapter/getView host entry points, current host class/resource helpers, side-button layout, message lookup and concurrent getView-registration set. The older integration described below used upstream `4750124e36223dd21d8535c14f2fb658025d8480`; those historical results are not relabeled as tests of the current source.
 
 On Linux x86-64, Temurin 21.0.13.1+2 and Kotlin 2.0.20, the current candidate passed all 60 framework cases on Robolectric 4.17 API 24/28/34 in 32.9 seconds. Compilation also passed against the real pinned OkHttp 4.12.0 and DexKit 2.2.0 APIs. A fresh mutation run completed in 202.6 seconds: its healthy repeat passed, then all five compiled regressions were detected by the intended behavioral assertions (3, 3, 3, 6 and 3 failures, respectively). These repeats do not increase unique coverage. Tested index tree: `4398183b88dfa03c1c714feff5635bd0adc850c2`; later edits are this acceptance record and the changelog fragment only.

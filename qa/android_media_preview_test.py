@@ -5,7 +5,8 @@ Uses public Robolectric 4.17, actual DexKit 2.2 and OkHttp 4.12 APIs, Kotlin
 2.0.20 and JDK 17+. Optional paths reuse existing dependencies and offline SDK
 JARs; otherwise Maven and pinned public downloads bootstrap them. Android classes,
 BaseFeature and HKDFv3 are real; network/host/Xposed/text/tint boundaries are
-explicit fixtures. No host injection, network download or media decoder is
+explicit fixtures. The unused BaseFeature privacy factory throws if called.
+No host injection, network download, privacy decision or media decoder is
 certified by these lifecycle tests.
 """
 import argparse

@@ -1,6 +1,14 @@
-"""Explicit Android-external transport/host/Xposed boundaries; real BaseFeature/HookRegistrar/ViewHookDispatcher are compiled."""
+"""Explicit transport/host/Xposed and unused privacy boundaries; real BaseFeature/HookRegistrar/ViewHookDispatcher are compiled."""
 STUBS = {'androidx/annotation/NonNull.java': 'package androidx.annotation; public @interface NonNull {}',
  'androidx/annotation/VisibleForTesting.java': 'package androidx.annotation; public @interface VisibleForTesting {}',
+ 'com/waenhancer/xposed/core/privacy/PrivacyPrefs.java': '''package com.waenhancer.xposed.core.privacy;
+ public final class PrivacyPrefs {
+  public static int calls;
+  private PrivacyPrefs() {}
+  public static PrivacyPrefs of(android.content.Context context, android.content.SharedPreferences prefs) {
+   calls++; throw new AssertionError("Privacy decisions are outside this media preview lifecycle fixture");
+  }
+ }''',
  'com/waenhancer/xposed/utils/ActivityTracker.java': '''package com.waenhancer.xposed.utils;
  public final class ActivityTracker {
   public static int calls;

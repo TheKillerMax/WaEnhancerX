@@ -72,6 +72,7 @@ public final class MediaPreviewLifecycleTest {
     @Before public void setup() throws Exception {
         FixtureNetwork.reset();
         com.waenhancer.xposed.utils.ActivityTracker.calls=0;
+        com.waenhancer.xposed.core.privacy.PrivacyPrefs.calls=0;
         CountingVideoShadow.reads.clear();
         controller=Robolectric.buildActivity(Activity.class).setup();activity=controller.get();
         hook=new MediaPreviewHook(activity,getClass().getClassLoader(),activity.getSharedPreferences("preview_test",Context.MODE_PRIVATE));
@@ -92,6 +93,8 @@ public final class MediaPreviewLifecycleTest {
         controller.pause().stop().destroy();Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertEquals("Host activity lookup was invoked outside this lifecycle contract",0,
                 com.waenhancer.xposed.utils.ActivityTracker.calls);
+        assertEquals("Privacy factory was invoked outside this lifecycle contract",0,
+                com.waenhancer.xposed.core.privacy.PrivacyPrefs.calls);
     }
 
     private ThreadPoolExecutor worker() throws Exception {
