@@ -155,6 +155,7 @@ import com.waenhancer.ui.screens.settings.CallRecordingSettingsScreen
 import com.waenhancer.ui.screens.settings.FilterItemsScreen
 import com.waenhancer.ui.screens.settings.FloatingBottomBarCustomizerScreen
 import com.waenhancer.ui.screens.settings.NativeFloatingNavigationScreen
+import com.waenhancer.ui.screens.settings.BubbleColorsScreen
 import com.waenhancer.ui.screens.settings.StylesSettingsScreen
 import com.waenhancer.update.UpdateCheckCoordinator
 import com.waenhancer.utils.ContactNameResolver
@@ -526,7 +527,7 @@ fun MainContainerScreen() {
                                             .size(42.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                     )
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "WaEnhancerX",
                                             style = typography.titleMd,
@@ -534,15 +535,18 @@ fun MainContainerScreen() {
                                             color = colors.onSurface
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "v${BuildConfig.VERSION_NAME}",
+                                            style = typography.bodySm,
+                                            color = colors.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Text(
-                                                text = "v${BuildConfig.VERSION_NAME}",
-                                                style = typography.bodySm,
-                                                color = colors.onSurfaceVariant
-                                            )
                                             ReleaseKindChip(versionName = BuildConfig.VERSION_NAME)
 
                                             // License Plan Chip inside Drawer Header
@@ -579,7 +583,9 @@ fun MainContainerScreen() {
                                                     style = typography.labelSm,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = chipText,
-                                                    fontSize = 10.sp
+                                                    fontSize = 10.sp,
+                                                    maxLines = 1,
+                                                    softWrap = false
                                                 )
                                             }
                                         }
@@ -1332,6 +1338,7 @@ fun WaexAppNavigation(
         Screen.ManageDevices -> ManageDevicesScreen()
         Screen.FloatingBottomBarCustomizer -> FloatingBottomBarCustomizerScreen()
         Screen.NativeFloatingNavigation -> NativeFloatingNavigationScreen()
+        Screen.BubbleColors -> BubbleColorsScreen()
         Screen.FilterItems -> FilterItemsScreen()
         Screen.CustomAbProps -> CustomAbPropsScreen(
             prefs = preferenceManager,

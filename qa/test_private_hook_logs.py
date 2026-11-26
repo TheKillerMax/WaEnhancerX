@@ -14,8 +14,8 @@ if not __debug__:
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = {
-    "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 13,
-    "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 31,
+    "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 12,
+    "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 32,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 9,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 7,
     "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 5,
@@ -117,8 +117,8 @@ total = 0
 for rel, expected in FILES.items():
     src = (ROOT / rel).read_text(encoding="utf-8")
     calls = list(hook_logs(src))
-    # All 13 BlueOnReplyHook expressions were reviewed and compiled independently
-    # in test_blue_on_reply_log_contract.py. Changed callsites require review.
+    # The 12 current BlueOnReply expressions are compiled independently by
+    # test_blue_on_reply_log_contract.py; any inventory change needs review.
     assert len(calls) == expected, (
         f"{rel}: expected {expected} diagnostic callsites, got {len(calls)}"
     )
@@ -164,8 +164,9 @@ if 'PendingReadReceiptStore<ReadJobRecipe>' in blue:
     assert 'PENDING_JOBS.snapshot(key)' in blue
     assert 'PENDING_JOBS.remove(recipient, original)' in blue
     assert 'if (vetoed) restoreRecipe();' in blue
-    assert 'HideReceiptsHook.allowExplicitReceiptIds(key, recipe.arguments)' in blue
-    assert 'HideReceiptsHook.revokeExplicitReceiptIds(key, recipe.arguments)' in blue
+    # Shared enqueue path: grants are scoped to the exact job recipient.
+    assert 'HideReceiptsHook.allowExplicitReceiptIds(recipient, recipe.arguments)' in blue
+    assert 'HideReceiptsHook.revokeExplicitReceiptIds(recipient, recipe.arguments)' in blue
     assert 'HideReceiptsHook.allowBlueReplyReceipt(key)' not in blue
     assert 'lastHiddenConversationJid' not in blue
     hide = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java").read_text()
@@ -177,7 +178,7 @@ else:
     assert 'HideReceiptsHook.allowExplicitReceiptIds(recipe.arguments)' in blue
     assert 'lastHiddenConversationJid' in blue
 if 'Cannot dispatch: outgoing recipient is unavailable' in blue:
-    dispatch = blue.split('private static int sendPendingReadJobs(String jid)', 1)[1].split('private String extractRemoteJid(', 1)[0]
+    dispatch = blue.split('private int sendPendingReadJobs(String jid)', 1)[1].split('private String extractRemoteJid(', 1)[0]
     assert 'if (key == null)' in dispatch and 'return 0;' in dispatch
     assert 'attempt.acknowledgeEnqueue();' in dispatch
     for unsafe_fallback in ('getUserPart(', 'lastHiddenConversationJid', 'PENDING_JOBS.size() == 1'):
@@ -193,6 +194,7 @@ if "editStore.recordTransitionAsync(" in edit:
     assert "fun recordTransitionAsync(" in store, "Async transition storage unavailable"
 assert "getMessages(" in store
 
+
 # PR #25 now includes three other independently fixture-tested log sources.
 # Keep this historical entrypoint comprehensive even if PR #27's optional
 # workflow has not yet merged. The scripts fail closed on missing source files.
@@ -201,8 +203,6 @@ for regression in (
     "qa/test_exception_message_privacy.py",
     "qa/test_call_privacy_logs.py",
     "qa/test_database_dialog_status_log_privacy.py",
-    # This historical entrypoint is invoked by source-qa; do not leave the
-    # compiled expression/mutation contract as an unexecuted standalone file.
     "qa/test_blue_on_reply_log_contract.py",
 ):
     runpy.run_path(str(ROOT / regression), run_name="__main__")

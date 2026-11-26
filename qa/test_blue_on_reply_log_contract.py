@@ -17,15 +17,14 @@ DEFAULT_SOURCE = (
     ROOT / "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java"
 )
 
-# Independently reviewed at nightly 0aaffab (2026-11-18): eight fixed literals
-# and five exception *type* diagnostics. Changed labels require a fresh review.
+# Reviewed against nightly c089458 (2026-11-26): seven fixed literals and
+# five exception-type diagnostics. Changed labels require a fresh review.
 REVIEWED_EXPRESSIONS = [
+    'TAG + " Owed read receipts cannot be rebuilt: Jid factory unavailable"',
     'TAG + " Error initializing receipt dispatcher: " + t.getClass().getSimpleName()',
     'TAG + " Error hooking Blue on Reply: " + t.getClass().getSimpleName()',
     'TAG + " chat receipt not staged: incomplete job contract"',
     'TAG + " chat receipt not staged: job has no message IDs"',
-    'TAG + " Cannot record observed receipt: constructor unavailable"',
-    'TAG + " buildMinimalConstructorArgs: required argument unavailable"',
     'TAG + " Error enqueueing status receipt: " + t.getClass().getSimpleName()',
     'TAG + " Cannot dispatch: outgoing recipient is unavailable"',
     'TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready"',
@@ -145,7 +144,7 @@ public final class WaexBlueReplyLogProbe {
         String senderName = "WAEX_PRIVATE_SYNTHETIC_SENDER_02R";
         Throwable t = new IllegalArgumentException("WAEX_PRIVATE_SYNTHETIC_ERROR_63M");
         """ + calls + """;
-        if (XposedBridge.records.size() != 13) {
+        if (XposedBridge.records.size() != 12) {
             System.err.println("LOG_COUNT_CHANGED");
             System.exit(8);
         }
@@ -220,10 +219,10 @@ def main() -> None:
             "raw_throwable": (target, "t.getClass().getSimpleName()", "t"),
             "exception_message": (target, "t.getClass().getSimpleName()", "t.getMessage()"),
             "stacktrace": (target, "t.getClass().getSimpleName()", "Log.getStackTraceString(t)"),
-            "jid": (7, expressions[7], expressions[7] + " + jid"),
-            "message_id": (3, expressions[3], expressions[3] + " + messageId"),
-            "key_id": (2, expressions[2], expressions[2] + " + keyId"),
-            "sender_name": (4, expressions[4], expressions[4] + " + senderName"),
+            "jid": (6, expressions[6], expressions[6] + " + jid"),
+            "message_id": (4, expressions[4], expressions[4] + " + messageId"),
+            "key_id": (3, expressions[3], expressions[3] + " + keyId"),
+            "sender_name": (0, expressions[0], expressions[0] + " + senderName"),
         }
         for name, (index, old, replacement) in sensitive.items():
             altered = expressions.copy()
@@ -259,8 +258,8 @@ def main() -> None:
         raise AssertionError("Removed logger was accepted")
 
     changed_label = expressions.copy()
-    changed_label[2] = changed_label[2].replace("incomplete job contract", "job contract unknown")
-    require(changed_label[2] != expressions[2], "Literal mutant did not alter expression")
+    changed_label[3] = changed_label[3].replace("incomplete job contract", "job contract unknown")
+    require(changed_label[3] != expressions[3], "Literal mutant did not alter expression")
     try:
         check_reviewed_contract(changed_label)
     except AssertionError as error:
@@ -269,7 +268,7 @@ def main() -> None:
         raise AssertionError("Unreviewed diagnostic label was accepted")
 
     print(
-        "PASS: 13 reviewed production logs compiled; 7 payload mutants, "
+        "PASS: 12 reviewed production logs compiled; 7 payload mutants, "
         "add/remove inventory mutants and changed-label mutant rejected"
     )
 
