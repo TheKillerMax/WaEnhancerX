@@ -6,6 +6,7 @@ lookups in binding. The current original-key resolver body is also compiled unch
 """
 from pathlib import Path
 import argparse
+import os
 import subprocess
 import tempfile
 import shutil
@@ -386,5 +387,5 @@ with tempfile.TemporaryDirectory() as folder:
     temp = Path(folder)
     path = temp / 'AdapterBindingChecks.kt'
     path.write_text(fixture)
-    subprocess.run([shutil.which('kotlinc.bat') or shutil.which('kotlinc') or 'kotlinc', str(path), '-jvm-target', '17', '-include-runtime', '-d', str(temp / 'checks.jar')], check=True)
+    subprocess.run([shutil.which('kotlinc.bat' if os.name == 'nt' else 'kotlinc') or 'kotlinc', str(path), '-jvm-target', '17', '-include-runtime', '-d', str(temp / 'checks.jar')], check=True)
     subprocess.run(['java', '-jar', str(temp / 'checks.jar'), args.scenario], check=True)
