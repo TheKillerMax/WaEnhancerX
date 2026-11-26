@@ -295,6 +295,7 @@ SHARED_EARLY = [  # needed before BaseFeature.kt is compiled
     CORE / 'xposed/core/wa/WaJid.java',
     CORE / 'xposed/core/wa/WaMessage.java',
     CORE / 'xposed/core/wa/WaTargets.java',
+    CORE / 'xposed/core/wa/ViewOnceSetterContract.java',
     CORE / 'config/DndPreferencePolicy.java',
 ]
 SHARED_LATE = [  # compiled with the hook (SafeHooks needs HookRegistrar)
