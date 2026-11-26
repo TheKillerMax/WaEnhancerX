@@ -13,7 +13,7 @@
   "historical_matrix_lock_sha256": "29b25a9d8f7068a8586f5c92d485b95e3b6cb761c8bb86868924c34f79677fc0",
   "jdk_selection": {
     "distribution": "temurin",
-    "java_version": "21.0.13+9",
+    "java_version": "21.0.13+9.0.LTS",
     "java_package": "jdk",
     "architecture": "x64",
     "check_latest": false,
@@ -121,11 +121,11 @@
   ],
   "known_nonce_scope": "Eight physical/DSU claims plus thirty ART17 reservations, fifteen Presence15 emissions and twenty-three reservations from the completed canonical recovery run; not a complete inventory of all historical executions.",
   "source_sha256": {
-    ".github/workflows/android-art-cache-profile-recovery.yml": "104cda50768ab49379f8ed168e3476d310a62d144829c3450517d95545794ca7",
-    "qa/art_cache_profile_recovery/README.md": "066f6c14905210e7d32d650fd7083279801701cf5fb6c6f35cb0865c106a7c3f",
+    ".github/workflows/android-art-cache-profile-recovery.yml": "3704f1dcd0eeb8d6bfba96f199fcaa1360b80ec9b8050e8e50a656e6b3e4f21e",
+    "qa/art_cache_profile_recovery/README.md": "7eedebb84c647f5d937749d6ec2041ac6d59f13e5b3808813a388265f478a524",
     "qa/art_cache_profile_recovery/bootstrap.py": "2d0b748de712a0b938ddbeb949610e6618ade997c7cd025aa165beffc429f6d8",
     "qa/art_cache_profile_recovery/build.py": "05d46d837f5bd815a29cf567770fcdde56cc2ffefb90731cb3e07155c61d6d05",
-    "qa/art_cache_profile_recovery/cache_contract.py": "0990a1dabc1d3511615884e9b7f259d76041c9dc9f2af21580047e78274c0512",
+    "qa/art_cache_profile_recovery/cache_contract.py": "55edac89ba25625dd5a141907ed44686dc52b396efb2e452caa947007a631179",
     "qa/art_cache_profile_recovery/jdk_observation.py": "daeb2e8c2b3555448eaf1afe1e1d4aeb7c7aee17ab57ad1db563bb5c30e668fc",
     "qa/art_cache_profile_recovery/pilot.py": "9b1f4aca4cf9d1215df0a7b1001eb97b11977fc533ee723b9c9ab38741d710b8",
     "qa/art_cache_profile_recovery/prior-evidence/CACHE_BUILD_BLOCKED_RESULT.json": "03f8686c24c88d7eae55fc1529af99704ef48af99b507953b01a02d28f569adc",

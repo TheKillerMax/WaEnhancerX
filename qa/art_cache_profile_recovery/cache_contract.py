@@ -24,7 +24,7 @@ SOURCE_NAMES = tuple('qa/art_cache_profile_recovery/' + name for name in (
     'prior-evidence/CACHE_BUILD_BLOCKED_REVIEW.json', 'prior-evidence/CACHE_NONCE_OBSERVATIONS.json',
     'prior-evidence/CACHE_BUILD_BLOCKED_RESULT.json', 'prior-evidence/RECOVERY_NONCE_LEDGER.json')) + (
         '.github/workflows/android-art-cache-profile-recovery.yml',)
-JDK_SELECTION = {'distribution': 'temurin', 'java_version': '21.0.13+9', 'java_package': 'jdk',
+JDK_SELECTION = {'distribution': 'temurin', 'java_version': '21.0.13+9.0.LTS', 'java_package': 'jdk',
                  'architecture': 'x64', 'check_latest': False, 'reference_manifest_sha256': REFERENCE_SHA}
 
 
