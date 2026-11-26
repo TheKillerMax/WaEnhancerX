@@ -70,6 +70,7 @@ public class PreservedDispatchContractTest {
     }
 
     @After public void after() throws Exception {
+        hook.unhookAll();
         // The producer is nonblocking. Drain its FIFO worker before deleting fixture
         // databases to avoid mixing writes from different Robolectric tests.
         awaitPreservationQueue(); resetStore(); resetHookDiagnostics();
@@ -547,6 +548,71 @@ public class PreservedDispatchContractTest {
         });}
         XposedBridge.fireAfter(XposedBridge.fireBefore(method,new FixtureRunnable(context),new Object[0]));
         assertEquals("b1b2a2a1",order.toString());
+    }
+
+    @Test public void absentEntryPointCannotReportSuccessfulInstallation() {
+        IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
+        assertEquals("Delete-for-me entry point unavailable",error.getMessage());
+        assertTrue("No dependent SQLite hook without an entry point",XposedBridge.hooks.isEmpty());
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    private void primeAvailableEntryPoint() throws Exception {
+        Method run=FixtureRunnable.class.getDeclaredMethod("run");
+        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(),"waex_delete_for_me_method_v7",()->run);
+    }
+
+    private void primeLegacyEntryPoint() throws Exception {
+        Method entry=DirectDelete.class.getDeclaredMethod("deleteSelected",int.class);
+        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(),"waex_delete_for_me_method_v7",()->entry);
+    }
+
+    @Test public void failedEntryRegistrationCannotInstallDependentDatabaseHook() throws Exception {
+        primeAvailableEntryPoint();XposedBridge.failRegistrationType=FixtureRunnable.class;
+        IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
+        assertEquals("Delete-for-me entry point unavailable",error.getMessage());
+        assertTrue(XposedBridge.hooks.isEmpty());
+    }
+
+    @Test public void failedDatabaseRegistrationPropagatesAndActualOwnerCleanupRemovesPartialEntry() throws Exception {
+        primeLegacyEntryPoint();XposedBridge.failRegistrationType=SQLiteDatabase.class;
+        hook.beginHookTracking();
+        try {
+            IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
+            assertEquals("Delete-for-me database interception unavailable",error.getMessage());
+            assertTrue("The earlier entry registration is present until feature cleanup",XposedBridge.hooks.containsKey(DirectDelete.class.getDeclaredMethod("deleteSelected",int.class)));
+        } finally {hook.endHookTracking();hook.unhookAll();}
+        assertTrue("BaseFeature/HookRegistrar must remove partial installation",XposedBridge.hooks.isEmpty());
+    }
+
+    @Test public void emptyDatabaseRegistrationCannotReportSuccessfulInstallation() throws Exception {
+        primeLegacyEntryPoint();XposedBridge.emptyAllMethodsType=SQLiteDatabase.class;
+        hook.beginHookTracking();
+        try {
+            IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
+            assertEquals("Delete-for-me database interception unavailable",error.getMessage());
+        } finally {hook.endHookTracking();hook.unhookAll();}
+        assertTrue(XposedBridge.hooks.isEmpty());
+    }
+
+    private void assertRunnableCaptureWithoutDatabaseInterceptor() throws Throwable {
+        registerProvider();FixtureRunnable owner=new FixtureRunnable(context);
+        XC_MethodHook.MethodHookParam param=beginRun(owner);
+        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        assertFalse("The optional database interception was not installed",XposedBridge.hooks.keySet().stream().anyMatch(m->m.getDeclaringClass()==SQLiteDatabase.class));
+        owner.run();XposedBridge.fireAfter(param);awaitPreservationQueue();
+        assertEquals(1,vaultRows());assertEquals(0,sourceRows());
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void runnableDirectCaptureSurvivesOptionalDatabaseRegistrationFailure() throws Throwable {
+        XposedBridge.failRegistrationType=SQLiteDatabase.class;
+        assertRunnableCaptureWithoutDatabaseInterceptor();
+    }
+
+    @Test public void runnableDirectCaptureSurvivesEmptyOptionalDatabaseRegistration() throws Throwable {
+        XposedBridge.emptyAllMethodsType=SQLiteDatabase.class;
+        assertRunnableCaptureWithoutDatabaseInterceptor();
     }
 
     @Test public void originalThrowableSurvivesScopeCleanup() throws Throwable {
