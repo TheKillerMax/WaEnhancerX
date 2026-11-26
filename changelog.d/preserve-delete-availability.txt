@@ -1,0 +1,2 @@
+Report message preservation as unavailable when its Delete-for-me entry point or required legacy database interception cannot be installed.
+Preserve the Runnable's direct capture when optional SQLite interception fails; partial failed installations use existing feature cleanup.

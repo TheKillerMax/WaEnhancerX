@@ -73,12 +73,17 @@ class PreserveDeleteForMeHook(
     }
 
     override fun hook() {
-        hookBytecodeDeleteForMe()
-        hookDatabaseDeleteForMe()
+        val entry = checkNotNull(hookBytecodeDeleteForMe()) { "Delete-for-me entry point unavailable" }
+        val capturesSelectedMessages = entry.name == "run" && entry.parameterTypes.isEmpty() &&
+            entry.returnType == Void.TYPE && Runnable::class.java.isAssignableFrom(entry.declaringClass)
+        // The current Runnable captures the selected messages itself. Older entry
+        // points only open a scope and therefore also require the SQLite interceptor.
+        val databaseInstalled = hookDatabaseDeleteForMe()
+        check(capturesSelectedMessages || databaseInstalled) { "Delete-for-me database interception unavailable" }
     }
 
-    private fun hookBytecodeDeleteForMe() {
-        try {
+    private fun hookBytecodeDeleteForMe(): Method? {
+        return try {
             val deleteMethod = resolveDeleteForMeMethod()
             if (deleteMethod != null) {
                 XposedBridge.hookMethod(
@@ -99,16 +104,19 @@ class PreserveDeleteForMeHook(
                         }
                     }
                 )
+                deleteMethod
             } else {
                 XposedBridge.log("$TAG Warning: DeleteForMe method not found via dexkit.")
+                null
             }
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Failed to install bytecode DeleteForMe hook: ${t.javaClass.simpleName}")
+            null
         }
     }
 
-    private fun hookDatabaseDeleteForMe() {
-        try {
+    private fun hookDatabaseDeleteForMe(): Boolean {
+        return try {
             XposedBridge.hookAllMethods(
                 SQLiteDatabase::class.java,
                 "delete",
@@ -170,9 +178,10 @@ class PreserveDeleteForMeHook(
                         }
                     }
                 }
-            )
+            ).isNotEmpty()
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error installing DB Delete-For-Me hook: ${t.javaClass.simpleName}")
+            false
         }
     }
 
