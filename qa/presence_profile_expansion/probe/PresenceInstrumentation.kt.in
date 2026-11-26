@@ -1,0 +1,329 @@
+package org.waex.qa.presence.host
+
+import RendererHarness
+import android.app.Activity
+import android.app.Application
+import android.app.Instrumentation
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.Bundle
+import android.os.Looper
+import android.system.Os
+import android.system.OsConstants
+import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
+import com.waenhancer.xposed.features.automation.PresenceStateStore
+import com.waenhancer.xposed.utils.HostResourceIds
+import java.io.File
+import java.util.concurrent.atomic.AtomicReference
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.*
+
+/** Runs on Instrumentation's worker; every view operation runs on the real main thread. */
+class PresenceInstrumentation : Instrumentation() {
+    private lateinit var activity: PresenceActivity
+    private lateinit var app: Application
+    private lateinit var host: Context
+    private lateinit var h: RendererHarness
+    private var avatarId = 0
+    private var photoId = 0
+    private val hostRows = linkedMapOf<FrameLayout, Pair<Int, Int>>()
+    private val a = "910001@s.whatsapp.net"
+    private lateinit var r: FrameLayout
+    private lateinit var bitmap: Bitmap
+    private var x = 0
+    private var y = 0
+    private lateinit var evidence: File
+    private var ownsEvidence = false
+    private var caseName = ""
+    private var observations = JSONArray()
+    private val results = JSONArray()
+    private var environment = JSONObject()
+    private var runId = ""
+    private var expectedPageSize = 0L
+    private var processPageSize = 0L
+    private var identityArguments = Bundle()
+    private var processIdentity = JSONObject()
+    private val producerCommit = "__PRODUCER_COMMIT__"
+    private val producerRunId = "__PRODUCER_RUN_ID__"
+    private val producerAttempt = "__PRODUCER_ATTEMPT__"
+
+    override fun onCreate(arguments: Bundle?) {
+        super.onCreate(arguments)
+        identityArguments = arguments ?: Bundle()
+        runId = arguments?.getString("run_id") ?: ""
+        expectedPageSize = arguments?.getString("page_bytes")?.toLongOrNull() ?: 0L
+        start()
+    }
+
+    override fun onStart() {
+        val names = listOf("pureCircleRasterizesWithoutWaex", "plainAndroidViewDrawsAndClearsWhenHidden",
+            "nativeCanvasContainsGreenDotAndClearsOffline", "invalidationClearsTheNativeGreenPixel")
+        try {
+            check(Looper.myLooper() != Looper.getMainLooper())
+            require(runId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) { "A unique run_id argument is required" }
+            require(expectedPageSize == 4096L || expectedPageSize == 16384L) { "An exact expected page size is required" }
+            processPageSize = Os.sysconf(OsConstants._SC_PAGE_SIZE)
+            check(processPageSize == expectedPageSize) { "Instrumentation process page size differs from the matrix" }
+            processIdentity = measureProcessIdentity()
+            evidence = File(targetContext.filesDir, "qa-presence/$runId")
+            check(!evidence.exists()) { "Refusing to overwrite an earlier instrumentation run" }
+            check(evidence.mkdirs())
+            ownsEvidence = true
+            activity = startActivitySync(Intent(targetContext, PresenceActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as PresenceActivity
+            names.forEach { name ->
+                caseName = name
+                observations = JSONArray()
+                val result = JSONObject().put("name", name)
+                try {
+                    reset()
+                    when (name) {
+                        "pureCircleRasterizesWithoutWaex" -> pureCircleRasterizesWithoutWaex()
+                        "plainAndroidViewDrawsAndClearsWhenHidden" -> plainAndroidViewDrawsAndClearsWhenHidden()
+                        "nativeCanvasContainsGreenDotAndClearsOffline" -> nativeCanvasContainsGreenDotAndClearsOffline()
+                        "invalidationClearsTheNativeGreenPixel" -> invalidationClearsTheNativeGreenPixel()
+                    }
+                    result.put("status", "PASS")
+                } catch (failure: Throwable) {
+                    result.put("status", if (failure is AssertionError) "FAIL" else "ERROR")
+                        .put("exception", failure.javaClass.name).put("message", failure.message ?: "")
+                        .put("stack", android.util.Log.getStackTraceString(failure))
+                }
+                result.put("observations", observations)
+                results.put(result)
+                sendStatus(0, Bundle().apply { putString("case", result.toString()) })
+            }
+            val passed = (0 until results.length()).count { results.getJSONObject(it).getString("status") == "PASS" }
+            val failed = (0 until results.length()).count { results.getJSONObject(it).getString("status") == "FAIL" }
+            val errors = results.length() - passed - failed
+            val report = JSONObject().put("schema_version", 1).put("run_id", runId).put("api", Build.VERSION.SDK_INT)
+                .put("application_page_size_bytes", processPageSize)
+                .put("process_identity", processIdentity)
+                .put("tests", results.length()).put("passed", passed).put("failures", failed)
+                .put("errors", errors).put("skipped", 0).put("environment", environment)
+                .put("cases", results).put("scope", "Extracted public presence renderer and real Android Canvas/View/Handler; synthetic host; no Xposed or WhatsApp")
+            File(evidence, "result.json").writeText(report.toString(2))
+            onMain { activity.finish() }
+            finish(if (passed == names.size && errors == 0) Activity.RESULT_OK else Activity.RESULT_CANCELED,
+                Bundle().apply { putString("qa_result", report.toString()); putString("stream", "\nWAEX_ART_PRESENCE " + report.toString() + "\n") })
+        } catch (failure: Throwable) {
+            val report = JSONObject().put("schema_version", 1).put("run_id", runId).put("api", Build.VERSION.SDK_INT)
+                .put("status", "HARNESS_ERROR").put("expected_tests", names.size)
+                .put("completed_tests", results.length()).put("cases", results)
+                .put("exception", failure.javaClass.name).put("message", failure.message ?: "")
+                .put("stack", android.util.Log.getStackTraceString(failure))
+            if (ownsEvidence) File(evidence, "result.json").writeText(report.toString(2))
+            finish(Activity.RESULT_CANCELED, Bundle().apply { putString("qa_result", report.toString()); putString("stream", "\nWAEX_ART_PRESENCE " + report.toString() + "\n") })
+        }
+    }
+
+    private fun measureProcessIdentity(): JSONObject {
+        fun arg(name: String): String = identityArguments.getString(name) ?: ""
+        fun hex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it.toInt() and 255) }
+        fun u16(bytes: ByteArray, offset: Int): Int =
+            (bytes[offset].toInt() and 255) or ((bytes[offset + 1].toInt() and 255) shl 8)
+        val api = Build.VERSION.SDK_INT
+        val requestedApi = arg("expected_api").toIntOrNull()
+        val minor = arg("expected_minor").toIntOrNull()
+        require(requestedApi == api && api in 27..37 && minor != null && minor in 0..99999)
+        val target = arg("target")
+        val targetMatch = Regex("api([0-9]+)(?:\\.([0-9]+))?(-16k)?").matchEntire(target)
+        require(targetMatch != null && targetMatch.groupValues[1].toInt() == api
+            && (targetMatch.groupValues[2].toIntOrNull() ?: 0) == minor
+            && expectedPageSize == (if (targetMatch.groupValues[3].isEmpty()) 4096L else 16384L))
+        val nonce = arg("nonce")
+        require(nonce.matches(Regex("[a-f0-9]{32}")) && runId == "presence-$nonce")
+        val boot = arg("host_boot_id")
+        require(boot.matches(Regex("[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}")))
+        require(producerCommit.matches(Regex("[a-f0-9]{40}"))
+            && producerRunId.matches(Regex("[1-9][0-9]*")) && producerAttempt == "1"
+            && arg("producer_commit") == producerCommit && arg("github_run_id") == producerRunId
+            && arg("github_run_attempt") == producerAttempt)
+        var full: Int? = null
+        var fullMajor: Int? = null
+        var fullMinor: Int? = null
+        var fullMethod = "NOT_READ_API_LT_36"
+        var minorPolicy = "LEGACY_MINOR_ZERO_POLICY_NOT_OBSERVED"
+        if (api >= 36) {
+            full = Build.VERSION::class.java.getField("SDK_INT_FULL").getInt(null)
+            fullMajor = Build::class.java.getMethod("getMajorSdkVersion", Integer.TYPE).invoke(null, full) as Int
+            fullMinor = Build::class.java.getMethod("getMinorSdkVersion", Integer.TYPE).invoke(null, full) as Int
+            check(full > 0 && fullMajor == api && fullMinor == minor)
+            fullMethod = "Build.VERSION.SDK_INT_FULL+Build.getMajorSdkVersion/getMinorSdkVersion(reflection)"
+            minorPolicy = "MEASURED_SDK_INT_FULL"
+        } else {
+            require(minor == 0) { "Legacy minor zero is policy; SDK_INT_FULL is not read" }
+        }
+        check(android.os.Process.is64Bit()) { "The instrumentation process is not 64-bit" }
+        val header = ByteArray(64)
+        java.io.RandomAccessFile("/proc/self/exe", "r").use { it.readFully(header) }
+        check(header.copyOfRange(0, 7).contentEquals(byteArrayOf(0x7f, 69, 76, 70, 2, 1, 1))
+            && u16(header, 16) in listOf(2, 3) && u16(header, 18) == 62
+            && header.copyOfRange(20, 24).contentEquals(byteArrayOf(1, 0, 0, 0))
+            && u16(header, 52) == 64) { "The actual process is not ELF64 little-endian x86_64" }
+        val executable = Os.readlink("/proc/self/exe")
+        check(executable.matches(Regex("/[A-Za-z0-9_./@+-]+/app_process64"))
+            && !executable.split('/').contains(".."))
+        val apk = File(targetContext.applicationInfo.sourceDir)
+        val apkBytes = apk.length()
+        val expectedHash = arg("expected_apk_sha256")
+        require(expectedHash.matches(Regex("[a-f0-9]{64}")) && apk.isFile && apkBytes in 1..(2L * 1024 * 1024))
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        var total = 0L
+        apk.inputStream().use { input ->
+            val block = ByteArray(65536)
+            while (true) {
+                val count = input.read(block)
+                if (count < 0) break
+                total += count
+                check(total <= apkBytes && total <= 2L * 1024 * 1024)
+                digest.update(block, 0, count)
+            }
+        }
+        val actualHash = hex(digest.digest())
+        check(total == apkBytes && apk.length() == apkBytes && actualHash == expectedHash)
+        val uid = android.os.Process.myUid()
+        val pid = android.os.Process.myPid()
+        check(uid >= 10000 && pid > 0)
+        return JSONObject().put("schema", "WAEX_PRESENCE_PROCESS_IDENTITY_V1").put("status", "PASS")
+            .put("target", target).put("api", api)
+            .put("sdk_int_full", full ?: JSONObject.NULL).put("sdk_full_major", fullMajor ?: JSONObject.NULL)
+            .put("sdk_full_minor", fullMinor ?: JSONObject.NULL).put("sdk_full_method", fullMethod)
+            .put("minor_policy", minorPolicy).put("process_is_64_bit", true)
+            .put("elf_class", 2).put("elf_machine", 62).put("elf_endian", "little")
+            .put("elf_header_hex", hex(header))
+            .put("elf_header_sha256", hex(java.security.MessageDigest.getInstance("SHA-256").digest(header)))
+            .put("executable_path", executable).put("process_uid", uid).put("process_pid", pid)
+            .put("application_page_size_bytes", processPageSize)
+            .put("page_size_method", "android.system.Os.sysconf(_SC_PAGE_SIZE)")
+            .put("nonce", nonce).put("run_id", runId).put("host_boot_id_binding", boot)
+            .put("boot_binding_method", "expected_host_boot_id_echo; measured separately by the adb supervisor")
+            .put("producer_commit", producerCommit).put("producer_run_id", producerRunId)
+            .put("producer_attempt", producerAttempt).put("github_run_id", arg("github_run_id"))
+            .put("github_run_attempt", arg("github_run_attempt"))
+            .put("apk_sha256", actualHash).put("apk_bytes", apkBytes).put("apk_path", apk.path)
+    }
+
+
+    private fun onMain(block: () -> Unit) {
+        check(Looper.myLooper() != Looper.getMainLooper())
+        val thrown = AtomicReference<Throwable?>()
+        runOnMainSync { try { block() } catch (failure: Throwable) { thrown.set(failure) } }
+        thrown.get()?.let { throw it }
+    }
+
+    private fun reset() {
+        waitForIdleSync()
+        onMain {
+            activity.content.removeAllViews()
+            val cacheField = HostResourceIds::class.java.getDeclaredField("CACHE")
+            cacheField.isAccessible = true
+            (cacheField.get(null) as MutableMap<*, *>).clear()
+            for (name in listOf("STATES", "LISTENERS")) {
+                val field = PresenceStateStore::class.java.getDeclaredField(name)
+                field.isAccessible = true
+                val value = field.get(null)
+                if (value is MutableMap<*, *>) value.clear()
+                if (value is MutableSet<*>) value.clear()
+            }
+            app = activity.application
+            // Robolectric's original fixed 400x80 fixture has mdpi coordinates.
+            // Use Android's real configuration context rather than replacing Resources.
+            val configuration = Configuration(app.resources.configuration)
+            configuration.densityDpi = 160
+            configuration.fontScale = 1f
+            host = app.createConfigurationContext(configuration)
+            assertEquals("fixture preserves original target SDK", 28, app.applicationInfo.targetSdkVersion)
+            assertEquals("fixture mdpi density", 1f, host.resources.displayMetrics.density, 0f)
+            assertEquals("compiled synthetic host package", "org.waex.qa.presence.host", host.packageName)
+            avatarId = host.resources.getIdentifier("contact_selector", "id", host.packageName)
+            photoId = host.resources.getIdentifier("contact_photo", "id", host.packageName)
+            assertTrue("real compiled host IDs must resolve", avatarId != 0 && photoId != 0)
+            h = RendererHarness(host)
+            hostRows.clear()
+            val aliases = RendererHarness::class.java.getDeclaredField("identityAliases")
+            aliases.isAccessible = true
+            (aliases.get(null) as MutableMap<*, *>).clear()
+            environment = JSONObject().put("api", Build.VERSION.SDK_INT)
+                .put("application_page_size_bytes", Os.sysconf(OsConstants._SC_PAGE_SIZE))
+                .put("page_size_method", "android.system.Os.sysconf(_SC_PAGE_SIZE)")
+                .put("target_sdk", app.applicationInfo.targetSdkVersion)
+                .put("device_density", app.resources.displayMetrics.density)
+                .put("fixture_density", host.resources.displayMetrics.density)
+                .put("host_package", host.packageName).put("avatar_id", avatarId)
+                .put("backend", "Android ART, android.graphics.Canvas(Bitmap); no Robolectric")
+        }
+    }
+
+    private fun attach(row: FrameLayout) {
+        activity.content.addView(row, FrameLayout.LayoutParams(400, 80, Gravity.TOP or Gravity.LEFT))
+        assertTrue("row is attached to a real Android window", row.isAttachedToWindow)
+    }
+
+    private fun pump() {
+        // Both waits occur on the instrumentation worker, never on the main looper.
+        waitForIdleSync()
+        onMain { hostRows.forEach { (row, size) -> layoutHost(row, size.first, size.second) } }
+        waitForIdleSync()
+        onMain { hostRows.forEach { (row, size) -> layoutHost(row, size.first, size.second) } }
+    }
+
+    private fun capture(bitmap: Bitmap, phase: String, sx: Int, sy: Int) {
+        val filename = "$caseName-$phase.png"
+        File(evidence, filename).outputStream().use { stream ->
+            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream))
+        }
+        observations.put(JSONObject().put("phase", phase).put("png", filename)
+            .put("x", sx).put("y", sy).put("argb", bitmap.getPixel(sx, sy))
+            .put("width", bitmap.width).put("height", bitmap.height))
+    }
+
+    private fun pureCircleRasterizesWithoutWaex() = onMain {
+        val bitmap = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888)
+        val paint = Paint().apply { color = Color.rgb(37, 211, 102) }
+        Canvas(bitmap).drawCircle(12f, 12f, 6f, paint)
+        capture(bitmap, "circle", 12, 12)
+        assertEquals("plain Canvas circle center", Color.rgb(37,211,102), bitmap.getPixel(12,12))
+        bitmap.recycle()
+    }
+
+    private fun plainAndroidViewDrawsAndClearsWhenHidden() = onMain {
+        val row = FrameLayout(host)
+        val dot = View(host)
+        dot.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.rgb(37,211,102))
+            setStroke(2, Color.WHITE)
+        }
+        row.addView(dot, FrameLayout.LayoutParams(14,14))
+        layoutHost(row, 400,80)
+        val bitmap = Bitmap.createBitmap(400,80,Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        row.draw(canvas)
+        capture(bitmap, "visible", 7,7)
+        assertEquals("plain Android View center",Color.rgb(37,211,102),bitmap.getPixel(7,7))
+        dot.visibility = View.GONE
+        bitmap.eraseColor(Color.TRANSPARENT)
+        row.draw(canvas)
+        capture(bitmap, "hidden", 7,7)
+        assertNotEquals("hidden Android View cleared",Color.rgb(37,211,102),bitmap.getPixel(7,7))
+        bitmap.recycle()
+    }
+
+    // The following helpers and two pixel oracles are derived at build time from
+    // qa/fixtures/PresenceRowRenderingTest.kt, with strict transformation checks.
+__ORIGINAL_HELPERS__
+
+__ART_ORACLES__
+}

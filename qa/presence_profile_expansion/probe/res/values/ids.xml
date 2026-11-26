@@ -1,0 +1,4 @@
+<resources>
+    <item name="contact_selector" type="id" />
+    <item name="contact_photo" type="id" />
+</resources>

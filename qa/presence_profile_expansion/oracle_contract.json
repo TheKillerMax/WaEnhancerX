@@ -1,0 +1,86 @@
+{
+  "schema": "WAEX_PRESENCE_ORACLE_INHERITANCE_V1",
+  "historical_receipt_sha256": "206c0316ef5f7f35eccfd42eecfd7f240fa4694675a961137923cc61b601c46c",
+  "historical_workflow_commit": "1e666077571c39896b7fcadbf7c549b440d51a86",
+  "historical_run_id": "45701170588",
+  "immutable_source": "7814908a1213d86f05ef5dc068b548d322a24d94",
+  "contract": {
+    "inputs": {
+      "qa/android_presence_row_test.py": {
+        "raw_sha256": "3db5ecaa4e72f18c0423a5e823aa1105df3a459ea826463e75cc15f46f81200e",
+        "lf_sha256": "3db5ecaa4e72f18c0423a5e823aa1105df3a459ea826463e75cc15f46f81200e"
+      },
+      "qa/fixtures/PresenceRowRenderingTest.kt": {
+        "raw_sha256": "ca00856a96f3ad7d07fe7c4de603503c42fb1a33477efd58e6a198bd77d5a87d",
+        "lf_sha256": "ca00856a96f3ad7d07fe7c4de603503c42fb1a33477efd58e6a198bd77d5a87d"
+      },
+      "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt": {
+        "raw_sha256": "7a7e27f51f7b608e756fe460defe8ee55e17a41f2204b78b2df2ead04b650049",
+        "lf_sha256": "7a7e27f51f7b608e756fe460defe8ee55e17a41f2204b78b2df2ead04b650049"
+      },
+      "app/src/main/java/com/waenhancer/xposed/features/automation/PresenceStateStore.java": {
+        "raw_sha256": "9955ef9803a57cc51e6c738e63f103b36ed084e267ab4b5f1abe91de737e8170",
+        "lf_sha256": "9955ef9803a57cc51e6c738e63f103b36ed084e267ab4b5f1abe91de737e8170"
+      },
+      "app/src/main/java/com/waenhancer/xposed/utils/HostResourceIds.java": {
+        "raw_sha256": "7840236f6b8ce0de2af1a22d065fd618035a0d2b43ea1fce292989dc3f5d6e06",
+        "lf_sha256": "7840236f6b8ce0de2af1a22d065fd618035a0d2b43ea1fce292989dc3f5d6e06"
+      },
+      "app/src/main/java/com/waenhancer/utils/UiText.java": {
+        "raw_sha256": "89f55ac1b6e21e630bd03204227cae28425df3d69afd139169d07be4cbb68156",
+        "lf_sha256": "89f55ac1b6e21e630bd03204227cae28425df3d69afd139169d07be4cbb68156"
+      },
+      "app/src/main/java/com/waenhancer/utils/DisplayLocalePolicy.java": {
+        "raw_sha256": "e3c0fcdfef0e16a5f3d6c23456fc5d5bf37ce434094f0844656bacd7adc15c5a",
+        "lf_sha256": "e3c0fcdfef0e16a5f3d6c23456fc5d5bf37ce434094f0844656bacd7adc15c5a"
+      }
+    },
+    "oracles": [
+      {
+        "name": "nativeCanvasContainsGreenDotAndClearsOffline",
+        "original_sha256": "76274d8bb7f36baafa0091171b3e85d1919382e19fc6bb18847cece5543d1136",
+        "adapted_sha256": "4692f89eb085866e5a8da582029cabc2e3b5ce3aaa64e4388f645f7d318a4e27",
+        "assertions": [
+          "assertEquals(\"rendered center pixel\", Color.rgb(37, 211, 102), bitmap.getPixel(x,y))",
+          "assertNotEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))"
+        ],
+        "assertion_text_preserved": true
+      },
+      {
+        "name": "invalidationClearsTheNativeGreenPixel",
+        "original_sha256": "9213cc59d761767ba115e87bc1c8b33c7c30d5dd9df91f6b624eaa4cf1ec2548",
+        "adapted_sha256": "0763a38fe29caed50f0059a975e4ca58144d0f2e9b7b6bece7d21a1eb03f176a",
+        "assertions": [
+          "assertEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))",
+          "assertNotEquals(Color.rgb(37,211,102), bitmap.getPixel(x,y))"
+        ],
+        "assertion_text_preserved": true
+      }
+    ],
+    "renderer_method_sha256": {
+      "bindRow": "75f9ebb866daacdc5175d5760d571acdff3f21533cfef4343f5da18e88eb27d3",
+      "ensureDotView": "0f75a24e2a908f49e0574571f5532a474403bde0ac8ab038d6f0142b3d094ccf",
+      "placeDotOnAvatarRim": "981ea01c7cc1cbf78ad5cfff1cbc8cc8798893ba1df33184ec637589b0b689b0",
+      "ensureTextView": "eb607c7b20556d11907123532640e353139cbe070b4d4006e6203de27d036c5d",
+      "render": "eec0fc8338cd4509bbec25e6aa53a34a94a59e13cb291e5b527f301692f63e77",
+      "recordIdentityAlias": "d26fac6f4a4557919ae4cda66ba064bf6cb96c989952d7deaa706ee3b68f3135",
+      "queueBindRow": "670bb424f5bbfdb070b6ed3731bdb114c9732cf9e9f39c82836c19b266651550",
+      "queuePresenceRefresh": "07560001a0ef5f4667f160656c11863bb12034885a7112672604788f2d9a075e",
+      "clearRow": "c13b89faab18f855ac63b2eb8e39ea28d393188f1eaaf32369f8ff31702fdeb4",
+      "stateForRow": "6b19f8e91d46183f79a4ee7da73a5681a1dce512d04a4c1a78ec3886cce95c6c"
+    },
+    "positive_extracted_harness_sha256": "241385367b8ff949679f330c5632245e4eb8e3a6b1b191074b7d2313fd1cf63a",
+    "compiled_harness_sha256": "241385367b8ff949679f330c5632245e4eb8e3a6b1b191074b7d2313fd1cf63a",
+    "reference_harness_compared": null,
+    "compile_bindings": {
+      "androidx/annotation/NonNull.java": "cd27971f34cf4d482fffbaf400621a9477345403962dd50a7e346a21bc47f453",
+      "com/waenhancer/app/R.java": "3250e3374218233c566161216fe2378515f93e83debb218c65294146f6f1dbc3"
+    },
+    "variant": "positive",
+    "scope": "Methods/fields/companion copied by the unchanged public renderer extractor; four complete production Java classes; original pixel expectations unchanged. Discovery/Xposed installation remains outside this test.",
+    "package": "org.waex.qa.presence.host",
+    "min_sdk": 24,
+    "target_sdk": 28,
+    "expected_tests": 4
+  }
+}
