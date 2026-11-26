@@ -125,7 +125,7 @@ object TargetAppManager {
     val probeError: StateFlow<String?> = _probeError.asStateFlow()
 
     private val _loaded = MutableStateFlow(false)
-    /** False until the first root probe finished, so UIs can show "checking" instead of "none". */
+    /** False until the first refresh attempt finishes, including failure; true does not mean success. */
     val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
 
     private val _refreshEpoch = MutableStateFlow(0L)
@@ -235,13 +235,50 @@ object TargetAppManager {
             if (!running.compareAndSet(false, true)) return // the active loop will observe the request
             try {
                 while (rerunRequested.getAndSet(false)) {
-                    try { refreshOnce(context) } catch (e: Exception) { _probeError.value = "Refresh failed: ${e.javaClass.simpleName}" }
+                    try {
+                        refreshOnce(context)
+                    } catch (e: Exception) {
+                        publishFailure(e)
+                    }
                 }
             } finally {
                 running.set(false)
             }
             if (!rerunRequested.get()) return // a request raced in after the last check: loop again
         }
+    }
+
+    /** End a failed attempt without presenting old observations as current evidence. */
+    private fun publishFailure(error: Exception) {
+        val message = "Refresh failed: ${error.javaClass.simpleName}"
+        val previousActivation = _moduleActivation.value
+        _scopeSnapshot.value = LsposedScopeSnapshot(
+            modulePackage = "com.waenhancer",
+            packages = emptySet(),
+            frameworkReachable = false,
+            source = LsposedScopeSnapshot.Source.UNAVAILABLE,
+            error = message
+        )
+        _runtimeSnapshot.value = null
+        // Keep known installed rows and their last reports, but revoke only their current proof.
+        _detectedApps.value = _detectedApps.value.map { app ->
+            app.copy(
+                isHooked = false,
+                injectionEvidence = InjectionEvidence.PROCESS_OBSERVATION_UNAVAILABLE,
+                processObservedAtElapsed = -1L,
+                scopeState = TargetScopeState.UNVERIFIED
+            )
+        }
+        // A target's old injection report cannot establish current activation. A separately
+        // confirmed manager hook remains evidence and requires no new call to the failed probe.
+        _moduleActivation.value = if (previousActivation.signal == ModuleSignal.MANAGER_HOOK) {
+            previousActivation
+        } else {
+            ModuleActivation.INACTIVE
+        }
+        _probeError.value = message
+        _loaded.value = true
+        _refreshEpoch.value = System.currentTimeMillis()
     }
 
     private fun refreshOnce(context: Context) {
