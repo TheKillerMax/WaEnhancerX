@@ -76,7 +76,8 @@ jobs:
             echo '::error::Kotlin CLI/compiler missing; syntax checks cannot silently pass.'
             exit 1
           fi
-          kotlinc -version
+          python3 qa/configure_kotlin_cli.py --report "$RUNNER_TEMP/waex-kotlin-cli.json" \
+            --export-env "$GITHUB_ENV"
 
       - name: Verify target-scoped legacy string preference reads
         shell: bash
@@ -175,6 +176,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 qa/test_prepare_dexkit.py --out "$RUNNER_TEMP/dexkit-acquisition-controls"
+          python3 -O qa/test_prepare_public_apis.py --out "$RUNNER_TEMP/public-api-acquisition-controls"
 
       - name: Restore the pinned DexKit input cache
         id: dexkit-cache
@@ -465,6 +467,40 @@ jobs:
             echo '::endgroup::'
           fi
 
+      - name: Verify reviewed quality, call-ending and startup contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f qa/fixtures/media_quality/MediaQualityContractTest.java
+          test -f qa/fixtures/CallRecordingLifecycleChecks.java
+          mkdir -p "$RUNNER_TEMP/waex-focused-source"
+          python3 qa/test_media_quality_contract.py \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-source/media-quality.log"
+          python3 qa/test_call_recording_event_contract.py \
+            --out "$RUNNER_TEMP/waex-focused-source/call-ending" \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-source/call-ending.log"
+          # --dexkit-jar selects compile-only mode; omit it for behavioral coverage.
+          python3 qa/test_call_recording_lifecycle.py --host-variant typed-ending --scenario all \
+            --out "$RUNNER_TEMP/waex-focused-source/typed-ending" \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-source/typed-ending.log"
+          python3 qa/test_startup_root_retry.py --source-root . --java "$(command -v java)" \
+            --kotlin-home "$KOTLIN_HOME" --out "$RUNNER_TEMP/waex-focused-source/startup" \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-source/startup.log"
+
+      - name: Preserve focused source and actual compiler identities
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-source-contracts-evidence
+          path: |
+            ${{ runner.temp }}/waex-kotlin-cli.json
+            ${{ runner.temp }}/waex-focused-source/**/*.json
+            ${{ runner.temp }}/waex-focused-source/**/*.log
+            ${{ runner.temp }}/public-api-acquisition-controls/**/*.json
+            ${{ runner.temp }}/public-api-acquisition-controls/**/*.log
+          retention-days: 14
+          if-no-files-found: error
+
       - name: Scope of verification
         shell: bash
         run: |
@@ -723,6 +759,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Record and configure the installed Kotlin CLI
+        if: steps.runtime.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/configure_kotlin_cli.py --report "$RUNNER_TEMP/waex-kotlin-cli.json" \
+            --export-env "$GITHUB_ENV"
       - name: Retrieve dependencies from the successful producer in this run attempt
         if: steps.runtime.outputs.present == 'true'
         uses: actions/download-artifact@v4
@@ -762,6 +805,26 @@ jobs:
             --bundle-run-id "$GITHUB_RUN_ID" \
             --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --bundle-head-sha "$GITHUB_SHA"
+      - name: Exercise scoped HMA recovery and profile process evidence
+        if: steps.runtime.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fixture in HmaFlowTest.kt HmaContractTest.java RootCommandBoundedChecks.java \
+                         hma_command_service.py ProfileProcessProbeTest.kt; do
+            test -f "qa/fixtures/$fixture"
+          done
+          mkdir -p "$RUNNER_TEMP/waex-focused-runtime"
+          python3 qa/android_hma_test.py --out "$RUNNER_TEMP/waex-focused-runtime/hma" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
+          python3 qa/test_hma_backup_commands.py --out "$RUNNER_TEMP/waex-focused-runtime/hma-backup" \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-runtime/hma-backup.log"
+          python3 qa/test_hma_dashboard_state.py \
+            2>&1 | tee "$RUNNER_TEMP/waex-focused-runtime/hma-dashboard.log"
+          python3 qa/test_profile_process_probe.py --out "$RUNNER_TEMP/waex-focused-runtime/profiles" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
       - name: Recheck shared bytes after the attempted framework consumer
         if: always() && steps.framework_inputs.outcome == 'success'
         shell: bash
@@ -781,6 +844,9 @@ jobs:
             ${{ runner.temp }}/waex-runtime-input-controls.log
             ${{ runner.temp }}/waex-target-exit-api.log
             ${{ runner.temp }}/waex-runtime-framework/evidence
+            ${{ runner.temp }}/waex-kotlin-cli.json
+            ${{ runner.temp }}/waex-focused-runtime/**/*.json
+            ${{ runner.temp }}/waex-focused-runtime/**/*.log
           retention-days: 14
           if-no-files-found: error
 
@@ -801,6 +867,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Record and configure the installed Kotlin CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/configure_kotlin_cli.py --report "$RUNNER_TEMP/waex-kotlin-cli.json" \
+            --export-env "$GITHUB_ENV"
       - name: Retrieve dependencies from the successful producer in this run attempt
         uses: actions/download-artifact@v4
         with:
@@ -823,6 +895,43 @@ jobs:
           python3 qa/verify_interface_scale_framework.py --out "$RUNNER_TEMP/waex-interface-scale" \
             --framework-bundle "$RUNNER_TEMP/waex-shared-framework" \
             --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA"
+      - name: Reuse pinned DexKit API bytes
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
+      - name: Reuse pinned Core API bytes
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/waex-qa/core-1.18.0
+          key: waex-core-1.18.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Prepare verified APIs without invoking interface consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --report "$RUNNER_TEMP/waex-interface-apis/dexkit.json"
+          python3 qa/prepare_public_apis.py --artifact core --report "$RUNNER_TEMP/waex-interface-apis/core.json"
+      - name: Exercise appearance, view-once and overlay recovery contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fixture in AppearanceCurrentContractTest.java FloatingBottomBarLifecycleTest.java \
+                         ViewClassSelectorTest.java boundaries.py; do
+            test -f "qa/fixtures/appearance_current/$fixture"
+          done
+          test -f qa/fixtures/ViewOnceSetterContractChecks.java
+          test -f qa/fixtures/overlay_settings/OverlayPermissionLauncherTest.java
+          python3 qa/test_appearance_current.py --out "$RUNNER_TEMP/waex-focused-interface/appearance" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --core-api-jar "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.jar"
+          python3 qa/test_view_once_setters.py --out "$RUNNER_TEMP/waex-focused-interface/view-once" \
+            --android-api "$RUNNER_TEMP/waex-shared-framework/deps/android-all-14-robolectric-10818077.jar" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar"
+          python3 qa/test_overlay_settings.py --out "$RUNNER_TEMP/waex-focused-interface/overlay" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
       - name: Recheck shared bytes after the attempted framework consumer
         if: always() && steps.framework_inputs.outcome == 'success'
         shell: bash
@@ -840,6 +949,10 @@ jobs:
           path: |
             ${{ runner.temp }}/waex-interface-dependency-bundle*.json
             ${{ runner.temp }}/waex-interface-scale/evidence
+            ${{ runner.temp }}/waex-kotlin-cli.json
+            ${{ runner.temp }}/waex-interface-apis/*.json
+            ${{ runner.temp }}/waex-focused-interface/**/*.json
+            ${{ runner.temp }}/waex-focused-interface/**/*.log
           retention-days: 14
           if-no-files-found: error
 
@@ -960,7 +1073,8 @@ jobs:
       - name: Require Kotlin for the complete production store
         run: |
           set -euo pipefail
-          kotlinc -version
+          python3 qa/configure_kotlin_cli.py --report "$RUNNER_TEMP/waex-kotlin-cli.json" \
+            --export-env "$GITHUB_ENV"
           test -f qa/fixtures/PreservedStoreCompatibilityTest.java
       - name: Retrieve dependencies from the successful producer in this run attempt
         uses: actions/download-artifact@v4
@@ -984,6 +1098,38 @@ jobs:
             --out "$RUNNER_TEMP/waex-preserved-vault" \
             --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
             --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
+      - name: Reuse pinned DexKit API bytes
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
+      - name: Reuse pinned Core API bytes
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/waex-qa/core-1.18.0
+          key: waex-core-1.18.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Prepare verified APIs without invoking recording consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --report "$RUNNER_TEMP/waex-vault-apis/dexkit.json"
+          python3 qa/prepare_public_apis.py --artifact core --report "$RUNNER_TEMP/waex-vault-apis/core.json"
+      - name: Exercise audio fallback and recording-list interaction contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f qa/test_call_recording_lifecycle.py
+          test -f qa/fixtures/CallRecordingAudioAndroidTest.java
+          test -f qa/fixtures/CallRecordingsListAndroidTest.java
+          test -f qa/fixtures/CallRecordingsListProbe.kt
+          python3 qa/android_call_recording_audio_test.py --out "$RUNNER_TEMP/waex-focused-vault/audio" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars" \
+            --dexkit "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar"
+          python3 qa/android_call_recordings_list_test.py --out "$RUNNER_TEMP/waex-focused-vault/list" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars" \
+            --core-jar "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.jar"
       - name: Recheck shared bytes after the attempted framework consumer
         if: always() && steps.framework_inputs.outcome == 'success'
         shell: bash
@@ -1002,6 +1148,10 @@ jobs:
             ${{ runner.temp }}/waex-vault-dependency-bundle*.json
             ${{ runner.temp }}/waex-preserved-vault/*.json
             ${{ runner.temp }}/waex-preserved-vault/*.log
+            ${{ runner.temp }}/waex-kotlin-cli.json
+            ${{ runner.temp }}/waex-vault-apis/*.json
+            ${{ runner.temp }}/waex-focused-vault/**/*.json
+            ${{ runner.temp }}/waex-focused-vault/**/*.log
           retention-days: 14
           if-no-files-found: error
 
@@ -1026,7 +1176,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          kotlinc -version
+          python3 qa/configure_kotlin_cli.py --report "$RUNNER_TEMP/waex-kotlin-cli.json" \
+            --export-env "$GITHUB_ENV"
           test -f qa/maven_dependencies.py
           test -f qa/fixtures/PreservedDispatchContractTest.java
       - name: Retrieve dependencies verified for this run attempt
@@ -1048,7 +1199,7 @@ jobs:
         with:
           path: ~/.cache/waex-qa/dexkit-2.2.0
           key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
-      - name: Exercise 105 persistence and callback cases on Android API 24, 28 and 34
+      - name: Exercise 123 persistence and callback cases on Android API 24, 28 and 34
         shell: bash
         run: |
           set -euo pipefail
@@ -1056,6 +1207,28 @@ jobs:
             --out "$RUNNER_TEMP/waex-preserved-dispatch" \
             --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
             --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
+      - name: Reuse pinned OkHttp API bytes
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/waex-qa/okhttp-4.12.0
+          key: waex-okhttp-4.12.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Prepare verified APIs without invoking the preview consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --offline --report "$RUNNER_TEMP/waex-dispatch-apis/dexkit.json"
+          python3 qa/prepare_public_apis.py --artifact okhttp --report "$RUNNER_TEMP/waex-dispatch-apis/okhttp.json"
+      - name: Exercise complete media-preview session cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f qa/fixtures/media_preview/MediaPreviewLifecycleTest.java
+          test -f qa/fixtures/media_preview/runtime_doubles.py
+          python3 qa/android_media_preview_test.py --out "$RUNNER_TEMP/waex-focused-dispatch/preview" \
+            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --http-api-jar "$HOME/.cache/waex-qa/okhttp-4.12.0/okhttp-4.12.0.jar"
       - name: Recheck shared bytes after the attempted Dispatch consumer
         if: always() && steps.framework_inputs.outcome == 'success'
         shell: bash
@@ -1074,5 +1247,9 @@ jobs:
             ${{ runner.temp }}/waex-dispatch-dependency-bundle*.json
             ${{ runner.temp }}/waex-preserved-dispatch/*.json
             ${{ runner.temp }}/waex-preserved-dispatch/*.log
+            ${{ runner.temp }}/waex-kotlin-cli.json
+            ${{ runner.temp }}/waex-dispatch-apis/*.json
+            ${{ runner.temp }}/waex-focused-dispatch/**/*.json
+            ${{ runner.temp }}/waex-focused-dispatch/**/*.log
           retention-days: 14
           if-no-files-found: error
