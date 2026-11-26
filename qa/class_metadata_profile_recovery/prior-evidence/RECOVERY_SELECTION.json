@@ -1,0 +1,320 @@
+{
+  "schema": "WAEX_ART17_VARIANT_RECOVERY_SELECTION_V1",
+  "created_utc": "2026-11-26T02:51:35.142438+00:00",
+  "status": "SOURCE_PREPARATION_SELECTION_ONLY_NO_EXECUTION_AUTHORITY_ADDED",
+  "parent_commit": "83012b298e555d8b3c87cbbec67e250582bfdb72",
+  "original_run_id": "45742530551",
+  "original_run_attempt": "1",
+  "target_count": 8,
+  "prospective_canonical_process_count": 15,
+  "selection": {
+    "api26": [
+      "baseline",
+      "candidate"
+    ],
+    "api29": [
+      "baseline",
+      "candidate"
+    ],
+    "api35": [
+      "baseline",
+      "candidate"
+    ],
+    "api36": [
+      "baseline",
+      "candidate"
+    ],
+    "api35-16k": [
+      "candidate"
+    ],
+    "api36-16k": [
+      "baseline",
+      "candidate"
+    ],
+    "api36.1-16k": [
+      "baseline",
+      "candidate"
+    ],
+    "api37-16k": [
+      "baseline",
+      "candidate"
+    ]
+  },
+  "preserved_functional_passes": [
+    {
+      "target": "api25",
+      "variant": "baseline",
+      "nonce": "b16e6628d5be3d9d8837d2529ea6d713",
+      "pid": 4269,
+      "workload_checks": 7,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082136974/art17-api25/reports/art-baseline-validated.json",
+        "bytes": 2800,
+        "sha256": "d2cfe651357a5cbdc72275df5a72d13729f50df3578e2ddff2f8c124363f7e3e"
+      }
+    },
+    {
+      "target": "api25",
+      "variant": "candidate",
+      "nonce": "e7fbfc47e8e769d87411639f2a7daa66",
+      "pid": 4335,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082136974/art17-api25/reports/art-candidate-validated.json",
+        "bytes": 2762,
+        "sha256": "700f97e4404f54e5d6dd02b8f99ac330cb30411e58e93839d801e3b6ec45eb31"
+      }
+    },
+    {
+      "target": "api27",
+      "variant": "baseline",
+      "nonce": "8f3bd83a3f933ce561ab4e50d41364fa",
+      "pid": 2753,
+      "workload_checks": 7,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081433545/art17-api27/reports/art-baseline-validated.json",
+        "bytes": 2810,
+        "sha256": "7b1d6a573694aa6340452db9f3a4dd9af0bf4c6f00f40ad8ac03acb24fe36948"
+      }
+    },
+    {
+      "target": "api27",
+      "variant": "candidate",
+      "nonce": "d9303f897774162f46ca9037acc15091",
+      "pid": 2786,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081433545/art17-api27/reports/art-candidate-validated.json",
+        "bytes": 2772,
+        "sha256": "a586a4501376ddf7183b993ee6cc34e16efc3ecd0195246002c3ea8e831cdeb8"
+      }
+    },
+    {
+      "target": "api28",
+      "variant": "baseline",
+      "nonce": "d8002a40717021c15638fc396091d16e",
+      "pid": 4280,
+      "workload_checks": 7,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081394593/art17-api28/reports/art-baseline-validated.json",
+        "bytes": 2800,
+        "sha256": "fff6f85f56692d0eb276d5c93dc73db21781f7bdc870355fce2adc28e853e1ac"
+      }
+    },
+    {
+      "target": "api28",
+      "variant": "candidate",
+      "nonce": "7d7a9357c1bf37ae3a91be2647bbd090",
+      "pid": 4344,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081394593/art17-api28/reports/art-candidate-validated.json",
+        "bytes": 2762,
+        "sha256": "2bec014ff6639126a6fd4e7c0dc85bf00918fbf93213f9e812629060cc0f10f4"
+      }
+    },
+    {
+      "target": "api31",
+      "variant": "baseline",
+      "nonce": "c6f49f40b2b7b6c549f0b2aaf88d0db4",
+      "pid": 2152,
+      "workload_checks": 7,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081743876/art17-api31/reports/art-baseline-validated.json",
+        "bytes": 2822,
+        "sha256": "8d6588400e786bd3ec44535bc0ad3e15f94f6ac80d9e3f6523b7b7f2ca69c7f4"
+      }
+    },
+    {
+      "target": "api31",
+      "variant": "candidate",
+      "nonce": "072f8f5d3f5e917a9d3d02d2a4bd66ef",
+      "pid": 2176,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081743876/art17-api31/reports/art-candidate-validated.json",
+        "bytes": 2784,
+        "sha256": "3c5050d992e35579a29942f7383209acb2f0c79f6f6487ce3867617bb2ef13e1"
+      }
+    },
+    {
+      "target": "api32",
+      "variant": "baseline",
+      "nonce": "99202e5aeec43b390726cbc51ef39b15",
+      "pid": 2197,
+      "workload_checks": 7,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082230947/art17-api32/reports/art-baseline-validated.json",
+        "bytes": 2816,
+        "sha256": "74896e50947f4652bde7a2d08e528dfb1f7683e714c0da197cfec9efe3b5a04c"
+      }
+    },
+    {
+      "target": "api32",
+      "variant": "candidate",
+      "nonce": "cee5195dd4e3e2c91aada4b4718dd774",
+      "pid": 2224,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082230947/art17-api32/reports/art-candidate-validated.json",
+        "bytes": 2778,
+        "sha256": "3eb5a3757248a4d24e7fec1b204ebcc55666e30b950fdb8dac140716d81f9d5a"
+      }
+    },
+    {
+      "target": "api37",
+      "variant": "baseline",
+      "nonce": "19cd060bfdcadea5d2773b948ff18a0d",
+      "pid": 4110,
+      "workload_checks": 13,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082600843/art17-api37/reports/art-baseline-validated.json",
+        "bytes": 2755,
+        "sha256": "2d62aab5519db7cd03a7204552aaf505639320c2bce3e4be3ef3e409ffaf7d65"
+      }
+    },
+    {
+      "target": "api37",
+      "variant": "candidate",
+      "nonce": "fc88eafd15ca4788430105d55021d475",
+      "pid": 4175,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082600843/art17-api37/reports/art-candidate-validated.json",
+        "bytes": 2758,
+        "sha256": "539d266205088df91f838758ffa9a4fb76d99204b6e984e521cafbcea95f414d"
+      }
+    },
+    {
+      "target": "api36.1",
+      "variant": "baseline",
+      "nonce": "622693b797de7721f63109d9fa54ef20",
+      "pid": 4075,
+      "workload_checks": 13,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081953964/art17-api36.1/reports/art-baseline-validated.json",
+        "bytes": 2751,
+        "sha256": "9dece49face49aa52907cf3d24970028423e288d5a15fc15d63d5d60d8900b07"
+      }
+    },
+    {
+      "target": "api36.1",
+      "variant": "candidate",
+      "nonce": "16da9c0047a1ed1038518dc65d5bf70d",
+      "pid": 4160,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081953964/art17-api36.1/reports/art-candidate-validated.json",
+        "bytes": 2754,
+        "sha256": "7e3800a27baa8d537efe487030d514de2ac7a2af0da1c400df5fe4bc69b1baf8"
+      }
+    },
+    {
+      "target": "api35-16k",
+      "variant": "baseline",
+      "nonce": "cc67bb70ea311279a42acc2ad6aa31e2",
+      "pid": 4121,
+      "workload_checks": 13,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081839656/art17-api35-16k/reports/art-baseline-validated.json",
+        "bytes": 2765,
+        "sha256": "e637d5021d95b9ce1343cb51333f7666e309f624e1c61d67ea1d03fa2a371c6e"
+      }
+    },
+    {
+      "target": "api37.1-16k",
+      "variant": "baseline",
+      "nonce": "948e66cd24d1f9edb56cdfbc67cb805f",
+      "pid": 4059,
+      "workload_checks": 13,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081949822/art17-api37.1-16k/reports/art-baseline-validated.json",
+        "bytes": 2764,
+        "sha256": "4e81ffc3b85e5b1502243238603ff7d4bcef1d73f5b19d7dedb214b627c4f709"
+      }
+    },
+    {
+      "target": "api37.1-16k",
+      "variant": "candidate",
+      "nonce": "d0ae7eee900c811a7497a2cf1b65f518",
+      "pid": 4169,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081949822/art17-api37.1-16k/reports/art-candidate-validated.json",
+        "bytes": 2767,
+        "sha256": "71aa2254b83c8420691f0b7021d89bb5c9618ef75e1a0f16bb4c63178391fe17"
+      }
+    },
+    {
+      "target": "api37.2-16k",
+      "variant": "baseline",
+      "nonce": "5f46fb28c442635403aa5d5135e259d3",
+      "pid": 4238,
+      "workload_checks": 13,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082129283/art17-api37.2-16k/reports/art-baseline-validated.json",
+        "bytes": 2764,
+        "sha256": "c3cb3af2a1969785dcaf4aec4a6ca5feefea06ad4dd96ae4ed3a344022856726"
+      }
+    },
+    {
+      "target": "api37.2-16k",
+      "variant": "candidate",
+      "nonce": "9e4b9f66f8a664bced840e488a37e16d",
+      "pid": 4392,
+      "workload_checks": 14,
+      "identity_checks": 13,
+      "validated_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082129283/art17-api37.2-16k/reports/art-candidate-validated.json",
+        "bytes": 2767,
+        "sha256": "02e366d4482ecc27c702197945ab90a7a927b9f545ae261de08a9c9e3372a6a1"
+      }
+    }
+  ],
+  "excluded_complete_profiles": [
+    "api25",
+    "api31",
+    "api32",
+    "api36.1",
+    "api37",
+    "api37.1-16k",
+    "api37.2-16k"
+  ],
+  "cleanup_only_new_fixture_profiles": [
+    "api27",
+    "api28"
+  ],
+  "baseline_api35_16k_must_not_repeat": true,
+  "requirements": [
+    "All thirty previous phase/invocation claims remain consumed, including the unexecuted candidate reservation.",
+    "Keep immutable historical canonical JARs and original driver producer identities; separately bind a new runtime/branch/head.",
+    "Own reviewed ADB helper must use the new exact branch guard; no environment spoofing.",
+    "Keep libpulse package/version/size/hash and authenticated repository requirements; capture missing APT source/index evidence.",
+    "API35-16k gets one new candidate invocation after fresh readback/identity/boot preflight; baseline is linked only by evidence.",
+    "No whole run rerun or original seventeen-cell dispatch; no old branch reuse.",
+    "API27/28 need a distinct cleanup fixture and no canonical workloads. Their original directory-cleanup failures remain historical facts."
+  ],
+  "nonce_ledger": {
+    "path": "android_coverage_work/ART17_RUN_45742530551/RUNTIME_RECONCILIATION/NONCE_LEDGER.json",
+    "bytes": 15787,
+    "sha256": "671c9763683ccfe3aa76860433201aae6b1f0b0503644ab3c5001abf92a51298"
+  }
+}

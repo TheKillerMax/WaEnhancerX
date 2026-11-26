@@ -1,0 +1,427 @@
+{
+  "schema": "WAEX_ART17_CONSUMED_CLAIMS_RECONCILIATION_V1",
+  "created_utc": "2026-11-26T02:51:35.142438+00:00",
+  "run_id": "45742530551",
+  "head_sha": "83012b298e555d8b3c87cbbec67e250582bfdb72",
+  "attempt": "1",
+  "claim_count": 30,
+  "unique_claim_count": 30,
+  "phase_claims": 10,
+  "executed_variant_claims": 19,
+  "reserved_but_not_executed_variant_claims": 1,
+  "all_claims_non_reusable": true,
+  "claims": [
+    {
+      "nonce": "efc03c4f583dad33aadbb2c038565b67",
+      "target": "api25",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082136974/art17-api25/reports/art-expansion-phase.json",
+        "bytes": 5143,
+        "sha256": "1bc3fa30ec9538c520ed5cb9a1caec11628c7e376c2661e7d94c76baf1184552"
+      }
+    },
+    {
+      "nonce": "b16e6628d5be3d9d8837d2529ea6d713",
+      "target": "api25",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082136974/art17-api25/reports/art-expansion-phase.json",
+        "bytes": 5143,
+        "sha256": "1bc3fa30ec9538c520ed5cb9a1caec11628c7e376c2661e7d94c76baf1184552"
+      }
+    },
+    {
+      "nonce": "e7fbfc47e8e769d87411639f2a7daa66",
+      "target": "api25",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082136974/art17-api25/reports/art-expansion-phase.json",
+        "bytes": 5143,
+        "sha256": "1bc3fa30ec9538c520ed5cb9a1caec11628c7e376c2661e7d94c76baf1184552"
+      }
+    },
+    {
+      "nonce": "7116f248f90004e1861c29b9cb06c041",
+      "target": "api27",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081433545/art17-api27/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "187f700f81ecc2e95903482f8e1ce99775220611dd14428a7582203934c1f94c"
+      }
+    },
+    {
+      "nonce": "8f3bd83a3f933ce561ab4e50d41364fa",
+      "target": "api27",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081433545/art17-api27/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "187f700f81ecc2e95903482f8e1ce99775220611dd14428a7582203934c1f94c"
+      }
+    },
+    {
+      "nonce": "d9303f897774162f46ca9037acc15091",
+      "target": "api27",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081433545/art17-api27/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "187f700f81ecc2e95903482f8e1ce99775220611dd14428a7582203934c1f94c"
+      }
+    },
+    {
+      "nonce": "42f09c90464d270d004c0ba7ea8f1fd8",
+      "target": "api28",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081394593/art17-api28/reports/art-expansion-phase.json",
+        "bytes": 5155,
+        "sha256": "04e0787279707af8892a006a35d577ef48c25c22ebc244058f44296efab14706"
+      }
+    },
+    {
+      "nonce": "d8002a40717021c15638fc396091d16e",
+      "target": "api28",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081394593/art17-api28/reports/art-expansion-phase.json",
+        "bytes": 5155,
+        "sha256": "04e0787279707af8892a006a35d577ef48c25c22ebc244058f44296efab14706"
+      }
+    },
+    {
+      "nonce": "7d7a9357c1bf37ae3a91be2647bbd090",
+      "target": "api28",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081394593/art17-api28/reports/art-expansion-phase.json",
+        "bytes": 5155,
+        "sha256": "04e0787279707af8892a006a35d577ef48c25c22ebc244058f44296efab14706"
+      }
+    },
+    {
+      "nonce": "73de65cc3c8c80b495f990e569f9470b",
+      "target": "api31",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081743876/art17-api31/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "78753c5e08d6676394c9a2553e4b0aec8e81250f6675107a60784cf881546f48"
+      }
+    },
+    {
+      "nonce": "c6f49f40b2b7b6c549f0b2aaf88d0db4",
+      "target": "api31",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081743876/art17-api31/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "78753c5e08d6676394c9a2553e4b0aec8e81250f6675107a60784cf881546f48"
+      }
+    },
+    {
+      "nonce": "072f8f5d3f5e917a9d3d02d2a4bd66ef",
+      "target": "api31",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081743876/art17-api31/reports/art-expansion-phase.json",
+        "bytes": 5165,
+        "sha256": "78753c5e08d6676394c9a2553e4b0aec8e81250f6675107a60784cf881546f48"
+      }
+    },
+    {
+      "nonce": "1093e86c4361f61cfd27adfd906186fd",
+      "target": "api32",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082230947/art17-api32/reports/art-expansion-phase.json",
+        "bytes": 5159,
+        "sha256": "537c66ad54aba2d307edb158d9c3cf789dfec7dff5ac81263fee38c9f5306856"
+      }
+    },
+    {
+      "nonce": "99202e5aeec43b390726cbc51ef39b15",
+      "target": "api32",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082230947/art17-api32/reports/art-expansion-phase.json",
+        "bytes": 5159,
+        "sha256": "537c66ad54aba2d307edb158d9c3cf789dfec7dff5ac81263fee38c9f5306856"
+      }
+    },
+    {
+      "nonce": "cee5195dd4e3e2c91aada4b4718dd774",
+      "target": "api32",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082230947/art17-api32/reports/art-expansion-phase.json",
+        "bytes": 5159,
+        "sha256": "537c66ad54aba2d307edb158d9c3cf789dfec7dff5ac81263fee38c9f5306856"
+      }
+    },
+    {
+      "nonce": "9e99ab55103b8dae169edb202d68c390",
+      "target": "api37",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082600843/art17-api37/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "ad2e616832c3626a88add3e7638caa49c7016eb789ba925b44adf5f49b51f904"
+      }
+    },
+    {
+      "nonce": "19cd060bfdcadea5d2773b948ff18a0d",
+      "target": "api37",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082600843/art17-api37/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "ad2e616832c3626a88add3e7638caa49c7016eb789ba925b44adf5f49b51f904"
+      }
+    },
+    {
+      "nonce": "fc88eafd15ca4788430105d55021d475",
+      "target": "api37",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082600843/art17-api37/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "ad2e616832c3626a88add3e7638caa49c7016eb789ba925b44adf5f49b51f904"
+      }
+    },
+    {
+      "nonce": "129977094883510fc3c40b89e6deddae",
+      "target": "api36.1",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081953964/art17-api36.1/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "9c7e9dbac7064e9eb2f83d7935659828d824adf89f49b18c9121faa36183b45d"
+      }
+    },
+    {
+      "nonce": "622693b797de7721f63109d9fa54ef20",
+      "target": "api36.1",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081953964/art17-api36.1/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "9c7e9dbac7064e9eb2f83d7935659828d824adf89f49b18c9121faa36183b45d"
+      }
+    },
+    {
+      "nonce": "16da9c0047a1ed1038518dc65d5bf70d",
+      "target": "api36.1",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081953964/art17-api36.1/reports/art-expansion-phase.json",
+        "bytes": 5144,
+        "sha256": "9c7e9dbac7064e9eb2f83d7935659828d824adf89f49b18c9121faa36183b45d"
+      }
+    },
+    {
+      "nonce": "8edc6672690a99f523a068972b372a2a",
+      "target": "api35-16k",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081839656/art17-api35-16k/reports/art-expansion-phase.json",
+        "bytes": 3658,
+        "sha256": "e4407e1651cf609a0239172e54676c100389f9a8e1cfcb7e9f64c765a5f8ff87"
+      }
+    },
+    {
+      "nonce": "cc67bb70ea311279a42acc2ad6aa31e2",
+      "target": "api35-16k",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081839656/art17-api35-16k/reports/art-expansion-phase.json",
+        "bytes": 3658,
+        "sha256": "e4407e1651cf609a0239172e54676c100389f9a8e1cfcb7e9f64c765a5f8ff87"
+      }
+    },
+    {
+      "nonce": "487535e095fb5fc1ac1caad15db052fd",
+      "target": "api35-16k",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "CLAIMED_BEFORE_EXECUTION",
+      "recorded_attempts": 0,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081839656/art17-api35-16k/reports/art-expansion-phase.json",
+        "bytes": 3658,
+        "sha256": "e4407e1651cf609a0239172e54676c100389f9a8e1cfcb7e9f64c765a5f8ff87"
+      }
+    },
+    {
+      "nonce": "8f2554b7ce7d188a5c3062b3e15f0891",
+      "target": "api37.1-16k",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081949822/art17-api37.1-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "6d05148e0af4164004137f24d064b8d8be104ca13e5c46ad5145f047adb285a7"
+      }
+    },
+    {
+      "nonce": "948e66cd24d1f9edb56cdfbc67cb805f",
+      "target": "api37.1-16k",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081949822/art17-api37.1-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "6d05148e0af4164004137f24d064b8d8be104ca13e5c46ad5145f047adb285a7"
+      }
+    },
+    {
+      "nonce": "d0ae7eee900c811a7497a2cf1b65f518",
+      "target": "api37.1-16k",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15081949822/art17-api37.1-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "6d05148e0af4164004137f24d064b8d8be104ca13e5c46ad5145f047adb285a7"
+      }
+    },
+    {
+      "nonce": "c68ab13136807f9873fb2b741a0fd5e4",
+      "target": "api37.2-16k",
+      "role": "phase",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082129283/art17-api37.2-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "be49cc5274323d08fdaba0edad95e3edac27f4d1bb31d994a36bef0dbf0d61a3"
+      }
+    },
+    {
+      "nonce": "5f46fb28c442635403aa5d5135e259d3",
+      "target": "api37.2-16k",
+      "role": "baseline",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082129283/art17-api37.2-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "be49cc5274323d08fdaba0edad95e3edac27f4d1bb31d994a36bef0dbf0d61a3"
+      }
+    },
+    {
+      "nonce": "9e4b9f66f8a664bced840e488a37e16d",
+      "target": "api37.2-16k",
+      "role": "candidate",
+      "consumed_or_reserved": true,
+      "reusable": false,
+      "recorded_state": "PASS",
+      "recorded_attempts": 1,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART17_RUN_45742530551/extracted/15082129283/art17-api37.2-16k/reports/art-expansion-phase.json",
+        "bytes": 5163,
+        "sha256": "be49cc5274323d08fdaba0edad95e3edac27f4d1bb31d994a36bef0dbf0d61a3"
+      }
+    }
+  ],
+  "prior_physical_consumed_nonces": [
+    "0a3bd30603d4905b684119820dcd0ea3",
+    "2608ac25fe42cfffe8b6b49d9f4b3f9c",
+    "70e24cf0783a030b998e889e8b3ee59e",
+    "eea754cbd049bd9653a8f30c226fd741",
+    "32b459cfc083a4cb9068f714c7cff49d",
+    "b0a8704d2663b3ad04e752542f36ad51",
+    "fb90547c97957f64315b7f356f3a755c",
+    "8e3a9daf4ae606f4a4ba2d32fcc7c6bc"
+  ],
+  "combined_known_exclusion_count": 38,
+  "scope_note": "These thirty are all claims in the ten phase receipts of this run. Seven pre-AVD profiles have no phase claims. Absence of a phase is not a claim of absence from all historical runs."
+}

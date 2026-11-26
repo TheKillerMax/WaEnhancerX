@@ -1,0 +1,1852 @@
+{
+  "schema": "WAEX_PRESENCE15_CONSUMED_CLAIMS_V1",
+  "created_utc": "2026-11-26T03:13:58.920946+00:00",
+  "run_id": "45743982684",
+  "head_sha": "d2b432a97a1d1250e365bc0a0a6822fbcd192dbb",
+  "prior_claim_ledger": {
+    "path": "ART17_RUN_45742530551/RUNTIME_RECONCILIATION/NONCE_LEDGER.json",
+    "bytes": 15787,
+    "sha256": "671c9763683ccfe3aa76860433201aae6b1f0b0503644ab3c5001abf92a51298"
+  },
+  "prior_known_claims": 38,
+  "new_claim_count": 15,
+  "new_unique_nonce_count": 15,
+  "claims": [
+    {
+      "nonce": "68a75a8abbde413aa6752c6c7f209aac",
+      "target": "api31",
+      "artifact_id": 15082149387,
+      "artifact_name": "presence-profile-api31-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "406e54ae1be801f47114de97e06cedbcd4b1618437f0ad8d799e9c642fd64969"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "406e54ae1be801f47114de97e06cedbcd4b1618437f0ad8d799e9c642fd64969"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "406e54ae1be801f47114de97e06cedbcd4b1618437f0ad8d799e9c642fd64969"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "1e301791b29bd85bb88d997a6d8c1d660e0be6c2a7f45e07a69eb8837b38b62f"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "1e301791b29bd85bb88d997a6d8c1d660e0be6c2a7f45e07a69eb8837b38b62f"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "1e301791b29bd85bb88d997a6d8c1d660e0be6c2a7f45e07a69eb8837b38b62f"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "1e301791b29bd85bb88d997a6d8c1d660e0be6c2a7f45e07a69eb8837b38b62f"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "79f46872f19aae60193da9e69fb6c8aa89c9a6e7f05020fefb24eb705ba3b3c8"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "79f46872f19aae60193da9e69fb6c8aa89c9a6e7f05020fefb24eb705ba3b3c8"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "79f46872f19aae60193da9e69fb6c8aa89c9a6e7f05020fefb24eb705ba3b3c8"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "79f46872f19aae60193da9e69fb6c8aa89c9a6e7f05020fefb24eb705ba3b3c8"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/commands.json",
+            "bytes": 9844,
+            "sha256": "c0b5910e7da9ccbc29ae85c93093ab385709e5fecc903103f64acffe3bd76f6c"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence-profile-result.json",
+            "bytes": 4594,
+            "sha256": "3f989016049d9bef6544b1f941815aaf207e755d4b5c761033cdc150d54ecf94"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082149387/presence-profile-api31/reports/presence/receipt.json",
+        "bytes": 16311,
+        "sha256": "406e54ae1be801f47114de97e06cedbcd4b1618437f0ad8d799e9c642fd64969"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "5300aca277de48b9abf4eb8358339f64",
+      "target": "api36",
+      "artifact_id": 15082458563,
+      "artifact_name": "presence-profile-api36-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/receipt.json",
+            "bytes": 17111,
+            "sha256": "70235e46777b0ffbfbf6f4536079ca6d59c1727e648c12e73d128f38852c4bcb"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/receipt.json",
+            "bytes": 17111,
+            "sha256": "70235e46777b0ffbfbf6f4536079ca6d59c1727e648c12e73d128f38852c4bcb"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/receipt.json",
+            "bytes": 17111,
+            "sha256": "70235e46777b0ffbfbf6f4536079ca6d59c1727e648c12e73d128f38852c4bcb"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/result.stdout",
+            "bytes": 4540,
+            "sha256": "0784ef336e808ae9918c83126b892461390957d93d47870a2743b3a8c8e683c4"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/result.stdout",
+            "bytes": 4540,
+            "sha256": "0784ef336e808ae9918c83126b892461390957d93d47870a2743b3a8c8e683c4"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/device-result.json",
+            "bytes": 4540,
+            "sha256": "0784ef336e808ae9918c83126b892461390957d93d47870a2743b3a8c8e683c4"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/device-result.json",
+            "bytes": 4540,
+            "sha256": "0784ef336e808ae9918c83126b892461390957d93d47870a2743b3a8c8e683c4"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "e9eaaa7e2cf8d0b7300a7d3347b5195c31f5a233ab297316229e1f148049bd00"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "e9eaaa7e2cf8d0b7300a7d3347b5195c31f5a233ab297316229e1f148049bd00"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "e9eaaa7e2cf8d0b7300a7d3347b5195c31f5a233ab297316229e1f148049bd00"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "e9eaaa7e2cf8d0b7300a7d3347b5195c31f5a233ab297316229e1f148049bd00"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/commands.json",
+            "bytes": 10598,
+            "sha256": "a709d9183211a3cf3424015cfe7b9b8b737ccaaa71eaadde9b06817959ac50b6"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence-profile-result.json",
+            "bytes": 10406,
+            "sha256": "528acd75ebbc75b8d511d0b6387f2896761d2264dd802e1aaa21e8d4dbd23f39"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082458563/presence-profile-api36/reports/presence/receipt.json",
+        "bytes": 17111,
+        "sha256": "70235e46777b0ffbfbf6f4536079ca6d59c1727e648c12e73d128f38852c4bcb"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "420a04ba788d4bceadded83768597131",
+      "target": "api36-16k",
+      "artifact_id": 15082498138,
+      "artifact_name": "presence-profile-api36-16k-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/receipt.json",
+            "bytes": 16387,
+            "sha256": "adf42ce60e938aed3b80db069e2b087a2ec8419b17dcfe6de4c4b1f6835e46ab"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/receipt.json",
+            "bytes": 16387,
+            "sha256": "adf42ce60e938aed3b80db069e2b087a2ec8419b17dcfe6de4c4b1f6835e46ab"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/receipt.json",
+            "bytes": 16387,
+            "sha256": "adf42ce60e938aed3b80db069e2b087a2ec8419b17dcfe6de4c4b1f6835e46ab"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/result.stdout",
+            "bytes": 4547,
+            "sha256": "041287be871b0265182fa001bb29b54d9023260e9ecf94828a689731613edc22"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/result.stdout",
+            "bytes": 4547,
+            "sha256": "041287be871b0265182fa001bb29b54d9023260e9ecf94828a689731613edc22"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/device-result.json",
+            "bytes": 4547,
+            "sha256": "041287be871b0265182fa001bb29b54d9023260e9ecf94828a689731613edc22"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/device-result.json",
+            "bytes": 4547,
+            "sha256": "041287be871b0265182fa001bb29b54d9023260e9ecf94828a689731613edc22"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "da7fcfb4c69466d6e626ef3a4d5cc37c2726c32b70693ca4a8fa101d30069c23"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "da7fcfb4c69466d6e626ef3a4d5cc37c2726c32b70693ca4a8fa101d30069c23"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "da7fcfb4c69466d6e626ef3a4d5cc37c2726c32b70693ca4a8fa101d30069c23"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "da7fcfb4c69466d6e626ef3a4d5cc37c2726c32b70693ca4a8fa101d30069c23"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/commands.json",
+            "bytes": 9858,
+            "sha256": "4ea0161e8069711adfed048993cfe029c4177b0d05fa3745f0fe197985d8c49d"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence-profile-result.json",
+            "bytes": 10188,
+            "sha256": "dca87b23a07051c152ff4a57b766305e6865fdd720b7a2dc6bcb8ae39dac7288"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082498138/presence-profile-api36-16k/reports/presence/receipt.json",
+        "bytes": 16387,
+        "sha256": "adf42ce60e938aed3b80db069e2b087a2ec8419b17dcfe6de4c4b1f6835e46ab"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "cffbcb48c8c34eb787b22a3fd1bb7567",
+      "target": "api33",
+      "artifact_id": 15082511980,
+      "artifact_name": "presence-profile-api33-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/receipt.json",
+            "bytes": 16310,
+            "sha256": "3d74c5b51f54e23917e8d91d4c02a0fede23f3cb3858cdaaefc7b984cf260363"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/receipt.json",
+            "bytes": 16310,
+            "sha256": "3d74c5b51f54e23917e8d91d4c02a0fede23f3cb3858cdaaefc7b984cf260363"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/receipt.json",
+            "bytes": 16310,
+            "sha256": "3d74c5b51f54e23917e8d91d4c02a0fede23f3cb3858cdaaefc7b984cf260363"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "f966ded058fcd9f04f02cb65c6764627617f9f1dd418256b74f3db66a5144514"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "f966ded058fcd9f04f02cb65c6764627617f9f1dd418256b74f3db66a5144514"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "f966ded058fcd9f04f02cb65c6764627617f9f1dd418256b74f3db66a5144514"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "f966ded058fcd9f04f02cb65c6764627617f9f1dd418256b74f3db66a5144514"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "038e545c218a9e424694ea8c415ecfd8c167521ba3ea744ca6fd23a3d2ccf8ee"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "038e545c218a9e424694ea8c415ecfd8c167521ba3ea744ca6fd23a3d2ccf8ee"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "038e545c218a9e424694ea8c415ecfd8c167521ba3ea744ca6fd23a3d2ccf8ee"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "038e545c218a9e424694ea8c415ecfd8c167521ba3ea744ca6fd23a3d2ccf8ee"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/commands.json",
+            "bytes": 9843,
+            "sha256": "fe2f55e36622c966863d0378b8598088797d152a6095e6f5501ac5290b6fb307"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence-profile-result.json",
+            "bytes": 4579,
+            "sha256": "5e08bd9dcfa98451f302792a43dd0cc3b3a3572330f5bfb8284342e947c03239"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082511980/presence-profile-api33/reports/presence/receipt.json",
+        "bytes": 16310,
+        "sha256": "3d74c5b51f54e23917e8d91d4c02a0fede23f3cb3858cdaaefc7b984cf260363"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "ca18964369a145bb9b581428f265e5af",
+      "target": "api32",
+      "artifact_id": 15082657409,
+      "artifact_name": "presence-profile-api32-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/receipt.json",
+            "bytes": 17066,
+            "sha256": "0658a362223284b602f3c8f964efd6809f8971d82b60da7f9322f4c12c0451fb"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/receipt.json",
+            "bytes": 17066,
+            "sha256": "0658a362223284b602f3c8f964efd6809f8971d82b60da7f9322f4c12c0451fb"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/receipt.json",
+            "bytes": 17066,
+            "sha256": "0658a362223284b602f3c8f964efd6809f8971d82b60da7f9322f4c12c0451fb"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "515adc1ca1dc0300f1ea89b97c23e38cd629742035011a40cd1baa88945794c0"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "515adc1ca1dc0300f1ea89b97c23e38cd629742035011a40cd1baa88945794c0"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "515adc1ca1dc0300f1ea89b97c23e38cd629742035011a40cd1baa88945794c0"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "515adc1ca1dc0300f1ea89b97c23e38cd629742035011a40cd1baa88945794c0"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "779f8dcbf176fab0fd5a718523fe8c9b46d7aadb38d82b7b02aa06ec4116a8fb"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "779f8dcbf176fab0fd5a718523fe8c9b46d7aadb38d82b7b02aa06ec4116a8fb"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "779f8dcbf176fab0fd5a718523fe8c9b46d7aadb38d82b7b02aa06ec4116a8fb"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "779f8dcbf176fab0fd5a718523fe8c9b46d7aadb38d82b7b02aa06ec4116a8fb"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/commands.json",
+            "bytes": 10599,
+            "sha256": "5fa153e704f9e6b47c29ce60e9fde614308ae3cd617ea0d4e3eb6131a159b2a2"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence-profile-result.json",
+            "bytes": 4591,
+            "sha256": "39ee626dc115e4f6c722ac34a270108b5b1ed20b297ad12d176223cf70d16256"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082657409/presence-profile-api32/reports/presence/receipt.json",
+        "bytes": 17066,
+        "sha256": "0658a362223284b602f3c8f964efd6809f8971d82b60da7f9322f4c12c0451fb"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "57c08698268c46449ffb8a36b1720c63",
+      "target": "api36.1-16k",
+      "artifact_id": 15082708930,
+      "artifact_name": "presence-profile-api36.1-16k-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "ea282c4d4b14ef378cd60f0b22b30d9a18fe9b82926944e34d45aba580e5d444"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "ea282c4d4b14ef378cd60f0b22b30d9a18fe9b82926944e34d45aba580e5d444"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "ea282c4d4b14ef378cd60f0b22b30d9a18fe9b82926944e34d45aba580e5d444"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "5d7c85510027d3dddb83942450a83e9b207d24fcc1f2136ed70793c6dfaeb4a1"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "5d7c85510027d3dddb83942450a83e9b207d24fcc1f2136ed70793c6dfaeb4a1"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "5d7c85510027d3dddb83942450a83e9b207d24fcc1f2136ed70793c6dfaeb4a1"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "5d7c85510027d3dddb83942450a83e9b207d24fcc1f2136ed70793c6dfaeb4a1"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "bcc3ab02e4e971275b2f1d1237a0d68ee653d6e38d7c101933ea8899465bd96e"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "bcc3ab02e4e971275b2f1d1237a0d68ee653d6e38d7c101933ea8899465bd96e"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "bcc3ab02e4e971275b2f1d1237a0d68ee653d6e38d7c101933ea8899465bd96e"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "bcc3ab02e4e971275b2f1d1237a0d68ee653d6e38d7c101933ea8899465bd96e"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/commands.json",
+            "bytes": 9863,
+            "sha256": "6e8e05554b0f857272d20b9ab3d7bb731b0916b164f6ca41010776b0d9fea4df"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence-profile-result.json",
+            "bytes": 10667,
+            "sha256": "2c9cc5f583dd706f7765ae83503e05488ab50a51b6db5b80d5e93f549bef6c43"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082708930/presence-profile-api36.1-16k/reports/presence/receipt.json",
+        "bytes": 16398,
+        "sha256": "ea282c4d4b14ef378cd60f0b22b30d9a18fe9b82926944e34d45aba580e5d444"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "536bc81686a84788888d1aa6ce29e64a",
+      "target": "api36.1",
+      "artifact_id": 15082783192,
+      "artifact_name": "presence-profile-api36.1-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/receipt.json",
+            "bytes": 16366,
+            "sha256": "a1061f9a5c42610e39eea113cb9864a82743340c3d3c3a78e3bd644754334c5d"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/receipt.json",
+            "bytes": 16366,
+            "sha256": "a1061f9a5c42610e39eea113cb9864a82743340c3d3c3a78e3bd644754334c5d"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/receipt.json",
+            "bytes": 16366,
+            "sha256": "a1061f9a5c42610e39eea113cb9864a82743340c3d3c3a78e3bd644754334c5d"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/result.stdout",
+            "bytes": 4542,
+            "sha256": "83ed962e32e66654c8cf11d9571cea61efd4b043d4f4394cf4703742d152c0f0"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/result.stdout",
+            "bytes": 4542,
+            "sha256": "83ed962e32e66654c8cf11d9571cea61efd4b043d4f4394cf4703742d152c0f0"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/device-result.json",
+            "bytes": 4542,
+            "sha256": "83ed962e32e66654c8cf11d9571cea61efd4b043d4f4394cf4703742d152c0f0"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/device-result.json",
+            "bytes": 4542,
+            "sha256": "83ed962e32e66654c8cf11d9571cea61efd4b043d4f4394cf4703742d152c0f0"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/instrument.stdout",
+            "bytes": 8304,
+            "sha256": "2c6726a7677398c871af050ce255fabc0ebc25f4e76170a59b0d48f8ed1613d1"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/instrument.stdout",
+            "bytes": 8304,
+            "sha256": "2c6726a7677398c871af050ce255fabc0ebc25f4e76170a59b0d48f8ed1613d1"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/instrument.stdout",
+            "bytes": 8304,
+            "sha256": "2c6726a7677398c871af050ce255fabc0ebc25f4e76170a59b0d48f8ed1613d1"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/instrument.stdout",
+            "bytes": 8304,
+            "sha256": "2c6726a7677398c871af050ce255fabc0ebc25f4e76170a59b0d48f8ed1613d1"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/commands.json",
+            "bytes": 9847,
+            "sha256": "c3c089850454f23f2927d859d2e042d5012b2bb800c204db54c2c6e06a49f1a7"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence-profile-result.json",
+            "bytes": 10639,
+            "sha256": "c24ea3d96721db475dd2cac48007938af3ffd1689f11d51054016bd949468906"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082783192/presence-profile-api36.1/reports/presence/receipt.json",
+        "bytes": 16366,
+        "sha256": "a1061f9a5c42610e39eea113cb9864a82743340c3d3c3a78e3bd644754334c5d"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "57ca6a7f9cc54aee9e14a34dbb1bef10",
+      "target": "api27",
+      "artifact_id": 15082791306,
+      "artifact_name": "presence-profile-api27-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/receipt.json",
+            "bytes": 16146,
+            "sha256": "5832731a6548e3bdb601c990e90e6e8bfbfbd97df2ec6a9656cd4075c37674ec"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/receipt.json",
+            "bytes": 16146,
+            "sha256": "5832731a6548e3bdb601c990e90e6e8bfbfbd97df2ec6a9656cd4075c37674ec"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/receipt.json",
+            "bytes": 16146,
+            "sha256": "5832731a6548e3bdb601c990e90e6e8bfbfbd97df2ec6a9656cd4075c37674ec"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/result.stdout",
+            "bytes": 4465,
+            "sha256": "001a8ceaa38f5d23ab5d01259da35f1886b156cc5a56b542597723bc6517b1ca"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/result.stdout",
+            "bytes": 4465,
+            "sha256": "001a8ceaa38f5d23ab5d01259da35f1886b156cc5a56b542597723bc6517b1ca"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/device-result.json",
+            "bytes": 4465,
+            "sha256": "001a8ceaa38f5d23ab5d01259da35f1886b156cc5a56b542597723bc6517b1ca"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/device-result.json",
+            "bytes": 4465,
+            "sha256": "001a8ceaa38f5d23ab5d01259da35f1886b156cc5a56b542597723bc6517b1ca"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "b7f3a62c403bfb2c4812243386419c06f9fc2e8565631fe9a87bd29b06c1d172"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "b7f3a62c403bfb2c4812243386419c06f9fc2e8565631fe9a87bd29b06c1d172"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "b7f3a62c403bfb2c4812243386419c06f9fc2e8565631fe9a87bd29b06c1d172"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "b7f3a62c403bfb2c4812243386419c06f9fc2e8565631fe9a87bd29b06c1d172"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/commands.json",
+            "bytes": 9787,
+            "sha256": "f378282571ac17450488616c610475286308a548bcb8783731efa2428b761461"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence-profile-result.json",
+            "bytes": 4564,
+            "sha256": "c5b49400077f036ad4f04e872b24cd2a4dcfa41769caa8d72e140ff5da7d4f75"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082791306/presence-profile-api27/reports/presence/receipt.json",
+        "bytes": 16146,
+        "sha256": "5832731a6548e3bdb601c990e90e6e8bfbfbd97df2ec6a9656cd4075c37674ec"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "69d7887591344767a0ef2edbcae1bd4f",
+      "target": "api29",
+      "artifact_id": 15082935483,
+      "artifact_name": "presence-profile-api29-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/receipt.json",
+            "bytes": 16903,
+            "sha256": "8eb25b0f8454cbbcaa14102a599d4857b1cecf47e77df6c045e324696b8d6ffa"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/receipt.json",
+            "bytes": 16903,
+            "sha256": "8eb25b0f8454cbbcaa14102a599d4857b1cecf47e77df6c045e324696b8d6ffa"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/receipt.json",
+            "bytes": 16903,
+            "sha256": "8eb25b0f8454cbbcaa14102a599d4857b1cecf47e77df6c045e324696b8d6ffa"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/result.stdout",
+            "bytes": 4465,
+            "sha256": "99ab0bdfae93dffa954d0343e6a31cca0a7412a877ac92bae23611460aa2155d"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/result.stdout",
+            "bytes": 4465,
+            "sha256": "99ab0bdfae93dffa954d0343e6a31cca0a7412a877ac92bae23611460aa2155d"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/device-result.json",
+            "bytes": 4465,
+            "sha256": "99ab0bdfae93dffa954d0343e6a31cca0a7412a877ac92bae23611460aa2155d"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/device-result.json",
+            "bytes": 4465,
+            "sha256": "99ab0bdfae93dffa954d0343e6a31cca0a7412a877ac92bae23611460aa2155d"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "7594faf54b78412ccd59cbb54e5b713d82d12d4721d6cec4ffb8f7f2977e73d0"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "7594faf54b78412ccd59cbb54e5b713d82d12d4721d6cec4ffb8f7f2977e73d0"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "7594faf54b78412ccd59cbb54e5b713d82d12d4721d6cec4ffb8f7f2977e73d0"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/instrument.stdout",
+            "bytes": 8150,
+            "sha256": "7594faf54b78412ccd59cbb54e5b713d82d12d4721d6cec4ffb8f7f2977e73d0"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/commands.json",
+            "bytes": 10544,
+            "sha256": "4f1cd808d186299248153a5e434b32b6ef34e04326e2ce6162f98f5d08952cf3"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence-profile-result.json",
+            "bytes": 4558,
+            "sha256": "762972f943601ba9ab7348770bf7d14d143d9a5ead7dec013df3057c487274db"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15082935483/presence-profile-api29/reports/presence/receipt.json",
+        "bytes": 16903,
+        "sha256": "8eb25b0f8454cbbcaa14102a599d4857b1cecf47e77df6c045e324696b8d6ffa"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "22b6cdfef9354745b0099e7afed15779",
+      "target": "api35",
+      "artifact_id": 15083022119,
+      "artifact_name": "presence-profile-api35-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "9fc391bc4f8a43bc8faa98fa8b8520b29b6ddfb5452ebaedd5f3f4714f9852a3"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "9fc391bc4f8a43bc8faa98fa8b8520b29b6ddfb5452ebaedd5f3f4714f9852a3"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/receipt.json",
+            "bytes": 16311,
+            "sha256": "9fc391bc4f8a43bc8faa98fa8b8520b29b6ddfb5452ebaedd5f3f4714f9852a3"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "42eed4b965e6a55500f399a406d6105211992f5d28540ce7a24330be4113c884"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "42eed4b965e6a55500f399a406d6105211992f5d28540ce7a24330be4113c884"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "42eed4b965e6a55500f399a406d6105211992f5d28540ce7a24330be4113c884"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "42eed4b965e6a55500f399a406d6105211992f5d28540ce7a24330be4113c884"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "d037f777fa2554ff16657da3ff2e4fcbb14973b66f85dc4a77f5577b565d87b8"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "d037f777fa2554ff16657da3ff2e4fcbb14973b66f85dc4a77f5577b565d87b8"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "d037f777fa2554ff16657da3ff2e4fcbb14973b66f85dc4a77f5577b565d87b8"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "d037f777fa2554ff16657da3ff2e4fcbb14973b66f85dc4a77f5577b565d87b8"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/commands.json",
+            "bytes": 9844,
+            "sha256": "9f8ff5070a23c129398d7ae005bb7d6054b119905578a089ff34563651df22a8"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence-profile-result.json",
+            "bytes": 4580,
+            "sha256": "f740f1f900858d25a547a25a14e65a4406adcd2254d0adc07040dd805d85e2e4"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083022119/presence-profile-api35/reports/presence/receipt.json",
+        "bytes": 16311,
+        "sha256": "9fc391bc4f8a43bc8faa98fa8b8520b29b6ddfb5452ebaedd5f3f4714f9852a3"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "0a79d198cae74332b807682178349397",
+      "target": "api30",
+      "artifact_id": 15083080574,
+      "artifact_name": "presence-profile-api30-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/receipt.json",
+            "bytes": 16308,
+            "sha256": "97e2ec038ac520ff1a7f3615f07cf6bac1931a87a6c344742f6c0786a492c427"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/receipt.json",
+            "bytes": 16308,
+            "sha256": "97e2ec038ac520ff1a7f3615f07cf6bac1931a87a6c344742f6c0786a492c427"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/receipt.json",
+            "bytes": 16308,
+            "sha256": "97e2ec038ac520ff1a7f3615f07cf6bac1931a87a6c344742f6c0786a492c427"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "0ab7e802f714168df5759e6976bf4cd37290fdd46abf047bfbb6c398822fcee5"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/result.stdout",
+            "bytes": 4493,
+            "sha256": "0ab7e802f714168df5759e6976bf4cd37290fdd46abf047bfbb6c398822fcee5"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "0ab7e802f714168df5759e6976bf4cd37290fdd46abf047bfbb6c398822fcee5"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/device-result.json",
+            "bytes": 4493,
+            "sha256": "0ab7e802f714168df5759e6976bf4cd37290fdd46abf047bfbb6c398822fcee5"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "424ee23b4ad272b12bf18af32daeaeef2fb65c5a9b4162b6c715eff58f7fb781"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "424ee23b4ad272b12bf18af32daeaeef2fb65c5a9b4162b6c715eff58f7fb781"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "424ee23b4ad272b12bf18af32daeaeef2fb65c5a9b4162b6c715eff58f7fb781"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/instrument.stdout",
+            "bytes": 8206,
+            "sha256": "424ee23b4ad272b12bf18af32daeaeef2fb65c5a9b4162b6c715eff58f7fb781"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/commands.json",
+            "bytes": 9841,
+            "sha256": "a160fd9c828dd968023df6db64be17c55c7496d4766620dd5cdc1a69379305c2"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence-profile-result.json",
+            "bytes": 4591,
+            "sha256": "ff0bdf79124200f3aa4115a4a57f535eac6f8b319d1b1c362e3ec13cb9b311ec"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083080574/presence-profile-api30/reports/presence/receipt.json",
+        "bytes": 16308,
+        "sha256": "97e2ec038ac520ff1a7f3615f07cf6bac1931a87a6c344742f6c0786a492c427"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "95832cfbc9c14964a01b3ee5264d8861",
+      "target": "api37.1-16k",
+      "artifact_id": 15083208205,
+      "artifact_name": "presence-profile-api37.1-16k-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "00bec3a15c0b1dfaa54bbaf1597bd51a63edc376850739f332c3947689d32685"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "00bec3a15c0b1dfaa54bbaf1597bd51a63edc376850739f332c3947689d32685"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/receipt.json",
+            "bytes": 16398,
+            "sha256": "00bec3a15c0b1dfaa54bbaf1597bd51a63edc376850739f332c3947689d32685"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "7c24683e7a928ca1dc793a011a8c8e5dda59e8cbf69763e5a17e22f4a1698e0f"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "7c24683e7a928ca1dc793a011a8c8e5dda59e8cbf69763e5a17e22f4a1698e0f"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "7c24683e7a928ca1dc793a011a8c8e5dda59e8cbf69763e5a17e22f4a1698e0f"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "7c24683e7a928ca1dc793a011a8c8e5dda59e8cbf69763e5a17e22f4a1698e0f"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "7ccf8e578955cb109b5801c6a4edba5d4576bec08f858c4269b9aec5becada22"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "7ccf8e578955cb109b5801c6a4edba5d4576bec08f858c4269b9aec5becada22"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "7ccf8e578955cb109b5801c6a4edba5d4576bec08f858c4269b9aec5becada22"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "7ccf8e578955cb109b5801c6a4edba5d4576bec08f858c4269b9aec5becada22"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/commands.json",
+            "bytes": 9863,
+            "sha256": "8157349d24bad818ba3f22db8af5af55d9f85d86724f3e83e79d3404b2dea95f"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence-profile-result.json",
+            "bytes": 10667,
+            "sha256": "466fdc6cd725674f5ac136a445c8a2a4055b0666a749b595ce7c8ff14ef0c59e"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083208205/presence-profile-api37.1-16k/reports/presence/receipt.json",
+        "bytes": 16398,
+        "sha256": "00bec3a15c0b1dfaa54bbaf1597bd51a63edc376850739f332c3947689d32685"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "b28196dde1614c6aa8d97319a59afefa",
+      "target": "api37.2-16k",
+      "artifact_id": 15083213523,
+      "artifact_name": "presence-profile-api37.2-16k-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/receipt.json",
+            "bytes": 16395,
+            "sha256": "9fd27a1a65004557bc99ba0c5ce678da514ca1a19ee58b8e32b38ba478becec4"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/receipt.json",
+            "bytes": 16395,
+            "sha256": "9fd27a1a65004557bc99ba0c5ce678da514ca1a19ee58b8e32b38ba478becec4"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/receipt.json",
+            "bytes": 16395,
+            "sha256": "9fd27a1a65004557bc99ba0c5ce678da514ca1a19ee58b8e32b38ba478becec4"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "b6817e17f22316467213ec1c4369c47a41ad0d246acc69fc359d9d143f6f4b90"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/result.stdout",
+            "bytes": 4549,
+            "sha256": "b6817e17f22316467213ec1c4369c47a41ad0d246acc69fc359d9d143f6f4b90"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "b6817e17f22316467213ec1c4369c47a41ad0d246acc69fc359d9d143f6f4b90"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/device-result.json",
+            "bytes": 4549,
+            "sha256": "b6817e17f22316467213ec1c4369c47a41ad0d246acc69fc359d9d143f6f4b90"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "1eafe90969808db30a70fe6fc69498000ae4cd1b66b74d3915520aa3ff1734ee"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "1eafe90969808db30a70fe6fc69498000ae4cd1b66b74d3915520aa3ff1734ee"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "1eafe90969808db30a70fe6fc69498000ae4cd1b66b74d3915520aa3ff1734ee"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/instrument.stdout",
+            "bytes": 8318,
+            "sha256": "1eafe90969808db30a70fe6fc69498000ae4cd1b66b74d3915520aa3ff1734ee"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/commands.json",
+            "bytes": 9860,
+            "sha256": "75736c9c43e8c7137a01d9d1ddd048ed55d1c955812b26a4a7c8127f41d09006"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence-profile-result.json",
+            "bytes": 10667,
+            "sha256": "42be640e1126d9feeacedd1336f4bb85b83aa0453cfee339f6c798eb49835952"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083213523/presence-profile-api37.2-16k/reports/presence/receipt.json",
+        "bytes": 16395,
+        "sha256": "9fd27a1a65004557bc99ba0c5ce678da514ca1a19ee58b8e32b38ba478becec4"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "6a62bc2a477d4679a92bbc3f4f71e46e",
+      "target": "api37-16k",
+      "artifact_id": 15083317717,
+      "artifact_name": "presence-profile-api37-16k-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/receipt.json",
+            "bytes": 16385,
+            "sha256": "33ab08e8c268b50daa7a3cc12f21c04c156f3eb88ec0631539aa2ea59524601d"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/receipt.json",
+            "bytes": 16385,
+            "sha256": "33ab08e8c268b50daa7a3cc12f21c04c156f3eb88ec0631539aa2ea59524601d"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/receipt.json",
+            "bytes": 16385,
+            "sha256": "33ab08e8c268b50daa7a3cc12f21c04c156f3eb88ec0631539aa2ea59524601d"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/result.stdout",
+            "bytes": 4547,
+            "sha256": "c81d3cd0d6269f3bfcf2dde750cf221a5c20c8701263720b8b304c9396281c1b"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/result.stdout",
+            "bytes": 4547,
+            "sha256": "c81d3cd0d6269f3bfcf2dde750cf221a5c20c8701263720b8b304c9396281c1b"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/device-result.json",
+            "bytes": 4547,
+            "sha256": "c81d3cd0d6269f3bfcf2dde750cf221a5c20c8701263720b8b304c9396281c1b"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/device-result.json",
+            "bytes": 4547,
+            "sha256": "c81d3cd0d6269f3bfcf2dde750cf221a5c20c8701263720b8b304c9396281c1b"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "637efd8c41748693e745d1627de934e1cf7ea9757b187e35dcdd20e74b50f0b9"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "637efd8c41748693e745d1627de934e1cf7ea9757b187e35dcdd20e74b50f0b9"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "637efd8c41748693e745d1627de934e1cf7ea9757b187e35dcdd20e74b50f0b9"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/instrument.stdout",
+            "bytes": 8314,
+            "sha256": "637efd8c41748693e745d1627de934e1cf7ea9757b187e35dcdd20e74b50f0b9"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/commands.json",
+            "bytes": 9856,
+            "sha256": "1bf6d0d718e3e60bbd77332a06a7c9e9c048b79fd4956aeaccc2f8724271edd7"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence-profile-result.json",
+            "bytes": 10662,
+            "sha256": "3c2820e757e48ea96bcb77c1813da73c064d9be66800bb0f58b87d33da67622c"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083317717/presence-profile-api37-16k/reports/presence/receipt.json",
+        "bytes": 16385,
+        "sha256": "33ab08e8c268b50daa7a3cc12f21c04c156f3eb88ec0631539aa2ea59524601d"
+      },
+      "boot_id": null
+    },
+    {
+      "nonce": "029af74d126d4105860dbdeb98a65fa9",
+      "target": "api37",
+      "artifact_id": 15083620458,
+      "artifact_name": "presence-profile-api37-45743982684-1",
+      "run_id": "45743982684",
+      "reusable": false,
+      "emissions": [
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/receipt.json",
+            "bytes": 16355,
+            "sha256": "d1b74b7eeab276db47046fc40fb8b1dad6cf672df96975cd7597d9bb82ff8ca5"
+          },
+          "selector": "receipt.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/receipt.json",
+            "bytes": 16355,
+            "sha256": "d1b74b7eeab276db47046fc40fb8b1dad6cf672df96975cd7597d9bb82ff8ca5"
+          },
+          "selector": "receipt.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/receipt.json",
+            "bytes": 16355,
+            "sha256": "d1b74b7eeab276db47046fc40fb8b1dad6cf672df96975cd7597d9bb82ff8ca5"
+          },
+          "selector": "receipt.identity_contract.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/result.stdout",
+            "bytes": 4540,
+            "sha256": "b2d1527bee5aa2bc768c2af1ada75a2397e92b46551aeb15d7fc977d8b04aec6"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/result.stdout",
+            "bytes": 4540,
+            "sha256": "b2d1527bee5aa2bc768c2af1ada75a2397e92b46551aeb15d7fc977d8b04aec6"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/device-result.json",
+            "bytes": 4540,
+            "sha256": "b2d1527bee5aa2bc768c2af1ada75a2397e92b46551aeb15d7fc977d8b04aec6"
+          },
+          "selector": "device.process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/device-result.json",
+            "bytes": 4540,
+            "sha256": "b2d1527bee5aa2bc768c2af1ada75a2397e92b46551aeb15d7fc977d8b04aec6"
+          },
+          "selector": "device.run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "bbd31b7c731cc5c49b20a0ae8095f6090233b25042a474e658df058b0150cc10"
+          },
+          "selector": "line[9].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "bbd31b7c731cc5c49b20a0ae8095f6090233b25042a474e658df058b0150cc10"
+          },
+          "selector": "line[9].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "bbd31b7c731cc5c49b20a0ae8095f6090233b25042a474e658df058b0150cc10"
+          },
+          "selector": "line[11].process_identity.nonce"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/instrument.stdout",
+            "bytes": 8300,
+            "sha256": "bbd31b7c731cc5c49b20a0ae8095f6090233b25042a474e658df058b0150cc10"
+          },
+          "selector": "line[11].run_id"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/commands.json",
+            "bytes": 9842,
+            "sha256": "bba240e037726ab20ce62810dcbb9363a5e5ea1092e89b321562a82d7d8278be"
+          },
+          "selector": "commands[10].argv[18]"
+        },
+        {
+          "file": {
+            "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence-profile-result.json",
+            "bytes": 10633,
+            "sha256": "e1c38c882edd70310e3c52252c77a557d62da3516ce40fc3638c17b042bd6b54"
+          },
+          "selector": "controller.phase_receipt.process_identity.nonce"
+        }
+      ],
+      "runtime_reconciliation_status": "AUDIT_NOT_RECONCILED",
+      "artifact_bytes_verified": true,
+      "receipt": {
+        "path": "PRESENCE15_RUN_45743982684/extracted/15083620458/presence-profile-api37/reports/presence/receipt.json",
+        "bytes": 16355,
+        "sha256": "d1b74b7eeab276db47046fc40fb8b1dad6cf672df96975cd7597d9bb82ff8ca5"
+      },
+      "boot_id": null
+    }
+  ],
+  "collisions": [],
+  "collection_complete": true,
+  "claim_collection_issues": [],
+  "status": "COMPLETE_RECOGNIZED_EMISSIONS_NON_REUSABLE",
+  "combined_known_unique_count": 53,
+  "scope": "Every recognized saved nonce emission from byte-verified artifacts is retained independently of runtime audit PASS. Collisions are reported without dropping claims. Prior physical/ART ledger plus this Presence run only, not a complete historical inventory."
+}
