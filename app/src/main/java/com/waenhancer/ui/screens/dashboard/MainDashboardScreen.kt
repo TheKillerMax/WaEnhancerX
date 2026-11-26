@@ -188,8 +188,15 @@ fun MainDashboardScreen(
 
     // Target heartbeats arrive every ten seconds. They refresh target evidence, while the
     // root/framework/package inventory only needs a screen resume or an explicit refresh.
+    var completedDiagnosticsRefresh by remember { mutableIntStateOf(0) }
     LaunchedEffect(diagnosticsRefreshTrigger, isModuleActive) {
-        systemDiagnostics = withContext(Dispatchers.IO) { SystemDiagnosticsReader.read(context, isModuleActive) }
+        val generation = diagnosticsRefreshTrigger
+        val forceRefresh = generation != completedDiagnosticsRefresh
+        systemDiagnostics = withContext(Dispatchers.IO) {
+            SystemDiagnosticsReader.read(context, isModuleActive, forceRefresh = forceRefresh)
+        }
+        // A cancelled IO handoff must leave the request pending for the replacement effect.
+        completedDiagnosticsRefresh = generation
     }
 
     LaunchedEffect(hmaRefreshTrigger, scopeSnapshot, refreshEpoch) {
