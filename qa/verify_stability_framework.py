@@ -7,6 +7,7 @@ from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tomllib
 import xml.etree.ElementTree as ET
 from framework_localization import stage_localization
+from gradle_dependencies import PREPARATION_TASK, prepare_dependencies
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -92,10 +93,12 @@ dependencies {
 }
 '''
     for key,val in {'AGP':v['androidGradlePlugin'],'KOTLIN':v['kotlin'],'BOM':v['androidxComposeBom'],'MATERIAL3':expressive_pins[0],'LIFE':v['androidxLifecycle'],'CORO':v['coroutines'],'CORE':v['androidxCore'],'OKHTTP':v['okhttp']}.items():build=build.replace(key,val)
+    build += PREPARATION_TASK
     if inputs:build='import java.security.MessageDigest\nimport java.io.File\n'+build+runtime_framework_inputs.test_configuration(inputs,e)
     write('build.gradle.kts',build)
     write('src/main/AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
     identity=dict(inputs['source_sha256']) if inputs else {}
+    identity['qa/gradle_dependencies.py']=hashlib.sha256(Path(__file__).with_name('gradle_dependencies.py').read_bytes()).hexdigest()
     identity.update({p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')})
     sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','xposed/utils/HookErrors.java','utils/AndroidUserScope.java',
                        'config/PreferenceStores.java','config/PreferenceSchema.java','ui/components/NetworkErrorSheet.kt','ui/components/WaexModalBottomSheet.kt','ui/components/WaexProgressIndicator.kt',
@@ -183,6 +186,9 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     # Slash paths also preserve Gradle wrapper APP_HOME handling on Git Bash.
     bash=shutil.which('bash')
     if not bash:raise RuntimeError('Compatible bash required for Gradle wrapper')
+    prepare_dependencies(root/'gradlew',p,e/'gradle-dependencies.log',bash=bash,offline=a.offline)
+    # Never retry compilation/tests. Preserve the caller's mode: AGP may
+    # resolve additional tool inputs lazily after the classpath preparation.
     cmd=[bash,(root/'gradlew').as_posix(),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
     if a.offline:cmd.append('--offline')
     with (e/'framework-build.log').open('w') as log:
