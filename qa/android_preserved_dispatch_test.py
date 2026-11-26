@@ -6,7 +6,8 @@ used. The Xposed dispatcher, host message graph and unrelated service boundaries
 are explicit fixtures. Cached dependencies can be supplied for offline checks.
 """
 from pathlib import Path
-import argparse,hashlib,json,os,re,shutil,subprocess,zipfile,urllib.request,io
+import argparse,hashlib,json,os,re,shutil,subprocess,zipfile
+from prepare_dexkit import DEFAULT_CACHE, acquire
 
 ROOT=Path(__file__).resolve().parents[1]
 EXPECTED_TESTS=105
@@ -221,13 +222,9 @@ def main():
         if not compiler_jars:raise RuntimeError('Kotlin compiler distribution JARs missing')
         compiler_command=['java','-Dkotlin.home='+str(kotlin_lib.parent),'-cp',os.pathsep.join(map(str,compiler_jars)),
                           'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-kotlin-home',str(kotlin_lib.parent)]
-    dexkit=args.dexkit.resolve() if args.dexkit else out/'dexkit-2.2.0.jar'
-    if not args.dexkit:
-        url='https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
-        with urllib.request.urlopen(url,timeout=30) as response:body=response.read(8*1024*1024+1)
-        if len(body)>8*1024*1024 or hashlib.sha256(body).hexdigest()!='cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6':
-            raise RuntimeError('DexKit public AAR identity mismatch')
-        with zipfile.ZipFile(io.BytesIO(body)) as archive:dexkit.write_bytes(archive.read('classes.jar'))
+    # Acquire the independently pinned public API before compilation. Only the
+    # transport can retry; the 105-case consumer still executes exactly once.
+    dexkit=args.dexkit.resolve() if args.dexkit else acquire(DEFAULT_CACHE,out/'dexkit-bootstrap.json')
     if hashlib.sha256(dexkit.read_bytes()).hexdigest()!='195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1':
         raise RuntimeError('DexKit classes JAR identity mismatch')
     stage=out/'sources';classes=out/'classes';classes.mkdir();identities={};sources=[]

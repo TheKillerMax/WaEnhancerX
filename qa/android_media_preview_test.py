@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import urllib.request
 import zipfile
+from prepare_dexkit import DEFAULT_CACHE, acquire
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TESTS = 36
@@ -27,7 +28,6 @@ SOURCES = [JAVA/'xposed/features/media/MediaPreviewHook.kt',
            JAVA/'xposed/core/BaseFeature.kt', JAVA/'xposed/utils/HKDFv3.kt']
 MAVEN_CENTRAL = 'https://repo.maven.apache.org/maven2'
 DEXKIT_URL = MAVEN_CENTRAL + '/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
-DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
 DEXKIT_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
 OKHTTP_URL = MAVEN_CENTRAL + '/com/squareup/okhttp3/okhttp/4.12.0/okhttp-4.12.0.jar'
 OKHTTP_SHA256 = 'b1050081b14bb7a3a7e55a4d3ef01b5dcfabc453b4573a4fc019767191d5f4e0'
@@ -75,12 +75,11 @@ def resolve_apis(args, out):
     apis = out / 'public-apis'
     dexkit = args.dexkit_jar.resolve() if args.dexkit_jar else apis / 'dexkit-2.2.0.jar'
     if not args.dexkit_jar:
-        archive = download_pinned(DEXKIT_URL, apis / 'dexkit-2.2.0.aar', DEXKIT_AAR_SHA256, 4 * 1024 * 1024)
-        with zipfile.ZipFile(archive) as bundle:
-            matches = [entry for entry in bundle.infolist() if entry.filename == 'classes.jar']
-            if len(matches) != 1 or matches[0].file_size > 2 * 1024 * 1024:
-                raise RuntimeError('Pinned DexKit AAR must contain one bounded classes.jar')
-            dexkit.write_bytes(bundle.read(matches[0]))
+        # The shared preparer verifies exact AAR/JAR size, SHA-256 and member
+        # CRC before publication, with bounded transport-only retries.
+        prepared = acquire(DEFAULT_CACHE, out / 'dexkit-bootstrap.json')
+        dexkit.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(prepared, dexkit)
     verify_api(dexkit, DEXKIT_SHA256, 2 * 1024 * 1024)
     http = args.http_api_jar.resolve() if args.http_api_jar else apis / 'okhttp-4.12.0.jar'
     if not args.http_api_jar:

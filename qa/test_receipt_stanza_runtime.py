@@ -373,15 +373,14 @@ def run_contracts(source_root, out, kotlinc):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding='utf-8')
         stubs.append(target)
-    import urllib.request, zipfile, io
+    from prepare_dexkit import DEFAULT_CACHE, acquire
     dexkit=out/'dexkit-2.2.0.jar'
     cached=os.environ.get('WAEX_QA_DEXKIT_JAR')
     if cached: shutil.copyfile(cached,dexkit)
     else:
-        url='https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
-        with urllib.request.urlopen(url,timeout=45) as response:body=response.read(8*1024*1024+1)
-        if hashlib.sha256(body).hexdigest()!='cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6':raise RuntimeError('DexKit AAR mismatch')
-        with zipfile.ZipFile(io.BytesIO(body)) as archive:dexkit.write_bytes(archive.read('classes.jar'))
+        # Preserve this fixture's private snapshot after bounded acquisition;
+        # compilation and all receipt assertions are outside the retry scope.
+        shutil.copyfile(acquire(DEFAULT_CACHE,out/'dexkit-bootstrap.json'),dexkit)
     if hashlib.sha256(dexkit.read_bytes()).hexdigest()!='195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1':raise RuntimeError('DexKit JAR mismatch')
     kotlin_home=Path(kotlinc).resolve().parents[1];stdlib=kotlin_home/'lib/kotlin-stdlib.jar'
     if not stdlib.is_file():raise RuntimeError('Complete Kotlin distribution required')
