@@ -1,0 +1,45 @@
+diff --git a/qa/fixtures/HmaFlowTest.kt b/qa/fixtures/HmaFlowTest.kt
+index 6d084c6..06cf8bb 100644
+--- a/qa/fixtures/HmaFlowTest.kt
++++ b/qa/fixtures/HmaFlowTest.kt
+@@ -771 +771 @@ class HmaFlowTest {
+-        assertEquals(HmaDiagnostics.HmaState.NOT_ACTIVE, report().state)
++        assertEquals(HmaDiagnostics.HmaState.UNAVAILABLE, report().state)
+@@ -792,0 +793,21 @@ class HmaFlowTest {
++    @Test fun failedDiscoveryIsUnavailableAndCannotRepair() {
++        add(document()); control.put("mode", "discovery_failed"); save()
++        assertEquals(HmaDiagnostics.HmaState.UNAVAILABLE, report().state)
++        assertFalse(repair()); assertTrue(writes().isEmpty())
++    }
++
++    @Test fun unacknowledgedDiscoveryCannotSupplyCleanEvidence() {
++        add(document()); control.put("mode", "discovery_unacknowledged"); save()
++        assertEquals(HmaDiagnostics.HmaState.UNAVAILABLE, report().state)
++    }
++
++    @Test fun truncatedDiscoveryIsUnavailableEvenWithTerminalMarker() {
++        add(document()); control.put("mode", "discovery_truncated"); save()
++        assertEquals(HmaDiagnostics.HmaState.UNAVAILABLE, report().state)
++    }
++
++    @Test fun acknowledgedEmptyDiscoveryDiffersFromFailure() {
++        assertEquals(HmaDiagnostics.HmaState.NOT_CONFIGURED, report().state)
++        assertFalse(repair()); assertTrue(writes().isEmpty())
++    }
++
+diff --git a/qa/fixtures/hma_command_service.py b/qa/fixtures/hma_command_service.py
+index eeb443c..9f195c9 100644
+--- a/qa/fixtures/hma_command_service.py
++++ b/qa/fixtures/hma_command_service.py
+@@ -94,0 +95,8 @@ if command.startswith('for waex_path in '):
++    mode = control.get('mode', 'normal')
++    if mode == 'discovery_failed':
++        raise SystemExit(1)
++    if mode == 'discovery_truncated':
++        print('x' * (100 * 1024))
++    if mode == 'discovery_unacknowledged':
++        print('\n'.join(control['paths']))
++        raise SystemExit(0)
+@@ -97,0 +106,2 @@ if command.startswith('for waex_path in '):
++    if 'WAEX_HMA_DISCOVERY_COMPLETE' in command:
++        print('WAEX_HMA_DISCOVERY_COMPLETE')

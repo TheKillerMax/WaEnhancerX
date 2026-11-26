@@ -1,0 +1,2 @@
+[Fixes]
+- Preserve unrelated HMA rules and configuration metadata when repairing one target, verify complete writes, and scope manager operations to the initiating Android user.
