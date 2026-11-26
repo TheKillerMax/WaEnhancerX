@@ -1,0 +1,4 @@
+Owned recordings remain visible without shared-media permission, including internal fallback storage and Android24/28 paths.
+Playback candidates are always owned and released; stale completion cannot stop a replacement player.
+Deletion retains refused files and reports file or metadata failures without claiming an all-or-nothing operation.
+Failed list refresh preserves the previous snapshot and reports an error; cancellation cannot publish a late result.
