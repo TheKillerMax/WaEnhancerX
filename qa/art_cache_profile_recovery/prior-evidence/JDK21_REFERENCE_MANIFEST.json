@@ -1,0 +1,553 @@
+{
+  "schema": "WAEX_CLASS_METADATA_ART_BUILD_V2",
+  "status": "PASS_BUILD_ONLY",
+  "workflow_commit": "c26f330a3cbd5d26807f1b9358daa46a62d26f3a",
+  "run_id": "45699162692",
+  "attempt": "1",
+  "lock_sha256": "6ed524c843e9e67533e776f121e55aac91969dc27ae2cdf6fcd08dd77c2be771",
+  "probe_sha256": "a4d35eb6ba25990b1a8bfdcfe967c5f869f3c89e7edf6c78aa6d22d20f0fa593",
+  "tools_sha256": {
+    "/usr/lib/jvm/temurin-21-jdk-amd64/bin/java": "9cad3f2620d3ef2ed10b26f922af7e773d54fdaa05f615d6d6df014f3fec4155",
+    "/usr/lib/jvm/temurin-21-jdk-amd64/bin/javac": "2cc288a26beebc50ca7cd924847dffbfb38ef3314e105bba6d4ebce03a0bcb6b",
+    "/home/runner/work/_temp/classmeta-build/kotlin-2.0.20/lib/kotlin-stdlib.jar": "fb169596659a518357c4b2c16f43dc75ab1c4980565ed4b4a317a050e5e39006",
+    "/usr/local/lib/android/sdk/platforms/android-36/android.jar": "d9eb9da824d9e247a352f570f01e1169e725b2954bca9e283a71786c59b59f9a",
+    "/usr/local/lib/android/sdk/build-tools/36.0.0/lib/d8.jar": "4097ff9c46c185c6e7214da7fe9b1befb5adeea5cc9ca349270e0249904f9240"
+  },
+  "sources": {
+    "baseline": {
+      "commit": "72174b77e6d102f7550b527ce2c2b83bd320b38a",
+      "pins": {
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": "3c2a7a92f141507539384cc5b9f4c2f59cc4e3c07db65ee746740ffb2dabf1cf",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": "0cdfe5f32c79a50418dbb2e63bdc5988537f75bc065a3e6c887eb3e9a5e233e1",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8"
+      },
+      "checkout_sha256_by_projection": {
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": {
+          "lf": "3c2a7a92f141507539384cc5b9f4c2f59cc4e3c07db65ee746740ffb2dabf1cf",
+          "crlf": "40ae8541ae37bbca439cbf99e3669883d5e686a845945cb8dbec1e66b2f69589"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": {
+          "lf": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+          "crlf": "3ae94a7fcd461549bdc1c88504f698f9473fe9773b9bcfda1317e8aa668ba285"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": {
+          "lf": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+          "crlf": "28d320b447105cc0a96d58e3bbcc5626e438de95c83daf617fcb76f583e03701"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": {
+          "lf": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+          "crlf": "d4b491c084c8699c5e037869c244408e574e35bbc0f652a8d9173e129e2c53ab"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": {
+          "lf": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+          "crlf": "31e5cc1b885c4ba09557d4643fa59522370750bdea1ca183ba6296e18a157df8"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": {
+          "lf": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+          "crlf": "330720a6c7c2a12859f11bb1c6ec3f7e41b4889bd565c1d2d17a89e61b0e68a2"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": {
+          "lf": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+          "crlf": "295ef7ac45c9aeb673c429daa247387f19d264a6da58a6c7d7ba5bd3dd72625e"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": {
+          "lf": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+          "crlf": "1c4d22fcd7bc6b6a941e953c3f53841ea51b0701ff85e82742a02ecc3ee6f672"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": {
+          "lf": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+          "crlf": "728f2c4ff5abf9381a5582bbd36de59c2c3ddc8caa4fd0e0e887ec03104f3272"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": {
+          "lf": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+          "crlf": "ee7fcdb8834e7c41ef4c3a1a49a5b822aa15afefdcb5078adf79a1d953a92053"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": {
+          "lf": "0cdfe5f32c79a50418dbb2e63bdc5988537f75bc065a3e6c887eb3e9a5e233e1",
+          "crlf": "1266d8916be7a7f6ee6c8d6407e8382e533ecda40b74cd6352e658543c4767f3"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": {
+          "lf": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+          "crlf": "fa932220e5ca9ac26d69cd184a62dd2dee8093e300683a3c5c48ee3d859d53d9"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": {
+          "lf": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+          "crlf": "2aa643826a9e2257def79c3178b74c502a60a880677f36c1f961cf262e081d8f"
+        },
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": {
+          "lf": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+          "crlf": "4d27d089aada2b75d0bcd6119a09307e5a67014bfb0649993ae5134423cf6347"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": {
+          "lf": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+          "crlf": "28591d2ca7722191fed73c13e688464cc8921b53956996daf0d173c333b938ba"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": {
+          "lf": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+          "crlf": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": {
+          "lf": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+          "crlf": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": {
+          "lf": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8",
+          "crlf": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+        }
+      }
+    },
+    "candidate": {
+      "commit": "7814908a1213d86f05ef5dc068b548d322a24d94",
+      "pins": {
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": "88e275846e30c00fd8341eae77eb5973a714a1d8d09d0a0e9ecb8c93342b7d9d",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": "e76094b4dcfc65d1c31adbaee7a0ab27dc477f4a358d004c901364d43ce8945d",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8"
+      },
+      "checkout_sha256_by_projection": {
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": {
+          "lf": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+          "crlf": "728f2c4ff5abf9381a5582bbd36de59c2c3ddc8caa4fd0e0e887ec03104f3272"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": {
+          "lf": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+          "crlf": "ee7fcdb8834e7c41ef4c3a1a49a5b822aa15afefdcb5078adf79a1d953a92053"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": {
+          "lf": "88e275846e30c00fd8341eae77eb5973a714a1d8d09d0a0e9ecb8c93342b7d9d",
+          "crlf": "50e04d09ba45a99dced74110b8d8979ed74ea9bd3e9380dc998159b35ffe7f7f"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": {
+          "lf": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+          "crlf": "fa932220e5ca9ac26d69cd184a62dd2dee8093e300683a3c5c48ee3d859d53d9"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": {
+          "lf": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+          "crlf": "2aa643826a9e2257def79c3178b74c502a60a880677f36c1f961cf262e081d8f"
+        },
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": {
+          "lf": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+          "crlf": "4d27d089aada2b75d0bcd6119a09307e5a67014bfb0649993ae5134423cf6347"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": {
+          "lf": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+          "crlf": "28591d2ca7722191fed73c13e688464cc8921b53956996daf0d173c333b938ba"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": {
+          "lf": "e76094b4dcfc65d1c31adbaee7a0ab27dc477f4a358d004c901364d43ce8945d",
+          "crlf": "0f822a6a4b529325b8a76fb434e38ed8952b6cce63ef23218384606dfdcd767d"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": {
+          "lf": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+          "crlf": "3ae94a7fcd461549bdc1c88504f698f9473fe9773b9bcfda1317e8aa668ba285"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": {
+          "lf": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+          "crlf": "28d320b447105cc0a96d58e3bbcc5626e438de95c83daf617fcb76f583e03701"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": {
+          "lf": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+          "crlf": "d4b491c084c8699c5e037869c244408e574e35bbc0f652a8d9173e129e2c53ab"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": {
+          "lf": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+          "crlf": "31e5cc1b885c4ba09557d4643fa59522370750bdea1ca183ba6296e18a157df8"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": {
+          "lf": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+          "crlf": "330720a6c7c2a12859f11bb1c6ec3f7e41b4889bd565c1d2d17a89e61b0e68a2"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": {
+          "lf": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+          "crlf": "295ef7ac45c9aeb673c429daa247387f19d264a6da58a6c7d7ba5bd3dd72625e"
+        },
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": {
+          "lf": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+          "crlf": "1c4d22fcd7bc6b6a941e953c3f53841ea51b0701ff85e82742a02ecc3ee6f672"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": {
+          "lf": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+          "crlf": "91eb3a4079400fb8f061c915059b16c2584f3c362942b4b0e31c7504b4a29279"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": {
+          "lf": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+          "crlf": "64dfcecbe0179ce29243c6b220cf837c7940308b8fc19a3ce1b2d80b6eaed827"
+        },
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": {
+          "lf": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8",
+          "crlf": "815c66ccbb5799e16db4d1152530e8dabe308ea28c522fce9097743e81cea327"
+        }
+      }
+    }
+  },
+  "fixture_checkout_sha256": {
+    "runner": "31e094f5835a1119a624ff2e488951d94941a54b99a5f274470af5d4c234be70",
+    "fixture": "d20388d759cbf2b042a3a5fdd5d93e6b2d7e857a54f642d6ebbfd9206688a1e7"
+  },
+  "variants": {
+    "baseline": {
+      "inputs": {
+        "androidx/annotation/NonNull.class": "a5fe64994d2d527f110e23181cdfbcb812c2849b006ec1e01c454a4ed80163e7",
+        "androidx/annotation/Nullable.class": "08a04551092706879a79734801b5a2c9994ab49925b5966c698de0d39b0ff5db",
+        "com/waenhancer/config/DndPreferencePolicy.class": "00f32698a106471106c0739a52c1bf258067a2b883915fbe1efac7cbcf3aa99b",
+        "com/waenhancer/utils/ContactNameResolver.class": "a4a9f7e078a10a0389b09eadbaef258607c7c00838e43cf5ffb55f243d0848be",
+        "com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.class": "a7a7ffeb7c9f1f6c9b388826b8bb4d7ffecb41131aa70793d43b453f98b53dd9",
+        "com/waenhancer/xposed/core/BaseFeature$Companion.class": "dcd792a8efa578338a20ee0f448430b150a7e000dfcba311ad4b354ac9a4030c",
+        "com/waenhancer/xposed/core/BaseFeature.class": "958be23a229571da313fc0df038695acf1d85d1a225350fc31bde3a5fdbd1396",
+        "com/waenhancer/xposed/core/HookRegistrar$Bridge.class": "9b48367c96192c4c78c1479d6f8aee737e6a67cc6676025532037c5499985ccb",
+        "com/waenhancer/xposed/core/HookRegistrar$Helpers.class": "de41f223d1de053074cd69ea0e821d9347797051c365a3069ca7f506295c4519",
+        "com/waenhancer/xposed/core/HookRegistrar.class": "d391d6e8ce3f388fbac4c06f76469252773263d03a56e8f2f2bb3476aa050f28",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$1.class": "58de62aec0176d8e4951ca204bc7550e256e9d64d93e96603840f30dadc1ac80",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$2.class": "6be98ec7259d0ec0cc2b54153167095cdd1dacbd33d20b916a52fc2f23bc9d15",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$3.class": "8c390b8fc7591325000ca688982e70c6ba3560fd5b62763a102dcac4bc438e89",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$SetFlagsFilter.class": "b31356ceb9f0252d8ddd046feafb1ad5c58f70c6dff99bc70d7d6bc1ad229a8e",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$ViewListener.class": "e4bdb0e2db0f7e3fe7064f0e12aedd29df8258d2b41457878a064ce385be3186",
+        "com/waenhancer/xposed/core/ViewHookDispatcher.class": "0cb708834a30e5270804dd03cb57bdd7d10ce96ccd14f7c079dc3af8d98d0e38",
+        "com/waenhancer/xposed/core/db/HideSeenStore$PendingRead.class": "79c162db3f0d2182032663e8d2528c3ac972f4b4e85614c700fea43e3a8a14a4",
+        "com/waenhancer/xposed/core/db/HideSeenStore.class": "eee011484ce5b12ed3172f19de117a81de9bb8fdc88a942d7796dbb5de6fae0f",
+        "com/waenhancer/xposed/core/devkit/DexCacheManager$Resolver.class": "9fe866968d9f512008284c54bddd26b599e2b4d97172da860e2174ddb6276d7c",
+        "com/waenhancer/xposed/core/devkit/DexCacheManager.class": "217ddbe2839038ee878bc4490704f9ea588bea1a17f99676eea7b6f5429b01a4",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitClassQuery.class": "9b8569cda9fce1d5221d7196d6d94d17f156d1b7fa651a4273ac12f026ba2c81",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitMethodsQuery.class": "0921edc7107132edf974d696cd1a74bd915974e9a02eb22d32cdbb05b7dec5b3",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitQuery.class": "e40fadb6b52344035caf16905a2a13f6fe3bdb59044b12cf7e365bdf1ecf2686",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine.class": "443c899f3a2e8cdc993d57092ab9302cb99fa95d4f255b3604faf70b8839fb91",
+        "com/waenhancer/xposed/core/privacy/PrivacyPrefs$1.class": "86f5b4c02d468addaae436dda553f9016c651f9deaab6d8b2df8aa517e082234",
+        "com/waenhancer/xposed/core/privacy/PrivacyPrefs.class": "e024d5a86e3c6829543f532cbe7a7b3dab61014a18c315eb47e2890ced04deb7",
+        "com/waenhancer/xposed/core/privacy/PrivacyToggle.class": "a3c94488f90d31ad7d3c91afb6a5a57fb624cc54a9fbe22940c3371a2e1cf867",
+        "com/waenhancer/xposed/core/wa/SafeHooks$1.class": "0177f7f12b8e48b54cb9c1d1eac66cb9890f991426cffec90460c91fbae8de4a",
+        "com/waenhancer/xposed/core/wa/SafeHooks.class": "1dd62f6dabdac70818d85d5a3004f59379edb26e2e9bfd48c583b3e7e9634f3e",
+        "com/waenhancer/xposed/core/wa/WaJid$1.class": "a3be71af8bf89c4fc0b9eca7799efce689874ff97baba778ee4f2af2e9b021f4",
+        "com/waenhancer/xposed/core/wa/WaJid$IdentityMap.class": "dfb1b7726284bb07cc0381fa6f32c979e86c9138091509ea8f8bcc250766c91b",
+        "com/waenhancer/xposed/core/wa/WaJid.class": "7522793320ac665507802dd8f1483409e2e5eb317526436ba6092704b11c8799",
+        "com/waenhancer/xposed/core/wa/WaMessage$KeyLayout.class": "ec294723f82a79402357b71a1cbbb26dc17e3ecc4d09423101e2defb1096cf60",
+        "com/waenhancer/xposed/core/wa/WaMessage.class": "87d2bbdefd670ccf6dca714526ff5adc184b5b78d039c5c0ce7d7372d4b235d2",
+        "com/waenhancer/xposed/core/wa/WaTargets.class": "f2ecdf98b5c6c8146f5513fcb3c160498f05d3676ef701204a56d4f74607b809",
+        "com/waenhancer/xposed/features/customization/PropsOverrideHook.class": "d6ca11e4af7751b22bdb60a566997e66cf50808405f3146e024f2967b49a638b",
+        "com/waenhancer/xposed/features/privacy/BlueOnReplyHook.class": "b2b28f094d5c65979f081cded5fef4b87412dba16ab7ab3de341991b262817da",
+        "com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance$Grant.class": "46a517193d21a7ece08a1d4d9bd364e47abd6a8fdd95374d75ba62cff145fafe",
+        "com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.class": "89367fb28d15cfcdc3b085d53acf497eee210ab3a75d33924fe0e74d5d06f6b8",
+        "com/waenhancer/xposed/features/privacy/CustomPrivacyHook.class": "5626ffea422fdeafda7d00b1497d0316bb8b823f6f059fe890cfa6dbae4c2a19",
+        "com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy$JobGrant.class": "735159888e47748f2a53afff8ec9d25f2c6ada8056efa9bb4ab3e327c00056cd",
+        "com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.class": "7b50d5c713158aa6918a036bd2511a71722a5b46c14c94ca08b68effa27d300c",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$1.class": "883b51e99007577970c029d15922385255b9e25f0002d5e7e75cfe5f65a7fcb7",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$2.class": "3ec3974cbd784b963b3e4a72b2302c25d66c5c9ccc81ae43ff3a76f7ce0eae9a",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$3.class": "bec47b049cfaf3712f73602f7e557dd1b22c6c85cfa79b9ab428513b9397235b",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$4.class": "94ea40a30c6d63e44ddf261722ee23fdbe1213d1e559d1ecf6916c0474eb2a8a",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$5.class": "bcd08ec054c538b12862f4da5f8eb249f198c3b5ae8552972c5388977af1aef4",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$6.class": "937001b44c60d8efefe52990629c3a8ee3b0e4eae17ebac568004fc1f5364b6f",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$7.class": "0cdaf60c6cca4f20e0a90df2c37f29ba7be335cc2aa6e7a31e283ff62af3660a",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$8.class": "edad83de122fbe8d7333a9dc4465046f91396b80c2a120e11fa958f4540875ac",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook.class": "0247c7038e64598047bb608a04ca20b79fed288c9fa93d996db92e5e48674830",
+        "com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.class": "2ed633d3ded9db0d352d4f278564794222121677f72b0325eafc0d7a2bb66b47",
+        "com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.class": "7cba4a04376d21e1169f978ac4dd5f8cc9018faf530f7140e70e5ec400dc798a",
+        "com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.class": "58fcb4d1bf1ca94bec1a033b9db727dde2adb348dd70a2fd325d9ed2802a7a14",
+        "com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.class": "f39d2a8be75d406fca01c014897ac2e0c73744d9b9874bf5747089e8a8acdc67",
+        "com/waenhancer/xposed/features/privacy/UnsentReadLedger.class": "2907b22b6e3d298ad9c3de5ea9a77b6db33ac8101203eaaa09cb2b378a4da5f4",
+        "com/waenhancer/xposed/utils/HookErrors.class": "6abfc794cea0eba252783caaa847ecc442782efe9529a4a69d57d59306649e06",
+        "com/waenhancer/xposed/utils/HostFields.class": "4924ca19e166bf41e529cd07cd76bbe884950c02c5e613809b270bf5ead611ed",
+        "com/whatsapp/infra/core/jid/Jid.class": "77782bd4f396fffcf04f0c0503cde22c5134348eda1080b69c8576ae5c2ddfd1",
+        "de/robv/android/xposed/XC_MethodHook$MethodHookParam.class": "56d3337c9d1e39c6f6ee863e1f390830c958bb25281725c2d7be0d69e2c71b57",
+        "de/robv/android/xposed/XC_MethodHook$Unhook.class": "bd961b8bbba64bbe9ef26c916f159ab6a43b760f8bbdda390f939a2d6525bb13",
+        "de/robv/android/xposed/XC_MethodHook.class": "63a83301dd4521761693b2152334b283f50e0c34b96ea41211fe04a88cb02bf4",
+        "de/robv/android/xposed/XposedBridge.class": "39f9ac4b3fecc840d0055db89d07e1a2ad28561a8452fc6c2782ff13ac3e4b90",
+        "de/robv/android/xposed/XposedHelpers.class": "03c0c109324acc84e3c702f613501c1d51de512ac0db345d12e43d8954d0ad49",
+        "org/lab/waex/qa/classmetadata/Main$NoGetter.class": "857d034541f2d47d126f9833ae54b9dedeb54d7b19773547a77d854d83f49749",
+        "org/lab/waex/qa/classmetadata/Main$SyntheticJid.class": "f8c898f8ebc31da4ec8e48ae65776ba3a0d86b2e640ae229f81f04e88d0a2ad9",
+        "org/lab/waex/qa/classmetadata/Main.class": "da911863eca20d8e661cb62f0a4b444dd17b4cc25ec7cdcf55067e7195705c20"
+      },
+      "excluded_host_only": [
+        "ReceiptResourceBoundaryProbe.class",
+        "android/content/Context.class",
+        "android/content/SharedPreferences$Editor.class",
+        "android/content/SharedPreferences.class",
+        "android/content/res/Resources.class",
+        "android/os/Message.class",
+        "android/os/SystemClock.class",
+        "android/util/LruCache.class",
+        "android/view/View.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Attribute.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Delivery.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$DeviceJid.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Generator.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Incoming.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$IncomingMessage.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Node.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Played.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Preferences.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$ReadJob.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Scenario.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Writer.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks.class",
+        "org/json/JSONObject.class"
+      ],
+      "dex_sha256": "4b2132c4af35e9065dfc1e40faad00393efa2150394a497a7ab5bd3d3c4bafc1",
+      "jar_sha256": "3e6378e13dee4ac9af960dcda75ed92f5d314fa6736aee4c996888d9151a9fa8",
+      "jar_bytes": 2750884,
+      "classvalue_descriptor_present": true,
+      "receipt_sha256": "04a6cae29281e0f72be9c7661914b70cc41de7985b4801177dd48d5ad768b24d",
+      "host_scenarios": 101,
+      "host_checks": 702,
+      "checkout_source_sha256": {
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": "3c2a7a92f141507539384cc5b9f4c2f59cc4e3c07db65ee746740ffb2dabf1cf",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": "0cdfe5f32c79a50418dbb2e63bdc5988537f75bc065a3e6c887eb3e9a5e233e1",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8"
+      }
+    },
+    "candidate": {
+      "inputs": {
+        "androidx/annotation/NonNull.class": "a5fe64994d2d527f110e23181cdfbcb812c2849b006ec1e01c454a4ed80163e7",
+        "androidx/annotation/Nullable.class": "08a04551092706879a79734801b5a2c9994ab49925b5966c698de0d39b0ff5db",
+        "com/waenhancer/config/DndPreferencePolicy.class": "00f32698a106471106c0739a52c1bf258067a2b883915fbe1efac7cbcf3aa99b",
+        "com/waenhancer/utils/ContactNameResolver.class": "a4a9f7e078a10a0389b09eadbaef258607c7c00838e43cf5ffb55f243d0848be",
+        "com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.class": "a7a7ffeb7c9f1f6c9b388826b8bb4d7ffecb41131aa70793d43b453f98b53dd9",
+        "com/waenhancer/xposed/core/BaseFeature$Companion.class": "dcd792a8efa578338a20ee0f448430b150a7e000dfcba311ad4b354ac9a4030c",
+        "com/waenhancer/xposed/core/BaseFeature.class": "958be23a229571da313fc0df038695acf1d85d1a225350fc31bde3a5fdbd1396",
+        "com/waenhancer/xposed/core/HookRegistrar$Bridge.class": "9b48367c96192c4c78c1479d6f8aee737e6a67cc6676025532037c5499985ccb",
+        "com/waenhancer/xposed/core/HookRegistrar$Helpers.class": "de41f223d1de053074cd69ea0e821d9347797051c365a3069ca7f506295c4519",
+        "com/waenhancer/xposed/core/HookRegistrar.class": "d391d6e8ce3f388fbac4c06f76469252773263d03a56e8f2f2bb3476aa050f28",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$1.class": "58de62aec0176d8e4951ca204bc7550e256e9d64d93e96603840f30dadc1ac80",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$2.class": "6be98ec7259d0ec0cc2b54153167095cdd1dacbd33d20b916a52fc2f23bc9d15",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$3.class": "8c390b8fc7591325000ca688982e70c6ba3560fd5b62763a102dcac4bc438e89",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$SetFlagsFilter.class": "b31356ceb9f0252d8ddd046feafb1ad5c58f70c6dff99bc70d7d6bc1ad229a8e",
+        "com/waenhancer/xposed/core/ViewHookDispatcher$ViewListener.class": "e4bdb0e2db0f7e3fe7064f0e12aedd29df8258d2b41457878a064ce385be3186",
+        "com/waenhancer/xposed/core/ViewHookDispatcher.class": "0cb708834a30e5270804dd03cb57bdd7d10ce96ccd14f7c079dc3af8d98d0e38",
+        "com/waenhancer/xposed/core/db/HideSeenStore$PendingRead.class": "79c162db3f0d2182032663e8d2528c3ac972f4b4e85614c700fea43e3a8a14a4",
+        "com/waenhancer/xposed/core/db/HideSeenStore.class": "eee011484ce5b12ed3172f19de117a81de9bb8fdc88a942d7796dbb5de6fae0f",
+        "com/waenhancer/xposed/core/devkit/DexCacheManager$Resolver.class": "9fe866968d9f512008284c54bddd26b599e2b4d97172da860e2174ddb6276d7c",
+        "com/waenhancer/xposed/core/devkit/DexCacheManager.class": "217ddbe2839038ee878bc4490704f9ea588bea1a17f99676eea7b6f5429b01a4",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitClassQuery.class": "9b8569cda9fce1d5221d7196d6d94d17f156d1b7fa651a4273ac12f026ba2c81",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitMethodsQuery.class": "0921edc7107132edf974d696cd1a74bd915974e9a02eb22d32cdbb05b7dec5b3",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine$DexKitQuery.class": "e40fadb6b52344035caf16905a2a13f6fe3bdb59044b12cf7e365bdf1ecf2686",
+        "com/waenhancer/xposed/core/devkit/DexSearchEngine.class": "443c899f3a2e8cdc993d57092ab9302cb99fa95d4f255b3604faf70b8839fb91",
+        "com/waenhancer/xposed/core/privacy/PrivacyPrefs$1.class": "86f5b4c02d468addaae436dda553f9016c651f9deaab6d8b2df8aa517e082234",
+        "com/waenhancer/xposed/core/privacy/PrivacyPrefs.class": "e024d5a86e3c6829543f532cbe7a7b3dab61014a18c315eb47e2890ced04deb7",
+        "com/waenhancer/xposed/core/privacy/PrivacyToggle.class": "a3c94488f90d31ad7d3c91afb6a5a57fb624cc54a9fbe22940c3371a2e1cf867",
+        "com/waenhancer/xposed/core/wa/SafeHooks$1.class": "0177f7f12b8e48b54cb9c1d1eac66cb9890f991426cffec90460c91fbae8de4a",
+        "com/waenhancer/xposed/core/wa/SafeHooks.class": "1dd62f6dabdac70818d85d5a3004f59379edb26e2e9bfd48c583b3e7e9634f3e",
+        "com/waenhancer/xposed/core/wa/WaJid$IdentityMap.class": "181c72a47fbcc5840c89427e539a3a8b172e9e3d1315fd2903146c853a6e8962",
+        "com/waenhancer/xposed/core/wa/WaJid.class": "3b62ea510e6c05290b89095bcb0c2fc4117846b7995f8c2cb9fe42ac37226f28",
+        "com/waenhancer/xposed/core/wa/WaMessage$KeyLayout.class": "ec294723f82a79402357b71a1cbbb26dc17e3ecc4d09423101e2defb1096cf60",
+        "com/waenhancer/xposed/core/wa/WaMessage.class": "87d2bbdefd670ccf6dca714526ff5adc184b5b78d039c5c0ce7d7372d4b235d2",
+        "com/waenhancer/xposed/core/wa/WaTargets.class": "f2ecdf98b5c6c8146f5513fcb3c160498f05d3676ef701204a56d4f74607b809",
+        "com/waenhancer/xposed/features/customization/PropsOverrideHook.class": "d6ca11e4af7751b22bdb60a566997e66cf50808405f3146e024f2967b49a638b",
+        "com/waenhancer/xposed/features/privacy/BlueOnReplyHook.class": "b2b28f094d5c65979f081cded5fef4b87412dba16ab7ab3de341991b262817da",
+        "com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance$Grant.class": "46a517193d21a7ece08a1d4d9bd364e47abd6a8fdd95374d75ba62cff145fafe",
+        "com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.class": "89367fb28d15cfcdc3b085d53acf497eee210ab3a75d33924fe0e74d5d06f6b8",
+        "com/waenhancer/xposed/features/privacy/CustomPrivacyHook.class": "5626ffea422fdeafda7d00b1497d0316bb8b823f6f059fe890cfa6dbae4c2a19",
+        "com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy$JobGrant.class": "735159888e47748f2a53afff8ec9d25f2c6ada8056efa9bb4ab3e327c00056cd",
+        "com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.class": "7b50d5c713158aa6918a036bd2511a71722a5b46c14c94ca08b68effa27d300c",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$1.class": "d5cbc8b17305e227e065b7469e9617c75e5bc588dc08f7d9bc899d3074be240a",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$2.class": "9e15fcb391d9f12da83bfe6ad1196cd48cd4045b34d0b7ba5d972766e5911f62",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$3.class": "a990301919831978d1f37e4455745149118f35b0fc274c1399c4de9276256a1b",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$4.class": "883b1d3e4bcd305f7bc1b8a622d278d06886f84a04c2a901060b25bff148ccd4",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$5.class": "8cb48aac36d8ae3111ac5519ad5c904449c2cf44688f4ffa5f612747cbb590ad",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$6.class": "335bc5c969334ba889ac1684722cbf00c70de5a0f1d5f1ab2f4abc3d31533926",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook$7.class": "6101e14ebdc8f08fbc3c778bc2f8987f472c11d9323401ccd898ba85f1662a62",
+        "com/waenhancer/xposed/features/privacy/HideReceiptsHook.class": "8191d0246f814decdd9bddf75cd6b42c86a5c0bc7f5060847de69a78e94c5628",
+        "com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.class": "2ed633d3ded9db0d352d4f278564794222121677f72b0325eafc0d7a2bb66b47",
+        "com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.class": "7cba4a04376d21e1169f978ac4dd5f8cc9018faf530f7140e70e5ec400dc798a",
+        "com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.class": "58fcb4d1bf1ca94bec1a033b9db727dde2adb348dd70a2fd325d9ed2802a7a14",
+        "com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.class": "f39d2a8be75d406fca01c014897ac2e0c73744d9b9874bf5747089e8a8acdc67",
+        "com/waenhancer/xposed/features/privacy/UnsentReadLedger.class": "2907b22b6e3d298ad9c3de5ea9a77b6db33ac8101203eaaa09cb2b378a4da5f4",
+        "com/waenhancer/xposed/utils/HookErrors.class": "6abfc794cea0eba252783caaa847ecc442782efe9529a4a69d57d59306649e06",
+        "com/waenhancer/xposed/utils/HostFields.class": "4924ca19e166bf41e529cd07cd76bbe884950c02c5e613809b270bf5ead611ed",
+        "com/whatsapp/infra/core/jid/Jid.class": "77782bd4f396fffcf04f0c0503cde22c5134348eda1080b69c8576ae5c2ddfd1",
+        "de/robv/android/xposed/XC_MethodHook$MethodHookParam.class": "56d3337c9d1e39c6f6ee863e1f390830c958bb25281725c2d7be0d69e2c71b57",
+        "de/robv/android/xposed/XC_MethodHook$Unhook.class": "bd961b8bbba64bbe9ef26c916f159ab6a43b760f8bbdda390f939a2d6525bb13",
+        "de/robv/android/xposed/XC_MethodHook.class": "63a83301dd4521761693b2152334b283f50e0c34b96ea41211fe04a88cb02bf4",
+        "de/robv/android/xposed/XposedBridge.class": "39f9ac4b3fecc840d0055db89d07e1a2ad28561a8452fc6c2782ff13ac3e4b90",
+        "de/robv/android/xposed/XposedHelpers.class": "03c0c109324acc84e3c702f613501c1d51de512ac0db345d12e43d8954d0ad49",
+        "org/lab/waex/qa/classmetadata/Main$NoGetter.class": "857d034541f2d47d126f9833ae54b9dedeb54d7b19773547a77d854d83f49749",
+        "org/lab/waex/qa/classmetadata/Main$SyntheticJid.class": "f8c898f8ebc31da4ec8e48ae65776ba3a0d86b2e640ae229f81f04e88d0a2ad9",
+        "org/lab/waex/qa/classmetadata/Main.class": "da911863eca20d8e661cb62f0a4b444dd17b4cc25ec7cdcf55067e7195705c20"
+      },
+      "excluded_host_only": [
+        "ReceiptResourceBoundaryProbe.class",
+        "android/content/Context.class",
+        "android/content/SharedPreferences$Editor.class",
+        "android/content/SharedPreferences.class",
+        "android/content/res/Resources.class",
+        "android/os/Message.class",
+        "android/os/SystemClock.class",
+        "android/util/LruCache.class",
+        "android/view/View.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Attribute.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Delivery.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$DeviceJid.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Generator.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Incoming.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$IncomingMessage.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Node.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Played.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Preferences.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$ReadJob.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Scenario.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks$Writer.class",
+        "com/waenhancer/xposed/features/privacy/ReceiptStanzaRuntimeChecks.class",
+        "org/json/JSONObject.class"
+      ],
+      "dex_sha256": "8e0cc402cafceb2db350365612b6176e7434788adf3b18bd73a1b5b16b5a1e0f",
+      "jar_sha256": "44526934c737ed2e53376560e4474013896f0f2dee19d111e13fbbd766d1c47e",
+      "jar_bytes": 2750584,
+      "classvalue_descriptor_present": false,
+      "receipt_sha256": "923bdcd28af3f3e2b5e863ae2da7de3bf3078116fdf03fd1481f3b1f2399bfc0",
+      "host_scenarios": 101,
+      "host_checks": 702,
+      "checkout_source_sha256": {
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyToggle.java": "64c034562175af354ee7852cc31b9fda57a7be341ef2eacbbfee300c553f23bb",
+        "app/src/main/java/com/waenhancer/xposed/core/privacy/PrivacyPrefs.java": "7977ce4b9c51f72660d9c68b154a08d2342c4d15337236cbae5c83b597e2ec83",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaJid.java": "88e275846e30c00fd8341eae77eb5973a714a1d8d09d0a0e9ecb8c93342b7d9d",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaMessage.java": "3562dd8b225885be74d43fa866ec6cb29ff4915bb97596012f8880be81d8f987",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/WaTargets.java": "605ee685fa3b34608e693efd0230634b3b24b88c626686027b10473c1c80cde7",
+        "app/src/main/java/com/waenhancer/config/DndPreferencePolicy.java": "78835d42450416c66ead8f5ae52781d2a616da0cab0e2344aa63ceb621bcdafc",
+        "app/src/main/java/com/waenhancer/xposed/core/wa/SafeHooks.java": "ae6996cf8d7c1bdf6aaf2b17be4e28e96ba4d2ba787505149c5da6a338e63814",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/HideReceiptsHook.java": "e76094b4dcfc65d1c31adbaee7a0ab27dc477f4a358d004c901364d43ce8945d",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJobExecutionPolicy.java": "85ae416d838bdebac582829ce828f727a102d86bbc26550c3cbd6ac4186dc842",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/PlayedReceiptBatch.java": "9c607c21bffde954d2d79e3c1e7c860ae7027574f636c4e16ad2a541f3e07efb",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/UnsentReadLedger.java": "ce72edbb34a891742d3dc6ec57aca62872d24b52a7403e58bd76b2a187d09023",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ReceiptJidPolicy.java": "cdbd665aefc3ac2b572a989e1bf637d92ad3386c963ca4164c27fafe70a10466",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/BoundedReceiptAllowance.java": "62edc5c3602c0afee02de7a9d811f613761a66065768b53be8c7c389c548ea83",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/RecipientReceiptAllowance.java": "f268821434c8cdd515018b6dc5754023e57e687b68acf4b6a97e55cf4d2f8a2e",
+        "app/src/main/java/com/waenhancer/xposed/features/privacy/ExplicitReadReceiptPolicy.java": "9dd633c99f749724335e76adef413f788136c427304796610bb9f10aff49faa8",
+        "app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt": "20473282d33ec3183989f4311baf445052eb3647f86a347d440a11f580fbbd29",
+        "app/src/main/java/com/waenhancer/xposed/core/HookRegistrar.java": "cc5db21b21b29c5ad3f5b13b88435fffcd04e1ba4d074a89e18585d691e9624d",
+        "app/src/main/java/com/waenhancer/xposed/core/ViewHookDispatcher.java": "a4f3a6c991e9f0b3ec08e8d4ddd0056271e1c5a0d947d5602a84c88bc52401b8"
+      }
+    }
+  },
+  "art_executed": false,
+  "kotlin_toolchain": {
+    "schema": "WAEX_CLASS_METADATA_KOTLIN_TOOLCHAIN_V1",
+    "lock_sha256": "22cbe8b32257e65cb65e1c894d7b5daa3c42d3a6fcfcaaf4c2207f36163b896d",
+    "helper_sha256": "67c31cb9b4ffb2f45f83aa7c4186ded17d804ae92c710c0206daa0c7b5600b23",
+    "kotlin_version_output": "info: kotlinc-jvm 2.0.20 (JRE 21.0.13+9-LTS)",
+    "artifacts": [
+      {
+        "file": "kotlin-compiler.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler/2.0.20/kotlin-compiler-2.0.20.jar",
+        "bytes": 59684377,
+        "sha256": "31ade4e3a65a2750c84b90788d37f23d89baa0e3e5c88538eda18914c908ee6d"
+      },
+      {
+        "file": "kotlin-stdlib.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.0.20/kotlin-stdlib-2.0.20.jar",
+        "bytes": 1747659,
+        "sha256": "fb169596659a518357c4b2c16f43dc75ab1c4980565ed4b4a317a050e5e39006"
+      },
+      {
+        "file": "kotlin-stdlib-jdk7.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk7/2.0.20/kotlin-stdlib-jdk7-2.0.20.jar",
+        "bytes": 945,
+        "sha256": "f4dad806a01ac5aab44e8250813d1d3eaa6cd52fec9ec59d7fbf04a873a445aa"
+      },
+      {
+        "file": "kotlin-stdlib-jdk8.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk8/2.0.20/kotlin-stdlib-jdk8-2.0.20.jar",
+        "bytes": 951,
+        "sha256": "e9e73558df903fcb93152273e86e4b8a3e3a4d5377898c4e5273cb42c49e00a8"
+      },
+      {
+        "file": "kotlin-script-runtime.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-script-runtime/2.0.20/kotlin-script-runtime-2.0.20.jar",
+        "bytes": 43369,
+        "sha256": "fe97002a6798f7207564648919d6eeccfb338b95dc04b48886d856655bc64a4e"
+      },
+      {
+        "file": "kotlin-reflect.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-reflect/1.6.10/kotlin-reflect-1.6.10.jar",
+        "bytes": 3038560,
+        "sha256": "3277ac102ae17aad10a55abec75ff5696c8d109790396434b496e75087854203"
+      },
+      {
+        "file": "trove4j.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/intellij/deps/trove4j/1.0.20200330/trove4j-1.0.20200330.jar",
+        "bytes": 572985,
+        "sha256": "c5fd725bffab51846bf3c77db1383c60aaaebfe1b7fe2f00d23fe1b7df0a439d"
+      },
+      {
+        "file": "kotlinx-coroutines-core-jvm.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.6.4/kotlinx-coroutines-core-jvm-1.6.4.jar",
+        "bytes": 1476653,
+        "sha256": "c24c8bb27bb320c4a93871501a7e5e0c61607638907b197aef675513d4c820be"
+      },
+      {
+        "file": "annotations.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+        "bytes": 17536,
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+      }
+    ],
+    "launcher_sha256": "288370a6d20419290426095189ffd4d2cce410ad1b300826025770caa56438e7",
+    "java": {
+      "java_home": "/usr/lib/jvm/temurin-21-jdk-amd64",
+      "properties": {
+        "java.specification.version": "21",
+        "java.version": "21.0.13",
+        "java.runtime.version": "21.0.13+9-LTS",
+        "java.vendor": "Eclipse Adoptium"
+      },
+      "javac_version": "javac 21.0.13",
+      "files_sha256": {
+        "bin/java": "9cad3f2620d3ef2ed10b26f922af7e773d54fdaa05f615d6d6df014f3fec4155",
+        "bin/javac": "2cc288a26beebc50ca7cd924847dffbfb38ef3314e105bba6d4ebce03a0bcb6b",
+        "release": "f83f6dcc966043c93cd498ac8e7ee7c310852074970d62c702e4ad2710002898",
+        "lib/modules": "a5fd7c311fbd96adcbd43757dbb94461e14df353b6ae9f5c029c45805a39782c",
+        "lib/ct.sym": "210305c54fb617c8935b3b1502fce15fd5d1a9005063aa9b4be59762b3d64042",
+        "lib/server/libjvm.so": "b1a6a98962406718a491922ea6a3f8d898ea7c4a9ebe814a7963defc61ce62b2"
+      },
+      "cleared_environment_names": [],
+      "qualification": "Observed preinstalled JDK21; no cross-patch binary reproducibility claim"
+    }
+  },
+  "builder_sha256": "d9446d12e6479503bcdd8d6d59a2839aeec40072ac1d0d7479e4958d6d675e60",
+  "supplied_dexkit_input": {
+    "path": "/home/runner/work/_temp/classmeta-dexkit/dexkit-2.2.0.jar",
+    "bytes": 827109,
+    "sha256": "195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1"
+  },
+  "scope": "Complete two production class definitions with explicit host-service boundaries. No app build or hooks."
+}

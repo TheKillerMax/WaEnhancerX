@@ -1,0 +1,51 @@
+{
+  "schema": "WAEX_ART_RECOVERY_CACHE_RECOGNIZED_CLAIMS_V1",
+  "created_utc": "2026-11-26T03:39:19.990073+00:00",
+  "run_id": "45749434077",
+  "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+  "attempt": 1,
+  "scope": "CACHE_BUILD_AND_DEPENDENT_API27_API28_ONLY",
+  "status": "NO_CACHE_RUNTIME_CLAIMS_OBSERVED_BUILD_BLOCKED_DEPENDENT_JOB_SKIPPED",
+  "claims": [],
+  "claim_count": 0,
+  "new_cache_Android_invocations_observed": 0,
+  "artifact_id": 15084568318,
+  "artifact": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/artifacts/cache-recovery-build-receipts-45749434077-1.zip",
+    "bytes": 2724,
+    "sha256": "207dd4cb2d2961b82871f666a2f3916429e956fe1ca67692c374aef62b4a035d"
+  },
+  "failed_build_receipt": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084568318/build-result.json",
+    "bytes": 5975,
+    "sha256": "03f8686c24c88d7eae55fc1529af99704ef48af99b507953b01a02d28f569adc"
+  },
+  "service_state": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/EARLY_SERVICE_STATE.json",
+    "bytes": 12213,
+    "sha256": "9a076c8efcefed971159a7721df3ed9696a1a0bef5415fade99f514b5c34ee04"
+  },
+  "jobs": {
+    "cache_build": {
+      "id": 139673382432,
+      "name": "cache_build",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 45749434077
+    },
+    "cache": {
+      "id": 139673445001,
+      "name": "cache",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_id": 45749434077
+    }
+  },
+  "interpretation": [
+    "The cache build stopped before its Java compiler and before producing the fixture artifact.",
+    "The dependent aggregate cache job is completed/skipped; no cache27/cache28 process emission or nonce claim exists in these observed artifacts.",
+    "Static consumed_nonces/source pins in build metadata are historical exclusions, not new runtime claims.",
+    "No hidden or unreported nonce value is invented. This zero observed cache-claim subset is not a successful runtime or cleanup qualification.",
+    "Canonical runtime claims from this same run are independently collected by native_reconcile."
+  ]
+}

@@ -1,0 +1,179 @@
+name: Lab new ART cache fixtures with exact JDK21 selection
+on:
+  push:
+    branches: [lab/art-cache-profile-recovery-20261126]
+    paths:
+      - .github/workflows/android-art-cache-profile-recovery.yml
+      - qa/art_cache_profile_recovery/**
+permissions:
+  contents: read
+concurrency:
+  group: waex-art-cache-profile-recovery-20261126
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONPATH: ${{ github.workspace }}/lab/qa
+jobs:
+  build:
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/art-cache-profile-recovery-20261126' &&
+      github.event_name == 'push' && github.run_attempt == '1' &&
+      github.event.repository.private == false && github.event.forced == false &&
+      github.event.deleted == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      manifest_sha256: ${{ steps.identity.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: lab
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Preserve the hosted JDK paths and bytes before explicit selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 lab/qa/art_cache_profile_recovery/jdk_observation.py --java-home "${JAVA_HOME_21_X64:-/missing/preinstalled-jdk21}" --sdk "$ANDROID_HOME" --out "$RUNNER_TEMP/cache-only-jdk-before"
+      - name: Select the exact historically recorded JDK21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21.0.13+9'
+          java-package: jdk
+          architecture: x64
+          check-latest: false
+      - name: Build only the new independent cache identity fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 lab/qa/art_cache_profile_recovery/build.py --sdk "$ANDROID_HOME" --java-home "$JAVA_HOME" --out "$RUNNER_TEMP/cache-only-build"
+      - name: Bind the cache artifact to its own current producer
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$RUNNER_TEMP/cache-only-build/artifact/artifact-manifest.json"
+          test -s "$manifest"
+          echo "manifest_sha256=$(sha256sum "$manifest" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        with:
+          name: cache-only-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cache-only-build/artifact/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: cache-only-build-receipts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cache-only-build/*.json
+            ${{ runner.temp }}/cache-only-build/*.log
+            ${{ runner.temp }}/cache-only-build/generated/
+            ${{ runner.temp }}/cache-only-jdk-before/
+          if-no-files-found: warn
+          retention-days: 14
+  cache:
+    needs: build
+    if: >-
+      github.repository == 'TheKillerMax/WaEnhancerX' &&
+      github.ref == 'refs/heads/lab/art-cache-profile-recovery-20261126' &&
+      github.event_name == 'push' && github.run_attempt == '1' &&
+      github.event.repository.private == false && github.event.forced == false &&
+      github.event.deleted == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        target: [api27, api28]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          path: lab
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: cache-only-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cache-only-artifact
+      - name: Preserve the hosted Java identity before selection
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import os, shutil, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('cache-only-java-' + os.environ['TARGET'])
+          out.mkdir()
+          save(out, 'preinstalled-java.json', {
+              'java': tool_identity(Path(shutil.which('java') or '/missing/java')),
+              'JAVA_HOME': os.environ.get('JAVA_HOME'),
+          })
+          PYCODE
+      - name: Select the exact reviewed Java runtime
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17.0.21+9'
+          java-package: jre
+          architecture: x64
+          check-latest: false
+      - name: Verify the selected runtime against the unchanged preflight pin
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, shutil, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'lab/qa')
+          from android_emulator_lab_preflight import save, sha256_file, tool_identity
+          out = Path(os.environ['RUNNER_TEMP']) / ('cache-only-java-' + os.environ['TARGET'])
+          java = Path(shutil.which('java') or '/missing/java').resolve()
+          home = Path(os.environ['JAVA_HOME']).resolve()
+          pin = json.loads(Path('lab/qa/android_emulator_lab_matrix_lock.json').read_bytes())['tool_sha256']['java']
+          record = {'status': 'BLOCKED', 'selected': tool_identity(java), 'JAVA_HOME': str(home), 'required_sha256': pin}
+          try:
+              if java != home / 'bin/java' or record['selected'].get('sha256') != pin:
+                  raise RuntimeError('Selected Java does not match the reviewed launcher and JAVA_HOME')
+              record['release_sha256'] = sha256_file(home / 'release')
+              if record['release_sha256'] != '59425849bf0f00e83133e485c166042ba1f97b7625a5edc389925bc25e19fe4a':
+                  raise RuntimeError('Selected Java release differs from the official reviewed JRE')
+              result = subprocess.run([str(java), '-version'], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15)
+              record.update(returncode=result.returncode, stdout=result.stdout, stderr=result.stderr)
+              if result.returncode != 0 or '17.0.21+9' not in result.stderr:
+                  raise RuntimeError('Selected Java version is not the reviewed release')
+              record['status'] = 'PASS'
+          finally:
+              save(out, 'selected-java.json', record)
+          PYCODE
+      - name: Bootstrap the disposable runner with the reviewed pins
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 lab/qa/art_cache_profile_recovery/bootstrap.py --out "$RUNNER_TEMP/cache-only-bootstrap-$TARGET"
+      - name: Run one new cache fixture and bounded cleanup; no canonical workloads
+        env:
+          TARGET: ${{ matrix.target }}
+          MANIFEST_SHA256: ${{ needs.build.outputs.manifest_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 lab/qa/art_cache_profile_recovery/run.py --target "$TARGET" --artifact "$RUNNER_TEMP/cache-only-artifact" --manifest-sha256 "$MANIFEST_SHA256" --out "$RUNNER_TEMP/cache-only-$TARGET"
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        if: always()
+        with:
+          name: cache-only-runtime-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/cache-only-${{ matrix.target }}/reports/
+            ${{ runner.temp }}/cache-only-bootstrap-${{ matrix.target }}/
+            ${{ runner.temp }}/cache-only-java-${{ matrix.target }}/
+          if-no-files-found: warn
+          retention-days: 14

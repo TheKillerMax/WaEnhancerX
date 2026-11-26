@@ -1,0 +1,130 @@
+{
+  "schema": "WAEX_ART_RECOVERY_CACHE_PRECOMPILATION_BLOCK_READ_REVIEW_V1",
+  "created_utc": "2026-11-26T03:39:19.990073+00:00",
+  "status": "BLOCKED_BUILD_PIN_GATE_CONFIRMED_NO_CACHE_RUNTIME",
+  "reviewer": "ui_review",
+  "run_id": "45749434077",
+  "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+  "cache_build_job": 139673382432,
+  "failed_build_artifact_id": 15084568318,
+  "artifact": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/artifacts/cache-recovery-build-receipts-45749434077-1.zip",
+    "bytes": 2724,
+    "sha256": "207dd4cb2d2961b82871f666a2f3916429e956fe1ca67692c374aef62b4a035d"
+  },
+  "transfer": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/15084568318-transfer.json",
+    "bytes": 913,
+    "sha256": "c9034cc2336fab454b1b1d688d73d700b2417d4efe79ed6de0987075644c2ed0"
+  },
+  "receipt": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084568318/build-result.json",
+    "bytes": 5975,
+    "sha256": "03f8686c24c88d7eae55fc1529af99704ef48af99b507953b01a02d28f569adc"
+  },
+  "job_log": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/CACHE_BUILD_JOB_139673382432.log",
+    "bytes": 15562,
+    "sha256": "090edbc125d359e18958b7b0d3af398f30ddfcf1ab477acaf64d8c900159d6f5"
+  },
+  "service_state": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/EARLY_SERVICE_STATE.json",
+    "bytes": 12213,
+    "sha256": "9a076c8efcefed971159a7721df3ed9696a1a0bef5415fade99f514b5c34ee04"
+  },
+  "source_builder": {
+    "path": "android_coverage_work/art_profile_recovery_candidate/repo/qa/art_cache_recovery/build.py",
+    "bytes": 9529,
+    "sha256": "d506957c2476a8707e6f735fe1e806dd7d7af71803ab881bab6b21b31fc0b5d8"
+  },
+  "observed_failure": {
+    "exception": "RuntimeError: Existing pinned tool differs: java",
+    "location": "build.py:122 first tool iteration (java)",
+    "compound_gate": "path.is_file() and digest(path) == TOOL_PINS[name]",
+    "observed_runner_image": "ubuntu-24.04 / 20261122.23.1",
+    "invocation_java_home_argument": "$JAVA_HOME_21_X64",
+    "tools_observed_saved": false,
+    "javac_or_d8_commands_in_artifact": 0,
+    "java_or_javac_started_before_failed_gate": false,
+    "cache_JAR_produced": false,
+    "cache_runtime_job_state": "completed/skipped"
+  },
+  "not_determined": [
+    "The resolved Java path on the failed runner.",
+    "Whether the selected java path was absent/nonregular or its SHA256 mismatched.",
+    "The failed runner Java version, vendor, actual bytes/hash, release or runtime modules.",
+    "The cause of any difference between the independent hosted runners."
+  ],
+  "evidence_comparison": {
+    "same_run_successful_canonical_build": {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085245912/build-result.json",
+      "bytes": 9155,
+      "sha256": "9a1149dfe3f8e5613718f8abd591bd1a744dca2fc52dc60dcd1b9fbc58f7bc05"
+    },
+    "current_canonical_java": {
+      "path": "/usr/lib/jvm/temurin-21-jdk-amd64/bin/java",
+      "bytes": 12328,
+      "sha256": "9cad3f2620d3ef2ed10b26f922af7e773d54fdaa05f615d6d6df014f3fec4155"
+    },
+    "current_canonical_javac": {
+      "path": "/usr/lib/jvm/temurin-21-jdk-amd64/bin/javac",
+      "bytes": 12424,
+      "sha256": "2cc288a26beebc50ca7cd924847dffbfb38ef3314e105bba6d4ebce03a0bcb6b"
+    },
+    "historical_exact_JDK_source": {
+      "path": "android_coverage_work/WORKFLOW_ADMISSION_REVIEW/artifact_reuse/ART_C26_ARTIFACT_MANIFEST.json",
+      "bytes": 48905,
+      "sha256": "76c2a3397d81bab85e341fc4c7adba5618e5b27afd70b8b391bd886b64702191"
+    },
+    "historical_JDK21_identity": {
+      "java_home": "/usr/lib/jvm/temurin-21-jdk-amd64",
+      "properties": {
+        "java.specification.version": "21",
+        "java.version": "21.0.13",
+        "java.runtime.version": "21.0.13+9-LTS",
+        "java.vendor": "Eclipse Adoptium"
+      },
+      "javac_version": "javac 21.0.13",
+      "files_sha256": {
+        "bin/java": "9cad3f2620d3ef2ed10b26f922af7e773d54fdaa05f615d6d6df014f3fec4155",
+        "bin/javac": "2cc288a26beebc50ca7cd924847dffbfb38ef3314e105bba6d4ebce03a0bcb6b",
+        "release": "f83f6dcc966043c93cd498ac8e7ee7c310852074970d62c702e4ad2710002898",
+        "lib/modules": "a5fd7c311fbd96adcbd43757dbb94461e14df353b6ae9f5c029c45805a39782c",
+        "lib/ct.sym": "210305c54fb617c8935b3b1502fce15fd5d1a9005063aa9b4be59762b3d64042",
+        "lib/server/libjvm.so": "b1a6a98962406718a491922ea6a3f8d898ea7c4a9ebe814a7963defc61ce62b2"
+      },
+      "cleared_environment_names": [],
+      "qualification": "Observed preinstalled JDK21; no cross-patch binary reproducibility claim"
+    },
+    "interpretation": "Historical full JDK identity supports an exact selector; the separate successful current build corroborates matching java/javac pins only on its own runner. Neither is a measurement of the failed cache runner."
+  },
+  "minimal_correction_for_new_candidate_only": [
+    "Preserve the original a8bea4fb source, failed receipt/log and job state without edits or reruns.",
+    "Create a cache-only workflow/branch for API27/28 so completed canonical workloads are not repeated.",
+    "Use the already pinned actions/setup-java commit with distribution temurin, java-package jdk, java-version21.0.13+9, architecture x64 and check-latest false.",
+    "Pass setup-java selected JAVA_HOME to the new builder; retain the original JAVA_HOME_21_X64 only as separately labelled observation.",
+    "Record resolved paths, existence/type, bytes and SHA256 of each tool before rejecting a pin. Keep the original java/javac/android.jar/D8 pins.",
+    "Use the historical release/modules/ct.sym/libjvm pins to bind the selected exact JDK data where the new reviewed contract requires full identity.",
+    "Wait for the active run final recognized-claim ledger before freezing the new cache-only admission. No existing workload or control suite needs replay for this diagnosis."
+  ],
+  "static_checks": {
+    "original_zip_crc_and_single_member_verified": true,
+    "expanded_receipt_equal_original_zip": true,
+    "published_builder_failure_order_read": true,
+    "historical_and_same_run_java_javac_pins_match": true,
+    "candidate_or_validator_imported": false,
+    "producer_or_compiler_executed": false,
+    "PC_or_Android_or_network_used": false,
+    "old_source_or_evidence_modified": false
+  },
+  "cache_claims": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/cache-read-review/CACHE_NONCE_OBSERVATIONS.json",
+    "bytes": 2153,
+    "sha256": "e80dcc7b28eae5088c7d1c23772b85b0128d6faa7c0b5df385115f5dc7319f29"
+  },
+  "limits": [
+    "The original API27/28 residual contents from run45742530551 remain unknown.",
+    "This run supplied no cache fixture/process/cleanup evidence; its skipped dependent job must not become PASS.",
+    "A future exact JDK selection still requires reviewed source and real build evidence."
+  ]
+}

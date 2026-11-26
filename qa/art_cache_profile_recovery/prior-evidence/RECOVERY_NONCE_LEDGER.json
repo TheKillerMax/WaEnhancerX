@@ -1,0 +1,736 @@
+{
+  "schema": "WAEX_ART_RECOVERY_CONSUMED_CLAIMS_V1",
+  "created_utc": "2026-11-26T03:51:11.613393+00:00",
+  "status": "COMPLETE_RECOGNIZED_EMISSIONS_NON_REUSABLE",
+  "run_id": "45749434077",
+  "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+  "attempt": "1",
+  "prior_non_reusable_count": 53,
+  "prior_non_reusable_nonces": [
+    "029af74d126d4105860dbdeb98a65fa9",
+    "072f8f5d3f5e917a9d3d02d2a4bd66ef",
+    "0a3bd30603d4905b684119820dcd0ea3",
+    "0a79d198cae74332b807682178349397",
+    "1093e86c4361f61cfd27adfd906186fd",
+    "129977094883510fc3c40b89e6deddae",
+    "16da9c0047a1ed1038518dc65d5bf70d",
+    "19cd060bfdcadea5d2773b948ff18a0d",
+    "22b6cdfef9354745b0099e7afed15779",
+    "2608ac25fe42cfffe8b6b49d9f4b3f9c",
+    "32b459cfc083a4cb9068f714c7cff49d",
+    "420a04ba788d4bceadded83768597131",
+    "42f09c90464d270d004c0ba7ea8f1fd8",
+    "487535e095fb5fc1ac1caad15db052fd",
+    "5300aca277de48b9abf4eb8358339f64",
+    "536bc81686a84788888d1aa6ce29e64a",
+    "57c08698268c46449ffb8a36b1720c63",
+    "57ca6a7f9cc54aee9e14a34dbb1bef10",
+    "5f46fb28c442635403aa5d5135e259d3",
+    "622693b797de7721f63109d9fa54ef20",
+    "68a75a8abbde413aa6752c6c7f209aac",
+    "69d7887591344767a0ef2edbcae1bd4f",
+    "6a62bc2a477d4679a92bbc3f4f71e46e",
+    "70e24cf0783a030b998e889e8b3ee59e",
+    "7116f248f90004e1861c29b9cb06c041",
+    "73de65cc3c8c80b495f990e569f9470b",
+    "7d7a9357c1bf37ae3a91be2647bbd090",
+    "8e3a9daf4ae606f4a4ba2d32fcc7c6bc",
+    "8edc6672690a99f523a068972b372a2a",
+    "8f2554b7ce7d188a5c3062b3e15f0891",
+    "8f3bd83a3f933ce561ab4e50d41364fa",
+    "948e66cd24d1f9edb56cdfbc67cb805f",
+    "95832cfbc9c14964a01b3ee5264d8861",
+    "99202e5aeec43b390726cbc51ef39b15",
+    "9e4b9f66f8a664bced840e488a37e16d",
+    "9e99ab55103b8dae169edb202d68c390",
+    "b0a8704d2663b3ad04e752542f36ad51",
+    "b16e6628d5be3d9d8837d2529ea6d713",
+    "b28196dde1614c6aa8d97319a59afefa",
+    "c68ab13136807f9873fb2b741a0fd5e4",
+    "c6f49f40b2b7b6c549f0b2aaf88d0db4",
+    "ca18964369a145bb9b581428f265e5af",
+    "cc67bb70ea311279a42acc2ad6aa31e2",
+    "cee5195dd4e3e2c91aada4b4718dd774",
+    "cffbcb48c8c34eb787b22a3fd1bb7567",
+    "d0ae7eee900c811a7497a2cf1b65f518",
+    "d8002a40717021c15638fc396091d16e",
+    "d9303f897774162f46ca9037acc15091",
+    "e7fbfc47e8e769d87411639f2a7daa66",
+    "eea754cbd049bd9653a8f30c226fd741",
+    "efc03c4f583dad33aadbb2c038565b67",
+    "fb90547c97957f64315b7f356f3a755c",
+    "fc88eafd15ca4788430105d55021d475"
+  ],
+  "prior_source_lock": {
+    "path": "android_coverage_work/art_profile_recovery_candidate/repo/qa/class_metadata_profile_recovery/lock.json",
+    "bytes": 12116,
+    "sha256": "65bb21afe6d39f610cfa3e06136cd374686058817deb9472feed443b2f80c8da"
+  },
+  "claim_count": 23,
+  "unique_claim_count": 23,
+  "phase_claim_count": 8,
+  "attempted_variant_claim_count": 15,
+  "reserved_not_attempted_variant_claim_count": 0,
+  "cache_runtime_claim_count": 0,
+  "combined_known_unique_count": 76,
+  "collection_complete": true,
+  "all_recognized_claims_non_reusable": true,
+  "collisions": [],
+  "claim_collection_issues": [],
+  "claims": [
+    {
+      "nonce": "ba6bb5f10a4c9231b9f69aeeda0121a3",
+      "target": "api26",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084918715/art-recovery-api26/reports/art-recovery-phase.json",
+        "bytes": 20475,
+        "sha256": "a54fbb99937f10aa5d109cd23db538cf527561d300ce16b6b65826b3308b765d"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084918715,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api26.json",
+        "bytes": 160407,
+        "sha256": "aa968fe91cc2dfdbb830c98969c3d2fe9ea9e6158ee116fed78ee8566bddd356"
+      }
+    },
+    {
+      "nonce": "d6b5e170a83c792befccfb824b2d391a",
+      "target": "api26",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084918715/art-recovery-api26/reports/art-recovery-phase.json",
+        "bytes": 20475,
+        "sha256": "a54fbb99937f10aa5d109cd23db538cf527561d300ce16b6b65826b3308b765d"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084918715,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api26.json",
+        "bytes": 160407,
+        "sha256": "aa968fe91cc2dfdbb830c98969c3d2fe9ea9e6158ee116fed78ee8566bddd356"
+      }
+    },
+    {
+      "nonce": "d30efc9f754a6c1f1ad6cc1cc81dd625",
+      "target": "api26",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084918715/art-recovery-api26/reports/art-recovery-phase.json",
+        "bytes": 20475,
+        "sha256": "a54fbb99937f10aa5d109cd23db538cf527561d300ce16b6b65826b3308b765d"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084918715,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api26.json",
+        "bytes": 160407,
+        "sha256": "aa968fe91cc2dfdbb830c98969c3d2fe9ea9e6158ee116fed78ee8566bddd356"
+      }
+    },
+    {
+      "nonce": "ae34487078b47df8f4305050907e5bf4",
+      "target": "api29",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085032719/art-recovery-api29/reports/art-recovery-phase.json",
+        "bytes": 14697,
+        "sha256": "3c11cc2913bda6de6604da3e08031454a0e13689650006c8364b869cabd2fe1e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085032719,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api29.json",
+        "bytes": 117577,
+        "sha256": "7c05d79c4a6869b6704378b18703806beb844022b53afa5737e742768274eb7d"
+      }
+    },
+    {
+      "nonce": "b36923c893e2946e55bad17c1da79ae8",
+      "target": "api29",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085032719/art-recovery-api29/reports/art-recovery-phase.json",
+        "bytes": 14697,
+        "sha256": "3c11cc2913bda6de6604da3e08031454a0e13689650006c8364b869cabd2fe1e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085032719,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api29.json",
+        "bytes": 117577,
+        "sha256": "7c05d79c4a6869b6704378b18703806beb844022b53afa5737e742768274eb7d"
+      }
+    },
+    {
+      "nonce": "ff5c8e14c7577e6144713efaebfc9ce5",
+      "target": "api29",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085032719/art-recovery-api29/reports/art-recovery-phase.json",
+        "bytes": 14697,
+        "sha256": "3c11cc2913bda6de6604da3e08031454a0e13689650006c8364b869cabd2fe1e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085032719,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api29.json",
+        "bytes": 117577,
+        "sha256": "7c05d79c4a6869b6704378b18703806beb844022b53afa5737e742768274eb7d"
+      }
+    },
+    {
+      "nonce": "dc1a5ca88db1fe8d29df37400877527d",
+      "target": "api35",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084284950/art-recovery-api35/reports/art-recovery-phase.json",
+        "bytes": 14688,
+        "sha256": "6423b42e9cc1c5c08ea6e55e368af5df1cd9e1833463f8c478977f273ada20ab"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084284950,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35.json",
+        "bytes": 117246,
+        "sha256": "be80fc8c0f1aa7fb12577089d53d7e17bbd0722684914ba21c5d54b6818ee835"
+      }
+    },
+    {
+      "nonce": "3f03262391c066d59293b0767d546793",
+      "target": "api35",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084284950/art-recovery-api35/reports/art-recovery-phase.json",
+        "bytes": 14688,
+        "sha256": "6423b42e9cc1c5c08ea6e55e368af5df1cd9e1833463f8c478977f273ada20ab"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084284950,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35.json",
+        "bytes": 117246,
+        "sha256": "be80fc8c0f1aa7fb12577089d53d7e17bbd0722684914ba21c5d54b6818ee835"
+      }
+    },
+    {
+      "nonce": "9fe5c3f1da2daa06d4148f3f420df591",
+      "target": "api35",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084284950/art-recovery-api35/reports/art-recovery-phase.json",
+        "bytes": 14688,
+        "sha256": "6423b42e9cc1c5c08ea6e55e368af5df1cd9e1833463f8c478977f273ada20ab"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084284950,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35.json",
+        "bytes": 117246,
+        "sha256": "be80fc8c0f1aa7fb12577089d53d7e17bbd0722684914ba21c5d54b6818ee835"
+      }
+    },
+    {
+      "nonce": "2977884d59f62bfc08e0e86f31a28908",
+      "target": "api36",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085720296/art-recovery-api36/reports/art-recovery-phase.json",
+        "bytes": 14694,
+        "sha256": "476e8fdb1c8e1e402afddce3396581da961b3e15ef516fa7b5a06b9b71bf0350"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085720296,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.json",
+        "bytes": 123771,
+        "sha256": "2265b02c63c0352218a8919057de6d9f1840f431fc681df2f0b8e879afadb6f1"
+      }
+    },
+    {
+      "nonce": "c0caa3a78b872597bec6f7558adcd454",
+      "target": "api36",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085720296/art-recovery-api36/reports/art-recovery-phase.json",
+        "bytes": 14694,
+        "sha256": "476e8fdb1c8e1e402afddce3396581da961b3e15ef516fa7b5a06b9b71bf0350"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085720296,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.json",
+        "bytes": 123771,
+        "sha256": "2265b02c63c0352218a8919057de6d9f1840f431fc681df2f0b8e879afadb6f1"
+      }
+    },
+    {
+      "nonce": "c580c316875ea5708a1f4ecd31fab7e0",
+      "target": "api36",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085720296/art-recovery-api36/reports/art-recovery-phase.json",
+        "bytes": 14694,
+        "sha256": "476e8fdb1c8e1e402afddce3396581da961b3e15ef516fa7b5a06b9b71bf0350"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085720296,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.json",
+        "bytes": 123771,
+        "sha256": "2265b02c63c0352218a8919057de6d9f1840f431fc681df2f0b8e879afadb6f1"
+      }
+    },
+    {
+      "nonce": "24ff98254345d1a81171dfbe0660e81b",
+      "target": "api35-16k",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084449079/art-recovery-api35-16k/reports/art-recovery-phase.json",
+        "bytes": 10557,
+        "sha256": "3b9901bf881f56d6e528d7c996e04bab2aa2dbe4f1ff935979992542522f0309"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084449079,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35-16k.json",
+        "bytes": 91159,
+        "sha256": "ae648963108f6d222625487ac0df2a3fe45f60ac690f0885e9326ddd388af063"
+      }
+    },
+    {
+      "nonce": "25c3a28da1e27de025e14bcebda955ac",
+      "target": "api35-16k",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15084449079/art-recovery-api35-16k/reports/art-recovery-phase.json",
+        "bytes": 10557,
+        "sha256": "3b9901bf881f56d6e528d7c996e04bab2aa2dbe4f1ff935979992542522f0309"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15084449079,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35-16k.json",
+        "bytes": 91159,
+        "sha256": "ae648963108f6d222625487ac0df2a3fe45f60ac690f0885e9326ddd388af063"
+      }
+    },
+    {
+      "nonce": "3230a8696bf9b7a658a0bb2bb250cf7e",
+      "target": "api36-16k",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085094244/art-recovery-api36-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "e19ccb05d972159c6b58b977474417077f82f0ae3bf8ef61ad09bc9b90d7079e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085094244,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36-16k.json",
+        "bytes": 123951,
+        "sha256": "4ab91084eb07e28925d8ecfe101814ccff32ede117b72183672d948b3730ec5a"
+      }
+    },
+    {
+      "nonce": "9b968497a2931d06acf8a92c6ece8c5b",
+      "target": "api36-16k",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085094244/art-recovery-api36-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "e19ccb05d972159c6b58b977474417077f82f0ae3bf8ef61ad09bc9b90d7079e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085094244,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36-16k.json",
+        "bytes": 123951,
+        "sha256": "4ab91084eb07e28925d8ecfe101814ccff32ede117b72183672d948b3730ec5a"
+      }
+    },
+    {
+      "nonce": "092006578901b52d7649b7e97520efaf",
+      "target": "api36-16k",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085094244/art-recovery-api36-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "e19ccb05d972159c6b58b977474417077f82f0ae3bf8ef61ad09bc9b90d7079e"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085094244,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36-16k.json",
+        "bytes": 123951,
+        "sha256": "4ab91084eb07e28925d8ecfe101814ccff32ede117b72183672d948b3730ec5a"
+      }
+    },
+    {
+      "nonce": "6fbfa07fc308ad4f9f3017581cc846f7",
+      "target": "api36.1-16k",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085831176/art-recovery-api36.1-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "170277b218d819e4b1daddf71d7bdc3821ab1730765be73037d78d40b620cf00"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085831176,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.1-16k.json",
+        "bytes": 124709,
+        "sha256": "5fd8c4afe0aa7756fabddfe2e17827a6b45385545332273996c7458b9de416e4"
+      }
+    },
+    {
+      "nonce": "871d4b0a0596310f0a43210cce7e331a",
+      "target": "api36.1-16k",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085831176/art-recovery-api36.1-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "170277b218d819e4b1daddf71d7bdc3821ab1730765be73037d78d40b620cf00"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085831176,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.1-16k.json",
+        "bytes": 124709,
+        "sha256": "5fd8c4afe0aa7756fabddfe2e17827a6b45385545332273996c7458b9de416e4"
+      }
+    },
+    {
+      "nonce": "cc54efcde84446dcda1d88df6fff3d8b",
+      "target": "api36.1-16k",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085831176/art-recovery-api36.1-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "170277b218d819e4b1daddf71d7bdc3821ab1730765be73037d78d40b620cf00"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085831176,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.1-16k.json",
+        "bytes": 124709,
+        "sha256": "5fd8c4afe0aa7756fabddfe2e17827a6b45385545332273996c7458b9de416e4"
+      }
+    },
+    {
+      "nonce": "0593cbf6242e4b16f6282ceefc7e11aa",
+      "target": "api37-16k",
+      "role": "phase",
+      "recorded_status": null,
+      "recorded_attempts": null,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085861376/art-recovery-api37-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "d54c6066c4405a1155d73d0f70d3663db3e27896502ce34062c848f7996571a0"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085861376,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api37-16k.json",
+        "bytes": 124440,
+        "sha256": "c511fc2dd462f9a53ac5ea50c40d700704bdcca332da7ed38f44b08d99b25de9"
+      }
+    },
+    {
+      "nonce": "18a38e2914e370d7e5aba3ae99c52575",
+      "target": "api37-16k",
+      "role": "baseline",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085861376/art-recovery-api37-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "d54c6066c4405a1155d73d0f70d3663db3e27896502ce34062c848f7996571a0"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085861376,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api37-16k.json",
+        "bytes": 124440,
+        "sha256": "c511fc2dd462f9a53ac5ea50c40d700704bdcca332da7ed38f44b08d99b25de9"
+      }
+    },
+    {
+      "nonce": "fdd890c55c6d6ba8000e7813388f5738",
+      "target": "api37-16k",
+      "role": "candidate",
+      "recorded_status": "PASS",
+      "recorded_attempts": 1,
+      "reusable": false,
+      "consumed_or_reserved": true,
+      "phase_receipt": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/extracted/15085861376/art-recovery-api37-16k/reports/art-recovery-phase.json",
+        "bytes": 14713,
+        "sha256": "d54c6066c4405a1155d73d0f70d3663db3e27896502ce34062c848f7996571a0"
+      },
+      "run_id": "45749434077",
+      "head_sha": "a8bea4fbf9ddefab6984e464eb24270a121cc659",
+      "attempt": "1",
+      "artifact_id": 15085861376,
+      "artifact_bytes_verified": true,
+      "audit": {
+        "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api37-16k.json",
+        "bytes": 124440,
+        "sha256": "c511fc2dd462f9a53ac5ea50c40d700704bdcca332da7ed38f44b08d99b25de9"
+      }
+    }
+  ],
+  "canonical_runtime_audits": [
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api26.json",
+      "bytes": 160407,
+      "sha256": "aa968fe91cc2dfdbb830c98969c3d2fe9ea9e6158ee116fed78ee8566bddd356"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api29.json",
+      "bytes": 117577,
+      "sha256": "7c05d79c4a6869b6704378b18703806beb844022b53afa5737e742768274eb7d"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35.json",
+      "bytes": 117246,
+      "sha256": "be80fc8c0f1aa7fb12577089d53d7e17bbd0722684914ba21c5d54b6818ee835"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.json",
+      "bytes": 123771,
+      "sha256": "2265b02c63c0352218a8919057de6d9f1840f431fc681df2f0b8e879afadb6f1"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api35-16k.json",
+      "bytes": 91159,
+      "sha256": "ae648963108f6d222625487ac0df2a3fe45f60ac690f0885e9326ddd388af063"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36-16k.json",
+      "bytes": 123951,
+      "sha256": "4ab91084eb07e28925d8ecfe101814ccff32ede117b72183672d948b3730ec5a"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api36.1-16k.json",
+      "bytes": 124709,
+      "sha256": "5fd8c4afe0aa7756fabddfe2e17827a6b45385545332273996c7458b9de416e4"
+    },
+    {
+      "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/canonical-read-review/rows/api37-16k.json",
+      "bytes": 124440,
+      "sha256": "c511fc2dd462f9a53ac5ea50c40d700704bdcca332da7ed38f44b08d99b25de9"
+    }
+  ],
+  "final_runtime_artifacts": [
+    {
+      "id": 15084918715,
+      "name": "art-recovery-runtime-api26-45749434077-1",
+      "sha256": "166287a3a2fa15792acdc8d3c9193b847575bdf956a089b52d36eaca336558ea"
+    },
+    {
+      "id": 15085032719,
+      "name": "art-recovery-runtime-api29-45749434077-1",
+      "sha256": "51513b7428393320db686a7023344037e505ea4e43b62ce8cd7dc07a4b0dd884"
+    },
+    {
+      "id": 15084284950,
+      "name": "art-recovery-runtime-api35-45749434077-1",
+      "sha256": "155f2a7bf6c432a10092ca69de945c26a36a1cdf5885054d08d44f65492b08cf"
+    },
+    {
+      "id": 15085720296,
+      "name": "art-recovery-runtime-api36-45749434077-1",
+      "sha256": "7abef0ebf77d05c2d8e870a6bd4173a6792ffd16af71c9729bd70b0a1440f53f"
+    },
+    {
+      "id": 15084449079,
+      "name": "art-recovery-runtime-api35-16k-45749434077-1",
+      "sha256": "47ad6d461af44586e54713f4aaba3c753e4f15a3d047f5c4a83606b4282af2c1"
+    },
+    {
+      "id": 15085094244,
+      "name": "art-recovery-runtime-api36-16k-45749434077-1",
+      "sha256": "4b82e327b0ec3e9d76ac1c5870b27cc2eb2cd0c466a17261a0ee525902404ece"
+    },
+    {
+      "id": 15085831176,
+      "name": "art-recovery-runtime-api36.1-16k-45749434077-1",
+      "sha256": "40d5b2c6e23d3b76d7ceb3c968670e7efae0274bcd426132596b3199fb089a07"
+    },
+    {
+      "id": 15085861376,
+      "name": "art-recovery-runtime-api37-16k-45749434077-1",
+      "sha256": "54befa1c5469e3f1f5b021e65ffd73a7e822cdf6b90b5a442f5878376f959564"
+    }
+  ],
+  "cache_subset": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/cache-read-review/CACHE_NONCE_OBSERVATIONS.json",
+    "bytes": 2153,
+    "sha256": "e80dcc7b28eae5088c7d1c23772b85b0128d6faa7c0b5df385115f5dc7319f29"
+  },
+  "final_service_evidence": {
+    "path": "android_coverage_work/ART_RECOVERY_RUN_45749434077/FINAL_SERVICE_STATE.json",
+    "bytes": 48129,
+    "sha256": "21e6d2423f09aa59c091ddc881109d1a86325cd5a6287e71983c860c529ff444"
+  },
+  "final_run_conclusion_preserved": "failure",
+  "interpretation": [
+    "Claim collection covers all recognized phase/invocation emissions in the eight canonical artifacts of this exact completed run.",
+    "The cache producer failed before Java compilation and its dependent aggregate job was skipped; the empty cache subset is not a runtime or cleanup PASS.",
+    "Claim consumption is independent of functional PASS and includes any recognized reservation before execution.",
+    "The53 earlier physical/DSU, ART17 and Presence claims remain excluded; this is not a complete inventory of all possible historical sessions.",
+    "No absent or unreported nonce is invented and no qualified workload was reexecuted by this reader."
+  ]
+}
