@@ -10,19 +10,11 @@ import android.os.SystemClock
 import com.waenhancer.xposed.core.BaseFeature
 import com.waenhancer.xposed.core.devkit.DexSearchEngine
 import com.waenhancer.xposed.utils.HookErrors
-import com.waenhancer.xposed.utils.HostFields
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import org.luckypray.dexkit.query.FindMethod
-import org.luckypray.dexkit.query.enums.StringMatchType
-import org.luckypray.dexkit.query.matchers.MethodMatcher
 import java.io.File
-import java.lang.reflect.Method
-import java.lang.reflect.Field
-import java.util.Collections
-import java.util.IdentityHashMap
+import java.lang.reflect.Member
 import java.util.concurrent.Executors
-import org.luckypray.dexkit.DexKitBridge
 
 /**
  * Feature: Preserve "Delete For Me" Messages.
@@ -44,10 +36,7 @@ class PreserveDeleteForMeHook(
         private const val TAG = "[WAEX:PreserveDeleteForMe]"
         private const val PREF_KEY = "preserve_delete_for_me"
 
-        // A nested method invocation must not clear its caller's Delete-for-me scope.
-        // Track qualifying invocations by identity: Xposed calls afterHookedMethod even
-        // when that invocation's beforeHookedMethod decided not to enter the scope.
-        private val deleteForMeScope = ThreadLocal<MutableSet<XC_MethodHook.MethodHookParam>>()
+        // Scope denotes a local request on this thread, not a persistence receipt.
         private val preservationWarningLock = Any()
         private var lastPreservationWarningAtElapsed = -1L
         private const val PRESERVATION_WARNING_INTERVAL_MS = 30_000L
@@ -57,65 +46,63 @@ class PreserveDeleteForMeHook(
 
         /** Lets other database hooks distinguish a local Delete-for-me from a remote revoke. */
         @JvmStatic
-        fun isDeleteForMeInProgress(): Boolean = deleteForMeScope.get()?.isNotEmpty() == true
-
-        private fun enterDeleteForMeScope(param: XC_MethodHook.MethodHookParam) {
-            val active = deleteForMeScope.get() ?: Collections.newSetFromMap(
-                IdentityHashMap<XC_MethodHook.MethodHookParam, Boolean>()
-            ).also(deleteForMeScope::set)
-            active.add(param)
-        }
-
-        private fun leaveDeleteForMeScope(param: XC_MethodHook.MethodHookParam) {
-            val active = deleteForMeScope.get() ?: return
-            if (active.remove(param) && active.isEmpty()) deleteForMeScope.remove()
-        }
+        fun isDeleteForMeInProgress(): Boolean = DeleteOriginSession.inLocalRequest()
     }
+
+    private var session: DeleteOriginSession? = null
 
     override fun hook() {
-        hookBytecodeDeleteForMe()
-        hookDatabaseDeleteForMe()
+        // Registry holds a bridge lease for the entire install. No Method cache (including v7)
+        // can attest the listener, constructor, field uses and local API together.
+        val engine = DexSearchEngine.getInstance()
+        engine.initialize(context)
+        val bridge = checkNotNull(engine.bridge) { "Delete-for-me entry point unavailable" }
+        // C03 proves the UI graph but not which of the two FMessage key fields is its own key.
+        install(DexDeleteCode(bridge, classLoader), context.packageName == "com.whatsapp", null)
     }
 
-    private fun hookBytecodeDeleteForMe() {
-        try {
-            val deleteMethod = resolveDeleteForMeMethod()
-            if (deleteMethod != null) {
-                XposedBridge.hookMethod(
-                    deleteMethod,
-                    object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            if (!isEnabled(PREF_KEY, false)) return
-                            if (deleteMethod.name == "run") {
-                                // Multiplexed Runnables are shared by unrelated WhatsApp features.
-                                // Only enter the delete scope after resolving real message keys.
-                                if (!captureRunnableMessages(param.thisObject)) return
-                            }
-                            enterDeleteForMeScope(param)
-                        }
-
-                        override fun afterHookedMethod(param: MethodHookParam) {
-                            leaveDeleteForMeScope(param)
-                        }
-                    }
-                )
-            } else {
-                XposedBridge.log("$TAG Warning: DeleteForMe method not found via dexkit.")
-            }
+    internal fun install(code: DeleteCode, personal: Boolean, keys: SelectedKeys?,
+                        register: (Member, XC_MethodHook) -> Unit = { m, cb ->
+                            checkNotNull(XposedBridge.hookMethod(m, cb))
+                        }) {
+        check(session == null)
+        val route = try {
+            DeleteRoute.resolve(code, personal)
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG Failed to install bytecode DeleteForMe hook: ${t.javaClass.simpleName}")
+            // The installation owner reports the message and prints the entire throwable.
+            throw IllegalStateException("Delete-for-me route search failed: ${t.javaClass.simpleName}")
+        } ?: error("Delete-for-me entry point unavailable")
+        val next = DeleteOriginSession { isEnabled(PREF_KEY, false) }
+        session = next
+        when (route) {
+            is DeleteRoute.Local -> {
+                val reader = checkNotNull(keys) { "Delete-for-me selected message key contract unavailable" }
+                next.installLocal(route, register) { captureSelectedMessages(it, reader) }
+                // Do not also inspect arbitrary SQLite deletes beneath a local API call.
+            }
+            is DeleteRoute.Store -> {
+                next.installStore(route.method, register)
+                check(hookDatabaseDeleteForMe()) { "Delete-for-me database interception unavailable" }
+            }
         }
+        next.activate()
     }
 
-    private fun hookDatabaseDeleteForMe() {
-        try {
+    override fun unhookAll() {
+        session?.close()
+        session = null
+        super.unhookAll()
+    }
+
+    private fun hookDatabaseDeleteForMe(): Boolean {
+        return try {
             XposedBridge.hookAllMethods(
                 SQLiteDatabase::class.java,
                 "delete",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (!isEnabled(PREF_KEY, false)) return
-                        if (!isDeleteForMeInProgress()) return
+                        if (session?.inStoreRequest() != true) return
 
                         val table = param.args.getOrNull(0) as? String ?: return
                         if (table != "message") return
@@ -170,9 +157,10 @@ class PreserveDeleteForMeHook(
                         }
                     }
                 }
-            )
+            ).isNotEmpty()
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error installing DB Delete-For-Me hook: ${t.javaClass.simpleName}")
+            false
         }
     }
 
@@ -379,114 +367,11 @@ class PreserveDeleteForMeHook(
         }
     }
 
-    private fun resolveDeleteForMeMethod(): Method? {
-        return try {
-            DexSearchEngine.getInstance().findMethodWithCache(
-                context,
-                classLoader,
-                "waex_delete_for_me_method_v7",
-                { bridge, loader ->
-                    resolveCurrentDeleteForMeRunnable(bridge, loader) ?: bridge.findMethod(
-                        FindMethod.create().matcher(
-                            MethodMatcher.create().addUsingString(
-                                "CoreMessageStore/deleteMessageForMe",
-                                StringMatchType.Contains
-                            )
-                        )
-                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterTypes.isNotEmpty()
-                    } ?: bridge.findMethod(
-                        FindMethod.create().matcher(
-                            MethodMatcher.create().addUsingString(
-                                "msgstore/delete-for-me",
-                                StringMatchType.Contains
-                            )
-                        )
-                    ).firstOrNull()?.getMethodInstance(loader)?.takeIf {
-                        it.name != "run" || it.parameterTypes.isNotEmpty()
-                    }
-                }
-            )
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG Exception while searching DeleteForMe method: ${t.javaClass.simpleName}")
-            null
-        }
-    }
-
-    /**
-     * Resolve the local-delete Runnable from WhatsApp's stable semantic and interface graph rather
-     * than obfuscated names, synthetic switch values, or constructor arity:
-     * message-key helper string -> dialog builder(Set) -> positive listener -> Runnable -> run().
-     */
-    private fun resolveCurrentDeleteForMeRunnable(
-        bridge: DexKitBridge,
-        loader: ClassLoader
-    ): Method? {
-        val deleteDialogAnchors = bridge.findMethod(
-            FindMethod.create().matcher(
-                MethodMatcher.create().addUsingString(
-                    "DeleteMessagesDialog/getSampleMessageForMediaType/multi chat jid delete",
-                    StringMatchType.Equals
-                )
-            )
-        )
-        val deleteDialogAnchor = deleteDialogAnchors.firstOrNull() ?: return null
-
-        val dialogBuilders = deleteDialogAnchor.declaredClass?.methods?.filter { method ->
-            val params = method.paramTypeNames
-            "java.util.Set" in params && "boolean" in params && params.size >= 6
-        }.orEmpty()
-        val dialogBuilder = dialogBuilders.firstOrNull() ?: return null
-
-        val deleteListenerConstructor = dialogBuilder.invokes.firstOrNull { invoked ->
-            if (!invoked.isConstructor) return@firstOrNull false
-            val params = invoked.paramTypeNames
-            if (params.firstOrNull() != "android.widget.CheckBox" ||
-                "java.util.Set" !in params) return@firstOrNull false
-            val declaredClass = invoked.declaredClass ?: return@firstOrNull false
-            declaredClass.interfaces.any {
-                it.name == "android.content.DialogInterface\$OnClickListener"
-            }
-        } ?: return null
-
-        val deleteListenerClass = deleteListenerConstructor.declaredClass ?: return null
-        val onClick = deleteListenerClass.methods.firstOrNull { method ->
-            method.name == "onClick" &&
-                method.paramTypeNames == listOf("android.content.DialogInterface", "int") &&
-                method.returnTypeName == "void"
-        } ?: return null
-
-        // Supports older WhatsApp ("int", "boolean") and newer versions (boxed "java.lang.Integer", "boolean")
-        val deleteRunnableConstructor = onClick.invokes.firstOrNull { invoked ->
-            if (!invoked.isConstructor) return@firstOrNull false
-            val declaredClass = invoked.declaredClass ?: return@firstOrNull false
-            declaredClass.interfaces.any { it.name == "java.lang.Runnable" }
-        } ?: return null
-
-        val deleteRunnableClass = deleteRunnableConstructor.declaredClass ?: return null
-        return deleteRunnableClass.methods.firstOrNull { method ->
-            method.name == "run" && method.paramCount == 0 && method.returnTypeName == "void"
-        }?.getMethodInstance(loader)
-    }
-
-    /**
-     * Current WhatsApp versions delete through an internal message-store API and may never call
-     * SQLiteDatabase.delete(). The Delete-for-me Runnable still owns the selected message Set, so
-     * copy those rows to the WAEX vault before allowing the Runnable to continue.
-     */
-    private fun captureRunnableMessages(instance: Any?): Boolean {
-        if (instance == null) return false
+    internal fun captureSelectedMessages(selection: Set<*>, reader: SelectedKeys): Boolean {
         try {
-            val messageSets = HostFields.declared(instance.javaClass).asSequence()
-                .filterNot { it.type.isPrimitive }
-                .mapNotNull { field ->
-                    field.isAccessible = true
-                    field.get(instance) as? Set<*>
-                }
-                .toList()
-            if (messageSets.isEmpty()) return false
-
-            val keys = messageSets.flatten().mapNotNull(::extractMessageKey).distinctBy { it.id }
+            // Historical vaults need not distinguish two chats carrying the same message id.
+            val keys = selection.mapNotNull(reader::read).distinct().groupBy { it.id }
+                .values.mapNotNull { it.singleOrNull() }
             if (keys.isEmpty()) {
                 XposedBridge.log("$TAG Warning: selected message keys were not resolved")
                 return false
@@ -499,19 +384,22 @@ class PreserveDeleteForMeHook(
             }
 
             var recognized = 0
-            var confirmed = 0
+            var enqueued = 0
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 keys.forEach { key ->
                     db.rawQuery(
-                        "SELECT _id, key_id, chat_row_id, from_me, message_type, text_data, " +
-                            "timestamp, sender_jid_row_id FROM message WHERE key_id = ? LIMIT 1",
-                        arrayOf(key.id)
-                    ).use { cursor ->
-                        if (!cursor.moveToFirst() || cursor.getInt(4) == 15) return@use
+                        "SELECT m._id,m.key_id,m.chat_row_id,m.from_me,m.message_type,m.text_data," +
+                            "m.timestamp,m.sender_jid_row_id,j.raw_string FROM message m " +
+                            "LEFT JOIN chat c ON c._id=m.chat_row_id LEFT JOIN jid j ON j._id=c.jid_row_id " +
+                            "WHERE m.key_id=? LIMIT 2", arrayOf(key.id)
+                    ).use row@{ cursor ->
+                        if (!cursor.moveToFirst() || !cursor.isLast || cursor.getInt(4) == 15 ||
+                            cursor.getString(1) != key.id || cursor.getString(8) != key.chatJid ||
+                            cursor.isNull(3) || cursor.getString(3) != (if (key.fromMe) "1" else "0")) return@row
                         val chatRowId = cursor.getLong(2)
-                        val fromMe = cursor.getInt(3) == 1
-                        val chatJid = resolveChatJid(db, chatRowId).ifBlank { key.chatJid }
-                        val isGroup = chatJid.contains("@g.us")
+                        val fromMe = key.fromMe
+                        val chatJid = key.chatJid
+                        val isGroup = chatJid.endsWith("@g.us")
                         val chatName = resolveChatDisplayName(context, db, chatRowId, chatJid)
                         val senderName = if (isGroup) {
                             resolveSenderDisplayName(context, db, cursor.getLong(7), chatName)
@@ -529,14 +417,13 @@ class PreserveDeleteForMeHook(
                             timestamp = cursor.getLong(6),
                             fromMe = fromMe,
                             isGroup = isGroup
-                        )) confirmed++
+                        )) enqueued++
                         recognized++
                     }
                 }
             }
-            if (confirmed < recognized) warnPreservationUnconfirmed()
-            // This return value identifies a local selection for AntiRevoke's
-            // scope. Storage availability must not change the original delete.
+            if (enqueued < recognized) warnPreservationUnconfirmed()
+            // Row recognition is neither the origin token nor a manager receipt.
             return recognized > 0
         } catch (t: Throwable) {
             XposedBridge.log("$TAG Error copying selected messages: ${t.javaClass.simpleName}")
@@ -544,49 +431,4 @@ class PreserveDeleteForMeHook(
         }
     }
 
-    private data class SelectedMessageKey(
-        val id: String,
-        val chatJid: String
-    )
-
-    private fun extractMessageKey(message: Any?): SelectedMessageKey? {
-        if (message == null) return null
-        return try {
-            val methodKey = message.javaClass.methods.firstOrNull {
-                it.name == "Atl" && it.parameterTypes.isEmpty()
-            }?.invoke(message)
-            val key = methodKey ?: allInstanceFields(message.javaClass)
-                .filterNot { it.type.isPrimitive || it.type == String::class.java }
-                .mapNotNull { field ->
-                    field.isAccessible = true
-                    field.get(message)
-                }
-                .firstOrNull(::looksLikeMessageKey)
-                ?: return null
-            val fields = HostFields.declared(key.javaClass).onEach { it.isAccessible = true }
-            val id = fields.singleOrNull { it.type == String::class.java }
-                ?.get(key) as? String ?: return null
-            val jid = fields.firstOrNull {
-                !it.type.isPrimitive && it.type != String::class.java
-            }?.get(key)?.toString().orEmpty()
-            SelectedMessageKey(id, jid)
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    private fun allInstanceFields(type: Class<*>): Sequence<Field> = sequence {
-        var current: Class<*>? = type
-        while (current != null && current != Any::class.java) {
-            yieldAll(HostFields.declared(current).asSequence())
-            current = current.superclass
-        }
-    }
-
-    private fun looksLikeMessageKey(candidate: Any): Boolean {
-        val fields = HostFields.declared(candidate.javaClass)
-        return fields.count { it.type == String::class.java } == 1 &&
-            fields.count { it.type == Boolean::class.javaPrimitiveType } == 1 &&
-            fields.any { !it.type.isPrimitive && it.type != String::class.java }
-    }
 }
