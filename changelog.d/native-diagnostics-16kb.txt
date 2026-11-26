@@ -1,0 +1,3 @@
+[Fixes]
+- Align the native diagnostic library for 16 KB memory pages, including the
+  boundary between read-only relocation data and writable data.
