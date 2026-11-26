@@ -107,7 +107,8 @@ object SystemDiagnosticsReader {
         val manager = findFrameworkManager(pm, runtimeFramework)
         val hooked = runtimeStore.getStringSet("hooked_whatsapp_packages", emptySet()).orEmpty()
         val rootAllowed = UpdateDownloader.hasRootAccess(forceRefresh)
-        val selinuxState = cachedSelinux?.takeIf { !forceRefresh } ?: readSelinuxState(rootAllowed).also { cachedSelinux = it }
+        val selinuxState = cachedSelinux?.takeIf { !forceRefresh && it != "Unknown" }
+            ?: readSelinuxState(rootAllowed).also { cachedSelinux = it }
 
         return SystemDiagnostics(
             moduleVersion = own?.versionName ?: BuildConfig.VERSION_NAME,
@@ -181,29 +182,25 @@ object SystemDiagnosticsReader {
         runCatching {
             val selinux = Class.forName("android.os.SELinux")
             val enforced = selinux.getMethod("isSELinuxEnforced").invoke(null) as Boolean
-            return if (enforced) "Enforcing" else "Permissive"
+            // Android also returns false when security_getenforce() fails.
+            // Only true establishes a mode without a readable state value.
+            if (enforced) "Enforcing" else null
         }.getOrNull()?.let { return it }
 
-        return "Enforcing"
+        return "Unknown"
     }
 
     private fun readSelinuxState(rootAllowed: Boolean): String {
-        runCatching {
-            normalizeSelinuxState(File("/sys/fs/selinux/enforce").readText())
-        }.getOrNull()?.let { return it }
-
-        runCatching {
-            val selinux = Class.forName("android.os.SELinux")
-            val enforced = selinux.getMethod("isSELinuxEnforced").invoke(null) as Boolean
-            return if (enforced) "Enforcing" else "Permissive"
-        }.getOrNull()?.let { return it }
+        val fastState = readFastSelinuxState()
+        if (fastState != "Unknown") return fastState
 
         if (rootAllowed) {
-            normalizeSelinuxState(AppRestartHelper.runRootCommand("getenforce"))
-                ?.let { return it }
+            runCatching {
+                normalizeSelinuxState(AppRestartHelper.runRootCommand("getenforce"))
+            }.getOrNull()?.let { return it }
         }
 
-        return "Enforcing"
+        return "Unknown"
     }
 
     private fun normalizeSelinuxState(raw: String?): String? = when (raw?.trim()?.lowercase()) {
