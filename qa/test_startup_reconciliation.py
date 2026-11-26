@@ -29,6 +29,7 @@ C={
  'runtime health unsupported': 'VersionGuard.runtimeStatus()' in main and '"UNSUPPORTED_VERSION"' in guard and '"COMPATIBILITY_UNAVAILABLE"' in guard,
  'runtime health failed': '"INITIALIZATION_FAILED"' in main,
  'on-demand reports replace retired heartbeat': 'HEARTBEAT_' not in main and 'registerHookReportReceiver(' in main and 'com.waenhancer.action.REPORT_HOOKS' in main,
+ 'runtime IPC is deferred to the reporting worker': 'queueDeferred(() -> WhatsAppPackageDetector.reportRuntimeHealth(' in main and 'REPORT_EXECUTOR.execute(task);' in main,
  'runtime report kept': 'WhatsAppPackageDetector.reportRuntimeHealth(' in main and 'fun reportRuntimeHealth(' in detector,
  'active framework recorder': 'active_xposed_framework' in main and 'detectActiveFramework()' in main,
  'signed restart': 'appContext.registerReceiver(receiver, filter, RESTART_PERMISSION' in main,

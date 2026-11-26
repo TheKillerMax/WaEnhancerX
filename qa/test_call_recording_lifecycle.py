@@ -23,7 +23,7 @@ STUBS = {
       }
       public void close(){if(closed)throw new AssertionError("Provider closed twice");closed=true;resolver.closes++;}
     }''',
-    'android/net/Uri.java': 'package android.net; public class Uri {public static Uri parse(String value){return new Uri();}}',
+    'android/net/Uri.java': 'package android.net; public class Uri {private String value; public static Uri parse(String value){Uri uri=new Uri();uri.value=value;return uri;} public String toString(){return value;}}',
     'android/os/Build.java': '''package android.os; public final class Build {
       public static class VERSION {public static int SDK_INT=34;}
       public static class VERSION_CODES {public static final int Q=29,S=31;}
@@ -50,8 +50,12 @@ STUBS = {
       public ContentResolver getContentResolver(){return resolver;} public Context getApplicationContext(){return this;}
       public String getPackageName(){return "com.whatsapp";}
       public static class ContentResolver {public final List<ParcelFileDescriptor> files=new ArrayList<>(); public int deletes,creates,finishes,acquires,closes; public boolean fail;
-        public ContentProviderClient acquireUnstableContentProviderClient(Uri uri){acquires++;return new ContentProviderClient(this);}
+        public ContentProviderClient acquireUnstableContentProviderClient(Uri uri){
+          if(!"content://com.waenhancer.hookprovider".equals(uri.toString()))throw new AssertionError("Wrong provider authority");
+          acquires++;return new ContentProviderClient(this);
+        }
         public Bundle call(Uri uri,String method,String argument,Bundle request){
+          if(uri!=null)throw new AssertionError("Stable resolver call must not run in recorder fixture");
           if(method.equals("create_call_recording")){creates++;if(fail)return null;
             Bundle result=new Bundle(); ParcelFileDescriptor fd=new ParcelFileDescriptor();files.add(fd);
             result.values.put("descriptor",fd);result.putString("path","private/"+request.getString("name"));return result;}
