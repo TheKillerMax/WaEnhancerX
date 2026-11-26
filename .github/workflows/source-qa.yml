@@ -210,12 +210,52 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Verify current deferred runtime and startup reporting
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_runtime_heartbeat_thread.py --out "$RUNNER_TEMP/waex-runtime-reporting"
+          python3 qa/test_startup_hook_reporting.py --out "$RUNNER_TEMP/waex-startup-reporting"
+          python3 qa/mutate_startup_hook_reporting.py --out "$RUNNER_TEMP/waex-startup-reporting-mutants"
+
+      - name: Verify all current manual receipt retry regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --offline --report "$RUNNER_TEMP/waex-manual-retry-dexkit.json"
+          export WAEX_QA_DEXKIT_JAR="$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar"
+          python3 qa/test_manual_receipt_retry.py --out "$RUNNER_TEMP/waex-manual-retry"
+          python3 qa/mutate_manual_receipt_retry.py --out "$RUNNER_TEMP/waex-manual-retry-mutants"
+
+      - name: Preserve current reporting and receipt retry evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-reporting-retry-evidence
+          path: |
+            ${{ runner.temp }}/waex-runtime-reporting/**/*.json
+            ${{ runner.temp }}/waex-runtime-reporting/**/*.log
+            ${{ runner.temp }}/waex-startup-reporting/*.json
+            ${{ runner.temp }}/waex-startup-reporting/*.log
+            ${{ runner.temp }}/waex-startup-reporting-mutants/**/*.json
+            ${{ runner.temp }}/waex-startup-reporting-mutants/**/*.log
+            ${{ runner.temp }}/waex-manual-retry-dexkit*.json
+            ${{ runner.temp }}/waex-manual-retry/*.json
+            ${{ runner.temp }}/waex-manual-retry/*.log
+            ${{ runner.temp }}/waex-manual-retry-mutants/result.json
+            ${{ runner.temp }}/waex-manual-retry-mutants/*.log
+            ${{ runner.temp }}/waex-manual-retry-mutants/*/result.json
+            ${{ runner.temp }}/waex-manual-retry-mutants/*/*.log
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Run required public-source JVM regression suites
         shell: bash
         run: |
           set -euo pipefail
           tests=(
             qa/test_provider_scope.py
+            qa/provider_ipc_freezer/verify.py
             qa/test_preference_write_types.py
             qa/test_bridge_contract.py
             qa/test_bridge_ordering.py
@@ -300,8 +340,10 @@ jobs:
             test -f qa/test_update_download_contract.py
             test -f qa/test_update_session.py
           fi
-          if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
             test -f qa/test_runtime_observation_clock.py
+            test -f qa/test_injection_evidence_contract.py
+            test -f qa/test_stability_framework_selection.py
           fi
           if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
             test -f qa/test_filter_work.py
@@ -388,6 +430,8 @@ jobs:
             qa/test_update_download_contract.py \
             qa/test_update_session.py \
             qa/test_runtime_observation_clock.py \
+            qa/test_injection_evidence_contract.py \
+            qa/test_stability_framework_selection.py \
             qa/test_filter_work.py \
             qa/test_recorder_cleanup.py \
             qa/test_call_recording_output_safety.py \
@@ -686,7 +730,15 @@ jobs:
             --out "$RUNNER_TEMP/waex-runtime-framework-controls" \
             --bundle "$RUNNER_TEMP/waex-shared-framework" \
             2>&1 | tee "$RUNNER_TEMP/waex-runtime-input-controls.log"
-      - name: Compile public utilities and observation clock; test compiled version resources
+      - name: Compile the actual exit adapter and unstable provider helper against Android APIs
+        if: steps.runtime.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_target_exit_android_api.py \
+            --android-jar "$RUNNER_TEMP/waex-shared-framework/deps/android-all-14-robolectric-10818077.jar" \
+            2>&1 | tee "$RUNNER_TEMP/waex-target-exit-api.log"
+      - name: Compile public runtime utilities and test compiled version resources
         if: steps.runtime.outputs.present == 'true'
         shell: bash
         run: |
@@ -714,6 +766,7 @@ jobs:
             ${{ runner.temp }}/waex-runtime-dependency-bundle*.json
             ${{ runner.temp }}/waex-runtime-framework-controls/result.json
             ${{ runner.temp }}/waex-runtime-input-controls.log
+            ${{ runner.temp }}/waex-target-exit-api.log
             ${{ runner.temp }}/waex-runtime-framework/evidence
           retention-days: 14
           if-no-files-found: error
@@ -796,8 +849,8 @@ jobs:
           if [[ -f app/src/main/java/com/waenhancer/update/UpdateTransferPolicy.kt ]]; then
             modes="$modes update"; test -f qa/fixtures/StabilityUpdateTest.kt
           fi
-          if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
-            modes="$modes clock"; test -f qa/fixtures/StabilityClockTest.kt
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            modes="$modes evidence"; test -f qa/fixtures/StabilityEvidenceTest.kt
           fi
           if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
             modes="$modes filter"; test -f qa/fixtures/StabilityFilterTest.kt
@@ -847,7 +900,7 @@ jobs:
           set -euo pipefail
           bundle=(--framework-bundle "$RUNNER_TEMP/waex-shared-framework"
                   --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA")
-          if [[ "$MODES" == ' update clock filter' ]]; then
+          if [[ "$MODES" == ' update evidence filter' ]]; then
             python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" "${bundle[@]}"
           else
             for mode in $MODES; do
