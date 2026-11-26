@@ -1,5 +1,7 @@
 """Real child-process controls for dependency-only retries; no network or Android."""
 import argparse
+import contextlib
+import io
 import json
 import math
 import os
@@ -8,9 +10,11 @@ import sys
 import tempfile
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import gradle_dependencies as helper
+import verify_interface_scale_framework as interface
 
 OUT = None
 FAKE = r'''
@@ -174,6 +178,52 @@ class DependencyChecks(unittest.TestCase):
         with self.assertRaises(OSError):helper.prepare_dependencies(self.wrapper,self.root,self.log,bash='/missing/launcher')
         self.assertFalse(self.report()['accepted']);self.assertEqual(self.report()['consumer_runs'],0)
 
+    def test_interface_preparation_failure_never_starts_compilation_or_tests(self):
+        for offline in (False, True):
+            with self.subTest(offline=offline):
+                out = self.root / ('offline' if offline else 'online')
+                argv = [interface.__file__, '--out', str(out)] + (['--offline'] if offline else [])
+                with patch.object(sys, 'argv', argv), patch.object(interface.shutil, 'which', return_value='fixture-bash'), \
+                     patch.object(interface, 'prepare_dependencies', side_effect=helper.GradleDependencyError('controlled acquisition failure')) as prepare, \
+                     patch.object(interface.subprocess, 'run', side_effect=AssertionError('Consumer reached after failed preparation')) as consumer:
+                    with self.assertRaises(helper.GradleDependencyError):
+                        interface.main()
+                prepare.assert_called_once()
+                consumer.assert_not_called()
+                self.assertEqual(prepare.call_args.kwargs, {'bash': 'fixture-bash', 'offline': offline})
+                build = (out/'fixture/probe/build.gradle.kts').read_text()
+                self.assertEqual(build.count(helper.PREPARATION_TASK), 1)
+                self.assertFalse((out/'evidence/framework-build.log').exists())
+
+    def test_interface_consumer_failure_is_once_only_and_preserves_caller_mode(self):
+        for offline in (False, True):
+            with self.subTest(offline=offline):
+                out = self.root / ('offline' if offline else 'online')
+                argv = [interface.__file__, '--out', str(out)] + (['--offline'] if offline else [])
+                order = []
+                def prepared(*args, **kwargs):
+                    order.append('prepare')
+                    return {'accepted': True}
+                def failed(*args, **kwargs):
+                    order.append('consumer')
+                    return SimpleNamespace(returncode=1)
+                with patch.object(sys, 'argv', argv), patch.object(interface.shutil, 'which', return_value='fixture-bash'), \
+                     patch.object(interface, 'prepare_dependencies', side_effect=prepared) as prepare, \
+                     patch.object(interface.subprocess, 'run', side_effect=failed) as consumer, \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, 'Interface scale framework failed'):
+                        interface.main()
+                self.assertEqual(order, ['prepare', 'consumer'])
+                prepare.assert_called_once()
+                consumer.assert_called_once()
+                self.assertEqual(prepare.call_args.kwargs['offline'], offline)
+                command = consumer.call_args.args[0]
+                self.assertEqual('--offline' in command, offline)
+                self.assertEqual(command.count(':probe:testDebugUnitTest'), 1)
+                self.assertEqual(consumer.call_args.kwargs['stdin'], interface.subprocess.DEVNULL)
+                report = json.loads((out/'evidence/result.json').read_bytes())
+                self.assertEqual([report[k] for k in ('tests', 'failures', 'errors', 'skipped', 'build_returncode')], [0, 0, 0, 0, 1])
+
 
 def main():
     global OUT
@@ -186,7 +236,7 @@ def main():
         result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(DependencyChecks))
         (OUT/'result.json').write_text(json.dumps({'accepted':result.wasSuccessful(),'tests':result.testsRun,
             'failures':len(result.failures),'errors':len(result.errors),'skipped':len(result.skipped),
-            'scope':'Actual controlled child processes; no real Gradle, Android or network.'},indent=2)+'\n')
+            'scope':'Controlled child processes and Interface sequencing; no real Gradle, Android or network.'},indent=2)+'\n')
         return 0 if result.wasSuccessful() else 1
 
 

@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tomllib
 import xml.etree.ElementTree as ET
+from gradle_dependencies import PREPARATION_TASK, prepare_dependencies
 
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN = Path('app/src/main/java/com/waenhancer/ui/designsystem')
@@ -122,6 +123,7 @@ tasks.register("writeQaDependencyHashes") {
                        'ACTIVITY': v['androidxActivity'], 'LIFECYCLE': v['androidxLifecycle'],
                        'COROUTINES': v['coroutines']}.items():
         build = build.replace('@' + key + '@', value)
+    build += PREPARATION_TASK
     if inputs:
         build = 'import java.io.File\n' + build + runtime_framework_inputs.test_configuration(inputs, evidence)
     (probe / 'build.gradle.kts').write_text(build)
@@ -129,6 +131,7 @@ tasks.register("writeQaDependencyHashes") {
     main = probe / 'src/main'; main.mkdir(parents=True)
     (main / 'AndroidManifest.xml').write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
     identities = dict(inputs['source_sha256']) if inputs else {}
+    identities['qa/gradle_dependencies.py'] = hashlib.sha256(Path(__file__).with_name('gradle_dependencies.py').read_bytes()).hexdigest()
     for source in SOURCES + FONTS + [FIXTURE, versions_path]:
         content = (root / source).read_bytes()
         identities[str(source)] = hashlib.sha256(content).hexdigest()
@@ -147,6 +150,10 @@ tasks.register("writeQaDependencyHashes") {
     bash = shutil.which('bash')
     if not bash:
         raise RuntimeError('A compatible bash executable is required for gradlew')
+    # Resolve transient plugin/module transport before the single consumer.
+    # Keep the caller's mode and all complete-theme acceptance counts intact.
+    prepare_dependencies(root / 'gradlew', project, evidence / 'gradle-dependencies.log',
+                         bash=bash, offline=a.offline)
     # Bash needs slash-separated script paths: a `C:\...` argument makes its
     # `dirname` treat the entire path as a filename and loses APP_HOME.
     command = [bash, (root / 'gradlew').as_posix(), '-p', str(project), '--no-daemon',
@@ -157,7 +164,7 @@ tasks.register("writeQaDependencyHashes") {
     returncode = None; failure = None
     try:
         with (evidence / 'framework-build.log').open('w') as log:
-            returncode = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
+            returncode = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     except (OSError, subprocess.TimeoutExpired) as exc:
         failure = type(exc).__name__ + ': ' + str(exc)
     for report in (probe / 'build/test-results/testDebugUnitTest').glob('*.xml'):
