@@ -1,0 +1,3 @@
+[Fixes]
+- Use the explicit older reflection API for media selector arity checks while
+  preserving the verified host profile and exact method signatures.

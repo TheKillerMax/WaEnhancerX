@@ -329,7 +329,7 @@ public class MediaQualityBypassHook extends BaseFeature {
             Method method = uniqueMethod("waex_image_quality_semantic_v3",
                     "image/compress quality", StringMatchType.Contains,
                     candidate -> candidate.getReturnType() == void.class
-                            && candidate.getParameterCount() == 1
+                            && candidate.getParameterTypes().length == 1
                             && candidate.getParameterTypes()[0] == int.class);
             if (!concreteInstance(method) || installedMethods.contains(method)) return;
             XposedBridge.hookMethod(method, new XC_MethodHook() {
@@ -352,7 +352,7 @@ public class MediaQualityBypassHook extends BaseFeature {
         try {
             Method method = uniqueMethod("waex_video_fps_encoder_v3",
                     "video/encoder fps", StringMatchType.Contains,
-                    candidate -> candidate.getParameterCount() == 0
+                    candidate -> candidate.getParameterTypes().length == 0
                             && HookReturnTypeGuard.returnsInteger(candidate));
             if (!concreteInstance(method) || installedMethods.contains(method)) return;
             XposedBridge.hookMethod(method, new XC_MethodHook() {
