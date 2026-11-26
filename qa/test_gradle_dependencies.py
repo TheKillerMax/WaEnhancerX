@@ -22,6 +22,8 @@ index=len(calls.read_text().splitlines()) if calls.exists() else 0
 with calls.open('a') as stream:stream.write(json.dumps(sys.argv[1:])+'\n')
 step=config[min(index,len(config)-1)]
 print(step.get('text',''),flush=True)
+if step.get('read_stdin'):
+ (root/'stdin-result.json').write_text(json.dumps({'input':sys.stdin.read(),'is_tty':sys.stdin.isatty()}))
 if step.get('child'):
  subprocess.Popen([sys.executable,'-c','import pathlib,time;time.sleep(1);pathlib.Path('+repr(str(root/'orphan'))+').write_text("escaped")'])
 if step.get('change'):(root/'probe/build.gradle.kts').write_text('changed')
@@ -67,6 +69,12 @@ class DependencyChecks(unittest.TestCase):
         self.assertEqual(len(self.calls()),1)
         self.assertEqual(self.calls()[0][-1],helper.TASK)
         self.assertNotIn('--refresh-dependencies',self.calls()[0])
+
+    def test_noninteractive_child_gets_a_valid_input_handle_at_eof(self):
+        self.configure([{**SUCCESS,'read_stdin':True}])
+        self.assertTrue(self.prepare()['accepted'])
+        observed=json.loads((self.root/'stdin-result.json').read_text())
+        self.assertEqual(observed,{'input':'','is_tty':False})
 
     def test_same_arguments_recover_transient_resolution_on_third_attempt(self):
         self.configure([THROTTLE,THROTTLE,SUCCESS]);result=self.prepare()

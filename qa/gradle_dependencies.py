@@ -152,7 +152,10 @@ def prepare_dependencies(wrapper, project, log, *, bash='bash', offline=False,
                            'timed_out': False, 'retryable': False}
                 record['attempts'].append(attempt)
                 with path.open('x', encoding='utf-8') as stream:
-                    process = subprocess.Popen(command, stdout=stream, stderr=subprocess.STDOUT,
+                    # Acquisition never prompts. Give Gradle a valid input handle
+                    # even when a Windows automation parent has no console stdin.
+                    process = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+                                               stdout=stream, stderr=subprocess.STDOUT,
                                                start_new_session=(os.name == 'posix'))
                     try:
                         attempt['exit_code'] = process.wait(timeout=max(.001, deadline-time.monotonic()))
