@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Isolated real Android/Compose compilation and regressions, not a full WAEX APK.
-Modes allow standalone updater/filter branches without borrowing production
-code from another PR. Xposed, private Pro behavior and design theme are fixtures.
+Modes allow standalone updater/filter/evidence branches without borrowing
+production code from another PR. The legacy clock name selects the PID/boot
+evidence suite; no periodic clock is reintroduced. Xposed, private Pro behavior
+and design theme are fixtures.
 """
 from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tomllib
@@ -12,23 +14,30 @@ from gradle_dependencies import PREPARATION_TASK, prepare_dependencies
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def select_modes(mode):
+    """Select each canonical suite once; clock is a compatibility alias."""
+    if mode == 'all':
+        return ['update', 'filter', 'evidence']
+    if mode == 'clock':
+        return ['evidence']
+    if mode in ('update', 'filter', 'evidence'):
+        return [mode]
+    raise ValueError('Unknown stability mode: '+str(mode))
+
+
 def selected_modes(mode, root):
     # Upstream 1b029ec88 retired the timer and heartbeat expiry. Its replacement
     # refresh/drain and boot/PID contract runs in test_runtime_observation_clock.py.
-    if mode == 'clock':
-        raise ValueError('The observation clock was retired; run qa/test_runtime_observation_clock.py for the current on-demand contract')
     if (root/'app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt').exists():
         raise ValueError('Retired observation clock reintroduced; review and restore its framework coverage explicitly')
-    if mode not in ('all', 'update', 'filter'):
-        raise ValueError('Unknown stability mode: '+mode)
-    return ['update', 'filter'] if mode == 'all' else [mode]
+    return select_modes(mode)
 
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--root',type=Path,default=ROOT)
     ap.add_argument('--out',type=Path,required=True)
-    ap.add_argument('--mode',choices=['all','update','filter','clock'],default='all',
-                    help='all runs the current updater and filter suites; retired clock mode fails explicitly')
+    ap.add_argument('--mode',choices=['all','update','filter','evidence','clock'],default='all',
+                    help='all runs updater, filter and PID/boot evidence; clock aliases evidence only')
     ap.add_argument('--offline',action='store_true',help='Use the existing Gradle dependency cache only')
     ap.add_argument('--framework-bundle',type=Path,help='Closed 39-file framework bundle from this CI run, attempt and head')
     ap.add_argument('--bundle-run-id');ap.add_argument('--bundle-run-attempt');ap.add_argument('--bundle-head-sha')
@@ -103,8 +112,9 @@ dependencies {
     sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','xposed/utils/HookErrors.java','utils/AndroidUserScope.java',
                        'config/PreferenceStores.java','config/PreferenceSchema.java','ui/components/NetworkErrorSheet.kt','ui/components/WaexModalBottomSheet.kt','ui/components/WaexProgressIndicator.kt',
                        'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt','ui/designsystem/WaexColors.kt'],
-             'filter':['xposed/features/customization/FilterItemsHook.kt','xposed/features/customization/LayoutPassThrottle.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java','xposed/utils/HostResourceIds.java','xposed/utils/HookErrors.java']}
-    expected={'update':12,'filter':3}
+             'filter':['xposed/features/customization/FilterItemsHook.kt','xposed/features/customization/LayoutPassThrottle.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java','xposed/utils/HostResourceIds.java','xposed/utils/HookErrors.java'],
+             'evidence':['utils/InjectionEvidence.kt']}
+    expected={'update':12,'filter':3,'evidence':15}
     for mode in modes:
         for rel in sources[mode]:
             source=root/'app/src/main/java/com/waenhancer'/rel
@@ -192,7 +202,7 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     cmd=[bash,(root/'gradlew').as_posix(),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
     if a.offline:cmd.append('--offline')
     with (e/'framework-build.log').open('w') as log:
-        result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+        result=subprocess.run(cmd,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,timeout=900)
     for f in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(f,e/f.name)
     reports=list(e.glob('TEST-*.xml'));counts=[0,0,0,0]
     for f in reports:
