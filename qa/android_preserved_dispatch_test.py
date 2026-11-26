@@ -9,10 +9,13 @@ from pathlib import Path
 import argparse,hashlib,json,os,re,shutil,subprocess,zipfile,urllib.request,io
 
 ROOT=Path(__file__).resolve().parents[1]
-EXPECTED_TESTS=105
+EXPECTED_TESTS=123
 PKG=Path('app/src/main/java/com/waenhancer')
 PRODUCTION=[
  PKG/'xposed/features/conversation/PreserveDeleteForMeHook.kt',
+ PKG/'xposed/features/conversation/DeleteOriginContract.kt',
+ PKG/'xposed/features/conversation/DeleteOriginSession.kt',
+ PKG/'xposed/features/conversation/SelectedKeys.kt',
  PKG/'xposed/core/BaseFeature.kt',
  PKG/'calls/CallRecordingStore.kt',
  PKG/'calls/RecordingOutputFiles.java',
@@ -38,16 +41,20 @@ XPOSED='''package de.robv.android.xposed;
 import java.lang.reflect.*; import java.util.*;
 public class XposedBridge {
  public static final Map<Member,List<XC_MethodHook>> hooks=new LinkedHashMap<>();
- public static final List<String> logs=new ArrayList<>();
+ public static final List<String> logs=Collections.synchronizedList(new ArrayList<>());
+ public static Class<?> failRegistrationType;
+ public static Class<?> emptyAllMethodsType;
  public static void log(String text){logs.add(text);}
  public static void log(Throwable error){java.io.StringWriter text=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(text));logs.add(text.toString());}
  public static XC_MethodHook.Unhook hookMethod(Member method,XC_MethodHook callback){
   if(method==null||callback==null)throw new IllegalArgumentException("Null hook registration");
   if(!(method instanceof Method)&&!(method instanceof Constructor))throw new IllegalArgumentException("Not a method/constructor");
+  if(method.getDeclaringClass()==failRegistrationType)throw new IllegalStateException("Synthetic registration failure");
   hooks.computeIfAbsent(method,k->new ArrayList<>()).add(callback);
   return callback.new Unhook(method);
  }
  public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> type,String name,XC_MethodHook callback){
+  if(type==emptyAllMethodsType)return Collections.emptySet();
   Set<XC_MethodHook.Unhook> registrations=new LinkedHashSet<>();
   for(Method m:type.getDeclaredMethods())if(m.getName().equals(name))registrations.add(hookMethod(m,callback));
   return registrations;
@@ -73,7 +80,7 @@ public class XposedBridge {
   if(param.invocationCallbacks==null)throw new AssertionError("No invocation snapshot");
   for(int i=param.beforeCount-1;i>=0;i--)param.invocationCallbacks.get(i).afterHookedMethod(param);
  }
- public static void reset(){hooks.clear();logs.clear();}
+ public static void reset(){hooks.clear();logs.clear();failRegistrationType=null;emptyAllMethodsType=null;}
 }'''
 METHOD_HOOK='''package de.robv.android.xposed;
 import java.lang.reflect.Member;
@@ -459,6 +466,17 @@ public final class WaexPreferenceManager {
              *[s for s in sources if s.name in lifecycle_names]],out/'kotlinc-production.log')
     execute(['javac','--release','17','-cp',cp,'-d',classes,
              *[s for s in sources if s.name in lifecycle_names]],out/'javac-hook-lifecycle.log')
+    origin=stage/'DeleteOriginTest.kt'
+    shutil.copyfile(ROOT/'qa/fixtures'/origin.name,origin)
+    identities['qa/fixtures/'+origin.name]=hashlib.sha256(origin.read_bytes()).hexdigest()
+    fixture_classes=out/'origin-classes';fixture_classes.mkdir()
+    # The injector is a JUnit runtime dependency, not a Kotlin 2.0 fixture API.
+    compile_jars=[p for p in runtime_jars if p.name!='test-parameter-injector-1.22.jar']
+    fixture_cp=os.pathsep.join(map(str,[classes,*compile_jars,dexkit,stdlib]))
+    execute([*compiler_command,'-jvm-target','17','-module-name','preserve_fixture',
+             '-Xfriend-paths='+str(classes),'-classpath',fixture_cp,'-d',fixture_classes,origin],out/'kotlinc-origin.log')
+    cp=os.pathsep.join([str(fixture_classes),cp])
+    suites.append(('origin','com.waenhancer.xposed.features.conversation.DeleteOriginTest',30,0))
     test=stage/'PreservedDispatchContractTest.java';shutil.copyfile(ROOT/'qa/fixtures'/test.name,test)
     identities['qa/fixtures/'+test.name]=hashlib.sha256(test.read_bytes()).hexdigest()
     execute(['javac','--release','17','-cp',cp,'-d',classes,stage/PKG/'xposed/bridge/HookProvider.java',test],out/'javac-provider-tests.log')
@@ -470,15 +488,16 @@ public final class WaexPreferenceManager {
     for name,test_class,required,expected in suites:
         folder=out if name=='dispatch' else out/name
         if folder!=out: folder.mkdir()
-        rc=execute([*command,test_class],folder/'junit.log',allow=True)
+        try:
+            rc=execute([*command,test_class],folder/'junit.log',allow=True)
+        except (OSError, subprocess.TimeoutExpired) as failure:
+            print(name, type(failure).__name__, flush=True)
+            rc=None  # No completed JUnit exit; keep any partial output and reject this suite.
         runs.append((folder,name,test_class,required,expected,rc))
-    if not args.sdk_jars:
-        repo=args.maven_repo.resolve() if args.maven_repo else Path.home()/'.m2/repository'
-        inventory('sdk-sha256.json',sorted((repo/'org/robolectric/android-all-instrumented').glob('*/*.jar')),3)
 
     rejected=[]
     for folder,name,test_class,required,expected,rc in runs:
-        log=(folder/'junit.log').read_text()
+        log=(folder/'junit.log').read_text(errors='replace')
         passed=re.search(r'^OK \((\d+) tests?\)$',log,re.M)
         failed=re.search(r'^Tests run: (\d+),\s+Failures: (\d+)$',log,re.M)
         count=int((passed or failed).group(1)) if passed or failed else 0
@@ -504,8 +523,16 @@ public final class WaexPreferenceManager {
                 'external_service_fixture_sha256':fixture_identities,'compile_only_source_contract_sha256':contract_hashes,
                 'limits':'Public production bytecode with explicit Xposed dispatch, synthetic host, lazy privacy/service boundaries and Robolectric Android/SQLite/UID shadows. No host key binding, native DexKit scan, ART/LSPosed, kernel Binder or device disk fault.'}
         (folder/'result.json').write_text(json.dumps(report,indent=2)+'\n')
+        if folder != out:
+            # Publish the completed files themselves under the nightly job's flat globs.
+            for leaf in ('junit.log', 'result.json'):
+                os.link(folder/leaf, out/(name+'-'+leaf))
         print(name,count,failures,'accepted='+str(accepted),flush=True)
         if not accepted: rejected.append(str(folder/'junit.log'))
+    # Even an incomplete SDK bootstrap must not hide already observed suite outcomes.
+    if not args.sdk_jars:
+        repo=args.maven_repo.resolve() if args.maven_repo else Path.home()/'.m2/repository'
+        inventory('sdk-sha256.json',sorted((repo/'org/robolectric/android-all-instrumented').glob('*/*.jar')),3)
     if rejected: raise RuntimeError('Unexpected suite results: '+', '.join(rejected))
 
 

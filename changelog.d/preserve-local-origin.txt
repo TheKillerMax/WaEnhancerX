@@ -1,0 +1,9 @@
+[Fixes]
+- Report message preservation as unavailable if the Delete-for-me entry point
+  or required legacy database interception cannot be installed. Failed partial
+  installations use the existing feature cleanup.
+- A shared Delete-for-me task or a stale cached method alone cannot authorize
+  capture. An unresolved message key leaves preservation unavailable.
+- Keep the Runnable's direct copy for an authorized local request when optional
+  SQLite interception fails or installs no hooks. The local check used a
+  synthetic, issued request.
