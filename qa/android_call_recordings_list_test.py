@@ -96,6 +96,10 @@ def main():
     deps = resolve_framework(args, out)
     core = resolve_core(args, out)
     kotlin, compiler = find_kotlin()
+    compiler_version = subprocess.run([str(compiler), '-version'], check=True,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30).stdout.strip()
+    toolchain = {'kotlin_home': str(kotlin), 'compiler_version': compiler_version,
+                 'compiler_jar_sha256': digest(kotlin / 'lib/kotlin-compiler.jar')}
     coroutine = kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'
     if not coroutine.is_file():
         raise RuntimeError('Kotlin distribution must include its coroutine QA runtime')
@@ -204,7 +208,8 @@ public final class ProviderStorageProbe {
     failed = 0 if passed else int(failures.group(2)) if failures else None
     summary = {'source_root': str(root), 'tests': actual, 'failures': failed, 'expected_tests': EXPECTED,
                'exit_code': result, 'sdk': [24, 28, 34], 'source_sha256': identities,
-               'limitations': __doc__, 'coroutines_runtime': 'Kotlin 2.0.20 distribution QA runtime, not the app dependency graph'}
+               'kotlin_toolchain': toolchain,
+               'limitations': __doc__, 'coroutines_runtime': 'Installed compiler distribution runtime; exact dependency SHA256 recorded, not the app dependency graph'}
     (out / 'result.json').write_text(json.dumps(summary, indent=2) + '\n')
     dependencies = {p.name: digest(p) for p in runtime_jars}
     if args.sdk_jars:

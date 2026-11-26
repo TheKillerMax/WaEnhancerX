@@ -125,7 +125,7 @@ def find_kotlin():
     elif compiler:
         home = Path(compiler).resolve().parents[1]
     else:
-        raise RuntimeError('Kotlin 2.0.20 is required: set KOTLIN_HOME or place kotlinc on PATH')
+        raise RuntimeError('A complete Kotlin distribution is required: set KOTLIN_HOME or place kotlinc on PATH')
     binary = home / 'bin/kotlinc'
     if not binary.is_file() or not (home / 'lib/kotlin-stdlib.jar').is_file():
         raise RuntimeError('Kotlin installation lacks bin/kotlinc or lib/kotlin-stdlib.jar: ' + str(home))
