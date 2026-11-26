@@ -1,0 +1,2 @@
+[Fixes]
+- Run a fresh root access check when Check again is selected.
