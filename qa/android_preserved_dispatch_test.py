@@ -23,6 +23,7 @@ PRODUCTION=[
  PKG/'utils/DeclaredWhatsAppTargets.java',
  PKG/'config/PreferenceSchema.java',
  PKG/'xposed/bridge/HookProvider.java',
+ PKG/'xposed/bridge/client/HookProviderIpc.java',
  PKG/'xposed/bridge/CallerScopePolicy.java',
  PKG/'xposed/bridge/ProviderDerivedKeyPolicy.java',
  PKG/'xposed/bridge/ProviderPreferenceScopePolicy.java',
@@ -240,6 +241,8 @@ def main():
     # Require their real source declarations before compiling a standalone fixture;
     # missing/changed methods must fail here rather than silently changing semantics.
     contracts = {
+        PKG/'xposed/core/privacy/PrivacyPrefs.java': (
+            r'public\s+static\s+PrivacyPrefs\s+of\s*\(\s*@NonNull\s+Context\s+context\s*,\s*@NonNull\s+SharedPreferences\s+prefs\s*\)',),
         PKG/'config/PreferenceRestartTracker.java': (
             r'NEED_RESTART\s*=\s*"need_restart"',
             r'PENDING_CHANGES\s*=\s*"pending_restart_changes"'),
@@ -310,6 +313,15 @@ def main():
     version_name=version_names[0].strip()
     if not version_name:raise RuntimeError('Empty Gradle VERSION_NAME')
     fixtures={
+        # BaseFeature initializes this service lazily; preserved-message cases
+        # must never query it. A future access fails instead of faking privacy.
+        'com/waenhancer/xposed/core/privacy/PrivacyPrefs.java':'''package com.waenhancer.xposed.core.privacy;
+public final class PrivacyPrefs {
+ private PrivacyPrefs() {}
+ public static PrivacyPrefs of(android.content.Context context, android.content.SharedPreferences prefs) {
+  throw new AssertionError("Privacy service is outside preserved-message fixture");
+ }
+}''',
         'androidx/annotation/NonNull.java':'package androidx.annotation;public @interface NonNull{}',
         'androidx/annotation/Nullable.java':'package androidx.annotation;public @interface Nullable{}',
         'androidx/annotation/VisibleForTesting.java':'package androidx.annotation;public @interface VisibleForTesting{}',
@@ -433,7 +445,7 @@ public final class WaexPreferenceManager {
     expected=args.expect_assertion_failures
     accepted=count==EXPECTED_TESTS and failures==expected and (result==0 and passed is not None if expected==0 else result!=0 and assertions==expected)
     report={'source_root':str(root),'tests':count,'failures':failures,'assertion_failures':assertions,'expected_tests':EXPECTED_TESTS,'expected_assertion_failures':expected,'junit_exit':result,'accepted_result':accepted,'source_sha256':identities,'external_service_fixture_sha256':fixture_identities,
-            'compile_only_source_contract_sha256':contract_hashes,'limits':'Complete production sender/provider/store and support policies/cache classes; Robolectric Android ContentResolver, ContentProvider, SQLite files and Binder/UID/package shadows on API24/28/34. Explicit Xposed dispatch and synthetic host Runnable/message graph/SQL schema. Package detector facade delegates to real DeclaredWhatsAppTargets; unrelated private license and update entry points throw if called. No native DexKit discovery, actual WhatsApp/LSPosed, device disk fault or kernel cross-process Binder test.'}
+            'compile_only_source_contract_sha256':contract_hashes,'limits':'Complete production sender/provider/store and support policies/cache classes; Robolectric Android ContentResolver, ContentProvider, SQLite files and Binder/UID/package shadows on API24/28/34. Explicit Xposed dispatch and synthetic host Runnable/message graph/SQL schema. Package detector facade delegates to real DeclaredWhatsAppTargets; unrelated private license, update and lazy privacy service entry points throw if called. No native DexKit discovery, actual WhatsApp/LSPosed, device disk fault or kernel cross-process Binder test.'}
     (out/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     dependency_paths=[*sorted(deps.glob('*.jar')),dexkit]
     (out/'dependency-sha256.json').write_text(json.dumps({path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in dependency_paths},indent=2)+'\n')

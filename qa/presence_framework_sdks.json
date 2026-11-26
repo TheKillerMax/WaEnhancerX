@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "consumer": "android-presence-rows",
+  "robolectric": "4.17",
+  "sdk_levels": [
+    28,
+    34,
+    36
+  ],
+  "framework_lock_sha256": "8fa74776e9ef20fdee5773a058235c4d0203a750cba1a4f9aed8d2d4e4e8924f",
+  "files": [
+    {
+      "sdk": 28,
+      "source": "framework_bundle",
+      "name": "android-all-instrumented-9-robolectric-4913185-2-i7.jar",
+      "bytes": 106130412,
+      "sha256": "dbb1c88987b54cef3132695a1b4d2f4851ba06286a6fa7d15772f98fd1f0cdf7"
+    },
+    {
+      "sdk": 34,
+      "source": "framework_bundle",
+      "name": "android-all-instrumented-14-robolectric-10818077-i7.jar",
+      "bytes": 151142227,
+      "sha256": "3fdac2d463f431c6b8d83b9d0ca739e795de75fffedee648c6761bd4bd864701"
+    },
+    {
+      "sdk": 36,
+      "source": "maven_central",
+      "name": "android-all-instrumented-16-robolectric-13921718-i7.jar",
+      "bytes": 213431622,
+      "sha256": "16f1f751643d1d3d5592008846bbdfc1e57cff15e6ec303d26584de3b6ac25ec",
+      "coordinate": "org.robolectric:android-all-instrumented:16-robolectric-13921718-i7",
+      "url": "https://repo.maven.apache.org/maven2/org/robolectric/android-all-instrumented/16-robolectric-13921718-i7/android-all-instrumented-16-robolectric-13921718-i7.jar"
+    }
+  ]
+}

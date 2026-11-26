@@ -1,0 +1,2 @@
+[Fixes]
+- Honor the anti-revoke status setting stored as its schema string value, including status-only activation and per-target settings.

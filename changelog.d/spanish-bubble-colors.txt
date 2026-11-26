@@ -1,0 +1,2 @@
+[Fixes]
+- Complete Spanish and Latin American Spanish labels for chat bubble color controls.

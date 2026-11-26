@@ -398,11 +398,9 @@ class AntiEditMessagesHook(
                                         val pos = p.args.getOrNull(0) as? Int ?: return
                                         val boundAdapter = p.thisObject as? ListAdapter ?: return
                                         val item = try { boundAdapter.getItem(pos) } catch (t: Throwable) { null } ?: return
-                                        var keyId = extractStableKeyId(item)
-                                        // Edited rows expose the edit's own key; history lives under the original's.
-                                        if (editLabel != null && !keyId.isNullOrEmpty()) {
-                                            keyId = editStore.resolveOriginalKey(keyId)
-                                        }
+                                        // Keep binding free of host-database reads. Resolve edited
+                                        // aliases in the snapshot writer or when history is opened.
+                                        val keyId = extractStableKeyId(item)
                                         val rowId = if (keyId.isNullOrEmpty()) extractRowId(item) else 0L
                                         val msgText = extractMessageText(item)
 
@@ -420,7 +418,10 @@ class AntiEditMessagesHook(
                                             val snapshotKey = if (!keyId.isNullOrEmpty()) keyId else "row:$rowId"
                                             if (sSnapshotted.size > 4000) sSnapshotted.clear()
                                             if (sSnapshotted.put(snapshotKey, msgText) != msgText) {
-                                                editStore.recordTransitionAsync(rowId, keyId, null, msgText, System.currentTimeMillis())
+                                                editStore.recordBoundSnapshotAsync(rowId, keyId, msgText, System.currentTimeMillis(), editLabel != null) {
+                                                    // An older failed worker must not invalidate a newer text snapshot.
+                                                    sSnapshotted.remove(snapshotKey, msgText)
+                                                }
                                             }
                                         }
 
@@ -619,8 +620,12 @@ class AntiEditMessagesHook(
         val result = mutableListOf<EditMessageStore.MessageItem>()
         val seenTexts = mutableSetOf<String>()
 
+        // Resolve an edited row only when its history is requested. A numeric
+        // row for the edit cannot identify the original message's history.
+        val resolvedKeyId = if (keyId.isNullOrBlank()) keyId else editStore.resolveOriginalKey(keyId)
+        val resolvedRowId = if (resolvedKeyId != keyId) 0L else rowId
         // 1. Pull from EditMessageStore
-        val stored = editStore.getMessages(rowId, keyId)
+        val stored = editStore.getMessages(resolvedRowId, resolvedKeyId)
         for (item in stored) {
             if (item.textData.isNotBlank() && seenTexts.add(item.textData.trim())) {
                 result.add(item)
@@ -631,8 +636,8 @@ class AntiEditMessagesHook(
         if (!currentText.isNullOrBlank() && seenTexts.add(currentText.trim())) {
             result.add(
                 EditMessageStore.MessageItem(
-                    rowId = rowId,
-                    keyId = keyId ?: "",
+                    rowId = resolvedRowId,
+                    keyId = resolvedKeyId ?: "",
                     textData = currentText.trim(),
                     timestamp = System.currentTimeMillis(),
                     versionNumber = result.size + 1

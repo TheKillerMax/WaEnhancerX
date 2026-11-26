@@ -282,7 +282,7 @@ public final class FeatureRegistry {
         registerFeature(AntiRevokeHook.class, "Privacy",
                 () -> prefs.getBoolean("anti_revoke", false)
                         || prefs.getBoolean("preserve_own_revoke", false)
-                        || prefs.getBoolean("antirevokestatus", false),
+                        || AntiRevokeHook.isAntiRevokeStatusEnabled(context, prefs),
                 () -> new AntiRevokeHook(context, classLoader, prefs));
 
         registerFeature(HideForwardedTagHook.class, "Privacy",

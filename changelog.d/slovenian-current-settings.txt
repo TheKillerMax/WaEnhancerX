@@ -1,0 +1,2 @@
+[Fixes]
+- Complete Slovenian labels for current settings, diagnostics and issue reporting while preserving existing translations.
