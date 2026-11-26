@@ -1,0 +1,2 @@
+[Fixes]
+- Distinguish an unreadable module scope from an empty target list in diagnostics, without treating installed WhatsApp apps as absent.

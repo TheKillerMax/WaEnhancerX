@@ -1029,7 +1029,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"रोका गया: असमर्थित संस्करण"</string>
     <string name="waex_runtime_status_failed">"असफल"</string>
     <string name="waex_runtime_status_injection_detected">"इंजेक्शन का पता चला"</string>
-    <string name="waex_runtime_status_no_target_installed">"कोई स्थापित लक्ष्य नहीं पाया गया"</string>
+    <string name="waex_runtime_status_no_target_installed">"मॉड्यूल के दायरे में कोई लक्ष्य ऐप नहीं मिला"</string>
+    <string name="waex_runtime_status_target_scope_checking">"मॉड्यूल का दायरा जाँचा जा रहा है"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"मॉड्यूल का दायरा उपलब्ध नहीं है"</string>
     <string name="waex_runtime_status_version_rules_require_review">"संस्करण नियमों की समीक्षा की आवश्यकता है"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"लक्ष्य रनटाइम की समीक्षा की आवश्यकता है"</string>
     <string name="waex_runtime_status_bypass_unverified">"संस्करण बायपास सक्रिय; संगतता असत्यापित"</string>

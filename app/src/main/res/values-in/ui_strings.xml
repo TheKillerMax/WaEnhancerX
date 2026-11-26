@@ -1029,7 +1029,9 @@ Mulai ulang WhatsApp untuk menerapkan perubahan?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"Dijeda: versi tidak didukung"</string>
     <string name="waex_runtime_status_failed">"Gagal"</string>
     <string name="waex_runtime_status_injection_detected">"Injeksi terdeteksi"</string>
-    <string name="waex_runtime_status_no_target_installed">"Tidak ada target terpasang yang terdeteksi"</string>
+    <string name="waex_runtime_status_no_target_installed">"Tidak ada target terdeteksi dalam cakupan modul"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Memeriksa cakupan modul"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Cakupan modul tidak tersedia"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Aturan versi memerlukan peninjauan"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Waktu proses target memerlukan peninjauan"</string>
     <string name="waex_runtime_status_bypass_unverified">"Bypass versi aktif; kompatibilitas belum diverifikasi"</string>

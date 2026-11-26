@@ -1029,7 +1029,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"متوقف مؤقتًا: إصدار غير مدعوم"</string>
     <string name="waex_runtime_status_failed">"فشل"</string>
     <string name="waex_runtime_status_injection_detected">"تم الكشف عن الحقن"</string>
-    <string name="waex_runtime_status_no_target_installed">"لم يتم اكتشاف أي هدف مثبت"</string>
+    <string name="waex_runtime_status_no_target_installed">"لم يُكتشف أي تطبيق ضمن نطاق الوحدة"</string>
+    <string name="waex_runtime_status_target_scope_checking">"جارٍ التحقق من نطاق الوحدة"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"نطاق الوحدة غير متاح"</string>
     <string name="waex_runtime_status_version_rules_require_review">"تتطلب قواعد الإصدار المراجعة"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"يتطلب وقت التشغيل المستهدف المراجعة"</string>
     <string name="waex_runtime_status_bypass_unverified">"تجاوز الإصدار نشط؛ لم يتم التحقق من التوافق"</string>

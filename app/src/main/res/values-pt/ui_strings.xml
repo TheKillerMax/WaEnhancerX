@@ -1029,7 +1029,9 @@ Reiniciar WhatsApp para aplicar as alterações?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"Pausado: versão não suportada"</string>
     <string name="waex_runtime_status_failed">"Falha"</string>
     <string name="waex_runtime_status_injection_detected">"Injeção detectada"</string>
-    <string name="waex_runtime_status_no_target_installed">"Nenhum alvo instalado detectado"</string>
+    <string name="waex_runtime_status_no_target_installed">"Nenhum alvo detectado no escopo do módulo"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Verificando o escopo do módulo"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Escopo do módulo indisponível"</string>
     <string name="waex_runtime_status_version_rules_require_review">"As regras de versão exigem revisão"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"O tempo de execução desejado requer revisão"</string>
     <string name="waex_runtime_status_bypass_unverified">"Desvio de versão ativo; compatibilidade não verificada"</string>

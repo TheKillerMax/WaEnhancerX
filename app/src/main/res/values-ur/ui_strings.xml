@@ -1029,7 +1029,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"رک گیا: غیر معاون ورژن"</string>
     <string name="waex_runtime_status_failed">"ناکام"</string>
     <string name="waex_runtime_status_injection_detected">"انجکشن معلوم ہوا"</string>
-    <string name="waex_runtime_status_no_target_installed">"کوئی نصب شدہ ہدف معلوم نہیں"</string>
+    <string name="waex_runtime_status_no_target_installed">"ماڈیول کے دائرۂ کار میں کوئی ہدف ایپ نہیں ملی"</string>
+    <string name="waex_runtime_status_target_scope_checking">"ماڈیول کے دائرۂ کار کی جانچ جاری ہے"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"ماڈیول کا دائرۂ کار دستیاب نہیں"</string>
     <string name="waex_runtime_status_version_rules_require_review">"ورژن کے قواعد کا جائزہ درکار"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"ہدف کے رن ٹائم کا جائزہ درکار"</string>
     <string name="waex_runtime_status_bypass_unverified">"ورژن بائ پاس فعال؛ مطابقت غیر تصدیق شدہ"</string>

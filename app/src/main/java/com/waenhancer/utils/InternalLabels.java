@@ -195,7 +195,9 @@ public final class InternalLabels {
             case "Paused: compatibility check unavailable": return UiText.get(R.string.waex_runtime_status_paused_compatibility_unavailable, "Paused: compatibility check unavailable");
             case "Paused: unsupported version": return UiText.get(R.string.waex_runtime_status_paused_unsupported_version, "Paused: unsupported version");
             case "Injection detected": return UiText.get(R.string.waex_runtime_status_injection_detected, "Injection detected");
-            case "No installed target detected": return UiText.get(R.string.waex_runtime_status_no_target_installed, "No installed target detected");
+            case "No scoped target detected": return UiText.get(R.string.waex_runtime_status_no_target_installed, "No scoped target detected");
+            case "Checking target scope": return UiText.get(R.string.waex_runtime_status_target_scope_checking, "Checking target scope");
+            case "Target scope unavailable": return UiText.get(R.string.waex_runtime_status_target_scope_unavailable, "Target scope unavailable");
             case "Version rules require review": return UiText.get(R.string.waex_runtime_status_version_rules_require_review, "Version rules require review");
             case "Target runtime requires review": return UiText.get(R.string.waex_runtime_status_target_runtime_requires_review, "Target runtime requires review");
             case "Version bypass active; compatibility unverified": return UiText.get(R.string.waex_runtime_status_bypass_unverified, "Version bypass active; compatibility unverified");

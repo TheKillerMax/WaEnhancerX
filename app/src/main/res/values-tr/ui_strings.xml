@@ -1029,7 +1029,9 @@ Değişiklikleri uygulamak için WhatsApp yeniden başlatılsın mı?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"Duraklatıldı: desteklenmeyen sürüm"</string>
     <string name="waex_runtime_status_failed">"Başarısız"</string>
     <string name="waex_runtime_status_injection_detected">"Enjeksiyon tespit edildi"</string>
-    <string name="waex_runtime_status_no_target_installed">"Yüklü hedef tespit edilmedi"</string>
+    <string name="waex_runtime_status_no_target_installed">"Modül kapsamında hedef algılanmadı"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Modül kapsamı denetleniyor"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Modül kapsamı kullanılamıyor"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Sürüm kuralları gözden geçirmeyi gerektiriyor"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Hedef çalışma zamanı gözden geçirmeyi gerektiriyor"</string>
     <string name="waex_runtime_status_bypass_unverified">"Sürüm atlaması aktif; uyumluluk doğrulanmamış"</string>

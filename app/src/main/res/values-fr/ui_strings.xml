@@ -1029,7 +1029,9 @@ Redémarrer WhatsApp pour appliquer les modifications ?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"En pause : version non prise en charge"</string>
     <string name="waex_runtime_status_failed">"Échec"</string>
     <string name="waex_runtime_status_injection_detected">"Injection détectée"</string>
-    <string name="waex_runtime_status_no_target_installed">"Aucune cible installée détectée"</string>
+    <string name="waex_runtime_status_no_target_installed">"Aucune application détectée dans le périmètre du module"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Vérification du périmètre du module"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Périmètre du module indisponible"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Les règles de version doivent être révisées"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Le temps d'exécution cible nécessite un examen"</string>
     <string name="waex_runtime_status_bypass_unverified">"Contournement de version actif ; compatibilité non vérifiée"</string>

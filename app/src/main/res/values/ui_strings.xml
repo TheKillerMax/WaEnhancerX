@@ -1071,7 +1071,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"Paused: unsupported version"</string>
     <string name="waex_runtime_status_failed">"Failed"</string>
     <string name="waex_runtime_status_injection_detected">"Injection detected"</string>
-    <string name="waex_runtime_status_no_target_installed">"No installed target detected"</string>
+    <string name="waex_runtime_status_no_target_installed">"No scoped target detected"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Checking target scope"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Target scope unavailable"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Version rules require review"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Target runtime requires review"</string>
     <string name="waex_runtime_status_bypass_unverified">"Version bypass active; compatibility unverified"</string>

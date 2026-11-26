@@ -54,9 +54,20 @@ object TargetRuntimePresentation {
      * summary into "unconfirmed". Per-target rows use [card], so the summary, the dashboard cards
      * and the compatibility sheet always agree.
      */
-    fun summarize(apps: List<HookedAppInfo>, decisions: Map<String, UniversalVersionValidator.Decision>): Summary {
+    fun summarize(
+        apps: List<HookedAppInfo>,
+        decisions: Map<String, UniversalVersionValidator.Decision>,
+        targetsLoaded: Boolean = true,
+        scopeReadable: Boolean = true
+    ): Summary {
         val installed = apps.filter { it.isInstalled }
-        if (installed.isEmpty()) return Summary("No installed target detected", null)
+        // This list is filtered by module scope, not a complete installed-package inventory.
+        // A missing scope observation must not imply that WhatsApp is not installed.
+        if (installed.isEmpty()) return when {
+            !targetsLoaded -> Summary("Checking target scope", null)
+            !scopeReadable -> Summary("Target scope unavailable", null)
+            else -> Summary("No scoped target detected", null)
+        }
         if (installed.any { !decisions.getOrDefault(it.packageName, UniversalVersionValidator.Decision.RULES_UNAVAILABLE).allowed })
             return Summary("Version rules require review", false)
         val running = installed.filter { it.isHooked }

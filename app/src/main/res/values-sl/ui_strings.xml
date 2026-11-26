@@ -1029,7 +1029,9 @@ Znova zaženite WhatsApp, da uporabite spremembe?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"Začasno ustavljeno: različica ni podprta"</string>
     <string name="waex_runtime_status_failed">"Neuspešno"</string>
     <string name="waex_runtime_status_injection_detected">"Zaznano vbrizgavanje"</string>
-    <string name="waex_runtime_status_no_target_installed">"Ni zaznana nameščena tarča"</string>
+    <string name="waex_runtime_status_no_target_installed">"V obsegu modula ni zaznane ciljne aplikacije"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Preverjanje obsega modula"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Obseg modula ni na voljo"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Pravila različic zahtevajo pregled"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Ciljno izvajanje zahteva pregled"</string>
     <string name="waex_runtime_status_bypass_unverified">"Obhod različice aktiven; združljivost ni preverjena"</string>

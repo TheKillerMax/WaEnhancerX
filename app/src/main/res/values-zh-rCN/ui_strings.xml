@@ -1029,7 +1029,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"暂停：不支持版本"</string>
     <string name="waex_runtime_status_failed">"失败"</string>
     <string name="waex_runtime_status_injection_detected">"检测到注射"</string>
-    <string name="waex_runtime_status_no_target_installed">"未检测到安装目标"</string>
+    <string name="waex_runtime_status_no_target_installed">"未在模块作用域中检测到目标应用"</string>
+    <string name="waex_runtime_status_target_scope_checking">"正在检查模块作用域"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"无法读取模块作用域"</string>
     <string name="waex_runtime_status_version_rules_require_review">"版本规则需要审核"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"目标运行时间需要审查"</string>
     <string name="waex_runtime_status_bypass_unverified">"版本绕过激活;兼容性未验证"</string>

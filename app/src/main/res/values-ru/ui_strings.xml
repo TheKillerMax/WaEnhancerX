@@ -1029,7 +1029,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"На паузе: неподдерживаемая версия"</string>
     <string name="waex_runtime_status_failed">"Не удалось"</string>
     <string name="waex_runtime_status_injection_detected">"Обнаружено внедрение"</string>
-    <string name="waex_runtime_status_no_target_installed">"Целевой объект не обнаружен"</string>
+    <string name="waex_runtime_status_no_target_installed">"Приложения в области действия модуля не обнаружены"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Проверка области действия модуля"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Область действия модуля недоступна"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Требуется проверка правил версии"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Требуется проверка времени выполнения цели"</string>
     <string name="waex_runtime_status_bypass_unverified">"Пропуск версии активен; совместимость не проверена"</string>

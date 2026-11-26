@@ -1029,7 +1029,9 @@ WhatsApp neu starten, um die Änderungen zu übernehmen?"</string>
     <string name="waex_runtime_status_paused_unsupported_version">"Angehalten: nicht unterstützte Version"</string>
     <string name="waex_runtime_status_failed">"Fehlgeschlagen"</string>
     <string name="waex_runtime_status_injection_detected">"Injektion erkannt"</string>
-    <string name="waex_runtime_status_no_target_installed">"Kein installiertes Ziel erkannt"</string>
+    <string name="waex_runtime_status_no_target_installed">"Kein Ziel im Modulbereich erkannt"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Modulbereich wird geprüft"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"Modulbereich nicht verfügbar"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Versionsregeln müssen überprüft werden"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Die Ziellaufzeit muss überprüft werden"</string>
     <string name="waex_runtime_status_bypass_unverified">"Versionsumgehung aktiv; Kompatibilität nicht überprüft"</string>

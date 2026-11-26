@@ -173,6 +173,7 @@ fun MainDashboardScreen(
     val scopeSnapshot by TargetAppManager.scopeSnapshot.collectAsState()
     val reportedApps by TargetAppManager.detectedApps.collectAsState()
     val refreshEpoch by TargetAppManager.refreshEpoch.collectAsState()
+    val targetsLoaded by TargetAppManager.loaded.collectAsState()
 
     var systemDiagnostics by remember {
         mutableStateOf(SystemDiagnosticsReader.getOrFastSnapshot(context, isModuleActive))
@@ -236,7 +237,12 @@ fun MainDashboardScreen(
     val versionDecisions = remember(reportedApps, refreshTrigger, refreshEpoch) {
         reportedApps.associate { it.packageName to UniversalVersionValidator.evaluate(context, it.versionName, prefs) }
     }
-    val targetSummary = TargetRuntimePresentation.summarize(detectedApps, versionDecisions)
+    val targetSummary = TargetRuntimePresentation.summarize(
+        detectedApps,
+        versionDecisions,
+        targetsLoaded = targetsLoaded,
+        scopeReadable = scopeSnapshot?.isLive == true
+    )
     val hasTargetReview = targetSummary.healthy == false
     val moduleVersion = remember(context) {
         @Suppress("DEPRECATION")

@@ -1001,7 +1001,9 @@
     <string name="waex_runtime_status_paused_unsupported_version">"En pausa: versión no compatible"</string>
     <string name="waex_runtime_status_failed">"Error"</string>
     <string name="waex_runtime_status_injection_detected">"Inyección detectada"</string>
-    <string name="waex_runtime_status_no_target_installed">"No se encontró ninguna aplicación de destino instalada"</string>
+    <string name="waex_runtime_status_no_target_installed">"No se detectaron aplicaciones en el alcance del módulo"</string>
+    <string name="waex_runtime_status_target_scope_checking">"Comprobando el alcance del módulo"</string>
+    <string name="waex_runtime_status_target_scope_unavailable">"No se pudo leer el alcance del módulo"</string>
     <string name="waex_runtime_status_version_rules_require_review">"Es necesario revisar las reglas de versión"</string>
     <string name="waex_runtime_status_target_runtime_requires_review">"Es necesario revisar la ejecución de la aplicación de destino"</string>
     <string name="waex_runtime_status_bypass_unverified">"Omisión de versión activa; compatibilidad sin verificar"</string>
