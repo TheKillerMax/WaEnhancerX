@@ -1,0 +1,3 @@
+# Local visibility contracts
+
+Separate the local UI visibility reconciliation of PR #108 from floating navigation and overlay permissions. Retain the upstream settings and public owner-scoped dispatcher. Compile complete production sources using the reviewed DexKit and Core API JARs; exercise Android Views and preferences on API 24/28/34. Run qa/test_visibility_current.py with explicit --deps, --sdk-jars, --dexkit-jar, --core-api-jar, --kotlin-home, --out and --mutations. The denominator is 60 cases per variant. Three faults must reach the intended assertion on each SDK. Host selection and Xposed transport are controlled boundaries. No permission, private engine, real WhatsApp injection, or physical UI acceptance is claimed.

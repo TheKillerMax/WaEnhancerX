@@ -1,0 +1,3 @@
+[Fixes]
+- Preserve channel recommendation layout dimensions and honor the live visibility setting.
+- Respect the Meta AI master setting and reject ambiguous host view selectors.

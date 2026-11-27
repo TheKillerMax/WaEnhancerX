@@ -1153,7 +1153,26 @@ jobs:
             --deps "$RUNNER_TEMP/waex-reconciled-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-reconciled-framework-bundle/sdk-jars" \
             --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
             --core-api-jar "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.jar" --kotlin-home "$KOTLIN_HOME" --mutations
-      - name: Recheck every framework input after both attempted suites
+      - name: Exercise local visibility and source lifecycle contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_meta_ai_removal.py
+          python3 qa/test_visibility_current.py --out "$RUNNER_TEMP/waex-reconciled-evidence/visibility" \
+            --deps "$RUNNER_TEMP/waex-reconciled-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-reconciled-framework-bundle/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --core-api-jar "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.jar" --kotlin-home "$KOTLIN_HOME" --mutations
+      - name: Exercise quality contracts and compile against the real public API
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waex-reconciled-evidence/quality"
+          python3 qa/test_media_quality_contract.py | tee "$RUNNER_TEMP/waex-reconciled-evidence/quality/behavior.log"
+          python3 qa/mutate_media_quality_contract.py | tee "$RUNNER_TEMP/waex-reconciled-evidence/quality/mutations.log"
+          python3 qa/test_media_quality_public_api.py --out "$RUNNER_TEMP/waex-reconciled-evidence/quality-api" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --kotlin-stdlib "$KOTLIN_HOME/lib/kotlin-stdlib.jar"
+      - name: Recheck every framework input after all attempted suites
         if: always() && steps.reconciled_inputs.outcome == 'success'
         shell: bash
         run: |
