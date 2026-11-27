@@ -125,6 +125,38 @@ The existing `call_recording_use_root` preference changes the order in which
 audio pipeline. This lifecycle correction preserves that order and does not
 claim to fix a missing remote participant's audio.
 
+## Explicit microphone fallback and bounded diagnostics
+
+The separate `call_recording_allow_mic_fallback` Boolean defaults to `true`, so
+existing installations retain their source order. In **Call audio** mode,
+turning **Allow microphone fallback** off limits the next attempt to
+`VOICE_CALL`. If source setup, preparation or start fails, the output is closed
+and removed instead of trying microphone sources. The switch changes its state
+only after the preference write is acknowledged. It does not restart an active
+recorder or establish that a successful source includes the remote participant.
+
+Successful selection reports `source`, `fallback` and
+`remote_audio=unverified`. Rejection reports only the source and exception class.
+Each identified call session emits at most one success and one rejection per
+source, plus one start failure. No call ID, contact, path, audio payload or
+exception message is logged.
+
+`qa/android_call_recording_audio_test.py` requires 26 JUnit methods on each of
+APIs 24, 28 and 34 (78 cases). It compiles the complete current recorder,
+event contract, `HookProviderIpc`, BaseFeature, HookErrors, preference schema,
+stores, preference manager and backup codec. Android SharedPreferences, Bundle,
+ContentResolver and ParcelFileDescriptor are framework objects. Host
+declarations, Xposed dispatch, scheduling, storage authorization and native
+audio operations remain explicit fixtures. The shadow checks source order,
+prepare/start failures, cleanup and configuration without capturing audio.
+`qa/test_call_recording_setting_wiring.py` separately compiles the exact setting
+callback and rejects a control that acknowledges a failed preference write.
+
+For device acceptance, use both participants' consent and record the selected
+source diagnostics. Validate call-source-only mode and the explicit fallback
+choice separately. Full Compose rendering, cross-process provider behavior,
+OEM audio policy and remote-participant audibility require their own evidence.
+
 Android documents `VOICE_COMMUNICATION` as a microphone source tuned for voice
 communications and restricts `VOICE_CALL` capture to the system
 `CAPTURE_AUDIO_OUTPUT` permission. Device-specific audio routing and concurrent

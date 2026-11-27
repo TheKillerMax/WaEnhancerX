@@ -90,6 +90,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.graphics.drawable.toBitmap
 import com.waenhancer.calls.CallRecordingStore
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -140,20 +143,37 @@ fun CallsHubScreen() {
     val spacing = WaexTheme.spacing
     val typography = WaexTheme.typography
     val radius = WaexTheme.radius
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var selectedTab by remember { mutableStateOf("configs") } // "configs" | "recordings"
+    val legacyRecordingPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
     var canReadLegacyRecordings by remember {
         mutableStateOf(
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+            ContextCompat.checkSelfPermission(context, legacyRecordingPermission) ==
                 PackageManager.PERMISSION_GRANTED
         )
     }
+    var recordingsRefresh by remember { mutableStateOf(0) }
     RequestRuntimePermissionOnUse(
-        permission = Manifest.permission.READ_EXTERNAL_STORAGE,
-        enabled = selectedTab == "recordings" && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU,
+        permission = legacyRecordingPermission,
+        enabled = selectedTab == "recordings",
         onResult = { canReadLegacyRecordings = it }
     )
+    DisposableEffect(lifecycleOwner, context, legacyRecordingPermission) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canReadLegacyRecordings = ContextCompat.checkSelfPermission(context, legacyRecordingPermission) ==
+                    PackageManager.PERMISSION_GRANTED
+                recordingsRefresh++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Call Blocker & Privacy State. Reading this screen must never enable blocking
     // or rewrite a user's retained policy. The explicit switch wins over legacy mode.
@@ -202,15 +222,21 @@ fun CallsHubScreen() {
     var recordingAppFilter by remember { mutableStateOf("all") }
 
     fun stopAudio() {
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-        } catch (_: Throwable) {}
+        val player = mediaPlayer
         mediaPlayer = null
         currentlyPlayingPath = null
         isAudioPlaying = false
         playbackPosition = 0
         playbackDuration = 0
+        try {
+            player?.stop()
+        } catch (_: RuntimeException) {
+            // A failed prepare/start may leave the player in a non-stoppable state.
+        } finally {
+            try {
+                player?.release()
+            } catch (_: RuntimeException) {}
+        }
     }
 
     fun clearRecordingSelection() {
@@ -258,7 +284,12 @@ fun CallsHubScreen() {
         recordingsList.removeAll(removed.toSet())
         clearRecordingSelection()
         recordingsPendingDelete = emptyList()
-        Toast.makeText(context, UiText.quantity(R.plurals.waex_recordings_deleted, removed.size, "Deleted %d recording(s)", removed.size), Toast.LENGTH_SHORT).show()
+        val message = if (removed.size == selected.size) {
+            UiText.quantity(R.plurals.waex_recordings_deleted, removed.size, "Deleted %d recording(s)", removed.size)
+        } else {
+            UiText.get(R.string.call_recording_delete_failed, "Couldn't delete this recording")
+        }
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     DisposableEffect(Unit) {
@@ -267,59 +298,71 @@ fun CallsHubScreen() {
         }
     }
 
-    fun loadRecordings() {
+    suspend fun loadRecordings() {
         isLoadingRecordings = true
-        recordingsList.clear()
-
-        val searchDirs = listOf(
-            File(context.getExternalFilesDir(null), "CallRecordings"),
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), "WAEX_Calls"),
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "WAEX_Calls"),
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "WaEnhancer/Recordings"),
-            File(context.filesDir, "call_recordings")
-        )
-
-        val metadata = CallRecordingStore.get(context).all().associateBy { it.recordingPath }
-        val foundFiles = mutableListOf<File>()
-        for (dir in searchDirs) {
-            if (dir.exists() && dir.isDirectory) {
-                dir.listFiles()?.forEach { file ->
-                    if (file.isFile && (file.name.endsWith(".m4a") || file.name.endsWith(".wav") || file.name.endsWith(".opus") || file.name.endsWith(".mp3") || file.name.endsWith(".aac"))) {
-                        foundFiles.add(file)
+        val includeLegacy = canReadLegacyRecordings
+        try {
+            val loaded = withContext(Dispatchers.IO) {
+                // Own recordings remain available when shared-storage permission is denied.
+                // Keep both internal names: the provider fallback and the older recorder.
+                val searchDirs = mutableListOf(
+                    File(context.filesDir, "CallRecordings"),
+                    File(context.filesDir, "call_recordings")
+                )
+                context.getExternalFilesDir(null)?.let { searchDirs.add(File(it, "CallRecordings")) }
+                if (includeLegacy) {
+                    // DIRECTORY_RECORDINGS was introduced in API 31; retain the same
+                    // legacy folder on older devices without resolving that field.
+                    val recordingsDirectory = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS)
+                    } else {
+                        File(Environment.getExternalStorageDirectory(), "Recordings")
                     }
+                    searchDirs.add(File(recordingsDirectory, "WAEX_Calls"))
+                    searchDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "WAEX_Calls"))
+                    searchDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "WaEnhancer/Recordings"))
+                }
+                val foundFiles = mutableListOf<File>()
+                val extensions = setOf("m4a", "wav", "opus", "mp3", "aac")
+                for (dir in searchDirs.distinctBy { it.absolutePath }) {
+                    // A removed volume or revoked legacy permission cannot hide readable own files.
+                    try {
+                        dir.listFiles()?.forEach { file ->
+                            if (file.isFile && file.extension.lowercase(Locale.ROOT) in extensions) {
+                                foundFiles.add(file)
+                            }
+                        }
+                    } catch (_: SecurityException) {}
+                }
+                foundFiles.sortByDescending { it.lastModified() }
+                val metadata = CallRecordingStore.get(context).all().associateBy { it.recordingPath }
+                val dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, UiText.displayLocale())
+                foundFiles.map { file ->
+                    val sizeKb = file.length() / 1024
+                    val record = metadata[file.absolutePath]
+                    RecordedCallItem(
+                        file = file,
+                        name = file.nameWithoutExtension,
+                        dateStr = dateFormat.format(Date(record?.startedAt ?: file.lastModified())),
+                        sizeStr = if (sizeKb > 1024) String.format(Locale.getDefault(), "%.1f MB", sizeKb / 1024f) else "$sizeKb KB",
+                        durationStr = formatPlaybackTime(readAudioDuration(file)),
+                        contactName = record?.contactName ?: file.nameWithoutExtension,
+                        contactJid = record?.contactJid,
+                        direction = record?.direction ?: "unknown",
+                        targetPackage = record?.targetPackage ?: "unknown"
+                    )
                 }
             }
+            recordingsList.clear()
+            recordingsList.addAll(loaded)
+            selectedRecordingPaths = selectedRecordingPaths.intersect(loaded.map { it.file.absolutePath }.toSet())
+        } finally {
+            isLoadingRecordings = false
         }
-
-        foundFiles.sortByDescending { it.lastModified() }
-        val dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, UiText.displayLocale())
-
-        for (file in foundFiles) {
-            val sizeKb = file.length() / 1024
-            val sizeStr = if (sizeKb > 1024) String.format(Locale.getDefault(), "%.1f MB", sizeKb / 1024f) else "$sizeKb KB"
-            val record = metadata[file.absolutePath]
-            val dateStr = dateFormat.format(Date(record?.startedAt ?: file.lastModified()))
-            val durationStr = formatPlaybackTime(readAudioDuration(file))
-
-            recordingsList.add(
-                RecordedCallItem(
-                    file = file,
-                    name = file.nameWithoutExtension,
-                    dateStr = dateStr,
-                    sizeStr = sizeStr,
-                    durationStr = durationStr,
-                    contactName = record?.contactName ?: file.nameWithoutExtension,
-                    contactJid = record?.contactJid,
-                    direction = record?.direction ?: "unknown",
-                    targetPackage = record?.targetPackage ?: "unknown"
-                )
-            )
-        }
-        isLoadingRecordings = false
     }
 
-    LaunchedEffect(selectedTab, canReadLegacyRecordings) {
-        if (selectedTab == "recordings" && canReadLegacyRecordings) {
+    LaunchedEffect(selectedTab, canReadLegacyRecordings, recordingsRefresh) {
+        if (selectedTab == "recordings") {
             loadRecordings()
         } else {
             stopAudio()
@@ -1133,16 +1176,20 @@ fun CallsHubScreen() {
                                     } else {
                                         stopAudio()
                                         try {
-                                            val mp = MediaPlayer().apply {
-                                                setDataSource(item.file.absolutePath)
-                                                prepare()
-                                                setOnCompletionListener { stopAudio() }
-                                                start()
-                                            }
+                                            val mp = MediaPlayer()
+                                            // Own the candidate before any operation can fail.
                                             mediaPlayer = mp
-                                            currentlyPlayingPath = item.file.absolutePath
-                                            playbackDuration = mp.duration
-                                            isAudioPlaying = true
+                                            mp.setDataSource(item.file.absolutePath)
+                                            mp.prepare()
+                                            mp.setOnCompletionListener {
+                                                if (mediaPlayer === mp) stopAudio()
+                                            }
+                                            mp.start()
+                                            if (mediaPlayer === mp) {
+                                                currentlyPlayingPath = item.file.absolutePath
+                                                playbackDuration = mp.duration
+                                                isAudioPlaying = true
+                                            }
                                         } catch (e: Exception) {
                                             Toast.makeText(
                                                 context,

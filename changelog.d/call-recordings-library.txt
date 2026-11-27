@@ -1,0 +1,7 @@
+[Fixes]
+- Keep app-owned call recordings visible when shared-storage access is denied or the external volume is unavailable.
+- Share internal fallback recordings through the existing file provider and report unsuccessful deletion.
+
+[Improvements]
+- Load the recordings library away from the UI thread and refresh storage access when returning to the screen.
+- Release playback resources after failed preparation, replacement and disposal.
