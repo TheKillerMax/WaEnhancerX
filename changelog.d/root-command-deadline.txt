@@ -1,0 +1,2 @@
+[Fixes]
+- Apply a shared timeout to subprocess startup, execution and output acknowledgement; reject incomplete captures.
