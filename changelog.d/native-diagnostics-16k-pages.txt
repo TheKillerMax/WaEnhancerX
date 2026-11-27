@@ -1,0 +1,2 @@
+[Fixes]
+- Link the bundled waexdiag diagnostic library with 16 KiB page alignment.
