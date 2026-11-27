@@ -16,5 +16,6 @@ LSPosed database, private engine, injection, or device acceptance is claimed.
 
 The previous C03 evidence is historical, not a fresh certification. The
 reconciliation does not include the remaining #98 IPC, preference sync,
-root configuration or protected workflow changes. Existing C04 refresh
-guards must be retained when integrating the common diagnostic runner.
+root configuration or protected workflow changes. The current common diagnostic runner also executes the C04 screen-refresh
+projections and eight causal refresh mutations. The separate observation-clock
+suite continues to verify its own state and queue contracts.

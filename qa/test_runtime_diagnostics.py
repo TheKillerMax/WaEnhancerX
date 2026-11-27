@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -23,6 +24,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, default=ROOT)
     args = parser.parse_args()
+    if args.root.resolve() != ROOT:
+        parser.error('--root must be the local checkout containing both diagnostics suites')
+    subprocess.run([sys.executable, str(ROOT / 'qa/test_diagnostics_refresh.py'), '--mutants'], cwd=ROOT, check=True)
     ROOT = args.root.resolve(); JAVA = ROOT / 'app/src/main/java/com/waenhancer'
     for tool in ('javac', 'java', 'sh'):
         if not shutil.which(tool):

@@ -1,0 +1,3 @@
+[Fixes]
+- Refreshing diagnostics on the Dashboard or System Health screen now checks
+  SELinux again instead of displaying the previously cached mode.
