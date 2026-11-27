@@ -1,0 +1,7 @@
+[Improvements]
+- Resume manual-retry mutation checks from a named case, reject unknown cases
+  before creating output, and distinguish resumed runs from the full matrix.
+- Run selection regressions before the mutation matrix without weakening its
+  compilation, completion or behavioral-failure requirements.
+- Compile the current manual-receipt sender and shared privacy layer while
+  preserving retry cases and checking active vetoes before enqueue.

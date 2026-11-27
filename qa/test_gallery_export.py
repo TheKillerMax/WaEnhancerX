@@ -118,12 +118,19 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--legacy-hook',type=Path);a=p.parse_args()
     with tempfile.TemporaryDirectory(prefix='waex-export-test-') as t:
         d=Path(t)
-        for rel,s in STUBS.items():
+        # Keep the shared storage fixtures unchanged: status-export imports STUBS.
+        fixtures=dict(STUBS)
+        fixtures.update({
+            'androidx/annotation/NonNull.java':'package androidx.annotation; public @interface NonNull {}',
+            'androidx/annotation/VisibleForTesting.java':'package androidx.annotation; public @interface VisibleForTesting {}',
+            'de/robv/android/xposed/XposedBridge.java':'package de.robv.android.xposed; public final class XposedBridge {public static void log(String s){System.err.println("[QA diagnostic sink] "+s);}}',
+        })
+        for rel,s in fixtures.items():
             f=d/rel;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(s)
         (d/'TestGalleryExport.java').write_text(TEST)
         (d/'LegacyGalleryExporter.java').write_text(legacy_source(a.legacy_hook) if a.legacy_hook else 'package com.waenhancer.xposed.features.media;class LegacyGalleryExporter {static void export(android.content.Context c,java.io.File f){throw new AssertionError("Unused legacy adapter");}}')
         production=ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/GalleryMediaExporter.java'
-        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(production),*map(str,d.rglob('*.java'))],check=True,timeout=60)
+        subprocess.run(['javac','--release','17','-d',str(d/'classes'),str(production),str(ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'),*map(str,d.rglob('*.java'))],check=True,timeout=60)
         print('COMPILE_OK: production and explicit test adapters', flush=True)
         subprocess.run(['java','-cp',str(d/'classes'),'com.waenhancer.xposed.features.media.TestGalleryExport',*(['legacy'] if a.legacy_hook else [])],check=True,timeout=60)
     hook=(ROOT/'app/src/main/java/com/waenhancer/xposed/features/media/DownloadViewOnceHook.java').read_text()
