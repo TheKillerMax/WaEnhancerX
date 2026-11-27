@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import shutil
 import ssl
+import signal
 import subprocess
 import sys
 import tempfile
@@ -178,6 +179,34 @@ def prepare(out, report, *, cache=None, offline=False, timeout=180, lock=LOCK, o
         save()
 
 
+def run_posix_gate(command, stream, env, timeout):
+    """Close a gate's whole Linux process group before its evidence is hashed."""
+    process = subprocess.Popen(command, cwd=Path(__file__).resolve().parents[1], env=env, stdout=stream,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    code = None
+    try:
+        try:
+            code = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            code = 'infrastructure_timeout'
+    finally:
+        # A gate can also time out an inner compiler and exit before that compiler.
+        # Its new session contains only this gate's descendants, never sibling jobs.
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            pass
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass  # The last descendant can exit between the probe and signal.
+            process.wait(timeout=5)
+            if code == 0:
+                code = 'infrastructure_descendant_leak'
+    return code
+
+
 def supervise(command, out, report, timeout):
     """Bound the entire worker, including a response body that keeps trickling bytes."""
     if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= MAX_TIMEOUT_SECONDS:
@@ -189,8 +218,7 @@ def supervise(command, out, report, timeout):
     start = time.monotonic()
     with log.open('w', encoding='utf-8') as stream:
         if os.name == 'posix':
-            from run_runtime_reporting_ci import run_gate
-            code = run_gate(command, stream, os.environ.copy(), timeout=timeout)
+            code = run_posix_gate(command, stream, os.environ.copy(), timeout=timeout)
         else:
             # The SDK worker performs only Python HTTP/file operations and starts no children.
             process = subprocess.Popen(command, stdout=stream, stderr=subprocess.STDOUT)
