@@ -1,0 +1,7 @@
+[Added]
+- Add an explicit option to disable microphone fallback when call audio is
+  preferred for recording.
+
+[Improvements]
+- Report the selected recording source with bounded diagnostics, without
+  claiming that remote audio was captured.

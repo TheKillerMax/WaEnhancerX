@@ -183,6 +183,9 @@ fun CallsHubScreen() {
     var callRecordingEnabled by remember(prefManager.targetEpoch) { mutableStateOf(prefManager.getBoolean("call_recording_enabled", false)) }
     var preferCallAudio by remember(prefManager.targetEpoch) { mutableStateOf(prefManager.getBoolean("call_recording_use_root", false)) }
     var audioFormat by remember(prefManager.targetEpoch) { mutableStateOf(prefManager.getString("call_recording_format", "m4a") ?: "m4a") }
+    var allowMicrophoneFallback by remember(prefManager.targetEpoch) {
+        mutableStateOf(prefManager.getBoolean("call_recording_allow_mic_fallback", true))
+    }
 
     // Recordings list state
     val recordingsList = remember { mutableStateListOf<RecordedCallItem>() }
@@ -908,6 +911,47 @@ fun CallsHubScreen() {
                                             }
                                         }
 
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                            text = stringResource(R.string.call_recording_capture_limitations),
+                                            style = typography.bodySm,
+                                            color = colors.onSurfaceVariant
+                                        )
+                                        if (preferCallAudio) {
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = stringResource(R.string.call_recording_allow_mic_fallback_title),
+                                                        style = typography.bodyMd,
+                                                        color = colors.onSurface
+                                                    )
+                                                    Text(
+                                                        text = stringResource(R.string.call_recording_allow_mic_fallback_description),
+                                                        style = typography.bodySm,
+                                                        color = colors.onSurfaceVariant
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                StitchSwitch(
+                                                    checked = allowMicrophoneFallback,
+                                                    onCheckedChange = { enabled ->
+                                                        if (prefManager.putBooleans(mapOf("call_recording_allow_mic_fallback" to enabled))) {
+                                                            allowMicrophoneFallback = enabled
+                                                        } else {
+                                                            Toast.makeText(
+                                                                context,
+                                                                UiText.get(R.string.call_recording_setting_save_failed, "Could not save the recording setting"),
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
                                         Spacer(modifier = Modifier.height(16.dp))
                                         HorizontalDivider(
                                             color = colors.outlineVariant.copy(alpha = 0.5f),
