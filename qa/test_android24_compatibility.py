@@ -12,6 +12,7 @@ from pathlib import Path
 import argparse
 import re
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +81,8 @@ def main():
         print('\n'.join(['SOURCE_POLICY: ' + issue for issue in bytecode + source]), flush=True)
         raise AssertionError(f'API 24 source policy rejected {len(source)} source sites and {len(bytecode)} pre-D8/R8 JVM member references')
     print(f'PASS: targeted API 24 source policy; {len(files)} production files; {len(names)} pre-D8/R8 production classfiles')
+    subprocess.run([sys.executable, str(ROOT / 'qa/test_bubble_colors_reflection.py'),
+                    '--source-root', str(root)], check=True, timeout=120, stdin=subprocess.DEVNULL)
 
 
 if __name__ == '__main__':

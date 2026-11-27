@@ -189,6 +189,7 @@ def main():
     parser.add_argument('--source-root',type=Path,default=ROOT)
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--deps',type=Path)
+    parser.add_argument('--locked-inputs',type=Path,help='Compare both JAR inventories to independently verified SHA-256 receipts in this directory')
     parser.add_argument('--sdk-jars',type=Path)
     parser.add_argument('--dexkit',type=Path)
     parser.add_argument('--maven',default='mvn')
@@ -215,12 +216,20 @@ def main():
     kotlin=Path(compiler);kotlin_lib=kotlin.resolve().parents[1]/'lib';stdlib=kotlin_lib/'kotlin-stdlib.jar'
     # Windows batch wrappers may split the semicolon-separated compiler classpath.
     # Launch the same pinned Kotlin compiler directly via Java on Windows.
-    compiler_command=[str(kotlin.resolve(strict=True))]
+    os.environ['KOTLIN_HOME'] = str(kotlin_lib.parent)
+    if os.environ.get('KOTLIN_COMPILER') or os.environ.get('KOTLIN_RUNNER'):
+        raise RuntimeError('Use the installed Kotlin JVM compiler without launcher overrides')
+    compiler_command=[str(kotlin.resolve())]
     if os.name=='nt':
         compiler_jars=sorted(kotlin_lib.glob('*.jar'))
         if not compiler_jars:raise RuntimeError('Kotlin compiler distribution JARs missing')
         compiler_command=['java','-Dkotlin.home='+str(kotlin_lib.parent),'-cp',os.pathsep.join(map(str,compiler_jars)),
                           'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-kotlin-home',str(kotlin_lib.parent)]
+    execute([*compiler_command,'-version'],out/'compiler-version.log')
+    execute(['java','-version'],out/'java-version.log')
+    execute(['javac','-version'],out/'javac-version.log')
+    from preserve_cli_identity import check_identity
+    check_identity(kotlin, compiler_command, out)
     dexkit=args.dexkit.resolve() if args.dexkit else out/'dexkit-2.2.0.jar'
     if not args.dexkit:
         url='https://repo.maven.apache.org/maven2/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
@@ -313,14 +322,14 @@ def main():
     version_name=version_names[0].strip()
     if not version_name:raise RuntimeError('Empty Gradle VERSION_NAME')
     fixtures={
-        # A lazy dependency of BaseFeature, not an exercised service.
-        'com/waenhancer/xposed/core/privacy/PrivacyPrefs.java':"""package com.waenhancer.xposed.core.privacy;
+        # BaseFeature has a lazy reference, not a preserve-path privacy service call.
+        'com/waenhancer/xposed/core/privacy/PrivacyPrefs.java':'''package com.waenhancer.xposed.core.privacy;
 public final class PrivacyPrefs {
  private PrivacyPrefs() {}
  public static PrivacyPrefs of(android.content.Context context, android.content.SharedPreferences prefs) {
-  throw new AssertionError("Privacy service is outside this fixture");
+  throw new AssertionError("Privacy service is outside preserved-message fixture");
  }
-}""",
+}''',
         'androidx/annotation/NonNull.java':'package androidx.annotation;public @interface NonNull{}',
         'androidx/annotation/Nullable.java':'package androidx.annotation;public @interface Nullable{}',
         'androidx/annotation/VisibleForTesting.java':'package androidx.annotation;public @interface VisibleForTesting{}',
@@ -419,11 +428,32 @@ public final class WaexPreferenceManager {
         dest=stage/'explicit-service-fixtures'/relative;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(text);fixture_paths.append(dest);fixture_identities[relative]=hashlib.sha256(dest.read_bytes()).hexdigest()
     android=deps/'android-all-14-robolectric-10818077.jar'
     if not android.is_file():raise RuntimeError('Pinned Android compilation API missing')
-    cp=os.pathsep.join(map(str,[classes,*sorted(deps.glob('*.jar')),dexkit,stdlib]))
+    def inventory(name, paths, required):
+        hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+        if len(paths)!=required or len(hashes)!=required:
+            raise RuntimeError(f'{name}: expected {required} distinct JARs, got {len(hashes)}')
+        (out/name).write_text(json.dumps(hashes,indent=2)+'\n')
+        if args.locked_inputs and hashes!=json.loads((args.locked_inputs/name).read_text()):
+            raise RuntimeError(f'{name}: verified dependency identity mismatch')
+
+    runtime_jars=sorted(deps.glob('*.jar'))
+    if deps/'test-parameter-injector-1.22.jar' not in runtime_jars:
+        raise RuntimeError('Pinned runtime test-parameter-injector missing')
+    injector = deps/'test-parameter-injector-1.22.jar'
+    if hashlib.sha256(injector.read_bytes()).hexdigest() != 'ff534578f2e3dc6030d1f4a6896df3d20573644858c6ade878efb75d2a36504b':
+        raise RuntimeError('Runtime test-parameter-injector identity mismatch')
+    inventory('dependency-sha256.json',[*runtime_jars,dexkit],37)
+    if args.sdk_jars:
+        inventory('sdk-sha256.json',sorted(args.sdk_jars.resolve().glob('*.jar')),3)
+    suites=[('dispatch','com.waenhancer.audit.PreservedDispatchContractTest',EXPECTED_TESTS,args.expect_assertion_failures)]
+    cp=os.pathsep.join(map(str,[classes,*runtime_jars,dexkit,stdlib]))
     prod_cp=os.pathsep.join(map(str,[classes,android,dexkit,stdlib]))
     lifecycle_names={'HookRegistrar.java','ViewHookDispatcher.java'}
     first=[source for source in sources if source.suffix=='.java' and source.name not in lifecycle_names|{'HookProvider.java'}]+fixture_paths
-    execute(['javac','--release','17','-cp',cp,'-d',classes,*first],out/'javac-production-support.log')
+    observer=stage/'PreserveJUnit.java'
+    shutil.copyfile(ROOT/'qa/fixtures'/observer.name,observer)
+    identities['qa/fixtures/'+observer.name]=hashlib.sha256(observer.read_bytes()).hexdigest()
+    execute(['javac','--release','17','-cp',cp,'-d',classes,*first,observer],out/'javac-production-support.log')
     execute([*compiler_command,'-jvm-target','17','-classpath',prod_cp,'-d',classes,
              *[s for s in sources if s.suffix=='.kt'],
              *[s for s in sources if s.name in lifecycle_names]],out/'kotlinc-production.log')
@@ -433,28 +463,50 @@ public final class WaexPreferenceManager {
     identities['qa/fixtures/'+test.name]=hashlib.sha256(test.read_bytes()).hexdigest()
     execute(['javac','--release','17','-cp',cp,'-d',classes,stage/PKG/'xposed/bridge/HookProvider.java',test],out/'javac-provider-tests.log')
     opens=['java.base/java.lang','java.base/java.util','java.base/java.io','java.base/java.net','java.base/java.security','java.base/java.text','java.base/jdk.internal.access','java.desktop/java.awt.font','jdk.compiler/com.sun.tools.javac.api']
-    command=['java',*['--add-opens='+part+'=ALL-UNNAMED' for part in opens],'-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2','-cp',cp,'org.junit.runner.JUnitCore','com.waenhancer.audit.PreservedDispatchContractTest']
+    command=['java',*['--add-opens='+part+'=ALL-UNNAMED' for part in opens],'-Drobolectric.dependency.repo.url=https://repo.maven.apache.org/maven2','-cp',cp,'com.waenhancer.audit.PreserveJUnit']
     if args.sdk_jars:command[1:1]=['-Drobolectric.offline=true','-Drobolectric.dependency.dir='+str(args.sdk_jars.resolve())]
     elif args.maven_repo:command.insert(1,'-Dmaven.repo.local='+str(args.maven_repo.resolve()))
-    result=execute(command,out/'junit.log',allow=True)
-    log=(out/'junit.log').read_text();passed=re.search(r'OK \((\d+) tests?\)',log);failed=re.search(r'Tests run: (\d+),\s+Failures: (\d+)',log)
-    count=int(passed.group(1)) if passed else int(failed.group(1)) if failed else 0
-    failures=int(failed.group(2)) if failed else 0
-    assertions=len(re.findall(r'^java\.lang\.AssertionError(?::|$)',log,re.MULTILINE))
-    expected=args.expect_assertion_failures
-    accepted=count==EXPECTED_TESTS and failures==expected and (result==0 and passed is not None if expected==0 else result!=0 and assertions==expected)
-    report={'source_root':str(root),'tests':count,'failures':failures,'assertion_failures':assertions,'expected_tests':EXPECTED_TESTS,'expected_assertion_failures':expected,'junit_exit':result,'accepted_result':accepted,'source_sha256':identities,'external_service_fixture_sha256':fixture_identities,
-            'compile_only_source_contract_sha256':contract_hashes,'limits':'Complete production sender/provider/store and support policies/cache classes; Robolectric Android ContentResolver, ContentProvider, SQLite files and Binder/UID/package shadows on API24/28/34. Explicit Xposed dispatch and synthetic host Runnable/message graph/SQL schema. Package detector facade delegates to real DeclaredWhatsAppTargets; unrelated private license and update entry points throw if called. No native DexKit discovery, actual WhatsApp/LSPosed, device disk fault or kernel cross-process Binder test.'}
-    (out/'result.json').write_text(json.dumps(report,indent=2)+'\n')
-    dependency_paths=[*sorted(deps.glob('*.jar')),dexkit]
-    (out/'dependency-sha256.json').write_text(json.dumps({path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in dependency_paths},indent=2)+'\n')
-    if args.sdk_jars:sdk_paths=sorted(args.sdk_jars.resolve().glob('*.jar'))
-    else:
-        maven_repo=args.maven_repo.resolve() if args.maven_repo else Path.home()/'.m2/repository'
-        sdk_paths=sorted((maven_repo/'org/robolectric/android-all-instrumented').glob('*/*.jar'))
-    (out/'sdk-sha256.json').write_text(json.dumps({path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in sdk_paths},indent=2)+'\n')
-    if not accepted:raise RuntimeError('Unexpected complete-suite result:\n'+log[-18000:])
-    print(json.dumps({key:report[key] for key in ['tests','failures','assertion_failures','accepted_result']},indent=2))
+    runs=[]
+    for name,test_class,required,expected in suites:
+        folder=out if name=='dispatch' else out/name
+        if folder!=out: folder.mkdir()
+        rc=execute([*command,test_class],folder/'junit.log',allow=True)
+        runs.append((folder,name,test_class,required,expected,rc))
+    if not args.sdk_jars:
+        repo=args.maven_repo.resolve() if args.maven_repo else Path.home()/'.m2/repository'
+        inventory('sdk-sha256.json',sorted((repo/'org/robolectric/android-all-instrumented').glob('*/*.jar')),3)
+
+    rejected=[]
+    for folder,name,test_class,required,expected,rc in runs:
+        log=(folder/'junit.log').read_text()
+        passed=re.search(r'^OK \((\d+) tests?\)$',log,re.M)
+        failed=re.search(r'^Tests run: (\d+),\s+Failures: (\d+)$',log,re.M)
+        count=int((passed or failed).group(1)) if passed or failed else 0
+        failures=int(failed.group(2)) if failed else 0
+        def events(kind):
+            return re.findall(r'^QA '+kind+r' (.+)$',log,re.M)
+        cases=events('end')
+        matrix={}
+        for case in cases:
+            method,_,marker=case.partition('[')
+            matrix.setdefault(method,[]).append(marker)
+        # Robolectric can leave the highest SDK's display name unsuffixed.
+        complete=(len(cases)==len(set(cases))==required and sorted(cases)==sorted(events('start'))
+                  and all(sorted(v) in (['','24]','28]'],['24]','28]','34]']) for v in matrix.values()))
+        assertions=events('assertion')
+        accepted=bool(complete and count==required and failures==expected==len(assertions)==len(set(assertions))
+                      and not events('error') and not events('skip') and
+                      ((rc==0 and passed and not failed and expected==0) or
+                       (rc==1 and failed and not passed and expected>0)))
+        report={'suite':test_class,'source_root':str(root),'tests':count,'failures':failures,
+                'assertion_failures':len(assertions),'expected_tests':required,'expected_assertion_failures':expected,
+                'cases':sorted(cases),'junit_exit':rc,'accepted_result':accepted,'source_sha256':identities,
+                'external_service_fixture_sha256':fixture_identities,'compile_only_source_contract_sha256':contract_hashes,
+                'limits':'Public production bytecode with explicit Xposed dispatch, synthetic host, lazy privacy/service boundaries and Robolectric Android/SQLite/UID shadows. No host key binding, native DexKit scan, ART/LSPosed, kernel Binder or device disk fault.'}
+        (folder/'result.json').write_text(json.dumps(report,indent=2)+'\n')
+        print(name,count,failures,'accepted='+str(accepted),flush=True)
+        if not accepted: rejected.append(str(folder/'junit.log'))
+    if rejected: raise RuntimeError('Unexpected suite results: '+', '.join(rejected))
 
 
 if __name__=='__main__':main()

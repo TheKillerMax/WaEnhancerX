@@ -891,7 +891,14 @@ jobs:
           if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
             modes="$modes filter"; test -f qa/fixtures/StabilityFilterTest.kt
           fi
-          if [[ -n "$modes" ]]; then test -f qa/verify_stability_framework.py; fi
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            modes="$modes evidence"; test -f qa/fixtures/StabilityEvidenceTest.kt
+          fi
+          if [[ -n "$modes" ]]; then
+            test -f qa/verify_stability_framework.py
+            test -f qa/test_stability_framework_selection.py
+            python3 qa/test_stability_framework_selection.py
+          fi
           echo "modes=$modes" >> "$GITHUB_OUTPUT"
           if [[ -z "$modes" ]]; then echo '::notice::Stability production changes absent; no stability framework tests executed.'; fi
       - uses: actions/setup-java@v4
@@ -945,7 +952,7 @@ jobs:
             gradle_args+=(--gradle-offline)
           fi
           printf 'Gradle cache match: %s; mode: %s\n' "$GRADLE_CACHE_MATCH" "${gradle_args[*]:-online}"
-          if [[ "$MODES" == ' update clock filter' ]]; then
+          if [[ "$MODES" == ' update filter evidence' || "$MODES" == ' update clock filter evidence' ]]; then
             python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" --framework-bundle "$RUNNER_TEMP/waex-stability-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
           else
             for mode in $MODES; do
