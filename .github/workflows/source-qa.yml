@@ -439,6 +439,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 qa/test_framework_dependency_bundle.py --out "$RUNNER_TEMP/waex-framework-input-evidence/bundle-controls"
+          python3 qa/test_framework_split_transport.py
           python3 qa/test_prepare_robolectric_sdks.py --out "$RUNNER_TEMP/waex-framework-input-evidence/sdk-controls"
           python3 qa/test_prepare_framework_dependencies.py --out "$RUNNER_TEMP/waex-framework-input-evidence/graph-controls"
           python3 qa/test_framework_partial_checkpoint.py
@@ -570,11 +571,21 @@ jobs:
           set -euo pipefail
           python3 qa/test_runtime_framework_inputs.py --bundle "$RUNNER_TEMP/waex-framework-verified" --out "$RUNNER_TEMP/waex-framework-input-evidence/runtime-controls"
           python3 qa/test_gradle_framework_consumers.py --bundle "$RUNNER_TEMP/waex-framework-verified" --out "$RUNNER_TEMP/waex-framework-input-evidence/gradle-controls"
-      - name: Share only the verified current-run dependency graph
+      - name: Share verified current-run dependencies and manifest
         uses: actions/upload-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/waex-framework-verified
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/waex-framework-verified/bundle.json
+            ${{ runner.temp }}/waex-framework-verified/deps/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+      - name: Share verified current-run SDKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-framework-verified/sdk-jars/
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -619,12 +630,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         if: steps.presence.outputs.present == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-presence-framework-bundle
+      - name: Download current-run verified SDKs
+        if: steps.presence.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-presence-framework-bundle/sdk-jars
       - name: Restore the exact Android 16 instrumented SDK
         if: steps.presence.outputs.present == 'true'
         uses: actions/cache@v4
@@ -728,12 +745,18 @@ jobs:
             ${{ steps.gradle_home.outputs.path }}/caches
             ${{ steps.gradle_home.outputs.path }}/wrapper
           key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-runtime-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_runtime_framework.py') }}
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         if: steps.runtime.outputs.present == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-runtime-framework-inputs
+      - name: Download current-run verified SDKs
+        if: steps.runtime.outputs.present == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-runtime-framework-inputs/sdk-jars
       - name: Compile public utilities and observation clock; test compiled version resources
         if: steps.runtime.outputs.present == 'true'
         shell: bash
@@ -799,11 +822,16 @@ jobs:
             ${{ steps.gradle_home.outputs.path }}/caches
             ${{ steps.gradle_home.outputs.path }}/wrapper
           key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-interface-scale-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_interface_scale_framework.py') }}
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-interface-scale-framework-inputs
+      - name: Download current-run verified SDKs
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-interface-scale-framework-inputs/sdk-jars
       - name: Require whole-theme scaling and accessibility regression tests
         shell: bash
         env:
@@ -888,12 +916,18 @@ jobs:
             ${{ steps.gradle_home.outputs.path }}/caches
             ${{ steps.gradle_home.outputs.path }}/wrapper
           key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-stability-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_stability_framework.py') }}
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         if: steps.modes.outputs.modes != ''
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-stability-framework-inputs
+      - name: Download current-run verified SDKs
+        if: steps.modes.outputs.modes != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-stability-framework-inputs/sdk-jars
       - name: Execute compiled production sources with real framework dependencies
         if: steps.modes.outputs.modes != ''
         shell: bash
@@ -953,11 +987,16 @@ jobs:
           set -euo pipefail
           kotlinc -version
           test -f qa/fixtures/PreservedStoreCompatibilityTest.java
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-vault-framework-bundle
+      - name: Download current-run verified SDKs
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-vault-framework-bundle/sdk-jars
       - name: Verify the complete graph and exact CI identity
         id: vault_inputs
         shell: bash
@@ -1016,11 +1055,16 @@ jobs:
           kotlinc -version
           test -f qa/maven_dependencies.py
           test -f qa/fixtures/PreservedDispatchContractTest.java
-      - name: Download the current-run verified framework graph
+      - name: Download current-run verified dependencies and manifest
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          name: waex-framework-deps-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-dispatch-framework-bundle
+      - name: Download current-run verified SDKs
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-sdks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-dispatch-framework-bundle/sdk-jars
       - name: Verify the complete graph and exact CI identity
         id: dispatch_inputs
         shell: bash
