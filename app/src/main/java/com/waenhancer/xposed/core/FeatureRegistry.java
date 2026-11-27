@@ -272,6 +272,10 @@ public final class FeatureRegistry {
                                 PrivacyToggle.HIDE_DELIVERY),
                 () -> new BlueOnReplyHook(context, classLoader, prefs));
 
+        registerFeature(CallTypeControllerHook.class, "Privacy",
+                () -> prefs.getBoolean("call_type_controller", false),
+                () -> new CallTypeControllerHook(context, classLoader, prefs));
+
         registerFeature(CallPrivacyHook.class, "Privacy",
                 () -> !"0".equals(prefs.getString("call_privacy", "0"))
                         || prefs.getBoolean("call_privacy_enabled", false)

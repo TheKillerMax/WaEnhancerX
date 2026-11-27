@@ -1,0 +1,9 @@
+[Added]
+- Phone-or-WhatsApp choice for verified conversation owners, preserving the
+  original call and requiring dialer confirmation.
+
+[Fixes]
+- Cancel pending call choices and phone lookups when the current screen releases
+  its lazy hook.
+- Preserve all native call arguments for the inspected Personal and Business
+  APK profiles; keep host behavior for unknown identities.
