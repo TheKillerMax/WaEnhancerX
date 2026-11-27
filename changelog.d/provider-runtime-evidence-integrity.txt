@@ -1,0 +1,2 @@
+[Fixes]
+- Protect recorded runtime process identity from generic preference writes and report package registration success only when the preference commit succeeds.

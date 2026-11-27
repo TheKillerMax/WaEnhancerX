@@ -28,7 +28,7 @@ assert 'return applyPreferenceChanges(context, prefs, callerUid,' in provider
 assert 'callerOwnsPackage(context, callerUid, pkg)' in provider
 assert provider.index('isTrustedCaller(context, callerUid)') < provider.index('Binder.clearCallingIdentity()')
 assert '"report_runtime_health".equals(method)' in provider
-for signal in ('runtime_boot_', 'runtime_status_', 'runtime_error_', 'bridge_status_'):
+for signal in ('runtime_boot_', 'runtime_pid_', 'runtime_status_', 'runtime_error_', 'bridge_status_'):
     assert signal in provider, f"Current upstream telemetry removed: {signal}"
 assert 'PreferenceWriteTypePolicy.accepts(entry.type.name(), type)' in provider
 with tempfile.TemporaryDirectory(prefix="waex_provider_policy_") as temp:
@@ -38,3 +38,21 @@ with tempfile.TemporaryDirectory(prefix="waex_provider_policy_") as temp:
     subprocess.run(["java", "-cp", temp,
                     "com.waenhancer.xposed.bridge.TestProviderDerivedKeyPolicy"], check=True)
 print("PASS: derived IPC key restrictions, privileged clear, and runtime telemetry preserved")
+
+# Compile the actual registration branch, rather than a duplicate implementation.
+# The adjacent health-report route is a strict extraction boundary.
+start = provider.index('            if ("register_hooked_package".equals(method)) {')
+end = provider.index('            if ("report_runtime_health".equals(method)', start)
+branch = provider[start:end]
+assert branch.count('callerOwnsPackage(context, callerUid, pkg)') == 1
+assert 'int callerPid = Binder.getCallingPid();' in provider
+assert provider.index('int callerPid = Binder.getCallingPid();') < provider.index('Binder.clearCallingIdentity()')
+template = (root / "qa/java/ProviderRegistrationChecks.java").read_text(encoding="utf-8")
+assert template.count("// PRODUCTION_REGISTRATION_BRANCH") == 1
+with tempfile.TemporaryDirectory(prefix="waex_registration_") as temp:
+    generated = Path(temp) / "ProviderRegistrationChecks.java"
+    generated.write_text(template.replace("// PRODUCTION_REGISTRATION_BRANCH", branch), encoding="utf-8")
+    subprocess.run(["javac", "--release", "17", "-d", temp,
+                    str(bridge / "CallerScopePolicy.java"), str(generated)], check=True)
+    subprocess.run(["java", "-cp", temp,
+                    "com.waenhancer.xposed.bridge.ProviderRegistrationChecks"], check=True)
