@@ -192,6 +192,39 @@ fun main() {
             assertSettings(destination, expected)
         }
     }
+    test("scoped status flags normalize typed legacy values without flattening scopes") {
+        val key = "antirevokestatus"
+        val raw = listOf(Expected(PUBLIC, key, "0"),
+            Expected(PUBLIC, PERSONAL + key, true), Expected(PUBLIC, BUSINESS + key, 0))
+        val expected = listOf(Expected(PUBLIC, key, "0"),
+            Expected(PUBLIC, PERSONAL + key, "1"), Expected(PUBLIC, BUSINESS + key, "0"))
+        for (format in listOf("binary", "legacy", "versioned", "export")) {
+            val bytes = when (format) {
+                "binary" -> binary(raw)
+                "export" -> ByteArrayOutputStream().also { output ->
+                    check(SettingsBackupCodec.encode(TestContext().also { seed(it, raw) }, output) == 3)
+                }.toByteArray()
+                else -> json(raw, format == "versioned")
+            }
+            val destination = TestContext()
+            check(SettingsBackupCodec.decode(destination, bytes.inputStream()) == 3)
+            assertSettings(destination, expected)
+        }
+    }
+    test("invalid scoped status flag cannot replace a valid value during mixed restore") {
+        val key = "antirevokestatus"
+        val original = listOf(Expected(PUBLIC, key, "1"),
+            Expected(PUBLIC, PERSONAL + key, "0"), Expected(PUBLIC, BUSINESS + key, "1"))
+        val incoming = listOf(Expected(PUBLIC, PERSONAL + key, 2), Expected(PUBLIC, BUSINESS + key, false))
+        val expected = listOf(Expected(PUBLIC, key, "1"),
+            Expected(PUBLIC, PERSONAL + key, "0"), Expected(PUBLIC, BUSINESS + key, "0"))
+        for (format in listOf("binary", "legacy", "versioned")) {
+            val destination = TestContext().also { seed(it, original) }
+            val bytes = if (format == "binary") binary(incoming) else json(incoming, format == "versioned")
+            check(SettingsBackupCodec.decode(destination, bytes.inputStream()) == 1)
+            assertSettings(destination, expected)
+        }
+    }
     test("schema store wins, historical other-store fallback survives, and import routes correctly") {
         val source = TestContext()
         source.seed(PUBLIC, PERSONAL + "imagequality", true)

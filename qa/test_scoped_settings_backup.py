@@ -30,7 +30,7 @@ def main() -> int:
     parser.add_argument('--kotlin-home', type=Path,
                         help='Kotlin CLI installation (containing bin and lib)')
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--mutant', choices=['drop-scoped', 'accept-scoped-secret'])
+    parser.add_argument('--mutant', choices=['drop-scoped', 'accept-scoped-secret', 'drop-status-legacy'])
     args = parser.parse_args()
     output = args.out.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -79,8 +79,10 @@ public final class ApplicationInfo { public String dataDir; }'''
             text = codec.read_text(encoding='utf-8')
             if args.mutant == 'drop-scoped':
                 old, new = 'val separator = key.indexOf(\':\')', 'return null\n        val separator = key.indexOf(\':\')'
-            else:
+            elif args.mutant == 'accept-scoped-secret':
                 old, new = 'entry != null && entry.isExportable()', 'entry != null'
+            else:
+                old, new = 'return PreferenceSchema.legacyStatusAntiRevokeString(value)', 'return null'
             if text.count(old) != 1:
                 raise ValueError('Mutation target is missing or ambiguous')
             codec = output / 'SettingsBackupCodec-mutant.kt'
