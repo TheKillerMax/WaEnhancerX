@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.waenhancer.config.PreferenceSchema;
 import com.waenhancer.xposed.core.BaseFeature;
 import com.waenhancer.xposed.core.wa.WaMessage;
 import com.waenhancer.xposed.core.wa.WaTargets;
@@ -2587,7 +2588,9 @@ public class AntiRevokeHook extends BaseFeature {
     }
 
     private boolean isAntiRevokeStatusEnabled() {
-        return isEnabled("antirevokestatus", false);
+        // The provider/bridge already resolves the effective preference for this host.
+        // Do not re-interpret a stale raw package-prefixed key in Universal mode.
+        return PreferenceSchema.isStatusAntiRevokeEnabled(prefs.getAll().get("antirevokestatus"));
     }
 
     private boolean isColorDeletedMessagesEnabled() {

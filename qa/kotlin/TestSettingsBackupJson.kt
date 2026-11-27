@@ -86,6 +86,37 @@ fun main() {
     test("integer exact minimum") { value("anti_revoke_indicator","-2147483648",Int.MIN_VALUE) }
     test("legacy integral decimal string") { value("anti_revoke_indicator","\"12.0\"",12) }
     test("legacy ARGB color") { value("deleted_message_color","\"#80112233\"",0x80112233.toInt()) }
+    for ((raw, expected) in listOf("true" to "1", "false" to "0", "1" to "1", "0" to "0",
+                                  "1.0" to "1", "0.0" to "0", "\"1\"" to "1", "\"TRUE\"" to "TRUE")) {
+        test("status legacy/canonical restore $raw") { value("antirevokestatus",raw,expected) }
+    }
+    test("status legacy wrapped Boolean and integer restore") {
+        value("antirevokestatus","{\"type\":\"boolean\",\"value\":true}","1")
+        value("antirevokestatus","{\"type\":\"int\",\"value\":0}","0")
+    }
+    test("invalid legacy numeric status flags do not overwrite valid settings") {
+        for (raw in listOf("2", "-1", "1.5", "null", "{}", "[]")) {
+            val c=target();c.seed("waex_prefs","antirevokestatus","0")
+            decode("{\"antirevokestatus\":$raw,\"always_online\":false}",c)
+            check(c.get("waex_prefs","antirevokestatus")=="0")
+            check(c.get("waex_prefs","always_online")==false)
+        }
+    }
+    test("status typed binary export and restore preserves valid legacy flags") {
+        for ((raw, expected) in listOf< Pair<Any,String> >(true to "1", false to "0", 1 to "1", 0 to "0", 1L to "1", 0.0f to "0")) {
+            val old=TestContext();old.seed("waex_prefs","antirevokestatus",raw)
+            val bytes=ByteArrayOutputStream();check(SettingsBackupCodec.encode(old,bytes)==1)
+            val restored=TestContext();check(SettingsBackupCodec.decode(restored,ByteArrayInputStream(bytes.toByteArray()))==1)
+            check(restored.get("waex_prefs","antirevokestatus")==expected)
+        }
+    }
+    test("legacy binary status Boolean and integer records restore as STRING") {
+        val c=TestContext()
+        SettingsBackupCodec.decode(c,ByteArrayInputStream(binary("antirevokestatus",PreferenceSchema.Type.BOOLEAN.ordinal){writeBoolean(true)}))
+        check(c.get("waex_prefs","antirevokestatus")=="1")
+        SettingsBackupCodec.decode(c,ByteArrayInputStream(binary("antirevokestatus",PreferenceSchema.Type.INT.ordinal){writeInt(0)}))
+        check(c.get("waex_prefs","antirevokestatus")=="0")
+    }
     val normalize = SettingsBackupCodec::class.java.declaredMethods.single { it.name=="normalize" }
     normalize.isAccessible=true
     test("wrapped LONG retains exact large string without Double conversion") {
