@@ -161,7 +161,7 @@ public final class CallTypeControllerHook extends BaseFeature implements ScreenS
 
     private boolean intercept(CallTypeHostContract.Site site, Object owner, Object[] arguments,
                               Application application) throws ReflectiveOperationException {
-        if (arguments == null || arguments.length != 3) return false;
+        if (arguments == null || arguments.length != site.operation.getParameterTypes().length) return false;
         for (Object argument : arguments) if (!(argument instanceof Boolean)) return false;
         CallTypeHostContract.Snapshot snapshot = site.read(owner);
         if (snapshot == null) return false;
@@ -349,3 +349,4 @@ public final class CallTypeControllerHook extends BaseFeature implements ScreenS
         }
     }
 }
+

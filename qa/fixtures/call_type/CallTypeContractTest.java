@@ -53,6 +53,34 @@ public class CallTypeContractTest {
         public void voice(boolean a, boolean b, boolean c) {}
         public void video(boolean a, boolean b, boolean c) {}
     }
+    public interface Calls4 { Jid getChatJid(); void voice(boolean a, boolean b, boolean c, boolean d); void video(boolean a, boolean b, boolean c, boolean d); }
+    public interface MixedCalls { void voice(boolean a, boolean b, boolean c); void video(boolean a, boolean b, boolean c, boolean d); }
+    public interface BadShapes {
+        void twoA(boolean a, boolean b); void twoB(boolean a, boolean b);
+        void fiveA(boolean a, boolean b, boolean c, boolean d, boolean e); void fiveB(boolean a, boolean b, boolean c, boolean d, boolean e);
+        void boxedA(boolean a, boolean b, Boolean c); void boxedB(boolean a, boolean b, Boolean c);
+        void integerA(boolean a, boolean b, int c); void integerB(boolean a, boolean b, int c);
+    }
+    public static class Conversation4 extends Conversation implements Calls4 {
+        public void voice(boolean a, boolean b, boolean c, boolean d) {}
+        public void video(boolean a, boolean b, boolean c, boolean d) {}
+    }
+    public static class InheritedConversation4 extends Conversation4 {}
+    public static class NativeConversation4 extends Conversation4 {
+        public native void voice(boolean a, boolean b, boolean c, boolean d);
+        public void video(boolean a, boolean b, boolean c, boolean d) {}
+    }
+    public static class FragmentOwner4 extends FragmentOwner { public Adapter4 controller; }
+    public static class AmbiguousOwner4 extends FragmentOwner { public Adapter4 first, second; }
+    public static class Adapter4 extends Adapter implements Calls4 {
+        public Adapter4(Context context) { super(context); }
+        public void voice(boolean a, boolean b, boolean c, boolean d) {}
+        public void video(boolean a, boolean b, boolean c, boolean d) {}
+    }
+    private static List<Method> calls4() throws Exception {
+        return Arrays.asList(Calls4.class.getMethod("voice", boolean.class, boolean.class, boolean.class, boolean.class),
+                Calls4.class.getMethod("video", boolean.class, boolean.class, boolean.class, boolean.class));
+    }
     private ActivityController<Conversation> controller;
     @After public void cleanup() { if (controller != null) controller.pause().stop().destroy(); }
     private static List<Method> calls() throws Exception {
@@ -118,4 +146,42 @@ public class CallTypeContractTest {
     @Test public void ambiguousLifecycleStateFailsClosed() throws Exception {
         rejected(AmbiguousStateConversation.class, FragmentOwner.class);
     }
+    @Test public void fourBooleanOperationsResolveWithoutDroppingAnArgument() throws Exception {
+        CallTypeHostContract c = CallTypeHostContract.resolve(calls4(), Conversation4.class, FragmentOwner4.class, Jid.class);
+        assertEquals(4, c.sites.size());
+        for (int i = 0; i < c.sites.size(); i++) {
+            Method method = c.sites.get(i).operation;
+            assertEquals(i < 2 ? Conversation4.class : Adapter4.class, method.getDeclaringClass());
+            assertArrayEquals(new Class<?>[]{boolean.class, boolean.class, boolean.class, boolean.class}, method.getParameterTypes());
+        }
+    }
+    @Test public void mixedArgumentCountsFailClosedEvenOnTheSameInterface() throws Exception {
+        List<Method> mixed = Arrays.asList(
+                MixedCalls.class.getMethod("voice", boolean.class, boolean.class, boolean.class),
+                MixedCalls.class.getMethod("video", boolean.class, boolean.class, boolean.class, boolean.class));
+        try { CallTypeHostContract.resolve(mixed, Conversation4.class, FragmentOwner4.class, Jid.class); fail("mixed arities"); }
+        catch (ReflectiveOperationException expected) {}
+    }
+    @Test public void unsupportedCountsAndNonBooleanArgumentsFailClosed() throws Exception {
+        String[] names = {"two", "five", "boxed", "integer"};
+        Class<?>[][] arguments = {{boolean.class, boolean.class},
+                {boolean.class, boolean.class, boolean.class, boolean.class, boolean.class},
+                {boolean.class, boolean.class, Boolean.class}, {boolean.class, boolean.class, int.class}};
+        for (int i = 0; i < names.length; i++) {
+            List<Method> calls = Arrays.asList(BadShapes.class.getMethod(names[i] + "A", arguments[i]),
+                    BadShapes.class.getMethod(names[i] + "B", arguments[i]));
+            try { CallTypeHostContract.resolve(calls, Conversation4.class, FragmentOwner4.class, Jid.class); fail(names[i]); }
+            catch (ReflectiveOperationException expected) {}
+        }
+    }
+    @Test public void fourArgumentOwnersRetainAmbiguityNativeAndDeclarationGuards() throws Exception {
+        Class<?>[][] owners = {{Conversation4.class, AmbiguousOwner4.class},
+                {NativeConversation4.class, FragmentOwner4.class}, {InheritedConversation4.class, FragmentOwner4.class}};
+        for (Class<?>[] pair : owners) {
+            try { CallTypeHostContract.resolve(calls4(), pair[0], pair[1], Jid.class); fail("unsupported owner"); }
+            catch (ReflectiveOperationException expected) {}
+        }
+    }
+
 }
+

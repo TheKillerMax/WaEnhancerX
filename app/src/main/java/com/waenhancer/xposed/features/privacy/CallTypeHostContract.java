@@ -2,24 +2,16 @@ package com.waenhancer.xposed.features.privacy;
 
 import android.app.Activity;
 import android.content.Context;
-import android.view.MenuItem;
 import android.view.View;
 import com.waenhancer.utils.ContactIdentityPolicy;
-import com.waenhancer.xposed.core.devkit.DexSearchEngine;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.luckypray.dexkit.DexKitBridge;
-import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.enums.StringMatchType;
-import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 /**
  * The outgoing conversation operations shared by classic and popup call menus.
@@ -27,9 +19,6 @@ import org.luckypray.dexkit.result.MethodData;
  * "last chat" participates in selecting a recipient.
  */
 final class CallTypeHostContract {
-    private static final Class<?>[] CALL_ARGUMENTS = {
-            boolean.class, boolean.class, boolean.class
-    };
     private static final Set<String> LIFECYCLE_STATES = new HashSet<>(Arrays.asList(
             "DESTROYED", "INITIALIZED", "CREATED", "STARTED", "RESUMED"));
     final List<Site> sites;
@@ -39,83 +28,24 @@ final class CallTypeHostContract {
     }
 
     static CallTypeHostContract discover(Context context, ClassLoader loader) throws Throwable {
-        DexSearchEngine engine = DexSearchEngine.getInstance();
-        engine.initialize(context);
-        DexKitBridge bridge = engine.getBridge();
-        if (bridge == null) throw new IllegalStateException("Call selector: DexKit is unavailable");
-        Class<?> menu = engine.findClassWithCache(context, loader,
-                "call_type_contact_menu_v1", (dex, cl) -> {
-                    Set<Class<?>> owners = new LinkedHashSet<>();
-                    for (MethodData data : dex.findMethod(FindMethod.create().matcher(
-                            MethodMatcher.create().addUsingString(
-                                    "contactconversationmenu/oncreateoptionsmenu",
-                                    StringMatchType.Equals)))) {
-                        owners.add(data.getMethodInstance(cl).getDeclaringClass());
-                    }
-                    if (owners.size() != 1) {
-                        throw new NoSuchMethodException("Call selector: contact menu is missing or ambiguous");
-                    }
-                    return owners.iterator().next();
-                });
-        if (menu == null) throw new NoSuchMethodException("Call selector: contact menu is unavailable");
-        Method selection = menu.getDeclaredMethod("onOptionsItemSelected", MenuItem.class);
-        requireInstance(selection, boolean.class, false);
-        Set<Method> calls = outgoingInvokes(bridge.getMethodData(selection), loader);
-        if (calls.size() != 2) {
-            throw new NoSuchMethodException("Call selector: expected two outgoing conversation operations");
-        }
-        Method chooser = engine.findMethodWithCache(context, loader,
-                "call_type_popup_dispatch_v1", (dex, cl) -> {
-                    Set<Method> candidates = new LinkedHashSet<>();
-                    for (MethodData data : dex.findMethod(FindMethod.create().matcher(
-                            MethodMatcher.create().addUsingString(
-                                    "CallMenuHelper/onPopupMenuEventListener unknown menu item id ",
-                                    StringMatchType.Equals)))) {
-                        candidates.add(data.getMethodInstance(cl));
-                    }
-                    if (candidates.size() != 1) {
-                        throw new NoSuchMethodException("Call selector: popup dispatch is missing or ambiguous");
-                    }
-                    return candidates.iterator().next();
-                });
-        if (chooser == null || !Modifier.isStatic(chooser.getModifiers())
-                || chooser.getReturnType() != void.class
-                || !Arrays.equals(chooser.getParameterTypes(), new Class<?>[] {
-                        chooser.getDeclaringClass(), int.class})
-                || !outgoingInvokes(bridge.getMethodData(chooser), loader).equals(calls)) {
-            throw new NoSuchMethodException("Call selector: popup and classic operations do not agree");
-        }
-        boolean opensChooser = false;
-        for (MethodData invoke : bridge.getMethodData(selection).getInvokes()) {
-            if (!invoke.isMethod()) continue;
-            if (!invoke.getReturnTypeName().equals("void")
-                    || !invoke.getParamTypeNames().equals(Arrays.asList(
-                            "android.view.View", "java.lang.Integer", "boolean"))) continue;
-            Method method = invoke.getMethodInstance(loader);
-            if (method.getDeclaringClass() == chooser.getDeclaringClass()
-                    && !Modifier.isStatic(method.getModifiers())) opensChooser = true;
-        }
-        if (!opensChooser) throw new NoSuchMethodException("Call selector: popup ownership is unverified");
-        return resolve(new ArrayList<>(calls),
-                Class.forName("com.whatsapp.Conversation", false, loader),
+        CallTypeHostProfile profile = CallTypeHostProfile.find(context);
+        if (profile == null) throw new NoSuchMethodException("Call selector: unsupported host APK");
+        Class<?> api = Class.forName(profile.apiName, false, loader);
+        Class<?>[] arguments = new Class<?>[profile.argumentCount];
+        Arrays.fill(arguments, boolean.class);
+        Class<?> activity = Class.forName("com.whatsapp.Conversation", false, loader);
+        Class<?> adapter = Class.forName(profile.adapterName, false, loader);
+        CallTypeHostContract contract = resolve(Arrays.asList(
+                api.getDeclaredMethod(profile.firstOperation, arguments),
+                api.getDeclaredMethod(profile.secondOperation, arguments)), activity,
                 Class.forName("com.whatsapp.conversation.ConversationFragment", false, loader),
                 Class.forName("com.whatsapp.infra.core.jid.Jid", false, loader));
-    }
-
-    private static Set<Method> outgoingInvokes(MethodData data, ClassLoader loader)
-            throws ReflectiveOperationException {
-        if (data == null) throw new NoSuchMethodException("Call selector: missing executable menu body");
-        Set<Method> methods = new LinkedHashSet<>();
-        for (MethodData invoke : data.getInvokes()) {
-            if (!invoke.isMethod() || !invoke.getReturnTypeName().equals("void")
-                    || !invoke.getParamTypeNames().equals(Arrays.asList("boolean", "boolean", "boolean"))) {
-                continue;
+        for (int index = 0; index < contract.sites.size(); index++) {
+            if (contract.sites.get(index).operation.getDeclaringClass() != (index < 2 ? activity : adapter)) {
+                throw new NoSuchMethodException("Call selector: inspected conversation owner changed");
             }
-            Method method = invoke.getMethodInstance(loader);
-            if (method.getDeclaringClass().isInterface()
-                    && !Modifier.isStatic(method.getModifiers())) methods.add(method);
         }
-        return methods;
+        return contract;
     }
 
     /** Reflection part also used by fixtures built from the verified host contract. */
@@ -127,10 +57,19 @@ final class CallTypeHostContract {
             throw new NoSuchMethodException("Call selector: unsupported conversation owners");
         }
         Class<?> api = calls.get(0).getDeclaringClass();
+        Class<?>[] arguments = calls.get(0).getParameterTypes();
+        if (arguments.length != 3 && arguments.length != 4) {
+            throw new NoSuchMethodException("Call selector: unsupported outgoing argument count");
+        }
+        for (Class<?> argument : arguments) {
+            if (argument != boolean.class) {
+                throw new NoSuchMethodException("Call selector: non-boolean outgoing argument");
+            }
+        }
         for (Method call : calls) {
             if (call.getDeclaringClass() != api || !api.isInterface()
                     || Modifier.isStatic(call.getModifiers()) || call.getReturnType() != void.class
-                    || !Arrays.equals(call.getParameterTypes(), CALL_ARGUMENTS)) {
+                    || !Arrays.equals(call.getParameterTypes(), arguments)) {
                 throw new NoSuchMethodException("Call selector: unsupported outgoing method shape");
             }
         }
@@ -182,7 +121,7 @@ final class CallTypeHostContract {
                 field = adapterField;
             }
             for (Method declaration : calls) {
-                Method operation = owner.getDeclaredMethod(declaration.getName(), CALL_ARGUMENTS);
+                Method operation = owner.getDeclaredMethod(declaration.getName(), arguments);
                 requireInstance(operation, void.class, false);
                 operation.setAccessible(true);
                 sites.add(new Site(operation, peer, raw, lifecycle, state, activity, host, field));
@@ -274,3 +213,4 @@ final class CallTypeHostContract {
         }
     }
 }
+

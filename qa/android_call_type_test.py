@@ -5,6 +5,8 @@ Supply preverified dependency and instrumented SDK directories plus the pinned
 DexKit 2.2.0 API JAR. This runner never resolves Maven or starts external calls.
 The contract suite stands alone. Selector/all additionally require the dependent
 controller focus and preserve all original PN/LID/continuation/cancellation cases.
+Optional explicit APK paths add production fingerprint checks over file bytes;
+no APK is downloaded, installed, loaded as classes, or executed.
 """
 import argparse
 import hashlib
@@ -28,7 +30,7 @@ LIFECYCLE = [BASE / p for p in ("xposed/core/HookRegistrar.java", "xposed/core/V
 FIX = Path("qa/fixtures/call_type")
 DOUBLES = [FIX / (p + ".java") for p in ("XC_MethodHook", "XposedBridge", "XposedHelpers")]
 HOOKS = BASE / "xposed/features/privacy"
-EXPECTED = {"contract": 24, "selector": 93, "all": 117}
+EXPECTED = {"contract": 36, "selector": 114, "all": 150}
 DEXKIT_SHA256 = "195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1"
 
 def digest(path):
@@ -52,9 +54,17 @@ def main():
     parser.add_argument("--sdk-jars", type=Path, required=True)
     parser.add_argument("--dexkit", type=Path, required=True)
     parser.add_argument("--suite", choices=tuple(EXPECTED), default="all")
+    parser.add_argument("--personal-apk", type=Path, help="Optional inspected Personal base APK for fingerprint checks")
+    parser.add_argument("--business-apk", type=Path, help="Optional inspected Business base APK; supply both APK paths")
     parser.add_argument("--allow-test-failure", action="store_true",
         help="Write failed JUnit evidence for a mutation driver; never mark a failed suite accepted")
     args = parser.parse_args()
+    if (args.personal_apk is None) != (args.business_apk is None):
+        parser.error("Fingerprint checks require both --personal-apk and --business-apk")
+    profile_apks = [p.resolve() for p in (args.personal_apk, args.business_apk) if p is not None]
+    if any(not p.is_file() for p in profile_apks):
+        raise RuntimeError("Explicit fingerprint APK input is missing")
+    profile_hashes = [digest(p) for p in profile_apks]
     root, out = args.source_root.resolve(), args.out.resolve()
     deps, sdks, dexkit = args.deps.resolve(), args.sdk_jars.resolve(), args.dexkit.resolve()
     if digest(dexkit) != DEXKIT_SHA256:
@@ -63,10 +73,12 @@ def main():
     tests = (["CallTypeContractTest"] if args.suite in ("contract", "all") else [])
     if selector:
         tests.append("CallTypeAndroidTest")
-    hook_files = [HOOKS / "CallTypeHostContract.java"]
+    hook_files = [HOOKS / "CallTypeHostProfile.java", HOOKS / "CallTypeHostContract.java"]
     if selector:
         hook_files.append(HOOKS / "CallTypeControllerHook.java")
     fixture_files = [FIX / (name + ".java") for name in tests] + [FIX / "CallTypeJUnit.java"]
+    if profile_apks:
+        fixture_files.append(FIX / "CallTypeProfileFileCheck.java")
     product_files = FIRST + hook_files + (KOTLIN + LIFECYCLE if selector else [])
     for path in product_files + DOUBLES + fixture_files:
         if not (root / path).is_file():
@@ -182,9 +194,24 @@ def main():
         junit_exit_code=exit_code, source_sha256=identities)
     result["accepted"] = (exit_code == 0 and result["tests"] == EXPECTED[args.suite]
         and result["failures"] == 0 and result["skipped"] == 0)
+    file_check = {"requested": bool(profile_apks), "status": "NOT_REQUESTED", "checks": 0, "accepted": False}
+    if profile_apks:
+        file_exit = run(["java", "-cp", cp,
+            "com.waenhancer.xposed.features.privacy.CallTypeProfileFileCheck", *profile_apks,
+            out / "profile-files"], out / "profile-files.log", allow_failure=True)
+        rows = [json.loads(line) for line in (out / "profile-files.log").read_text(encoding="utf-8").splitlines()
+                if line.startswith("{")]
+        summaries = [row for row in rows if row.get("status") == "PASS"]
+        unchanged = profile_hashes == [digest(p) for p in profile_apks]
+        accepted = file_exit == 0 and len(summaries) == 1 and summaries[0].get("checks") == 15 and unchanged
+        file_check.update(status="PASS" if accepted else "FAIL", exit_code=file_exit, accepted=accepted,
+            checks=summaries[0]["checks"] if len(summaries) == 1 else 0,
+            input_sha256=profile_hashes, inputs_unchanged=unchanged, observations=rows)
+        result["accepted"] = result["accepted"] and accepted
+    result["profile_file_check"] = file_check
     result["limits"] = ("Real Android 24/28/34 APIs, complete public host contract and selected controller/dependencies; "
         "Xposed, host classes, ScreenScopedFeature descriptor and unused lazy privacy service are explicit fixtures. "
-        "No native DexKit matching, real WhatsApp binding, private module, APK, external phone/WhatsApp call or device change.")
+        "No target WhatsApp class execution, runtime host binding, private module, APK build, external phone/WhatsApp call or device change.")
     (out / "dependency-sha256.json").write_text(json.dumps({p.name: digest(p) for p in jars + sorted(sdks.glob("*.jar"))}, indent=2) + "\n")
     (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({k: v for k, v in result.items() if k != "source_sha256"}, indent=2))
@@ -193,3 +220,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

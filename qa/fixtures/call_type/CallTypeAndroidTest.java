@@ -53,7 +53,7 @@ public class CallTypeAndroidTest {
     private Application app;
     private SharedPreferences prefs;
     private CallTypeControllerHook hook;
-    private ActivityController<Conversation> activityController;
+    private ActivityController<? extends Conversation> activityController;
     private Conversation activity;
     private final List<CountDownLatch> releases = new ArrayList<>();
 
@@ -134,6 +134,44 @@ public class CallTypeAndroidTest {
         public Activity getActivityNullable() { return (Activity) getContext(); }
         public void voice(boolean a, boolean b, boolean c) { calls.add("voice:" + a + ":" + b + ":" + c); }
         public void video(boolean a, boolean b, boolean c) { calls.add("video:" + a + ":" + b + ":" + c); }
+    }
+    public interface ConversationApi4 extends CurrentChat {
+        void voice(boolean a, boolean b, boolean c, boolean d);
+        void video(boolean a, boolean b, boolean c, boolean d);
+    }
+    public static class Conversation4 extends Conversation implements ConversationApi4 {
+        public void voice(boolean a, boolean b, boolean c, boolean d) { calls.add("voice:" + a + ":" + b + ":" + c + ":" + d); }
+        public void video(boolean a, boolean b, boolean c, boolean d) { calls.add("video:" + a + ":" + b + ":" + c + ":" + d); }
+    }
+    public static class ConversationFragment4 extends ConversationFragment {
+        public Adapter4 controller4;
+        @Override public View onCreateView(LayoutInflater inflater, ViewGroup parent, Bundle state) {
+            controller4 = new Adapter4(getActivity(), this); return controller4;
+        }
+    }
+    public static class Adapter4 extends Adapter implements ConversationApi4 {
+        Adapter4(Context context, ConversationFragment4 fragment) { super(context, fragment); }
+        public void voice(boolean a, boolean b, boolean c, boolean d) { calls.add("voice:" + a + ":" + b + ":" + c + ":" + d); }
+        public void video(boolean a, boolean b, boolean c, boolean d) { calls.add("video:" + a + ":" + b + ":" + c + ":" + d); }
+    }
+    private static CallTypeHostContract contract4() throws Exception {
+        return CallTypeHostContract.resolve(Arrays.asList(
+                ConversationApi4.class.getMethod("voice", boolean.class, boolean.class, boolean.class, boolean.class),
+                ConversationApi4.class.getMethod("video", boolean.class, boolean.class, boolean.class, boolean.class)),
+                Conversation4.class, ConversationFragment4.class, Jid.class);
+    }
+    private void install4(CallTypeControllerHook.PhoneLookup lookup) throws Throwable {
+        hook = new CallTypeControllerHook(app, getClass().getClassLoader(), prefs, CallTypeAndroidTest::contract4, lookup);
+        hook.hook();
+        activityController = Robolectric.buildActivity(Conversation4.class).create().start().resume().visible();
+        activity = activityController.get();
+        assertTrue(activity.getWindow().getDecorView().isAttachedToWindow());
+    }
+    private static Method operation4(Object owner, String name) throws Exception {
+        return owner.getClass().getDeclaredMethod(name, boolean.class, boolean.class, boolean.class, boolean.class);
+    }
+    private static Object fire4(Object owner, String name, boolean a, boolean b, boolean c, boolean d) throws Throwable {
+        return XposedBridge.dispatch(operation4(owner, name), owner, a, b, c, d);
     }
     public static class AmbiguousFragment extends Fragment { public Adapter one, two; }
     public interface WrongCalls extends CurrentChat {
@@ -591,10 +629,10 @@ public class CallTypeAndroidTest {
         } catch (ReflectiveOperationException expected) {}
         assertEquals(0, XposedBridge.registrations);
     }
-    @Test public void unavailableNativeDiscoveryCannotPretendTheHookWasInstalled() throws Throwable {
+    @Test public void unrecognizedApkCannotPretendTheHookWasInstalled() throws Throwable {
         hook = new CallTypeControllerHook(app, getClass().getClassLoader(), prefs);
-        try { hook.hook(); fail("native boundary unavailable"); }
-        catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("DexKit")); }
+        try { hook.hook(); fail("unrecognized APK must remain untouched"); }
+        catch (NoSuchMethodException expected) { assertTrue(expected.getMessage().contains("unsupported host APK")); }
         assertEquals(0, XposedBridge.registrations);
     }
     @Test public void screenDisposalInvalidatesVisibleChoiceAndRetainedCallbacks() throws Throwable {
@@ -644,4 +682,111 @@ public class CallTypeAndroidTest {
         assertEquals(1, XposedBridge.originals);
         assertTrue(activity.intents.isEmpty());
     }
+    @Test public void whatsappChoicePreservesAllFourArgumentsForBothOperations() throws Throwable {
+        install4((context, lid) -> null);
+        int calls = 0;
+        for (String name : new String[]{"voice", "video"}) {
+            for (int i = 0; i < 16; i++) {
+                boolean a = (i & 1) != 0, b = (i & 2) != 0, c = (i & 4) != 0, d = (i & 8) != 0;
+                assertNull(fire4(activity, name, a, b, c, d));
+                assertEquals(calls, activity.calls.size());
+                choose(AlertDialog.BUTTON_NEGATIVE);
+                assertEquals(name + ":" + a + ":" + b + ":" + c + ":" + d, activity.calls.get(calls++));
+            }
+        }
+        assertEquals(32, XposedBridge.originals);
+        assertTrue(activity.intents.isEmpty());
+    }
+    @Test public void fourArgumentFragmentResumesOnlyItsOwnCurrentOperation() throws Throwable {
+        install4((context, lid) -> null);
+        ConversationFragment4 fragment = new ConversationFragment4();
+        activity.getFragmentManager().beginTransaction().replace(0x123456, fragment).commit();
+        activity.getFragmentManager().executePendingTransactions();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        Adapter4 adapter = fragment.controller4;
+        fire4(adapter, "video", true, false, true, false);
+        choose(AlertDialog.BUTTON_NEGATIVE);
+        assertEquals(Arrays.asList("video:true:false:true:false"), adapter.calls);
+        fire4(adapter, "voice", false, true, false, true);
+        fragment.controller4 = new Adapter4(activity, fragment);
+        choose(AlertDialog.BUTTON_NEGATIVE);
+        assertEquals(1, adapter.calls.size());
+        assertEquals(1, XposedBridge.originals);
+        assertTrue(activity.calls.isEmpty());
+    }
+    @Test public void fourArgumentRequestClonesArgumentsAndOnlyPhoneChoiceDials() throws Throwable {
+        install4((context, lid) -> null);
+        Object[] arguments = {true, false, true, false};
+        XposedBridge.dispatch(operation4(activity, "voice"), activity, arguments);
+        arguments[0] = false; arguments[3] = true;
+        choose(AlertDialog.BUTTON_NEGATIVE);
+        assertEquals(Arrays.asList("voice:true:false:true:false"), activity.calls);
+        fire4(activity, "video", false, true, false, true);
+        choose(AlertDialog.BUTTON_POSITIVE);
+        assertEquals(1, XposedBridge.originals);
+        assertEquals(1, activity.intents.size());
+        assertEquals(Intent.ACTION_DIAL, activity.intents.get(0).getAction());
+        assertEquals("+15551234567", activity.intents.get(0).getData().getSchemeSpecificPart());
+    }
+    @Test public void fourArgumentUnmappedLidResumesOriginalWithoutDialing() throws Throwable {
+        install4((context, lid) -> null);
+        activity.peer = new ChatJid(LID);
+        fire4(activity, "video", false, true, true, false);
+        idleUntil(() -> !activity.calls.isEmpty());
+        assertEquals(Arrays.asList("video:false:true:true:false"), activity.calls);
+        assertEquals(1, XposedBridge.originals);
+        assertTrue(activity.intents.isEmpty());
+    }
+    @Test public void fourArgumentChoicesStillRejectPeerAndLifecycleChanges() throws Throwable {
+        install4((context, lid) -> null);
+        fire4(activity, "voice", true, false, true, false);
+        activity.peer = new ChatJid("15550000000@s.whatsapp.net");
+        choose(AlertDialog.BUTTON_NEGATIVE);
+        activity.peer = new ChatJid(PHONE);
+        fire4(activity, "video", false, true, false, true);
+        AlertDialog stale = dialog();
+        activityController.pause();
+        assertFalse(stale.isShowing());
+        stale.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+        assertEquals(0, XposedBridge.originals);
+        assertTrue(activity.calls.isEmpty());
+        assertTrue(activity.intents.isEmpty());
+        activityController.resume();
+    }
+    @Test public void fourArgumentCallbackRejectsWrongArityOrNonBooleans() throws Throwable {
+        install4((context, lid) -> null);
+        Method intercept = CallTypeControllerHook.class.getDeclaredMethod("intercept",
+                CallTypeHostContract.Site.class, Object.class, Object[].class, Application.class);
+        intercept.setAccessible(true);
+        Object[][] invalid = {null, {}, {true, false, true}, {true, false, true, false, true},
+                {true, false, null, true}, {true, false, "true", true}};
+        CallTypeHostContract.Site site = contract4().sites.get(0);
+        for (Object[] arguments : invalid) assertEquals(false, intercept.invoke(hook, site, activity, arguments, app));
+        assertEquals(0, XposedBridge.originals);
+        assertTrue(activity.intents.isEmpty());
+    }
+
+    @Test public void registryRetryWithANewInstanceCannotReactivateFailedCallbacks() throws Throwable {
+        XposedBridge.failRegistration = 3;
+        XposedBridge.failUnhook = true;
+        CallTypeControllerHook failed = new CallTypeControllerHook(app, getClass().getClassLoader(), prefs,
+                CallTypeAndroidTest::contract4, (context, lid) -> null);
+        try { failed.hook(); fail("partial registration"); } catch (IllegalStateException expected) {}
+        failed.unhookAll(); // FeatureRegistry calls this before dropping the failed instance.
+        assertEquals(2, XposedBridge.hooks.size());
+        XposedBridge.failRegistration = -1;
+        install4((context, lid) -> null);
+        assertEquals(7, XposedBridge.registrations);
+        assertEquals(2, XposedBridge.hooks.get(operation4(activity, "voice")).size());
+        fire4(activity, "voice", true, false, true, false);
+        assertEquals(0, XposedBridge.originals);
+        choose(AlertDialog.BUTTON_NEGATIVE);
+        assertEquals(Arrays.asList("voice:true:false:true:false"), activity.calls);
+        assertEquals(1, XposedBridge.originals);
+        try { failed.hook(); fail("failed instance must stay inert"); } catch (IllegalStateException expected) {}
+        assertEquals(7, XposedBridge.registrations);
+        failed.onScreenDisposed(activity);
+    }
+
 }
+

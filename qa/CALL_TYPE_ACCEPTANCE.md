@@ -9,7 +9,8 @@ retains its current conditional registration and lifecycle policy.
 
 - Off at startup means no host discovery and no installed selector callbacks.
 - Both native voice/video operations preserve their original receiver and all
-  three boolean arguments. Choosing WhatsApp continues the exact original once.
+  three or four boolean arguments from the inspected profile. Choosing WhatsApp
+  continues the exact original once.
 - Phone opens only ACTION_DIAL. The dialer requires the user's confirmation.
   Dialer failure keeps WhatsApp/cancel available and never makes an automatic call.
 - Cancel, back, dismissal, changed peer, non-resumed owner, detached/replaced
@@ -37,13 +38,14 @@ is part of this focus.
       --deps /path/to/verified-bundle/deps --sdk-jars /path/to/verified-bundle/sdk-jars \
       --dexkit /path/to/dexkit-2.2.0.jar
 
-All original 29 selector test methods are retained. Two additional methods check
-screen disposal with retained callbacks and a late LID result. The selector suite
-is 93 cases at API 24/28/34; the independent eight-method host suite adds 24,
-for 117 total. None may be silently skipped. The result JSON reports the exact
-source/dependency identities, total, failures, assertion failures, errors and
-skips. A mutation driver's --allow-test-failure preserves failed evidence but
-never marks it accepted.
+The C12 history contains 117 fixture executions. C14 retains the 29 original
+selector methods and the two screen-disposal methods, and adds seven selector
+methods plus four host-contract methods. The current selector suite is 114 cases
+and the host suite is 36, for 150 total at API 24/28/34. None may be silently
+skipped. Source/dependency identities, totals, assertion failures, errors and
+skips remain recorded. Optional explicit APK inputs add 15 separate production
+fingerprint file checks; see CALL_TYPE_HOST_ACCEPTANCE.md. Missing APK inputs
+are reported as NOT_REQUESTED and cannot stand in for host acceptance.
 
 Real Android dialogs, Activity/View lifecycle, Looper, Intents and SQLite are
 exercised. The Activity records ACTION_DIAL instead of launching a real external
@@ -60,20 +62,20 @@ separate positive assertions; fewer tests is not reconciliation.
 
 ## Current-host acceptance remains separate
 
-The historical static host investigation used WhatsApp 2.26.40.76 APK SHA-256
-593d1216e8f3f24303c42bb1de88ab40060128a9030c1e0e44315c9909e258a4.
-It verified the shared classic/popup outgoing operations and activity/fragment
-ownership for that exact input. Neither the contract nor this port invents a
-binding for WhatsApp Personal 2.26.46.82 or Business 2.26.46.83.
+The original investigation covered WhatsApp 2.26.40.76. C14 now pins the exact
+Personal 2.26.46.82 and Business 2.26.46.83 APKs inspected through bounded static
+DEX queries. Their identities, generated Runnable branches, receiver guards,
+3/4-argument distinction and reproduction commands are documented in
+CALL_TYPE_HOST_ACCEPTANCE.md. Unknown APK identities are rejected before host
+class resolution; no heuristic expansion of multipurpose Runnable calls is used.
 
-Required physical acceptance therefore remains blocked pending legitimate
-current-host evidence: unique native discovery, correct recipient after chat
-navigation, Phone intent opening without auto-call, cancellation and same-profile
-original continuation using authorized test accounts. No real call, message,
-recording, account data, permission change or device mutation was performed by
-the offline suite. It does not establish native DexKit matching, AndroidX host
-fragment behavior, installed resource resolution, LSPosed injection or a signed
-full-module APK.
+The current production fingerprint has been exercised against the actual APK
+bytes without loading target classes. This does not establish live reflection,
+AndroidX host fragment behavior, LSPosed injection, installed resource resolution,
+a signed full-module APK or device behavior. Cold Windows hash measurements do
+not establish Android/UI latency. Those performance and runtime gates remain
+open; no real call, message, recording, account data access, permission change
+or device mutation was performed by these suites.
 
 ## Review order
 
