@@ -55,8 +55,11 @@ fixture throws if called; unrelated privacy logic cannot silently pass.
 
 Causal controls must compile and execute the reviewed case inventory before
 their expected behavioral assertions fail: ACTION_CALL replacing ACTION_DIAL,
-removed current-peer comparison, rearmed failed-install callbacks, and missing
-screen-disposal invalidation. Compilation/setup failures do not reject a mutant
+removed current-peer comparison, rearmed failed-install callbacks, missing
+screen-disposal invalidation, a cancel path that starts WhatsApp, and aliased
+four-argument requests. All six controls must execute the full current 150-case
+inventory, reject on API 24/28/34, and use the same dependency identities as
+the positive baseline. Compilation/setup failures do not reject a mutant
 successfully. PN/LID identity, original continuation and cancellation have
 separate positive assertions; fewer tests is not reconciliation.
 

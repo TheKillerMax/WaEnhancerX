@@ -4,10 +4,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sys
+
+from android_call_type_test import EXPECTED
 
 ROOT = Path(__file__).resolve().parents[1]
 HOOK = Path("app/src/main/java/com/waenhancer/xposed/features/privacy/CallTypeControllerHook.java")
@@ -25,6 +26,9 @@ MUTATIONS = (
     ("cancel_starts_whatsapp", "dialog.setOnCancelListener(d -> finish(request));",
      "dialog.setOnCancelListener(d -> continueWhatsApp(request));",
      "cancelAndDismissNeverCallEitherDestination"),
+    ("argument_alias", "new Request(site, owner, snapshot, arguments.clone())",
+     "new Request(site, owner, snapshot, arguments)",
+     "fourArgumentRequestClonesArgumentsAndOnlyPhoneChoiceDials"),
 )
 
 def digest(path):
@@ -38,18 +42,20 @@ def main():
     parser.add_argument("--sdk-jars", type=Path, required=True)
     parser.add_argument("--dexkit", type=Path, required=True)
     args = parser.parse_args()
-    baseline = json.loads(args.baseline.read_text())
+    expected_tests = EXPECTED["all"]
+    baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
+    baseline_dependencies = json.loads(args.baseline.with_name("dependency-sha256.json").read_text(encoding="utf-8"))
     if not (baseline.get("accepted") is True and baseline.get("suite") == "all"
-            and baseline.get("tests") == baseline.get("expected_tests") == 117
+            and baseline.get("tests") == baseline.get("expected_tests") == expected_tests
             and baseline.get("junit_exit_code") == baseline.get("failures") == baseline.get("errors") == baseline.get("skipped") == 0):
-        raise RuntimeError("A complete passing 117-case baseline is required")
+        raise RuntimeError(f"A complete passing {expected_tests}-case baseline is required")
     for relative, expected in baseline["source_sha256"].items():
         if relative.startswith("generated/"):
             continue
         if digest(ROOT / relative) != expected:
             raise RuntimeError("Baseline source identity changed: " + relative)
     args.out.mkdir(parents=True, exist_ok=False)
-    original = (ROOT / HOOK).read_text()
+    original = (ROOT / HOOK).read_text(encoding="utf-8")
     rows = []
     for name, before, after, expected_method in MUTATIONS:
         if original.count(before) != 1:
@@ -74,23 +80,32 @@ def main():
         receipt = work / "run/result.json"
         if executed.returncode != 0 or not receipt.is_file():
             raise RuntimeError("Mutation did not reach compiled JUnit execution: " + name)
-        result = json.loads(receipt.read_text())
-        observed = [n for n in result["failed_tests"] if re.sub(r"\[\d+\]$", "", n) == expected_method]
+        result = json.loads(receipt.read_text(encoding="utf-8"))
+        # Robolectric 4.17 prints the default API 34 case without a suffix.
+        expected_names = {expected_method, expected_method + "[24]", expected_method + "[28]"}
+        observed = [n for n in result["failed_tests"] if n in expected_names]
+        observed_dependencies = json.loads(receipt.with_name("dependency-sha256.json").read_text(encoding="utf-8"))
+        if observed_dependencies != baseline_dependencies:
+            raise RuntimeError("Mutation dependency identities differ from baseline: " + name)
         accepted = (result["accepted"] is False and result["junit_exit_code"] == 1
-            and result["tests"] == result["expected_tests"] == 117
+            and result["tests"] == result["expected_tests"] == expected_tests
             and result["errors"] == result["skipped"] == 0
-            and result["failures"] == result["assertion_failures"] and len(observed) == 3)
+            and result["failures"] == result["assertion_failures"]
+            and len(observed) == len(expected_names) and set(observed) == expected_names)
         row = dict(name=name, behavioral_rejection=accepted, expected_method=expected_method,
             tests=result["tests"], assertion_failures=result["assertion_failures"],
             errors=result["errors"], skipped=result["skipped"], failed_tests=result["failed_tests"],
-            modified_source_sha256=digest(source / HOOK), receipt_sha256=digest(receipt))
+            modified_source_sha256=digest(source / HOOK), receipt_sha256=digest(receipt),
+            dependency_receipt_sha256=digest(receipt.with_name("dependency-sha256.json")))
         rows.append(row)
         (args.out / "result.json").write_text(json.dumps(dict(complete=False, rows=rows), indent=2) + "\n")
         print(json.dumps(row), flush=True)
         if not accepted:
             raise RuntimeError("Expected causal assertion did not reject: " + name)
     (args.out / "result.json").write_text(json.dumps(dict(complete=True, baseline_sha256=digest(args.baseline),
-        count=len(rows), rows=rows, scope="Offline public compiled fixtures; no real calls or device execution"), indent=2) + "\n")
+        count=len(rows), expected_tests=expected_tests,
+        baseline_dependency_sha256=digest(args.baseline.with_name("dependency-sha256.json")),
+        rows=rows, scope="Offline public compiled fixtures; no real calls or device execution"), indent=2) + "\n")
 
 if __name__ == "__main__":
     main()
