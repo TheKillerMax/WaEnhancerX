@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="overlay_settings_help">Android may make this optional permission unavailable. You can review the app settings in App info or continue without overlay access. If Android restricts access, leave the permission disabled.</string>
+    <string name="overlay_open_app_info">Open App info</string>
+    <string name="overlay_settings_unavailable">Android could not open this settings screen. You can review the permission in Settings &gt; Apps &gt; WaEnhancerX.</string>
+</resources>

@@ -1,0 +1,2 @@
+[Fixes]
+- Recover navigation when Android cannot open optional overlay settings, without changing permission enforcement.

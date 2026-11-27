@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="overlay_settings_help">Android puede impedir el acceso a este permiso opcional. Puedes revisar los ajustes en Información de la app o continuar sin superposición. Si Android restringe el acceso, mantén el permiso desactivado.</string>
+    <string name="overlay_open_app_info">Abrir Información de la app</string>
+    <string name="overlay_settings_unavailable">Android no pudo abrir esta pantalla. Puedes revisar el permiso en Ajustes &gt; Apps &gt; WaEnhancerX.</string>
+</resources>
