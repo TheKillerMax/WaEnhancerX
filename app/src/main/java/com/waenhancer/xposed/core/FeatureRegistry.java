@@ -102,8 +102,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Orchestrates and registers all modular hooks in WAEX and reports injected status.
@@ -117,6 +115,7 @@ public final class FeatureRegistry {
     private final String hookingMode;
     private final Map<String, String> customizedInstallations = new HashMap<>();
     private final SharedPreferences prefs;
+    private final RuntimeReportDispatcher reportDispatcher;
 
     @FunctionalInterface
     private interface FeatureFactory {
@@ -179,6 +178,14 @@ public final class FeatureRegistry {
     }
 
     public FeatureRegistry(@NonNull Context context, @NonNull ClassLoader classLoader, @NonNull SharedPreferences prefs) {
+        this(context, classLoader, prefs,
+                new RuntimeReportDispatcher(failure -> HookErrors.swallowed("FeatureRegistry", failure)));
+    }
+
+    /** MainHook supplies its shared lifecycle-gated dispatcher for catalogue/health ordering. */
+    public FeatureRegistry(@NonNull Context context, @NonNull ClassLoader classLoader,
+                           @NonNull SharedPreferences prefs, @NonNull RuntimeReportDispatcher reportDispatcher) {
+        this.reportDispatcher = java.util.Objects.requireNonNull(reportDispatcher);
         this.prefs = prefs;
         this.reportingContext = context.getApplicationContext() != null
                 ? context.getApplicationContext() : context;
@@ -858,14 +865,6 @@ public final class FeatureRegistry {
 
     private static final long SLOW_HOOK_LOG_MS = 15L;
 
-    private static final ExecutorService HOOK_REPORT_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "WAEX-HookReportIpc");
-                t.setDaemon(true);
-                t.setPriority(Thread.MIN_PRIORITY);
-                return t;
-            });
-
     public void reportInjectedHooks(@NonNull Context context, @NonNull String packageName) {
         try {
             JSONArray array = new JSONArray();
@@ -887,9 +886,9 @@ public final class FeatureRegistry {
             extras.putString("hooking_mode", hookingMode);
             extras.putLong("timestamp", System.currentTimeMillis());
 
-            // The JSON snapshot above is built on the caller; the cross-process call is not, because
-            // lazy installs report from the UI thread while a screen is opening.
-            HOOK_REPORT_EXECUTOR.execute(() -> {
+            // Capture the snapshot on the producer; only the latest pending snapshot reaches
+            // Binder. MainHook health reports share this same serial worker, with no second queue.
+            reportDispatcher.submitLatest(RuntimeReportDispatcher.Kind.HOOKS, () -> {
                 try {
                     HookProviderIpc.call(context, "register_injected_hooks", packageName, extras);
                 } catch (Throwable t) {

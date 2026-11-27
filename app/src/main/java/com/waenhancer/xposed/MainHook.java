@@ -44,9 +44,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import com.waenhancer.xposed.core.RuntimeReportDispatcher;
+import com.waenhancer.xposed.core.RuntimeReportDispatcher.Kind;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
@@ -373,7 +372,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 // which may have to cold-start the WAEX process, so none of them may run on this
                 // thread. They are queued and sent from one background thread once a screen shows.
                 installDeferredReporting(appContext);
-                queueDeferred(() -> {
+                queueDeferred(Kind.PACKAGE, () -> {
                     try {
                         WhatsAppPackageDetector.registerHookedPackage(appContext, packageName);
                     } catch (Throwable t) {
@@ -382,7 +381,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                     }
                 });
                 reportTargetRuntime(appContext, packageName, "INJECTED", "PENDING", null);
-                queueDeferred(() -> {
+                queueDeferred(Kind.UPDATE_CHECK, () -> {
                     try {
                         HookProviderIpc.call(appContext,
                                 "request_update_check", packageName, null);
@@ -451,7 +450,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                         BroadcastReceiver prefsReceiver = new BroadcastReceiver() {
                             @Override
                             public void onReceive(Context context, Intent intent) {
-                                bridgeClient.syncPreferences();
+                                bridgeClient.requestRefresh();
                             }
                         };
                         if (Build.VERSION.SDK_INT >= 33) {
@@ -492,13 +491,13 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                             }
                         }
                         long registryStart = System.nanoTime();
-                        FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient);
+                        FeatureRegistry registry = new FeatureRegistry(appContext, lpparam.classLoader, bridgeClient, REPORT_DISPATCHER);
                         logStartupStage("FeatureRegistry constructor", registryStart);
                         long installStart = System.nanoTime();
                         registry.initializeAll();
                         logStartupStage("initializeAll (startup features)", installStart);
                         logStartupStage("TOTAL target init (main thread)", initStart);
-                        queueDeferred(() -> registry.reportInjectedHooks(appContext, packageName));
+                        registry.reportInjectedHooks(appContext, packageName);
                         registerHookReportReceiver(appContext, packageName, registry);
                         reportTargetRuntime(
                                 appContext,
@@ -618,13 +617,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (!packageName.equals(intent.getStringExtra("PKG"))) return;
-                    Thread worker = new Thread(() -> {
-                        try {
-                            registry.reportInjectedHooks(appContext, packageName);
-                        } catch (Throwable ignored) { HookErrors.swallowed("MainHook", ignored); }
-                    }, "WAEX-HookReport");
-                    worker.setDaemon(true);
-                    worker.start();
+                    registry.reportInjectedHooks(appContext, packageName);
                 }
             };
             if (Build.VERSION.SDK_INT >= 33) {
@@ -647,7 +640,7 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
         sRuntimeStatus = runtimeStatus;
         sBridgeStatus = bridgeStatus;
         sRuntimeError = error;
-        queueDeferred(() -> WhatsAppPackageDetector.reportRuntimeHealth(
+        queueDeferred(Kind.HEALTH, () -> WhatsAppPackageDetector.reportRuntimeHealth(
                 appContext, packageName, runtimeStatus, bridgeStatus, error));
     }
 
@@ -658,41 +651,20 @@ public class MainHook implements IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     // ── Deferred, off-main-thread reporting ─────────────────────────────────────────────────
-    private static final ExecutorService REPORT_EXECUTOR =
-            Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r, "WAEX-Report");
-                t.setDaemon(true);
-                t.setPriority(Thread.MIN_PRIORITY);
-                return t;
-            });
-    private static final ConcurrentLinkedQueue<Runnable> DEFERRED_REPORTS =
-            new ConcurrentLinkedQueue<>();
-    private static final AtomicBoolean REPORTING_RELEASED =
-            new AtomicBoolean(false);
+    private static final RuntimeReportDispatcher REPORT_DISPATCHER =
+            new RuntimeReportDispatcher(failure ->
+                    HookErrors.swallowed("MainHook", failure), false);
     private static final AtomicBoolean REPORTING_INSTALLED =
             new AtomicBoolean(false);
     private static final long REPORTING_FALLBACK_MS = 5_000L;
 
-    /** Runs {@code task} on the reporting thread; held back until WhatsApp is on screen. */
-    private static void queueDeferred(Runnable task) {
-        if (REPORTING_RELEASED.get()) {
-            REPORT_EXECUTOR.execute(task);
-        } else {
-            DEFERRED_REPORTS.add(task);
-            // Lost race: released between the check and the add, so drain now.
-            if (REPORTING_RELEASED.get()) drainDeferred();
-        }
-    }
-
-    private static void drainDeferred() {
-        Runnable task;
-        while ((task = DEFERRED_REPORTS.poll()) != null) {
-            REPORT_EXECUTOR.execute(task);
-        }
+    /** Optional observations retain only the latest pending task of each kind. */
+    private static void queueDeferred(Kind kind, Runnable task) {
+        REPORT_DISPATCHER.submitLatest(kind, task);
     }
 
     private static void releaseDeferredReporting() {
-        if (REPORTING_RELEASED.compareAndSet(false, true)) drainDeferred();
+        REPORT_DISPATCHER.release();
     }
 
     /**

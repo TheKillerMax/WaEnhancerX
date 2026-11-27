@@ -1,0 +1,5 @@
+[Fixes]
+- Refresh injected preferences on the ordered worker and preserve interruption while waiting for the first provider snapshot.
+[Improvements]
+- Coalesce optional runtime and hook reports on one bounded background queue while retaining first-screen or fallback release.
+- Coalesce actual hook-catalogue provider writes on the shared reporter and preserve catalogue-before-ready ordering during lazy refreshes.
