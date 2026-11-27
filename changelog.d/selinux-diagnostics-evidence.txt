@@ -1,1 +1,0 @@
-System diagnostics now show Unknown when SELinux state cannot be verified, retry that observation during a full refresh, and preserve confirmed Enforcing, Permissive and Disabled states.

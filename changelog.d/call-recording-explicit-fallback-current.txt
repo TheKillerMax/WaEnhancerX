@@ -1,3 +1,0 @@
-Call audio now tries microphone fallback only after the option is explicitly enabled; saved choices remain intact.
-The new switch reflects acknowledged writes, and source diagnostics distinguish capture setup from unverified remote audio.
-Current call-ending validation and unstable provider-client ownership are preserved.

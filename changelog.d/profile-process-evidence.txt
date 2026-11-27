@@ -1,2 +1,0 @@
-[Fixes]
-- Bind live process evidence to package UIDs in the manager's Android user and require the initiating manager process before accepting an absence result.

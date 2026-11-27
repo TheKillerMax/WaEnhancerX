@@ -1,3 +1,0 @@
-[Improvements]
-- Exercise the reviewed runtime, appearance, preview and call-recording contracts
-  within the existing public source and Android framework regression jobs.

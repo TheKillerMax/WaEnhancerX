@@ -91,47 +91,38 @@ final class CallRecordingEventContract {
     }
 
     private static Method resolveCallEndingMethod(Class<?> callback, Class<?> info) throws NoSuchMethodException {
-        final Class<?> logInfo;
+        Class<?> logInfo = null;
         try {
             logInfo = Class.forName(info.getName().replace("CallInfo", "CallLogInfo"),
                     false, callback.getClassLoader());
-        } catch (ClassNotFoundException missing) {
-            throw new NoSuchMethodException("Unsupported CallLogInfo type");
+        } catch (ClassNotFoundException ignored) {
         }
 
-        // Prefer the verified host signature, after validating it as a hookable event.
-        // An overload with this parameter list but a different return/static contract
-        // must not prevent a separate, usable typed event from being considered.
-        try {
-            Method exact = callback.getDeclaredMethod("callEnding", logInfo, int.class, String.class, String.class);
-            requireVoidMethod(exact);
-            return exact;
-        } catch (NoSuchMethodException ignored) {
-        }
-
-        // Additional trailing host arguments are not inspected or changed by this
-        // hook. Accept one concrete instance event with the exact CallLogInfo owner;
-        // reflection enumeration order and a matching class-name suffix are not
-        // sufficient evidence that a different overload marks the end of a call.
-        Method candidate = null;
-        for (Method method : callback.getDeclaredMethods()) {
-            if (!"callEnding".equals(method.getName())) continue;
-            Class<?>[] params = method.getParameterTypes();
-            if (params.length == 0 || params[0] != logInfo) continue;
+        // Try exact legacy signature: (CallLogInfo, int, String, String)
+        if (logInfo != null) {
             try {
-                requireVoidMethod(method);
-            } catch (NoSuchMethodException unsupported) {
-                continue;
+                return callback.getDeclaredMethod("callEnding", logInfo, int.class, String.class, String.class);
+            } catch (NoSuchMethodException ignored) {
             }
-            if (candidate != null) {
-                throw new NoSuchMethodException("Ambiguous callEnding event");
+        }
+
+        // Search declared methods for any callEnding starting with CallLogInfo or matching parameters
+        Method fallback = null;
+        for (Method m : callback.getDeclaredMethods()) {
+            if ("callEnding".equals(m.getName())) {
+                Class<?>[] params = m.getParameterTypes();
+                if (params.length >= 1 && (logInfo == null || params[0].equals(logInfo) || params[0].getName().endsWith("CallLogInfo"))) {
+                    return m;
+                }
+                if (fallback == null) {
+                    fallback = m;
+                }
             }
-            candidate = method;
         }
-        if (candidate != null) {
-            return candidate;
+        if (fallback != null) {
+            return fallback;
         }
-        throw new NoSuchMethodException("Supported callEnding event not found");
+        throw new NoSuchMethodException("VoiceServiceEventCallback.callEnding not found");
     }
 
     private static void requireInstanceMethod(Method method) throws NoSuchMethodException {

@@ -13,7 +13,6 @@ import shutil
 import subprocess
 import tomllib
 import xml.etree.ElementTree as ET
-from gradle_dependencies import PREPARATION_TASK, prepare_dependencies
 
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN = Path('app/src/main/java/com/waenhancer/ui/designsystem')
@@ -28,7 +27,6 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--root', type=Path, default=ROOT)
     ap.add_argument('--out', type=Path, required=True)
-    ap.add_argument('--offline', action='store_true', help='Use the existing Gradle dependency cache only')
     ap.add_argument('--framework-bundle', type=Path, help='Closed 39-file framework bundle from this CI run, attempt and head')
     ap.add_argument('--bundle-run-id'); ap.add_argument('--bundle-run-attempt'); ap.add_argument('--bundle-head-sha')
     a = ap.parse_args(); root = a.root.resolve(); out = a.out.resolve()
@@ -42,9 +40,8 @@ def main():
     evidence = out / 'evidence'; evidence.mkdir()
     inputs = None
     if a.framework_bundle:
-        inputs = runtime_framework_inputs.prepare(a.framework_bundle, out, *origin,
-                    consumer='interface-scale', project='interface-scale-fixture', runner=Path(__file__))
-        (evidence / 'framework-inputs-before.json').write_text(json.dumps(inputs, indent=2) + '\n', encoding='utf-8')
+        inputs = runtime_framework_inputs.prepare(a.framework_bundle, out, *origin, consumer='interface-scale', project='interface-scale-fixture', runner=Path(__file__))
+        (evidence/'framework-inputs-before.json').write_text(json.dumps(inputs, indent=2)+'\n', encoding='utf-8')
     project = out / 'fixture'; project.mkdir()
     probe = project / 'probe'; probe.mkdir()
     versions_path = Path('gradle/libs.versions.toml')
@@ -55,9 +52,7 @@ rootProject.name = "interface-scale-fixture"
 include(":probe")
 ''')
     if inputs:
-        settings = runtime_framework_inputs.settings(inputs)
-        (project / 'settings.gradle.kts').write_text(settings, encoding='utf-8')
-        (evidence / 'settings.gradle.kts').write_text(settings, encoding='utf-8')
+        (project/'settings.gradle.kts').write_text(runtime_framework_inputs.settings(inputs), encoding='utf-8')
     (project / 'gradle.properties').write_text('android.useAndroidX=true\nandroid.builtInKotlin=false\nandroid.newDsl=false\norg.gradle.jvmargs=-Xmx2g\n')
     build = '''import java.security.MessageDigest
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
@@ -123,15 +118,14 @@ tasks.register("writeQaDependencyHashes") {
                        'ACTIVITY': v['androidxActivity'], 'LIFECYCLE': v['androidxLifecycle'],
                        'COROUTINES': v['coroutines']}.items():
         build = build.replace('@' + key + '@', value)
-    build += PREPARATION_TASK
     if inputs:
         build = 'import java.io.File\n' + build + runtime_framework_inputs.test_configuration(inputs, evidence)
     (probe / 'build.gradle.kts').write_text(build)
     (evidence / 'build.gradle.kts').write_text(build)
     main = probe / 'src/main'; main.mkdir(parents=True)
     (main / 'AndroidManifest.xml').write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
-    identities = dict(inputs['source_sha256']) if inputs else {}
-    identities['qa/gradle_dependencies.py'] = hashlib.sha256(Path(__file__).with_name('gradle_dependencies.py').read_bytes()).hexdigest()
+    identities = {}
+    if inputs: identities.update(inputs['source_sha256'])
     for source in SOURCES + FONTS + [FIXTURE, versions_path]:
         content = (root / source).read_bytes()
         identities[str(source)] = hashlib.sha256(content).hexdigest()
@@ -150,21 +144,15 @@ tasks.register("writeQaDependencyHashes") {
     bash = shutil.which('bash')
     if not bash:
         raise RuntimeError('A compatible bash executable is required for gradlew')
-    # Resolve transient plugin/module transport before the single consumer.
-    # Keep the caller's mode and all complete-theme acceptance counts intact.
-    prepare_dependencies(root / 'gradlew', project, evidence / 'gradle-dependencies.log',
-                         bash=bash, offline=a.offline)
     # Bash needs slash-separated script paths: a `C:\...` argument makes its
     # `dirname` treat the entire path as a filename and loses APP_HOME.
     command = [bash, (root / 'gradlew').as_posix(), '-p', str(project), '--no-daemon',
                ':probe:writeQaDependencyHashes', ':probe:testDebugUnitTest']
-    if a.offline:
-        command.append('--offline')
     (evidence / 'command.json').write_text(json.dumps(command, indent=2))
     returncode = None; failure = None
     try:
         with (evidence / 'framework-build.log').open('w') as log:
-            returncode = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
+            returncode = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     except (OSError, subprocess.TimeoutExpired) as exc:
         failure = type(exc).__name__ + ': ' + str(exc)
     for report in (probe / 'build/test-results/testDebugUnitTest').glob('*.xml'):
@@ -182,8 +170,7 @@ tasks.register("writeQaDependencyHashes") {
     if returncode != 0 or counts != [12, 0, 0, 0]:
         print((evidence / 'framework-build.log').read_text()[-22000:])
         raise RuntimeError('Interface scale framework failed: ' + json.dumps(result))
-    if inputs:
-        runtime_framework_inputs.finish(inputs, evidence)
+    if inputs: runtime_framework_inputs.finish(inputs, evidence)
     print('PASS: ' + json.dumps(result))
 
 

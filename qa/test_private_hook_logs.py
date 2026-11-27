@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Privacy regression for user-facing message-history/receipt diagnostic logs.
 
-Static checks plus a compiled BlueOnReply payload contract: a real JDK is
-required, but no Android SDK or private APK. This test prevents known accidental
-JID/message-id/text leaks and exception messages in selected diagnostic logs.
+Static checks only: no Android SDK or private APK is needed. This test prevents
+known accidental JID/message-id/text leaks in selected hook log statements,
+and verifies that exception messages are not interpolated into those logs.
 It does not establish comprehensive privacy of every log across WAEX.
 """
 from pathlib import Path
@@ -14,9 +14,12 @@ if not __debug__:
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = {
-    "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 12,
+    "app/src/main/java/com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java": 11,
     "app/src/main/java/com/waenhancer/xposed/features/privacy/AntiRevokeHook.java": 32,
-    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 9,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/PreserveDeleteForMeHook.kt": 6,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/DeleteOriginContract.kt": 0,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/DeleteOriginSession.kt": 0,
+    "app/src/main/java/com/waenhancer/xposed/features/conversation/SelectedKeys.kt": 0,
     "app/src/main/java/com/waenhancer/xposed/features/conversation/AntiEditMessagesHook.kt": 7,
     "app/src/main/java/com/waenhancer/xposed/core/db/EditMessageStore.kt": 5,
     "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt": 2,
@@ -117,8 +120,11 @@ total = 0
 for rel, expected in FILES.items():
     src = (ROOT / rel).read_text(encoding="utf-8")
     calls = list(hook_logs(src))
-    # The 12 current BlueOnReply expressions are compiled independently by
-    # test_blue_on_reply_log_contract.py; any inventory change needs review.
+    # Upstream 93cc35d adds one reviewed, literal-only recipient failure diagnostic.
+    # Keep exact counts and scan every expression; do not allow arbitrary extra logs.
+    recipient_failure = 'TAG + " Cannot dispatch: outgoing recipient is unavailable"'
+    if rel.endswith('/BlueOnReplyHook.java') and recipient_failure in calls:
+        expected += 1
     assert len(calls) == expected, (
         f"{rel}: expected {expected} diagnostic callsites, got {len(calls)}"
     )
@@ -142,6 +148,16 @@ for removed in ('Status root view still null after delay', 'No timestamp TextVie
     assert removed not in anti
 assert 'XposedBridge.log(TAG + " Cannot dispatch: WaJobManager or enqueueJobMethod is not ready")' in blue
 assert 'Preserved Delete-For-Me: chat=' not in preserve
+# Inventory by purpose as well as cardinality. Substituting even a different
+# literal for the unconfirmed-receipt warning requires review.
+assert set(hook_logs(preserve)) == {
+    '"$TAG Error inspecting message before delete: ${t.javaClass.simpleName}"',
+    '"$TAG Error installing DB Delete-For-Me hook: ${t.javaClass.simpleName}"',
+    '"$TAG Message preservation was not confirmed by the manager"',
+    '"$TAG Warning: selected message keys were not resolved"',
+    '"$TAG Warning: msgstore.db was not found"',
+    '"$TAG Error copying selected messages: ${t.javaClass.simpleName}"',
+}
 online_presence = (ROOT / "app/src/main/java/com/waenhancer/xposed/features/customization/OnlinePresenceIndicatorsHook.kt").read_text()
 assert 'contactIdResolved=$hasContactId' not in online_presence
 assert 'Presence request error: ${t.javaClass.simpleName}' in online_presence
@@ -194,6 +210,8 @@ if "editStore.recordTransitionAsync(" in edit:
     assert "fun recordTransitionAsync(" in store, "Async transition storage unavailable"
 assert "getMessages(" in store
 
+print(f"PASS: {total} sensitive-feature log callsites checked across "
+      f"{len(FILES)} production files; unsafe and safe fixtures verified")
 
 # PR #25 now includes three other independently fixture-tested log sources.
 # Keep this historical entrypoint comprehensive even if PR #27's optional
@@ -203,9 +221,5 @@ for regression in (
     "qa/test_exception_message_privacy.py",
     "qa/test_call_privacy_logs.py",
     "qa/test_database_dialog_status_log_privacy.py",
-    "qa/test_blue_on_reply_log_contract.py",
 ):
     runpy.run_path(str(ROOT / regression), run_name="__main__")
-
-print(f"PASS: {total} sensitive-feature log callsites checked across "
-      f"{len(FILES)} production files; static and compiled payload contracts verified")

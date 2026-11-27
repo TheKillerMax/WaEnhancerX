@@ -197,43 +197,38 @@ public final class WaTargets {
     @NonNull
     public static Method[] viewOnceSetters(@NonNull Context context, @NonNull ClassLoader loader)
             throws NoSuchMethodException {
-        final Class<?> messageClass;
-        try {
-            messageClass = fMessageClass(context, loader);
-        } catch (ClassNotFoundException missing) {
-            throw new NoSuchMethodException("View-once message class unresolved");
-        }
         Method[] methods = DexSearchEngine.getInstance().findMethodsWithCache(context, loader,
-                "waex_wa_view_once_setters_v3",
+                "waex_wa_view_once_setters_v1",
                 (bridge, cl) -> {
-                    List<MethodData> callers = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                            .addUsingString("INSERT_VIEW_ONCE_SQL", StringMatchType.Contains)));
-                    if (callers.size() != 1) return null;
-                    List<Method> invocations = new ArrayList<>();
-                    for (MethodData invoke : callers.get(0).getInvokes()) {
-                        // DexKit includes invoke-direct constructors in this list. They
-                        // have no java.lang.reflect.Method and are not state candidates.
-                        if (!invoke.isMethod()) continue;
+                    MethodData caller = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                            .addUsingString("INSERT_VIEW_ONCE_SQL", StringMatchType.Contains))).firstOrNull();
+                    if (caller == null) return null;
+                    List<Method> setters = new ArrayList<>();
+                    for (MethodData invoke : caller.getInvokes()) {
+                        Method invoked;
                         try {
-                            invocations.add(invoke.getMethodInstance(cl));
-                        } catch (ReflectiveOperationException | LinkageError unavailable) {
-                            return null;
+                            invoked = invoke.getMethodInstance(cl);
+                        } catch (Throwable ignored) {
+                            continue;
+                        }
+                        Class<?> owner = invoked.getDeclaringClass();
+                        if (!owner.isInterface() || owner.getMethods().length != 2) continue;
+                        for (ClassData impl : bridge.findClass(FindClass.create().matcher(
+                                ClassMatcher.create().addInterface(owner.getName())))) {
+                            for (Method m : impl.getInstance(cl).getDeclaredMethods()) {
+                                Class<?>[] params = m.getParameterTypes();
+                                if (params.length == 1 && params[0] == int.class
+                                        && m.getReturnType() == void.class
+                                        && !Modifier.isAbstract(m.getModifiers())) {
+                                    setters.add(m);
+                                }
+                            }
                         }
                     }
-                    Method setter = ViewOnceSetterContract.uniqueSetter(invocations);
-                    if (setter == null) return null;
-                    List<Class<?>> implementations = new ArrayList<>();
-                    for (ClassData impl : bridge.findClass(FindClass.create().matcher(
-                            ClassMatcher.create().addInterface(setter.getDeclaringClass().getName())))) {
-                        implementations.add(impl.getInstance(cl));
-                    }
-                    return ViewOnceSetterContract.cacheEntry(setter, messageClass, implementations);
+                    return setters.isEmpty() ? null : setters.toArray(new Method[0]);
                 });
-        Method[] validated = ViewOnceSetterContract.validatedCached(methods, messageClass);
-        if (validated == null) {
-            throw new NoSuchMethodException("INSERT_VIEW_ONCE_SQL setters");
-        }
-        return validated;
+        if (methods == null || methods.length == 0) throw new NoSuchMethodException("INSERT_VIEW_ONCE_SQL setters");
+        return methods;
     }
 
     /**

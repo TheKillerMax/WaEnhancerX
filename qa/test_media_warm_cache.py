@@ -2,9 +2,7 @@
 """Exercise production media hook + DexSearchEngine + DexCacheManager on the JVM.
 
 Expected-correct assertions never depend on whether source is baseline/candidate.
-Android, Xposed, DexKit metadata and the accepted-host decision are strict fixtures,
-NOT device acceptance. The real fingerprint policy is covered independently by
-test_media_quality_contract.py; this suite cannot establish an APK SHA identity.
+Android, Xposed and DexKit metadata are strict fixtures, NOT device acceptance.
 The disk-cache scenario uses a separate seeding JVM and a real properties file.
 No real APK, WhatsApp account, native hook, codec or network operation is used.
 """
@@ -35,12 +33,11 @@ import de.robv.android.xposed.*;
 import org.luckypray.dexkit.DexKitBridge;
 
 public final class MediaWarmCacheProbe {
-  public static final String CLASS_KEY="class:waex_process_image_quality_exact_v3";
+  public static final String CLASS_KEY="class:waex_process_image_quality_class";
   public static final String APK="/synthetic-waex-probe/base.apk";
   public static String scenario;
   public static final List<String> violations=new ArrayList<>(), assertions=new ArrayList<>();
   public static int classQueries,methodQueries,metadataReads,createCalls,closeCalls;
-  public static boolean propertySetup;
   public static AssertionError unexpected(String message) {
     violations.add(message);return new AssertionError(message);
   }
@@ -168,17 +165,10 @@ public final class MediaWarmCacheProbe {
     FilePrefs preferences=new FilePrefs(null);
     preferences.edit().putBoolean("imagequality",!scenario.equals("G_fps"))
       .putBoolean("video_maxfps",scenario.equals("G_fps")).putString("module_config_mode","Universal").apply();
-    // The property dispatcher normally configures these maps before hook setup.
-    // Allow that explicit fixture phase only; a later hook-side rewrite still fails.
-    propertySetup=true;
-    try{MediaQualityBypassHook.configurePropertyOverrides(!scenario.equals("G_fps"));}
-    finally{propertySetup=false;}
-    Throwable installationFailure=null;
     engine.acquireLease();
     try{
       if(preinitialize)engine.initialize(context);
       new MediaQualityBypassHook(context,MediaWarmCacheProbe.class.getClassLoader(),preferences).hook();
-    }catch(Throwable failure){installationFailure=failure;
     }finally{engine.releaseLease();}
     DexCacheManager.Diagnostics stats=DexCacheManager.getInstance(context).diagnostics();
     if(scenario.startsWith("B_")||scenario.equals("D2_warm_init_fail")){
@@ -193,17 +183,13 @@ public final class MediaWarmCacheProbe {
       require(repaired.contains(hex(Quality.class.getName())),"invalid descriptor was not repaired");
     }
     boolean unavailable=scenario.equals("D_init_fail")||scenario.equals("D2_warm_init_fail");
-    require(unavailable
-      ? installationFailure instanceof IllegalStateException
-          && "Media quality contract unavailable".equals(installationFailure.getMessage())
-      : installationFailure==null,"unexpected hook installation outcome: "+installationFailure);
     if(unavailable){
       require(engine.getBridge()==null,"failed initialization fabricated a bridge");
       require(createCalls>0,"initialization failure fixture never executed");
       require(metadataReads==0,"metadata accessed without available bridge");
       require(XposedBridge.logs.stream().anyMatch(line->line.contains("initialize DexKitBridge")),"initialization failure was not diagnosed");
     }else if(!scenario.equals("G_fps")){
-      require(metadataReads==2,"constructor and stringifier metadata were not read exactly once each");
+      require(metadataReads==1,"structured metadata was not read exactly once");
       if(!scenario.startsWith("B_"))require(classQueries==1,"cold class resolution not executed exactly once");
     }
     if(scenario.equals("G_fps"))exerciseFps(preferences);else exerciseConstructor(scenario,preferences);
@@ -300,28 +286,8 @@ public abstract class BaseFeature {
     "com/waenhancer/xposed/features/customization/PropsOverrideHook.java": '''package com.waenhancer.xposed.features.customization;
 import fixture.MediaWarmCacheProbe;
 public final class PropsOverrideHook {
- public static final java.util.Map<Integer,Integer> INTEGERS=new java.util.HashMap<>();
- public static final java.util.Map<Integer,Boolean> BOOLEANS=new java.util.HashMap<>();
- public static void setIntegerOverride(int id,boolean enabled,int value){
-  if(!MediaWarmCacheProbe.propertySetup)throw MediaWarmCacheProbe.unexpected("unexpected property configuration entry point");
-  if(enabled)INTEGERS.put(id,value);else INTEGERS.remove(id);
- }
- public static void setBooleanOverride(int id,boolean enabled,boolean value){
-  if(!MediaWarmCacheProbe.propertySetup)throw MediaWarmCacheProbe.unexpected("unexpected property configuration entry point");
-  if(enabled)BOOLEANS.put(id,value);else BOOLEANS.remove(id);
- }
-}
-''',
-    "com/waenhancer/xposed/features/media/MediaHostFingerprint.java": '''package com.waenhancer.xposed.features.media;
-import android.content.Context;import fixture.MediaWarmCacheProbe;
-/** Explicit accepted-host decision boundary; no actual APK hash acceptance is claimed. */
-final class MediaHostFingerprint {
- static boolean accepts(Context context){
-  if(context==null||!"com.whatsapp".equals(context.getPackageName())
-    ||!MediaWarmCacheProbe.APK.equals(context.getApplicationInfo().sourceDir))
-   throw MediaWarmCacheProbe.unexpected("unrecognized synthetic host decision");
-  return true;
- }
+ public static void setIntegerOverride(int id,boolean enabled,int value){throw MediaWarmCacheProbe.unexpected("unexpected property configuration entry point");}
+ public static void setBooleanOverride(int id,boolean enabled,boolean value){throw MediaWarmCacheProbe.unexpected("unexpected property configuration entry point");}
 }
 ''',
     "de/robv/android/xposed/XC_MethodHook.java": '''package de.robv.android.xposed;
@@ -362,7 +328,7 @@ public final class XposedBridge {
  }
 }
 ''',
-    "org/luckypray/dexkit/query/enums/StringMatchType.java": '''package org.luckypray.dexkit.query.enums;public enum StringMatchType{StartsWith,Contains,Equals}''',
+    "org/luckypray/dexkit/query/enums/StringMatchType.java": '''package org.luckypray.dexkit.query.enums;public enum StringMatchType{StartsWith,Contains}''',
     "org/luckypray/dexkit/query/matchers/ClassMatcher.java": '''package org.luckypray.dexkit.query.matchers;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 public final class ClassMatcher {public String anchor;public StringMatchType match;
@@ -371,10 +337,8 @@ public final class ClassMatcher {public String anchor;public StringMatchType mat
 ''',
     "org/luckypray/dexkit/query/matchers/MethodMatcher.java": '''package org.luckypray.dexkit.query.matchers;
 import org.luckypray.dexkit.query.enums.StringMatchType;
-public final class MethodMatcher {public String anchor;public StringMatchType match;public Integer count;public Class<?> result;
+public final class MethodMatcher {public String anchor;public StringMatchType match;
  public static MethodMatcher create(){return new MethodMatcher();}
- public MethodMatcher paramCount(int value){count=value;return this;}
- public MethodMatcher returnType(Class<?> value){result=value;return this;}
  public MethodMatcher addUsingString(String value,StringMatchType mode){anchor=value;match=mode;return this;}}
 ''',
     "org/luckypray/dexkit/query/FindClass.java": '''package org.luckypray.dexkit.query;import org.luckypray.dexkit.query.matchers.ClassMatcher;
@@ -403,23 +367,8 @@ public final class UsingFieldData {private final FieldData field;public UsingFie
 ''',
     "org/luckypray/dexkit/result/MethodData.java": '''package org.luckypray.dexkit.result;
 import java.lang.reflect.*;import java.util.*;import fixture.MediaWarmCacheProbe;
-public final class MethodData {private final Executable method;public MethodData(Executable value){method=value;}
- public boolean isMethod(){return method instanceof Method;}
- public boolean isConstructor(){return method instanceof Constructor<?>;}
- public Method getMethodInstance(ClassLoader loader){
-  if(!isMethod())throw MediaWarmCacheProbe.unexpected("constructor requested as method");return (Method)method;}
- public Constructor<?> getConstructorInstance(ClassLoader loader){
-  if(!isConstructor())throw MediaWarmCacheProbe.unexpected("method requested as constructor");return (Constructor<?>)method;}
- public List<Integer> getOpCodes(){
-  if(method.getDeclaringClass()!=MediaWarmCacheProbe.Quality.class)throw MediaWarmCacheProbe.unexpected("unexpected opcode metadata");
-  return isConstructor()?List.of(0x70,0x59,0x59,0x59,0x0e)
-   :List.of(0x52,0x52,0x52,0x1a,0x71,0x0c,0x1a,0x6e,0x6e,0x1a,0x71,0x0c,0x11);
- }
- public List<MethodData> getInvokes(){
-  if(method.getDeclaringClass()!=MediaWarmCacheProbe.Quality.class)throw MediaWarmCacheProbe.unexpected("unexpected invocation metadata");
-  try{return isConstructor()?List.of(new MethodData(Object.class.getConstructor())):List.of();}
-  catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
- }
+public final class MethodData {private final Method method;public MethodData(Method value){method=value;}
+ public Method getMethodInstance(ClassLoader loader){return method;}
  public List<String> getUsingStrings(){
   if(method.getDeclaringClass()!=MediaWarmCacheProbe.Quality.class)throw MediaWarmCacheProbe.unexpected("unexpected string metadata");
   return List.of("ProcessImageQuality(maxKb=",", quality=",", maxEdge=");
@@ -433,7 +382,7 @@ public final class MethodData {private final Executable method;public MethodData
 }
 ''',
     "org/luckypray/dexkit/DexKitBridge.java": '''package org.luckypray.dexkit;
-import java.lang.reflect.*;import java.util.Arrays;import fixture.MediaWarmCacheProbe;import org.luckypray.dexkit.query.*;
+import java.lang.reflect.*;import fixture.MediaWarmCacheProbe;import org.luckypray.dexkit.query.*;
 import org.luckypray.dexkit.query.enums.StringMatchType;import org.luckypray.dexkit.result.*;
 public final class DexKitBridge {
  private boolean closed;
@@ -447,21 +396,14 @@ public final class DexKitBridge {
  public void close(){open();closed=true;MediaWarmCacheProbe.closeCalls++;}
  public ResultList<ClassData> findClass(FindClass query){
   open();MediaWarmCacheProbe.classQueries++;
-  if(query.matcher==null||!"ProcessImageQuality(maxKb=".equals(query.matcher.anchor)||query.matcher.match!=StringMatchType.StartsWith)
+  if(query.matcher==null||!"ProcessImageQuality(".equals(query.matcher.anchor)||query.matcher.match!=StringMatchType.StartsWith)
    throw MediaWarmCacheProbe.unexpected("unrecognized class query");
   ResultList<ClassData> result=new ResultList<>();result.add(new ClassData());return result;
  }
  public ResultList<MethodData> findMethod(FindMethod query){
   open();MediaWarmCacheProbe.methodQueries++;ResultList<MethodData> result=new ResultList<>();
-  if(query.matcher==null)throw MediaWarmCacheProbe.unexpected("unrecognized method matcher");
+  if(query.matcher==null||query.matcher.match!=StringMatchType.Contains)throw MediaWarmCacheProbe.unexpected("unrecognized method matcher");
   String anchor=query.matcher.anchor;
-  if("show_media_quality_toggle".equals(anchor)){
-   if(query.matcher.match!=StringMatchType.Equals||!Integer.valueOf(0).equals(query.matcher.count)||query.matcher.result!=boolean.class)
-    throw MediaWarmCacheProbe.unexpected("unrecognized selector matcher");
-   return result;
-  }
-  if(query.matcher.match!=StringMatchType.Contains||query.matcher.count!=null||query.matcher.result!=null)
-   throw MediaWarmCacheProbe.unexpected("unrecognized legacy method matcher");
   if(!anchor.equals("image/compress quality")&&!anchor.equals("video/encoder fps"))throw MediaWarmCacheProbe.unexpected("unrecognized method anchor");
   if(anchor.equals("video/encoder fps")&&MediaWarmCacheProbe.scenario.equals("G_fps")){
    try{result.add(new MethodData(MediaWarmCacheProbe.Encoder.class.getDeclaredMethod("fps")));}
@@ -469,14 +411,10 @@ public final class DexKitBridge {
   }
   return result;
  }
- public MethodData getMethodData(Method method){return metadata(method);}
- public MethodData getMethodData(Constructor<?> constructor){return metadata(constructor);}
- private MethodData metadata(Executable method){
+ public MethodData getMethodData(Method method){
   open();MediaWarmCacheProbe.metadataReads++;
   if(Boolean.getBoolean("waex.probe.unexpectedMetadata"))throw MediaWarmCacheProbe.unexpected("injected unexpected metadata boundary call");
-  if(method.getDeclaringClass()!=MediaWarmCacheProbe.Quality.class
-    ||(method instanceof Method? !method.getName().equals("toString")||method.getParameterCount()!=0
-       :!Arrays.equals(method.getParameterTypes(),new Class<?>[]{int.class,int.class,int.class})))
+  if(method.getDeclaringClass()!=MediaWarmCacheProbe.Quality.class||!method.getName().equals("toString")||method.getParameterCount()!=0)
    throw MediaWarmCacheProbe.unexpected("unrecognized metadata request");return new MethodData(method);
  }
 }
@@ -518,11 +456,9 @@ def main() -> int:
     production_dir = root / "app/src/main/java/com/waenhancer/xposed"
     production = [production_dir / "core/devkit" / filename for filename in (
         "DexSearchEngine.java", "DexCacheManager.java", "DexNegativeLookupCache.java", "HookReturnTypeGuard.java")]
-    production.extend(production_dir / "features/media" / name for name in (
-        "MediaQualityBypassHook.java", "ProcessImageQualityContract.java", "MediaQualitySelectorContract.java"))
-    fingerprint = production_dir / "features/media/MediaHostFingerprint.java"
+    production.append(production_dir / "features/media/MediaQualityBypassHook.java")
     template = root / "qa/test_dex_negative_cache.py"
-    identities = {str(p.relative_to(root)): sha256(p) for p in [*production, fingerprint, template]}
+    identities = {str(p.relative_to(root)): sha256(p) for p in [*production, template]}
     stubs = inherited_stubs(template)
     stubs.update(EXTRA_STUBS)
     stubs["fixture/MediaWarmCacheProbe.java"] = HARNESS
@@ -541,9 +477,7 @@ def main() -> int:
         "source_sha256": identities, "runner_sha256": sha256(Path(__file__)),
         "mode": "EXTERNAL_PREINITIALIZE_CONTROL" if args.preinitialize_control else
                 "NEGATIVE_CONTROL_"+args.negative_control if args.negative_control else "EXPECTED_CORRECT_CONTRACT",
-        "limits": "JVM; actual production hook, engine, cache and value-object/selector contracts. Strict Android/DexKit/Xposed fixtures; accepted-host decision is synthetic, not execution of MediaHostFingerprint. That real policy is independently compiled by test_media_quality_contract.py. No native DexKit, APK, ART, codec or UI acceptance. Source/target17 on JDK21 is not Java17 API-surface verification.",
-        "compiled_production": [str(p.relative_to(root)) for p in production],
-        "identity_only_production": [str(fingerprint.relative_to(root))],
+        "limits": "JVM; actual production hook, engine and both cache classes. Strict Android/DexKit/Xposed fixtures. No native DexKit, APK, ART, codec or UI acceptance. Source/target17 on JDK21 is not Java17 API-surface verification.",
         "commands": [], "cases": []}
     report["git_head"] = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], text=True, capture_output=True, check=True).stdout.strip()
     report["git_status"] = subprocess.run(["git", "-C", str(root), "status", "--short"], text=True, capture_output=True, check=True).stdout
@@ -613,7 +547,7 @@ def main() -> int:
         print(result.stdout, end="", flush=True)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
-    final_identities = {str(p.relative_to(root)): sha256(p) for p in [*production, fingerprint, template]}
+    final_identities = {str(p.relative_to(root)): sha256(p) for p in [*production, template]}
     report["source_unchanged_during_run"] = identities == final_identities
     if identities != final_identities:
         fail_count += 1

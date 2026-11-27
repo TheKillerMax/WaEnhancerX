@@ -171,6 +171,29 @@ public final class PreferenceManagerStringScopeChecks {
         check(propagated, "Do not broaden strict read catch to swallow unrelated runtime failures");
         check(c.unexpected == 0, "Unexpected platform call");
     }
+    static void statusFlagEffectiveScope() {
+        Ctx c = new Ctx(); c.pub.values.put(MODE, "Per Target App");
+        WaexPreferenceManager m = manager(c);
+        String k = "antirevokestatus";
+        c.pub.values.put(k, "1");
+        c.pub.values.put(TARGET + ":" + k, "0");
+        c.pub.values.put(OTHER + ":" + k, "1");
+        int commits = c.pub.commits;
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Effective own OFF overrides root ON");
+        c.pub.values.put(TARGET + ":" + k, 1);
+        check(PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Effective own legacy typed ON");
+        c.pub.values.put(TARGET + ":" + k, "broken");
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Invalid own must not fall through");
+        c.pub.values.remove(TARGET + ":" + k);
+        check(PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Effective root fallback");
+        c.pub.values.remove(k);
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Other target not consulted");
+        c.pub.values.put(MODE, "Universal");
+        c.pub.values.put(TARGET + ":" + k, "1");
+        c.pub.values.put(k, "0");
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(m.getAll().get(k)), "Universal ignores stale own ON");
+        check(c.pub.commits == commits && c.unexpected == 0, "Reading effective flag is read-only");
+    }
     interface Scenario { void run(); }
     public static void main(String[] args) {
         check(PreferenceSchema.entry("seentick").type == PreferenceSchema.Type.STRING, "Use actual STRING schema");
@@ -191,6 +214,7 @@ public final class PreferenceManagerStringScopeChecks {
         cases.put("target-changes", () -> targetChangesDuringFailure(false));
         cases.put("mode-changes", () -> targetChangesDuringFailure(true));
         cases.put("errors", PreferenceManagerStringScopeChecks::malformedModeAndReadErrors);
+        cases.put("status-flag-effective-scope", PreferenceManagerStringScopeChecks::statusFlagEffectiveScope);
         int failures = 0;
         for (var entry : cases.entrySet()) {
             try { entry.getValue().run(); System.out.println("PASS " + entry.getKey()); }

@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -20,9 +21,12 @@ JAVA = ROOT / 'app/src/main/java/com/waenhancer'
 
 def main():
     global ROOT, JAVA
+    subprocess.run([sys.executable, str(ROOT / 'qa/test_diagnostics_refresh.py')], cwd=ROOT, check=True)
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, default=ROOT)
     args = parser.parse_args()
+    if args.root.resolve() != ROOT:
+        parser.error('--root must be the local checkout containing both diagnostics suites')
     ROOT = args.root.resolve(); JAVA = ROOT / 'app/src/main/java/com/waenhancer'
     for tool in ('kotlinc', 'javac', 'java', 'sh'):
         if not shutil.which(tool):
@@ -32,7 +36,7 @@ def main():
         hashes = {}
         def put(name, text):
             (src / name).write_text(text)
-        for name in ('UniversalVersionValidator', 'InjectionEvidence', 'TargetRuntimePresentation', 'XposedRuntimeInspector', 'ProfileProcessSnapshot'):
+        for name in ('UniversalVersionValidator', 'InjectionEvidence', 'TargetRuntimePresentation', 'XposedRuntimeInspector'):
             path = JAVA / ('utils/' + name + '.kt')
             put(name + '.kt', path.read_text())
             hashes[str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -44,7 +48,7 @@ def main():
         manager_path = JAVA/'utils/TargetAppManager.kt'
         manager = manager_path.read_text()
         probe = manager[manager.index('enum class ModuleSignal {'):manager.index('/**\n * Universal source of truth')]
-        put('RootProbe.kt', 'package com.waenhancer.utils\nimport android.content.Context\nimport android.os.SystemClock\nimport android.os.Process\nimport com.waenhancer.xposed.utils.AppRestartHelper\n' + probe)
+        put('RootProbe.kt', 'package com.waenhancer.utils\nimport android.content.Context\nimport android.os.SystemClock\nimport com.waenhancer.xposed.utils.AppRestartHelper\n' + probe)
         scope_path = JAVA/'utils/LsposedScopeReader.kt'
         scope = scope_path.read_text()
         snapshot = scope[scope.index('data class LsposedScopeSnapshot('):scope.index('/**\n * Reads the module')]
@@ -65,8 +69,8 @@ object LsposedScopeReader {
 """)
         declared_path = JAVA/'utils/DeclaredWhatsAppTargets.java'
         classes = out/'classes'; classes.mkdir()
-        subprocess.run(['javac', '--release', '17', '-d', str(classes), str(declared_path), str(JAVA/'utils/AndroidUserScope.java')], check=True)
-        for path in (JAVA/'utils/WhatsAppPackageDetector.kt', manager_path, scope_path, declared_path, JAVA/'utils/AndroidUserScope.java'):
+        subprocess.run(['javac', '--release', '17', '-d', str(classes), str(declared_path)], check=True)
+        for path in (JAVA/'utils/WhatsAppPackageDetector.kt', manager_path, scope_path, declared_path):
             hashes[str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
         # Full production guard is compiled too; the visual builder is an explicit double.
         guard_source = (JAVA/'xposed/core/VersionGuard.kt').read_text()
@@ -95,7 +99,6 @@ import android.content.res.Resources
 import android.content.pm.PackageManager
 open class Context(val packageName:String,val resources:Resources,val module:Context?=null) {
  val packageManager=PackageManager()
- val applicationInfo=android.content.pm.ApplicationInfo(packageName,10000)
  val contextRequests=mutableListOf<Pair<String,Int>>()
  var contextFailure:Throwable?=null
  open fun createPackageContext(name:String,flags:Int):Context {
@@ -112,10 +115,8 @@ interface SharedPreferences {fun getBoolean(k:String,d:Boolean):Boolean;fun getS
 ''')
         put('PM.kt', '''package android.content.pm
 import android.content.Intent
-class ApplicationInfo(val packageName:String,val uid:Int)
 class PackageInfo(val versionName:String?)
 class PackageManager {class NameNotFoundException:Exception();var version:String?="2.26.40.76";var fail=false
- fun getApplicationInfo(p:String,f:Int):ApplicationInfo=when(p){"com.whatsapp"->ApplicationInfo(p,10123);"com.whatsapp.w4b"->ApplicationInfo(p,10124);else->throw NameNotFoundException()}
  fun getPackageInfo(p:String,f:Int):PackageInfo=if(fail)throw NameNotFoundException() else PackageInfo(version)
  fun getLaunchIntentForPackage(p:String):Intent?=Intent()}
 ''')
@@ -142,7 +143,6 @@ object XposedBridge{val logs=mutableListOf<String>();fun log(s:String){logs.add(
 ''')
         put('Clock.kt', '''package android.os
 object SystemClock{var time=1000L;fun elapsedRealtime()=time}
-object Process {fun myUid()=10000;fun myPid()=99}
 ''')
         put('R.kt', 'package com.waenhancer.app\nobject R { object array { const val universal_supported_versions = 0x7f030000 }; object string {\n' + '\n'.join('const val '+name+' = '+str(0x7f050100+i) for i,name in enumerate(guard_ids)) + '\n} }\n')
         put('Root.kt', '''package com.waenhancer.xposed.utils
@@ -165,14 +165,13 @@ object AppRestartHelper {var output:String?=null;var lastCommand="";var failure:
         fake.chmod(0o700)
         shell=shutil.which('sh')
         cases=[
-            ('primary', 0, 'UID PID NAME\n10123 10 com.whatsapp\n10124 20 com.whatsapp.w4b\n10000 30 com.waenhancer\n10099 40 com.foreign', 0, '', ['10123 10 com.whatsapp','10124 20 com.whatsapp.w4b','10000 30 com.waenhancer']),
+            ('primary', 0, 'PID NAME\n10 com.whatsapp\n20 com.whatsapp.w4b\n30 com.waenhancer\n40 com.foreign', 0, '', ['10 com.whatsapp','20 com.whatsapp.w4b','30 com.waenhancer']),
             ('legacy fallback', 127, '', 0, 'USER PID PPID NAME\nu0_a12 42 1 com.whatsapp', ['u0_a12 42 1 com.whatsapp']),
             ('foreign only', 0, '99 com.foreign', 0, '', []),
             ('exact package boundary', 0, '1 com.whatsapp:push\n2 com.whatsapp.attacker\n3 comXwhatsapp\n4 com.whatsapp;id\n5 COM.WHATSAPP\n6 com.whatsapp', 0, '', ['6 com.whatsapp']),
             ('trailing whitespace', 0, '8 com.whatsapp  ', 0, '', ['8 com.whatsapp  ']),
             ('empty listing', 0, '', 0, '', []),
             ('both ps commands unavailable', 127, '', 127, '', []),
-            ('failed producers discard partial process rows', 1, '10000 99 com.waenhancer', 1, 'u0_a0 99 1 com.waenhancer', []),
         ]
         for label, code, text, fallback_code, fallback, expected in cases:
             env=os.environ|{'PATH':str(out)+os.pathsep+os.environ['PATH'], 'FAKE_PS':text,
@@ -181,7 +180,7 @@ object AppRestartHelper {var output:String?=null;var lastCommand="";var failure:
             result=subprocess.run([shell,'-c',command],text=True,capture_output=True,env=env,timeout=5)
             assert result.returncode==(0 if expected else 1), (label,result)
             assert result.stdout.splitlines()==expected, (label,result)
-        print('PASS: 8 actual production command shell controls; controlled ps, no root or real process listing.')
+        print('PASS: 7 actual production command shell controls; controlled ps, no root or real process listing.')
     # Guard actual call sites: production decisions, not a replacement demo UI.
     dash=(JAVA/'ui/screens/dashboard/MainDashboardScreen.kt').read_text()
     health=(JAVA/'ui/screens/settings/SystemHealthScreen.kt').read_text()

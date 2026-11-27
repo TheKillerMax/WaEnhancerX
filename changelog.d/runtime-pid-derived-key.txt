@@ -1,3 +1,0 @@
-[Fixes]
-- Protect provider-reported process IDs from generic preference updates so
-  runtime diagnostic metadata remains bound to validated callers.

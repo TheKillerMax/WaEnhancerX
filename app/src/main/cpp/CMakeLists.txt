@@ -11,10 +11,3 @@ project(waexdiag C)
 # constants for HmaDiagnostics / MagiskDenylistDiagnostics.
 add_library(waexdiag SHARED waex_diag.c)
 target_compile_options(waexdiag PRIVATE -O2)
-
-# The app uses NDK r27, which requires explicit 16 KB LOAD and RELRO alignment.
-# Keep writable data outside the final page protected by GNU_RELRO.
-target_link_options(waexdiag PRIVATE
-    "-Wl,-z,max-page-size=16384"
-    "-Wl,-z,common-page-size=16384"
-)

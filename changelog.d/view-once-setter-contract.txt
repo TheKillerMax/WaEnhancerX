@@ -1,2 +1,0 @@
-[Fixes]
-- Resolve only the message state setter actually associated with view-once storage; leave the feature unavailable when its contract is ambiguous.

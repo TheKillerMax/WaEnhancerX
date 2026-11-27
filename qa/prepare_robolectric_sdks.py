@@ -14,8 +14,8 @@ import math
 import os
 from pathlib import Path
 import shutil
-import signal
 import ssl
+import signal
 import subprocess
 import sys
 import tempfile
@@ -38,32 +38,6 @@ def validate_evidence_paths(out, report, cache=None):
         physical = path.resolve()
         if any(physical == root or root in physical.parents for root in roots):
             raise ValueError('Evidence paths must remain outside SDK destination/cache')
-
-
-def run_worker(command, stream, timeout):
-    """Close the complete POSIX worker group, including leaked descendants."""
-    process = subprocess.Popen(command, cwd=Path(__file__).resolve().parents[1],
-                               stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
-    code = None
-    try:
-        try:
-            code = process.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            code = 'infrastructure_timeout'
-    finally:
-        try:
-            os.killpg(process.pid, 0)
-        except ProcessLookupError:
-            pass
-        else:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait(timeout=5)
-            if code == 0:
-                code = 'infrastructure_descendant_leak'
-    return code
 
 
 def retry_after(value):
@@ -149,10 +123,9 @@ def download(item, destination, deadline, record, save, opener):
 
 
 def prepare(out, report, *, cache=None, offline=False, timeout=180, lock=LOCK, opener=urllib.request.urlopen):
-    validate_evidence_paths(out, report, cache)
     if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= MAX_TIMEOUT_SECONDS:
         raise ValueError('SDK preparation timeout must be in (0, 600] seconds')
-    if any(path.exists() or path.is_symlink() for path in (report, report.with_suffix(report.suffix + '.pending'))):
+    if report.exists():
         raise ValueError('Use a new receipt path to preserve previous attempts')
     start = time.monotonic()
     record = {'schema': 1, 'accepted': False, 'offline': offline, 'lock_sha256': sha(lock),
@@ -216,9 +189,37 @@ def prepare(out, report, *, cache=None, offline=False, timeout=180, lock=LOCK, o
         save()
 
 
-def supervise(command, out, report, timeout, *, cache=None):
+def run_posix_gate(command, stream, env, timeout):
+    """Close a gate's whole Linux process group before its evidence is hashed."""
+    process = subprocess.Popen(command, cwd=Path(__file__).resolve().parents[1], env=env, stdout=stream,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    code = None
+    try:
+        try:
+            code = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            code = 'infrastructure_timeout'
+    finally:
+        # A gate can also time out an inner compiler and exit before that compiler.
+        # Its new session contains only this gate's descendants, never sibling jobs.
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            pass
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass  # The last descendant can exit between the probe and signal.
+            process.wait(timeout=5)
+            if code == 0:
+                code = 'infrastructure_descendant_leak'
+    return code
+
+
+def supervise(command, out, report, timeout):
     """Bound the entire worker, including a response body that keeps trickling bytes."""
-    validate_evidence_paths(out, report, cache)
+    validate_evidence_paths(out, report)
     if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= MAX_TIMEOUT_SECONDS:
         raise ValueError('Worker timeout must be in (0, 600] seconds')
     log = report.with_suffix('.worker.log')
@@ -228,7 +229,7 @@ def supervise(command, out, report, timeout, *, cache=None):
     start = time.monotonic()
     with log.open('w', encoding='utf-8') as stream:
         if os.name == 'posix':
-            code = run_worker(command, stream, timeout)
+            code = run_posix_gate(command, stream, os.environ.copy(), timeout=timeout)
         else:
             # The SDK worker performs only Python HTTP/file operations and starts no children.
             process = subprocess.Popen(command, stdout=stream, stderr=subprocess.STDOUT)
@@ -264,22 +265,19 @@ def main():
     parser.add_argument('--timeout', type=float, default=180)
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
-    out, report = args.out.absolute(), args.report.absolute()
-    cache = args.cache.absolute() if args.cache else None
     try:
-        validate_evidence_paths(out, report, cache)
         if args.worker:
-            result = prepare(out, report, cache=cache,
+            result = prepare(args.out.resolve(), args.report.resolve(), cache=args.cache.resolve() if args.cache else None,
                              offline=args.offline, timeout=args.timeout)
         else:
             command = [sys.executable, str(Path(__file__).resolve()), '--worker',
-                       '--out', str(out), '--report', str(report),
+                       '--out', str(args.out.resolve()), '--report', str(args.report.resolve()),
                        '--timeout', str(args.timeout)]
             if args.cache:
-                command += ['--cache', str(cache)]
+                command += ['--cache', str(args.cache.resolve())]
             if args.offline:
                 command += ['--offline']
-            result = supervise(command, out, report, args.timeout, cache=cache)
+            result = supervise(command, args.out.resolve(), args.report.resolve(), args.timeout)
     except (OSError, ValueError, RuntimeError) as failure:
         print('SDK preparation failed:', failure, flush=True)
         raise SystemExit(1)

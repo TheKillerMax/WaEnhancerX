@@ -6,10 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TargetScopeStateTest {
-    private fun profileProbe(output: String) = RootProbe.parseRuntime(output, 0L,
-        mapOf("com.waenhancer" to 10000, "com.whatsapp" to 10123, "com.whatsapp.w4b" to 10124),
-        "com.waenhancer", 99)
-
     private fun snap(live: Boolean, vararg pkgs: String, cache: Boolean = false) = LsposedScopeSnapshot(
         "com.waenhancer", pkgs.toSet(), live,
         when { live -> LsposedScopeSnapshot.Source.DATABASE; cache -> LsposedScopeSnapshot.Source.CACHE
@@ -60,8 +56,8 @@ class TargetScopeStateTest {
     }
 
     @Test fun `truncated process probe is not treated as nothing running`() {
-        assertEquals(null, profileProbe("WAEX_PS_BEGIN\n 10123 1 com.whatsapp\n"))
-        assertEquals(null, profileProbe(""))
+        assertEquals(null, RootProbe.parseRuntime("WAEX_PS_BEGIN\n 1 com.a.b\n", 0L))
+        assertEquals(null, RootProbe.parseRuntime("", 0L))
     }
 
     @Test fun `process probe filters on the shell side and always includes the manager`() {
@@ -72,14 +68,14 @@ class TargetScopeStateTest {
     }
 
     @Test fun `filtered process output with a target and the manager parses`() {
-        val snap = profileProbe("WAEX_PS_BEGIN\n 10123 4242 com.whatsapp\n 10000 99 com.waenhancer\nWAEX_PS_END\n")
+        val snap = RootProbe.parseRuntime("WAEX_PS_BEGIN\n 4242 com.whatsapp\n 99 com.waenhancer\nWAEX_PS_END\n", 0L)
         assertEquals(setOf(4242), snap?.pidsFor("com.whatsapp"))
         assertEquals(emptySet<Int>(), snap?.pidsFor("com.whatsapp.w4b"))
     }
 
-    @Test fun `UID-less complete process probe stays unavailable`() {
-        val snap = profileProbe("WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n 99 com.waenhancer\nWAEX_PS_END\n")
-        assertEquals(null, snap)
+    @Test fun `complete process probe yields snapshot`() {
+        val snap = RootProbe.parseRuntime("WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n PID NAME\n 9 com.a.b\nWAEX_PS_END\n", 0L)
+        assertEquals(setOf(9), snap?.pidsFor("com.a.b"))
     }
 
     @Test fun `scoped app outside the supported list is never a target`() {

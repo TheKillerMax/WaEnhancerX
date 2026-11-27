@@ -104,10 +104,16 @@ fun SystemHealthScreen() {
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) TargetAppManager.refresh(context)
     }
+    var completedDiagnosticsRefresh by remember { mutableIntStateOf(0) }
     LaunchedEffect(refreshTrigger, moduleActivation.active) {
+        val generation = refreshTrigger
+        val forceRefresh = generation != completedDiagnosticsRefresh
+        val moduleActive = moduleActivation.active
         diagnostics = withContext(Dispatchers.IO) {
-            SystemDiagnosticsReader.read(context, moduleActivation.active)
+            SystemDiagnosticsReader.read(context, moduleActive, forceRefresh = forceRefresh)
         }
+        // A cancelled IO handoff must leave the request pending for the replacement effect.
+        completedDiagnosticsRefresh = generation
     }
     LaunchedEffect(refreshTrigger, scopeSnapshot, activeTargets.map { it.packageName }) {
         val packages = activeTargets.filter { it.isInstalled }.map { it.packageName }

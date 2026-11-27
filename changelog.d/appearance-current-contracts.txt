@@ -1,3 +1,0 @@
-[Fixes]
-- Stop waiting for floating-bar layout after its View is detached and keep tab transitions bounded.
-- Require an unambiguous View for channel and conversation-row selection, retain channel hiding through host binds while preserving layout sizes, and honor the Meta AI switch on later events.

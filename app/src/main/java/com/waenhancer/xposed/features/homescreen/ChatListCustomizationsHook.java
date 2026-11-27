@@ -17,10 +17,8 @@ import com.waenhancer.xposed.utils.ActivityTracker;
 import com.waenhancer.xposed.utils.HookErrors;
 import com.waenhancer.xposed.utils.HostClassNames;
 import com.waenhancer.xposed.utils.HostResourceIds;
-import com.waenhancer.xposed.utils.ViewClassSelector;
 import de.robv.android.xposed.XC_MethodHook;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Locale;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.enums.StringMatchType;
@@ -146,7 +144,6 @@ public class ChatListCustomizationsHook extends BaseFeature {
     }
 
     private boolean shouldRemoveView(View view) {
-        if (!isMetaAiDisabled()) return false;
         boolean fab = isAssistantFab(view);
         return (shouldRemoveHomeFab() && fab)
                 || (shouldRemoveEntryPoints() && !fab && isAssistantView(view));
@@ -221,15 +218,13 @@ public class ChatListCustomizationsHook extends BaseFeature {
             Class<?> rowClass = DexSearchEngine.getInstance().findClassWithCache(
                     context,
                     classLoader,
-                    "waex_conversations_row_view_class_v2",
+                    "waex_conversations_row_class",
                     (bridge, loader) -> {
-                        ArrayList<Class<?>> candidates = new ArrayList<>();
-                        for (ClassData data : bridge.findClass(FindClass.create().matcher(
+                        ClassData data = bridge.findClass(FindClass.create().matcher(
                                 ClassMatcher.create().className(
-                                        "ConversationsRow", StringMatchType.EndsWith)))) {
-                            candidates.add(data.getInstance(loader));
-                        }
-                        return ViewClassSelector.uniqueViewGroup(candidates);
+                                        "ConversationsRow", StringMatchType.EndsWith)))
+                                .firstOrNull();
+                        return data != null ? data.getInstance(loader) : null;
                     });
             if (rowClass == null) return;
             XposedBridge.hookAllConstructors(rowClass, new XC_MethodHook() {
@@ -259,11 +254,11 @@ public class ChatListCustomizationsHook extends BaseFeature {
     }
 
     private boolean shouldBlockAssistantChat() {
-        return isMetaAiDisabled() && prefs.getBoolean("metaai_block_chat", true);
+        return prefs.getBoolean("metaai_block_chat", true);
     }
 
     private boolean shouldDisableHostConfiguration() {
-        return isMetaAiDisabled() && shouldRemoveEntryPoints() && shouldBlockAssistantChat();
+        return shouldRemoveEntryPoints() && shouldBlockAssistantChat();
     }
 
     private boolean isOnlineDotEnabled() {

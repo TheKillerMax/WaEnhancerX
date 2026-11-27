@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
                             if (initialRootResultProvided && rootCheckAttempt == 0) return@LaunchedEffect
                             rootState = RootAccessState.Checking
                             val hasRoot = withContext(Dispatchers.IO) {
-                                UpdateDownloader.hasRootAccess(forceRefresh = rootCheckAttempt > 0)
+                                UpdateDownloader.hasRootAccess()
                             }
                             rootState = if (hasRoot) {
                                 hasGrantedRootThisSession = true

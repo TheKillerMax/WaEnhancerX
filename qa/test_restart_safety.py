@@ -44,11 +44,9 @@ public final class XposedBridge {
     sources = [ROOT/'app/src/main/java/com/waenhancer/utils/AndroidUserScope.java',
                SRC/'RestartTargetPolicy.java', SRC/'RootCommandRunner.java', SRC/'HookErrors.java',
                *boundary_sources,
-               QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java',
-               QA/'TestRootCommandDeadline.java']
+               QA/'TestRestartTargetPolicy.java', QA/'TestRootCommandRunner.java']
     subprocess.run(['javac', '--release', '17', '-d', output, *map(str, sources)], check=True)
-    for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', []),
-                       ('TestRootCommandDeadline', [])]:
+    for name, argv in [('TestRestartTargetPolicy', scope), ('TestRootCommandRunner', [])]:
         subprocess.run(['java', '-cp', output,
                         'com.waenhancer.xposed.utils.'+name, *argv], check=True)
 

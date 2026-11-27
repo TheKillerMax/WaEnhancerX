@@ -1,3 +1,0 @@
-[Improvements]
-- Exercise emoji font-download integrity in the existing source QA job and require
-  its strict filesystem fixtures whenever the production storage policy is present.

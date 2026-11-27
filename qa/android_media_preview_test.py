@@ -5,8 +5,7 @@ Uses public Robolectric 4.17, actual DexKit 2.2 and OkHttp 4.12 APIs, Kotlin
 2.0.20 and JDK 17+. Optional paths reuse existing dependencies and offline SDK
 JARs; otherwise Maven and pinned public downloads bootstrap them. Android classes,
 BaseFeature and HKDFv3 are real; network/host/Xposed/text/tint boundaries are
-explicit fixtures. The unused BaseFeature privacy factory throws if called.
-No host injection, network download, privacy decision or media decoder is
+explicit fixtures. No host injection, network download or media decoder is
 certified by these lifecycle tests.
 """
 import argparse
@@ -20,18 +19,15 @@ import shutil
 import subprocess
 import urllib.request
 import zipfile
-from prepare_dexkit import DEFAULT_CACHE, acquire
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_TESTS = 60
+EXPECTED_TESTS = 36
 JAVA = Path('app/src/main/java/com/waenhancer')
 SOURCES = [JAVA/'xposed/features/media/MediaPreviewHook.kt',
-           JAVA/'xposed/core/BaseFeature.kt', JAVA/'xposed/utils/HKDFv3.kt',
-           JAVA/'xposed/core/HookRegistrar.java', JAVA/'xposed/core/ViewHookDispatcher.java',
-           JAVA/'xposed/utils/HookErrors.java', JAVA/'xposed/utils/HostClassNames.java',
-           JAVA/'xposed/utils/HostResourceIds.java']
+           JAVA/'xposed/core/BaseFeature.kt', JAVA/'xposed/utils/HKDFv3.kt']
 MAVEN_CENTRAL = 'https://repo.maven.apache.org/maven2'
 DEXKIT_URL = MAVEN_CENTRAL + '/org/luckypray/dexkit/2.2.0/dexkit-2.2.0.aar'
+DEXKIT_AAR_SHA256 = 'cf4488da9f721750ce5ff4311e88356cbfcb1d4444c2b519b12d8bdb5f33f2c6'
 DEXKIT_SHA256 = '195979d9576ba6d68a1c60bdd3e38cd3aed068d4e0c5c6c99caa50bc25fcb9f1'
 OKHTTP_URL = MAVEN_CENTRAL + '/com/squareup/okhttp3/okhttp/4.12.0/okhttp-4.12.0.jar'
 OKHTTP_SHA256 = 'b1050081b14bb7a3a7e55a4d3ef01b5dcfabc453b4573a4fc019767191d5f4e0'
@@ -48,11 +44,11 @@ POM = '''<project xmlns="http://maven.apache.org/POM/4.0.0">
 
 
 def run(command, log, allow_failure=False, timeout=180):
-    with log.open('w',encoding='utf-8') as output:
+    with log.open('w') as output:
         result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
     print(log.name, 'exit=' + str(result.returncode), flush=True)
     if result.returncode and not allow_failure:
-        print(log.read_text(encoding='utf-8')[-14000:])
+        print(log.read_text()[-14000:])
         raise RuntimeError('Command failed: ' + command[0])
     return result.returncode
 
@@ -79,11 +75,12 @@ def resolve_apis(args, out):
     apis = out / 'public-apis'
     dexkit = args.dexkit_jar.resolve() if args.dexkit_jar else apis / 'dexkit-2.2.0.jar'
     if not args.dexkit_jar:
-        # The shared preparer verifies exact AAR/JAR size, SHA-256 and member
-        # CRC before publication, with bounded transport-only retries.
-        prepared = acquire(DEFAULT_CACHE, out / 'dexkit-bootstrap.json')
-        dexkit.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(prepared, dexkit)
+        archive = download_pinned(DEXKIT_URL, apis / 'dexkit-2.2.0.aar', DEXKIT_AAR_SHA256, 4 * 1024 * 1024)
+        with zipfile.ZipFile(archive) as bundle:
+            matches = [entry for entry in bundle.infolist() if entry.filename == 'classes.jar']
+            if len(matches) != 1 or matches[0].file_size > 2 * 1024 * 1024:
+                raise RuntimeError('Pinned DexKit AAR must contain one bounded classes.jar')
+            dexkit.write_bytes(bundle.read(matches[0]))
     verify_api(dexkit, DEXKIT_SHA256, 2 * 1024 * 1024)
     http = args.http_api_jar.resolve() if args.http_api_jar else apis / 'okhttp-4.12.0.jar'
     if not args.http_api_jar:
@@ -125,7 +122,7 @@ def find_kotlin():
     elif compiler:
         home = Path(compiler).resolve().parents[1]
     else:
-        raise RuntimeError('A complete Kotlin distribution is required: set KOTLIN_HOME or place kotlinc on PATH')
+        raise RuntimeError('Kotlin 2.0.20 is required: set KOTLIN_HOME or place kotlinc on PATH')
     binary = home / 'bin/kotlinc'
     if not binary.is_file() or not (home / 'lib/kotlin-stdlib.jar').is_file():
         raise RuntimeError('Kotlin installation lacks bin/kotlinc or lib/kotlin-stdlib.jar: ' + str(home))
@@ -154,7 +151,6 @@ def main():
         parser.error('--expect-assertion-failures is outside the suite size')
     out.mkdir(parents=True,exist_ok=True)
     kotlin_home, kotlin_compiler = find_kotlin()
-    compiler_command=['java','-Dkotlin.home='+str(kotlin_home),'-cp',str(kotlin_home/'lib/*'),'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-kotlin-home',str(kotlin_home)]
     deps = resolve_framework(args, out)
     dexkit_jar, http_api_jar = resolve_apis(args, out)
     bootstrap = {'framework': 'provided' if args.deps else 'public-maven',
@@ -173,19 +169,12 @@ def main():
     fixture=ROOT/'qa/fixtures/media_preview/runtime_doubles.py'
     stubs=runpy.run_path(str(fixture))['STUBS']
     identities[str(fixture.relative_to(ROOT))]=hashlib.sha256(fixture.read_bytes()).hexdigest()
-    hook=(root/SOURCES[0]).read_text(encoding='utf-8')
+    hook=(root/SOURCES[0]).read_text()
     ids=sorted(set(re.findall(r'(?<!Android)R\.string\.([A-Za-z_][A-Za-z_0-9]*)',hook)))
-    import xml.etree.ElementTree as ET
-    resource_ids=set()
-    for resource_file in (root/'app/src/main/res/values').glob('*.xml'):
-        tree=ET.parse(resource_file)
-        resource_ids.update(e.attrib['name'] for e in tree.getroot() if e.tag=='string' and 'name' in e.attrib)
-    missing=set(ids)-resource_ids
-    if missing: raise RuntimeError('Preview refers to absent real resource identifiers: '+repr(sorted(missing)))
     stubs['com/waenhancer/app/R.java']='package com.waenhancer.app; public final class R {public static final class string {'+''.join(f'public static final int {name}={index+1};' for index,name in enumerate(ids))+'}}'
     stub_sources=[]
     for name,content in stubs.items():
-        dest=stage/'doubles'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(content,encoding='utf-8');stub_sources.append(dest)
+        dest=stage/'doubles'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(content);stub_sources.append(dest)
     dependencies=sorted(deps.glob('*.jar'))+[dexkit_jar,kotlin_home/'lib/kotlin-stdlib.jar']
     cp=os.pathsep.join(map(str,dependencies))
     # Framework test helpers may use newer Kotlin metadata. They are not app
@@ -196,12 +185,9 @@ def main():
     api_cp=production_cp+os.pathsep+str(http_api_jar)
     non_network=[p for p in stub_sources if 'okhttp3' not in p.parts]
     run(['javac','--release','17','-cp',api_cp,'-d',str(api_classes),*map(str,non_network)],out/'javac-api-adapters.log')
-    run([*compiler_command,'-jvm-target','17','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-real-http-api.log')
+    run([str(kotlin_compiler),'-jvm-target','17','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-real-http-api.log')
     run(['javac','--release','17','-cp',cp,'-d',str(classes),*map(str,stub_sources)],out/'javac-doubles.log')
-    run([*compiler_command,'-jvm-target','17','-cp',str(classes)+os.pathsep+production_cp,'-d',str(classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-production.log')
-    lifecycle=[stage/p for p in SOURCES if p.suffix=='.java']
-    run(['javac','--release','17','-encoding','UTF-8','-cp',str(api_classes)+os.pathsep+api_cp,'-d',str(api_classes),*map(str,lifecycle)],out/'javac-real-http-lifecycle.log')
-    run(['javac','--release','17','-encoding','UTF-8','-cp',str(classes)+os.pathsep+cp,'-d',str(classes),*map(str,lifecycle)],out/'javac-lifecycle.log')
+    run([str(kotlin_compiler),'-jvm-target','17','-cp',str(classes)+os.pathsep+production_cp,'-d',str(classes),*[str(stage/p) for p in SOURCES]],out/'kotlinc-production.log')
     test=ROOT/'qa/fixtures/media_preview/MediaPreviewLifecycleTest.java'
     identities[str(test.relative_to(ROOT))]=hashlib.sha256(test.read_bytes()).hexdigest()
     staged_test=stage/test.name
@@ -216,7 +202,7 @@ def main():
     if args.sdk_jars:
         command[1:1] = ['-Drobolectric.offline=true', '-Drobolectric.dependency.dir=' + str(args.sdk_jars.resolve())]
     result=run(command,out/'junit.log',allow_failure=True,timeout=180 if args.sdk_jars else 600)
-    junit=(out/'junit.log').read_text(encoding='utf-8')
+    junit=(out/'junit.log').read_text()
     passed=re.search(r'OK \((\d+) tests?\)',junit)
     failed=re.search(r'Tests run: (\d+),\s+Failures: (\d+)',junit)
     tests=int(passed.group(1)) if passed else int(failed.group(1)) if failed else 0

@@ -1,3 +1,0 @@
-[Fixes]
-- Fall back to App info when Android cannot open the overlay permission screen, and show guidance when access remains restricted.
-- Keep overlay permission optional and report unavailable settings screens without crashing the permission setup.

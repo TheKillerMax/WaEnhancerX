@@ -1,3 +1,0 @@
-[Improvements]
-- Verify pinned public Core and OkHttp API inputs before focused regression tests.
-- Record the actual Kotlin compiler distribution used by public QA fixtures.

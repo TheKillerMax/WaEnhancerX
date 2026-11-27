@@ -1,5 +1,0 @@
-[Fixes]
-- Bound root-command startup waits and reject incomplete or failed output
-  instead of reporting successful results.
-- Discard cancelled queued commands and clean up processes that start after
-  their callers stop waiting.

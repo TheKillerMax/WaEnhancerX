@@ -64,7 +64,7 @@ def main():
         match = re.search(r"RESULT: (\d+) cases, (\d+) assertions, (\d+) failures", completed.stdout)
         failed_cases = re.findall(r"^FAIL ([^:]+):", completed.stdout, flags=re.MULTILINE)
         detected = bool(completed.returncode != 0 and match
-                        and int(match.group(1)) == 15 and int(match.group(3)) > 0
+                        and int(match.group(1)) == 16 and int(match.group(3)) > 0
                         and expected_failure in failed_cases)
         report["results"].append({
             "mutation": name, "command": command, "exit_code": completed.returncode,

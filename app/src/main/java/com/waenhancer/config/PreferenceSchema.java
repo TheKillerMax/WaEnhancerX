@@ -154,7 +154,6 @@ public final class PreferenceSchema {
         add(entries, "call_recording_whitelist", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "call_recording_enabled", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "call_recording_use_root", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
-        add(entries, "call_recording_allow_mic_fallback", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "call_recording_format", Type.STRING, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         add(entries, "download_profile", Type.BOOLEAN, Sensitivity.PUBLIC_SETTING, Store.PUBLIC);
         // Preserve the existing save-every-time behaviour by default. The saved identity
@@ -518,6 +517,32 @@ public final class PreferenceSchema {
             throw new IllegalStateException("A secret may never live in the public store: " + key);
         }
         entries.put(key, new Entry(key, type, sensitivity, store));
+    }
+
+    /**
+     * The status Anti-Revoke switch is a STRING setting: the UI writes "1" or "0".
+     * Historical typed flags may still exist. Only explicit, valid ON values enable it;
+     * other values (including malformed strings and non-binary numbers) fail closed.
+     */
+    public static boolean isStatusAntiRevokeEnabled(Object value) {
+        if (value instanceof String) {
+            String text = (String) value;
+            return "1".equals(text) || "true".equalsIgnoreCase(text);
+        }
+        return "1".equals(legacyStatusAntiRevokeString(value));
+    }
+
+    /** Convert only legacy typed binary flags, without coercing unrelated STRING settings. */
+    public static String legacyStatusAntiRevokeString(Object value) {
+        if (value instanceof Boolean) return (Boolean) value ? "1" : "0";
+        // These are the numeric types produced by SharedPreferences and the JSON decoder.
+        if (value instanceof Integer || value instanceof Long
+                || value instanceof Float || value instanceof Double) {
+            double number = ((Number) value).doubleValue();
+            if (number == 0.0) return "0";
+            if (number == 1.0) return "1";
+        }
+        return null;
     }
 
     public static Map<String, Entry> all() {

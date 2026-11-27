@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="call_recording_delete_failed">"No se pudo eliminar esta grabación"</string>
-    <string name="call_recording_load_failed">"No se pudieron actualizar las grabaciones. Se sigue mostrando la lista anterior."</string>
-</resources>

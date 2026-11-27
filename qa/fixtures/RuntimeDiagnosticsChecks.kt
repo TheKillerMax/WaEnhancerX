@@ -161,7 +161,7 @@ fun main(args:Array<String>){
     ck("unconfigured scope boundary fails closed",rejectedBoundary,true)
     ck("unconfigured boundary never invokes root",Root.calls,beforeUnconfigured)
     LsposedScopeReader.configured=live
-    Root.output="WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n10123 123 com.whatsapp\n10000 99 com.waenhancer\nWAEX_PS_END"
+    Root.output="WAEX_LSPOSED_DB_OK\nWAEX_PS_BEGIN\n123 com.whatsapp\n1 com.waenhancer\nWAEX_PS_END"
     Root.advance=4000;SystemClock.time=1000
     val observed=RootProbe.run(mod)
     ck("shared probe scope unchanged",observed.scope===live,true)
@@ -169,7 +169,7 @@ fun main(args:Array<String>){
     ck("shared probe preserves PID",observed.runtime!!.pidsFor("com.whatsapp"),setOf(123))
     ck("collection timestamp taken before root invocation",observed.runtime.observedAtElapsed,1000L)
     ck("one shared root invocation",Root.calls,beforeUnconfigured+1)
-    ck("production probe frames process output",Root.lastCommand.contains("\necho WAEX_PS_BEGIN\n")&&Root.lastCommand.endsWith("&& echo WAEX_PS_END"),true)
+    ck("production probe frames process output",Root.lastCommand.contains("\necho WAEX_PS_BEGIN\n")&&Root.lastCommand.endsWith("\necho WAEX_PS_END"),true)
     File(args.single()).writeText(RootProbe.processListCommand())
     Root.advance=0
     for(output in listOf(null,"","bad","WAEX_PS_BEGIN\n42 com.whatsapp",
@@ -178,7 +178,7 @@ fun main(args:Array<String>){
         Root.output=output
         ck("failed or incomplete process output unavailable",RootProbe.run(mod).runtime,null)
     }
-    Root.output="WAEX_PS_BEGIN\n10000 99 com.waenhancer\nWAEX_PS_END"
+    Root.output="WAEX_PS_BEGIN\n1 com.waenhancer\nWAEX_PS_END"
     ck("manager proves completed empty target observation",RootProbe.run(mod).runtime!!.pidsFor("com.whatsapp"),emptySet<Int>())
     for(error in listOf(SecurityException("fixture private denial"),NoClassDefFoundError("fixture linkage"))){
         Root.failure=error

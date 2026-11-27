@@ -13,7 +13,6 @@ final class ProviderDerivedKeyPolicy {
                 || key.startsWith("injected_hooks_")
                 || key.startsWith("last_active_")
                 || key.startsWith("runtime_boot_")
-                || key.startsWith("runtime_pid_")
                 || key.startsWith("runtime_status_")
                 || key.startsWith("runtime_error_")
                 || key.startsWith("bridge_status_")) return false;

@@ -1,4 +1,0 @@
-[Fixes]
-- Guard media-quality hooks against ambiguous methods and field mappings.
-- Change only the verified media-quality presentation flag while preserving
-  the gallery's remaining host eligibility checks.

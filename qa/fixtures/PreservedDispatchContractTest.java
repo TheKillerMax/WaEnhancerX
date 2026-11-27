@@ -12,7 +12,11 @@ import com.waenhancer.xposed.bridge.HookProvider;
 import com.waenhancer.xposed.core.db.PreservedMessageStore;
 import com.waenhancer.xposed.core.devkit.DexCacheManager;
 import com.waenhancer.xposed.core.devkit.DexSearchEngine;
+import com.waenhancer.xposed.features.conversation.DeleteOriginTest;
 import com.waenhancer.xposed.features.conversation.PreserveDeleteForMeHook;
+import com.waenhancer.xposed.features.conversation.SelectedKeys;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import java.lang.reflect.Field;
@@ -70,21 +74,19 @@ public class PreservedDispatchContractTest {
     }
 
     @After public void after() throws Exception {
-        hook.unhookAll();
         // The producer is nonblocking. Drain its FIFO worker before deleting fixture
         // databases to avoid mixing writes from different Robolectric tests.
+        if (hook != null) hook.unhookAll();
+        if (context == null) return;
         awaitPreservationQueue(); resetStore(); resetHookDiagnostics();
         context.deleteDatabase(DATABASE); context.deleteDatabase(MSGSTORE);
         ShadowBinder.reset(); ShadowContentResolver.reset(); XposedBridge.reset();
     }
 
     private void resetHookDiagnostics() throws Exception {
-        Field scope = PreserveDeleteForMeHook.class.getDeclaredField("deleteForMeScope");
-        scope.setAccessible(true); ((ThreadLocal<?>) scope.get(null)).remove();
-        try {
-            Field warning = PreserveDeleteForMeHook.class.getDeclaredField("lastPreservationWarningAtElapsed");
-            warning.setAccessible(true); warning.setLong(null, -1L);
-        } catch (NoSuchFieldException earlierMain) { /* Baseline has no bounded warning. */ }
+        assertFalse("An invocation escaped its callback", PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        Field warning = PreserveDeleteForMeHook.class.getDeclaredField("lastPreservationWarningAtElapsed");
+        warning.setAccessible(true); warning.setLong(null, -1L);
     }
 
     private void resetStore() throws Exception {
@@ -172,9 +174,7 @@ public class PreservedDispatchContractTest {
     }
 
     private boolean capture() throws Exception {
-        Method method = PreserveDeleteForMeHook.class.getDeclaredMethod("captureRunnableMessages", Object.class);
-        method.setAccessible(true);
-        return (Boolean) method.invoke(hook, new FixtureRunnable(context));
+        return capture(new FixtureRunnable(context));
     }
 
     private void denyCaller() {
@@ -226,9 +226,12 @@ public class PreservedDispatchContractTest {
         return (Boolean) resultMethod().invoke(store(), GROUP, "Synthetic group", "Synthetic sender", ID, TEXT,10000L,false,true);
     }
 
-    private boolean capture(FixtureRunnable owner) throws Exception {
-        Method method = PreserveDeleteForMeHook.class.getDeclaredMethod("captureRunnableMessages", Object.class);
-        method.setAccessible(true); return (Boolean) method.invoke(hook, owner);
+    private final SelectedKeys keys = Objects.requireNonNull(SelectedKeys.Companion.unique(
+            FixtureMessage.class, FixtureKey.class, FixtureJid.class, Object::toString));
+
+    private boolean capture(FixtureRunnable owner) {
+        // Sender-only oracle: row recognition, not scope and not a persistence receipt.
+        return hook.captureSelectedMessages$main(owner.selected, keys);
     }
 
     private boolean captureAndAwait(FixtureRunnable owner) throws Exception {
@@ -237,10 +240,14 @@ public class PreservedDispatchContractTest {
         return recognized;
     }
 
-    private XC_MethodHook.MethodHookParam beginRun(FixtureRunnable owner) throws Throwable {
-        Method run = FixtureRunnable.class.getDeclaredMethod("run");
-        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(), "waex_delete_for_me_method_v7", () -> run);
-        hook.hook(); return XposedBridge.fireBefore(run, owner, new Object[0]);
+    private void installLocal() {
+        hook.beginHookTracking();
+        try { DeleteOriginTest.Companion.installLocal(hook, keys); }
+        finally { hook.endHookTracking(); }
+    }
+
+    private void request(FixtureRunnable owner, Runnable body) {
+        DeleteOriginTest.Companion.request(owner.selected, body);
     }
 
     public static final class LegacyResponseProvider extends HookProvider {
@@ -259,10 +266,17 @@ public class PreservedDispatchContractTest {
         public void deleteSelected(int token) { }
     }
 
+    private void installStore() throws Exception {
+        Method entry = DirectDelete.class.getDeclaredMethod("deleteSelected", int.class);
+        hook.beginHookTracking();
+        try { DeleteOriginTest.Companion.installStore(hook, entry); }
+        finally { hook.endHookTracking(); }
+    }
+
     private XC_MethodHook.MethodHookParam beginDirectDelete() throws Throwable {
-        Method method = DirectDelete.class.getDeclaredMethod("deleteSelected",int.class);
-        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(), "waex_delete_for_me_method_v7", () -> method);
-        hook.hook(); return XposedBridge.fireBefore(method,new DirectDelete(),new Object[]{1});
+        installStore();
+        Method entry = DirectDelete.class.getDeclaredMethod("deleteSelected", int.class);
+        return XposedBridge.fireBefore(entry, new DirectDelete(), new Object[]{1});
     }
 
     @Test public void endpointAcknowledgesAnInsertThatSurvivesReopening() throws Exception {
@@ -357,6 +371,7 @@ public class PreservedDispatchContractTest {
     @Test public void warningsAreBoundedAcrossRepeatedCallsAndHookInstances() throws Exception {
         registerProvider(); abortInsert();
         for(int i=0;i<4;i++) assertTrue(captureAndAwait());
+        hook.unhookAll();
         hook=new PreserveDeleteForMeHook(context,getClass().getClassLoader(),context.getSharedPreferences("capture-observation",Context.MODE_PRIVATE));
         assertTrue(captureAndAwait()); assertEquals(1,warningCount()); assertEquals(0,vaultRows());
     }
@@ -414,7 +429,10 @@ public class PreservedDispatchContractTest {
     }
 
     @Test public void emptySelectionIsNotRecognizedAndDoesNotEmitStorageWarning() throws Exception {
-        FixtureRunnable owner=new FixtureRunnable(context);owner.selected.clear();assertFalse(capture(owner));assertEquals(0,warningCount());assertEquals(0,vaultRows());
+        FixtureRunnable owner=new FixtureRunnable(context); owner.selected.clear();
+        assertFalse(capture(owner)); installLocal();
+        request(owner, () -> assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()));
+        awaitPreservationQueue(); assertEquals(0,warningCount()); assertEquals(0,vaultRows());
     }
 
     @Test public void unsupportedMessageTypeIsNotRecognizedAndDoesNotEmitStorageWarning() throws Exception {
@@ -423,70 +441,75 @@ public class PreservedDispatchContractTest {
     }
 
     @Test public void failedCopyKeepsScopeOriginalDeleteAndAfterCleanupUnchanged() throws Throwable {
-        registerProvider();abortInsert();FixtureRunnable owner=new FixtureRunnable(context);XC_MethodHook.MethodHookParam param=beginRun(owner);
-        awaitPreservationQueue();
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());assertFalse(param.resultWasSet);assertEquals(0,vaultRows());assertEquals(1,warningCount());
-        owner.run();XposedBridge.fireAfter(param);
-        assertTrue(owner.originalExecuted);assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());assertEquals(0,sourceRows());assertEquals(0,vaultRows());
+        registerProvider(); abortInsert(); installLocal(); FixtureRunnable owner=new FixtureRunnable(context);
+        request(owner, () -> {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+            owner.run();
+        });
+        assertTrue(owner.originalExecuted); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        awaitPreservationQueue(); assertEquals(0,sourceRows()); assertEquals(0,vaultRows()); assertEquals(1,warningCount());
     }
 
     @Test public void SQLiteFallbackWarnsWithoutCancellingTheScopedOriginalDelete() throws Throwable {
         registerProvider();abortInsert();XC_MethodHook.MethodHookParam outer=beginDirectDelete();
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        Method method=SQLiteDatabase.class.getDeclaredMethod("delete",String.class,String.class,String[].class);
-        try(SQLiteDatabase db=context.openOrCreateDatabase(MSGSTORE,Context.MODE_PRIVATE,null)){
+        try (SQLiteDatabase db=context.openOrCreateDatabase(MSGSTORE,Context.MODE_PRIVATE,null)) {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertFalse(outer.resultWasSet);
+            Method method=SQLiteDatabase.class.getDeclaredMethod("delete",String.class,String.class,String[].class);
             XC_MethodHook.MethodHookParam before=XposedBridge.fireBefore(method,db,new Object[]{"message","key_id = ?",new String[]{ID}});
-            awaitPreservationQueue();
-            assertFalse(before.resultWasSet);assertEquals(1,warningCount());assertEquals(0,vaultRows());assertEquals(1,sourceRows());
-            assertEquals(1,db.delete("message","key_id = ?",new String[]{ID}));
-        }
-        XposedBridge.fireAfter(outer);assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());assertEquals(0,sourceRows());
+            try {
+                awaitPreservationQueue(); assertFalse(before.resultWasSet);
+                assertEquals(1,warningCount()); assertEquals(0,vaultRows()); assertEquals(1,sourceRows());
+                assertEquals(1,db.delete("message","key_id = ?",new String[]{ID}));
+            } finally { XposedBridge.fireAfter(before); }
+        } finally { XposedBridge.fireAfter(outer); }
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertEquals(0,sourceRows());
     }
 
     @Test public void SQLiteFallbackConfirmsCopyWithoutWarning() throws Throwable {
         registerProvider();XC_MethodHook.MethodHookParam outer=beginDirectDelete();
-        Method method=SQLiteDatabase.class.getDeclaredMethod("delete",String.class,String.class,String[].class);
-        try(SQLiteDatabase db=context.openOrCreateDatabase(MSGSTORE,Context.MODE_PRIVATE,null)){
+        try (SQLiteDatabase db=context.openOrCreateDatabase(MSGSTORE,Context.MODE_PRIVATE,null)) {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertFalse(outer.resultWasSet);
+            Method method=SQLiteDatabase.class.getDeclaredMethod("delete",String.class,String.class,String[].class);
             XC_MethodHook.MethodHookParam before=XposedBridge.fireBefore(method,db,new Object[]{"message","key_id = ?",new String[]{ID}});
-            awaitPreservationQueue();
-            assertFalse(before.resultWasSet);assertEquals(0,warningCount());assertEquals(1,vaultRows());assertEquals(TEXT,store().getAllPreservedMessages().get(0).getText());
-        }
-        XposedBridge.fireAfter(outer);assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());assertEquals(1,sourceRows());
+            try {
+                awaitPreservationQueue(); assertFalse(before.resultWasSet); assertEquals(0,warningCount());
+                assertEquals(1,vaultRows()); assertEquals(TEXT,store().getAllPreservedMessages().get(0).getText());
+                assertEquals(1,sourceRows()); assertEquals(1,db.delete("message","key_id = ?",new String[]{ID}));
+            } finally { XposedBridge.fireAfter(before); }
+        } finally { XposedBridge.fireAfter(outer); }
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertEquals(0,sourceRows());
     }
 
     @Test public void disabledOptionDoesNotCaptureWarnOrCancelOriginal() throws Throwable {
         registerProvider();context.getSharedPreferences("capture-observation",Context.MODE_PRIVATE).edit().putBoolean("preserve_delete_for_me",false).commit();
-        FixtureRunnable owner=new FixtureRunnable(context);XC_MethodHook.MethodHookParam param=beginRun(owner);
-        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());assertFalse(param.resultWasSet);assertEquals(0,vaultRows());assertEquals(0,warningCount());
-        owner.run();XposedBridge.fireAfter(param);assertEquals(0,sourceRows());assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        FixtureRunnable owner=new FixtureRunnable(context); installLocal();
+        request(owner, () -> {
+            assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+            owner.run();
+        });
+        awaitPreservationQueue(); assertTrue(owner.originalExecuted); assertEquals(0,sourceRows());
+        assertEquals(0,vaultRows()); assertEquals(0,warningCount()); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
     @Test public void nestedQualifyingInvocationCannotEndOuterDeleteScope() throws Throwable {
         registerProvider();
-        Method run=FixtureRunnable.class.getDeclaredMethod("run");
-        XC_MethodHook.MethodHookParam outer=beginRun(new FixtureRunnable(context));
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(run,new FixtureRunnable(context),new Object[0]);
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        XposedBridge.fireAfter(inner);
-        assertTrue("The outer Delete-for-me scope must outlive a nested qualified call",
-                PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        XposedBridge.fireAfter(outer);
+        installLocal();
+        request(new FixtureRunnable(context), () -> {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+            request(new FixtureRunnable(context), () -> assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()));
+            assertTrue("The outer request must survive the nested request", PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        });
         assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
     @Test public void nestedUnrecognizedRunnableCannotEndOuterDeleteScope() throws Throwable {
         registerProvider();
-        Method run=FixtureRunnable.class.getDeclaredMethod("run");
-        XC_MethodHook.MethodHookParam outer=beginRun(new FixtureRunnable(context));
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        FixtureRunnable unrelated=new FixtureRunnable(context);unrelated.selected.clear();
-        XC_MethodHook.MethodHookParam inner=XposedBridge.fireBefore(run,unrelated,new Object[0]);
-        assertFalse(inner.resultWasSet);
-        XposedBridge.fireAfter(inner);
-        assertTrue("A non-matching nested Runnable must not clear its caller's scope",
-                PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        XposedBridge.fireAfter(outer);
+        installLocal(); FixtureRunnable outer=new FixtureRunnable(context);
+        request(outer, () -> {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+            DeleteOriginTest.Companion.unselected(outer.selected, () -> assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress()));
+            assertTrue("The unmarked run must not clear its caller's scope", PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        });
         assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
@@ -513,10 +536,13 @@ public class PreservedDispatchContractTest {
         registerProvider(BlockingProvider.class);
         FixtureRunnable owner=new FixtureRunnable(context);
         try {
-            XC_MethodHook.MethodHookParam param=beginRun(owner);
-            assertTrue("Worker must enter provider",BlockingProvider.entered.await(5,java.util.concurrent.TimeUnit.SECONDS));
-            assertFalse(owner.originalExecuted);assertFalse(param.resultWasSet);
-            owner.run();XposedBridge.fireAfter(param);
+            installLocal();
+            request(owner, () -> {
+                try { assertTrue("Worker must enter provider", BlockingProvider.entered.await(5, TimeUnit.SECONDS)); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssertionError(e); }
+                assertFalse(owner.originalExecuted); assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+                owner.run();
+            });
             assertTrue(owner.originalExecuted);assertEquals(0,sourceRows());
             assertEquals("Provider still held while original already completed",1L,BlockingProvider.release.getCount());
         } finally {BlockingProvider.release.countDown();awaitPreservationQueue();}
@@ -551,74 +577,72 @@ public class PreservedDispatchContractTest {
     }
 
     @Test public void absentEntryPointCannotReportSuccessfulInstallation() {
-        IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
-        assertEquals("Delete-for-me entry point unavailable",error.getMessage());
-        assertTrue("No dependent SQLite hook without an entry point",XposedBridge.hooks.isEmpty());
-        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+        IllegalStateException error=assertThrows(IllegalStateException.class, hook::hook);
+        assertEquals("Delete-for-me entry point unavailable", error.getMessage());
+        assertTrue(XposedBridge.hooks.isEmpty()); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
-    private void primeAvailableEntryPoint() throws Exception {
-        Method run=FixtureRunnable.class.getDeclaredMethod("run");
-        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(),"waex_delete_for_me_method_v7",()->run);
+    @Test public void failedEntryRegistrationCannotInstallDependentDatabaseHook() {
+        XposedBridge.failRegistrationType=DeleteOriginTest.Listener.class;
+        IllegalStateException error=assertThrows(IllegalStateException.class, this::installLocal);
+        assertEquals("Synthetic registration failure", error.getMessage()); assertTrue(XposedBridge.hooks.isEmpty());
     }
 
-    private void primeLegacyEntryPoint() throws Exception {
-        Method entry=DirectDelete.class.getDeclaredMethod("deleteSelected",int.class);
-        DexCacheManager.getInstance(context).getMethod(getClass().getClassLoader(),"waex_delete_for_me_method_v7",()->entry);
-    }
-
-    @Test public void failedEntryRegistrationCannotInstallDependentDatabaseHook() throws Exception {
-        primeAvailableEntryPoint();XposedBridge.failRegistrationType=FixtureRunnable.class;
-        IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
-        assertEquals("Delete-for-me entry point unavailable",error.getMessage());
-        assertTrue(XposedBridge.hooks.isEmpty());
-    }
-
-    @Test public void failedDatabaseRegistrationPropagatesAndActualOwnerCleanupRemovesPartialEntry() throws Exception {
-        primeLegacyEntryPoint();XposedBridge.failRegistrationType=SQLiteDatabase.class;
-        hook.beginHookTracking();
-        try {
-            IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
-            assertEquals("Delete-for-me database interception unavailable",error.getMessage());
-            assertTrue("The earlier entry registration is present until feature cleanup",XposedBridge.hooks.containsKey(DirectDelete.class.getDeclaredMethod("deleteSelected",int.class)));
-        } finally {hook.endHookTracking();hook.unhookAll();}
-        assertTrue("BaseFeature/HookRegistrar must remove partial installation",XposedBridge.hooks.isEmpty());
-    }
-
-    @Test public void emptyDatabaseRegistrationCannotReportSuccessfulInstallation() throws Exception {
-        primeLegacyEntryPoint();XposedBridge.emptyAllMethodsType=SQLiteDatabase.class;
-        hook.beginHookTracking();
-        try {
-            IllegalStateException error=assertThrows(IllegalStateException.class,()->hook.hook());
-            assertEquals("Delete-for-me database interception unavailable",error.getMessage());
-        } finally {hook.endHookTracking();hook.unhookAll();}
-        assertTrue(XposedBridge.hooks.isEmpty());
-    }
-
-    private void assertRunnableCaptureWithoutDatabaseInterceptor() throws Throwable {
-        registerProvider();FixtureRunnable owner=new FixtureRunnable(context);
-        XC_MethodHook.MethodHookParam param=beginRun(owner);
-        assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-        assertFalse("The optional database interception was not installed",XposedBridge.hooks.keySet().stream().anyMatch(m->m.getDeclaringClass()==SQLiteDatabase.class));
-        owner.run();XposedBridge.fireAfter(param);awaitPreservationQueue();
-        assertEquals(1,vaultRows());assertEquals(0,sourceRows());
-        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
-    }
-
-    @Test public void runnableDirectCaptureSurvivesOptionalDatabaseRegistrationFailure() throws Throwable {
+    @Test public void failedDatabaseRegistrationPropagatesAndActualOwnerCleanupRemovesPartialEntry() throws Throwable {
         XposedBridge.failRegistrationType=SQLiteDatabase.class;
-        assertRunnableCaptureWithoutDatabaseInterceptor();
+        IllegalStateException error=assertThrows(IllegalStateException.class, this::installStore);
+        assertEquals("Delete-for-me database interception unavailable", error.getMessage());
+        Method entry=DirectDelete.class.getDeclaredMethod("deleteSelected", int.class);
+        assertTrue(XposedBridge.hooks.containsKey(entry));
+        XC_MethodHook.MethodHookParam partial=XposedBridge.fireBefore(entry,new DirectDelete(),new Object[]{1});
+        try { assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress()); assertFalse(partial.resultWasSet); }
+        finally { XposedBridge.fireAfter(partial); hook.unhookAll(); }
+        assertTrue(XposedBridge.hooks.isEmpty());
     }
 
-    @Test public void runnableDirectCaptureSurvivesEmptyOptionalDatabaseRegistration() throws Throwable {
+    @Test public void emptyDatabaseRegistrationCannotReportSuccessfulInstallation() {
         XposedBridge.emptyAllMethodsType=SQLiteDatabase.class;
-        assertRunnableCaptureWithoutDatabaseInterceptor();
+        IllegalStateException error=assertThrows(IllegalStateException.class, this::installStore);
+        assertEquals("Delete-for-me database interception unavailable", error.getMessage());
+        hook.unhookAll(); assertTrue(XposedBridge.hooks.isEmpty());
     }
 
-    @Test public void originalThrowableSurvivesScopeCleanup() throws Throwable {
-        registerProvider();FixtureRunnable owner=new FixtureRunnable(context);XC_MethodHook.MethodHookParam param=beginRun(owner);
-        IllegalStateException original=new IllegalStateException("synthetic original error");param.setThrowable(original);
-        XposedBridge.fireAfter(param);assertSame(original,param.getThrowable());assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    private void assertDirectCaptureWithoutDatabaseInterceptor() throws Exception {
+        registerProvider(); installLocal(); FixtureRunnable owner=new FixtureRunnable(context);
+        assertFalse(XposedBridge.hooks.keySet().stream().anyMatch(m -> m.getDeclaringClass()==SQLiteDatabase.class));
+        // Same selected messages and real original delete, but no click-issued job.
+        DeleteOriginTest.Companion.unselected(owner.selected, () -> {
+            assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress()); owner.run();
+        });
+        awaitPreservationQueue(); assertTrue(owner.originalExecuted); assertEquals(0,sourceRows());
+        assertEquals(0,vaultRows()); assertEquals(0,warningCount());
+        try (SQLiteDatabase db=context.openOrCreateDatabase(MSGSTORE,Context.MODE_PRIVATE,null)) {
+            db.execSQL("INSERT INTO message VALUES(1,?,1,0,0,?,10000,0)", new Object[]{ID,TEXT});
+        }
+        FixtureRunnable selected=new FixtureRunnable(context);
+        request(selected, () -> { assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()); selected.run(); });
+        awaitPreservationQueue(); assertTrue(selected.originalExecuted); assertEquals(0,sourceRows());
+        assertEquals(1,vaultRows()); assertEquals(TEXT,store().getAllPreservedMessages().get(0).getText());
+        assertEquals(0,warningCount()); assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
+    }
+
+    @Test public void runnableDirectCaptureSurvivesOptionalDatabaseRegistrationFailure() throws Exception {
+        XposedBridge.failRegistrationType=SQLiteDatabase.class;
+        assertDirectCaptureWithoutDatabaseInterceptor();
+    }
+
+    @Test public void runnableDirectCaptureSurvivesEmptyOptionalDatabaseRegistration() throws Exception {
+        XposedBridge.emptyAllMethodsType=SQLiteDatabase.class;
+        assertDirectCaptureWithoutDatabaseInterceptor();
+    }
+
+    @Test public void originalThrowableSurvivesScopeCleanup() {
+        registerProvider(); installLocal(); FixtureRunnable owner=new FixtureRunnable(context);
+        IllegalStateException original=new IllegalStateException("synthetic original error");
+        assertSame(original, assertThrows(IllegalStateException.class, () -> request(owner, () -> {
+            assertTrue(PreserveDeleteForMeHook.isDeleteForMeInProgress()); throw original;
+        })));
+        assertFalse(PreserveDeleteForMeHook.isDeleteForMeInProgress());
     }
 
 }
