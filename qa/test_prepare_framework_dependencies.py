@@ -209,6 +209,42 @@ class FrameworkPreparationControls(unittest.TestCase):
         self.assertEqual(39363, attempt['retry_after_seconds'])
         self.assertEqual('retry_deferred_beyond_budget', attempt['status'])
 
+    def test_deferred_partial_roundtrip_only_requests_missing_artifacts(self):
+        import framework_partial_checkpoint as partial
+        item = self.items[23]
+        path = self.path(item)
+        self.server.responses[path].insert(0, (429, {"Retry-After": "63865"}, b"deferred"))
+        # Use the real supervised worker, local loopback only.
+        module = str(Path(framework.__file__).resolve().parent)
+        code = ('from pathlib import Path; import sys; sys.path.insert(0, ' + repr(module) + '); '
+                'from prepare_framework_dependencies import prepare; '
+                f'prepare(Path({str(self.out)!r}), Path({str(self.report)!r}), '
+                f'lock=Path({str(self.lock)!r}), archive_bytes={self.archive_bytes!r}, timeout=10)')
+        result = framework.supervise([sys.executable, '-c', code], self.out, self.report, timeout=15)
+        self.assertFalse(result['accepted'])
+        self.assertTrue(result['worker_closed'])
+        self.assertEqual(24, len(self.server.requests))
+        checkpoint = self.work / 'partial'
+        manifest = partial.capture(self.out, self.report, checkpoint, self.lock, now=1000)
+        self.assertEqual(23, len(manifest['files']))
+        before = list(self.server.requests)
+        with self.assertRaisesRegex(ValueError, "Retry-After is still active"):
+            partial.verify(checkpoint, self.lock, now=1001)
+        self.assertEqual(before, self.server.requests)
+        # Inject the elapsed clock in this synthetic fixture, not in production.
+        self.assertEqual(23, partial.verify(checkpoint, self.lock, now=64865)['verified_files'])
+        final = self.work/'resumed-deps'
+        resumed = framework.prepare(final, self.work/'resumed.json',
+                                    cache=checkpoint/'deps', lock=self.lock,
+                                    archive_bytes=self.archive_bytes, timeout=10)
+        self.assertTrue(resumed['accepted'])
+        self.assertEqual(13, resumed['network_requests'])
+        self.assertEqual([self.path(row) for row in self.items[23:]], self.server.requests[24:])
+        self.assertEqual(36, len(list(final.iterdir())))
+        for row in self.items:
+            self.assertEqual(self.bodies[row['name']], (final/row['name']).read_bytes())
+        self.assertEqual(23, partial.verify(checkpoint, self.lock, now=64866)['verified_files'])
+
     def test_transient_response_uses_the_existing_bounded_transport(self):
         item = self.items[0]; path = self.path(item)
         self.server.responses[path].insert(0, (503, {}, b'transient'))
@@ -303,7 +339,7 @@ def main():
               'preparer_sha256': framework.sha(Path(framework.__file__)),
               'transport_sha256': framework.sha(Path(framework.transport.__file__))}
     (OUT/'result.json').write_text(json.dumps(report, indent=2) + '\n')
-    raise SystemExit(0 if result.wasSuccessful() and result.testsRun == 17 else 1)
+    raise SystemExit(0 if result.wasSuccessful() and result.testsRun == 18 else 1)
 
 
 if __name__ == '__main__':

@@ -441,38 +441,91 @@ jobs:
           python3 qa/test_framework_dependency_bundle.py --out "$RUNNER_TEMP/waex-framework-input-evidence/bundle-controls"
           python3 qa/test_prepare_robolectric_sdks.py --out "$RUNNER_TEMP/waex-framework-input-evidence/sdk-controls"
           python3 qa/test_prepare_framework_dependencies.py --out "$RUNNER_TEMP/waex-framework-input-evidence/graph-controls"
+          python3 qa/test_framework_partial_checkpoint.py
       - name: Restore the exact locked framework graph
         id: framework_cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
           key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Restore a previously deferred partial graph
+        if: steps.framework_cache.outputs.cache-hit != 'true'
+        id: framework_partial_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waex-framework-partial
+          key: waex-framework36-partial-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('qa/framework_dependency_lock.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            waex-framework36-partial-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('qa/framework_dependency_lock.json') }}-
+      - name: Verify partial inputs and enforce the deferred server interval
+        if: steps.framework_cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          partial="$RUNNER_TEMP/waex-framework-partial"
+          if [[ -e "$partial" || -L "$partial" ]]; then
+            python3 qa/framework_partial_checkpoint.py verify --checkpoint "$partial"
+          fi
       - name: Restore the exact locked Android SDKs
         id: sdk_cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
           key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
-      - name: Prepare and verify all 39 locked inputs
+      - name: Prepare and verify all 36 locked framework dependencies
+        id: framework_prepare
         shell: bash
         run: |
           set -euo pipefail
           framework_cache_args=()
-          if [[ "${{ steps.framework_cache.outputs.cache-hit }}" == "true" ]]; then framework_cache_args+=(--offline); fi
+          if [[ "${{ steps.framework_cache.outputs.cache-hit }}" == "true" ]]; then
+            framework_cache_args+=(--offline)
+          elif [[ -d "$RUNNER_TEMP/waex-framework-partial/deps" ]]; then
+            framework_cache_args+=(--cache "$RUNNER_TEMP/waex-framework-partial/deps")
+          fi
           python3 qa/prepare_framework_dependencies.py \
             --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
             --report "$RUNNER_TEMP/waex-framework-input-evidence/deps.json" "${framework_cache_args[@]}"
-          sdk_cache_args=()
-          if [[ "${{ steps.sdk_cache.outputs.cache-hit }}" == "true" ]]; then sdk_cache_args+=(--offline); fi
-          python3 qa/prepare_robolectric_sdks.py \
-            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
-            --report "$RUNNER_TEMP/waex-framework-input-evidence/sdks.json" "${sdk_cache_args[@]}"
+      - name: Retain only pinned bytes after an explicit server deferral
+        if: always() && steps.framework_prepare.outcome == 'failure' && steps.framework_cache.outputs.cache-hit != 'true'
+        id: framework_partial_capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          partial="$RUNNER_TEMP/waex-framework-partial"
+          next="$RUNNER_TEMP/waex-framework-partial-next"
+          python3 qa/framework_partial_checkpoint.py capture \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --receipt "$RUNNER_TEMP/waex-framework-input-evidence/deps.json" --checkpoint "$next"
+          if [[ -f "$next/partial.json" ]]; then
+            test ! -e "$RUNNER_TEMP/waex-framework-partial-previous"
+            test ! -L "$RUNNER_TEMP/waex-framework-partial-previous"
+            if [[ -d "$partial" ]]; then mv -- "$partial" "$RUNNER_TEMP/waex-framework-partial-previous"; fi
+            mv -- "$next" "$partial"
+            cp -- "$partial/partial.json" "$RUNNER_TEMP/waex-framework-input-evidence/partial.json"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Save deferred partial graph separately from the full cache
+        if: always() && steps.framework_partial_capture.outputs.ready == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waex-framework-partial
+          key: ${{ steps.framework_partial_cache.outputs.cache-primary-key }}
       - name: Save the verified framework graph
         if: steps.framework_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
           key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
+      - name: Prepare and verify the three locked SDKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_cache_args=()
+          if [[ "${{ steps.sdk_cache.outputs.cache-hit }}" == "true" ]]; then sdk_cache_args+=(--offline); fi
+          python3 qa/prepare_robolectric_sdks.py \
+            --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
+            --report "$RUNNER_TEMP/waex-framework-input-evidence/sdks.json" "${sdk_cache_args[@]}"
       - name: Save the verified SDK graph
         if: steps.sdk_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
