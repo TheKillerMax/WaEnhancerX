@@ -644,6 +644,11 @@ object SettingsBackupCodec {
 
     /** Restore hex RGB/ARGB strings written by earlier UI versions for this INT key. */
     private fun normalizeForKey(key: String, type: PreferenceSchema.Type, value: Any): Any? {
+        // Older backups/stores can hold a typed Boolean or numeric binary flag.
+        // Preserve existing STRING bytes; only migrate valid legacy typed values.
+        if (key == "antirevokestatus" && type == PreferenceSchema.Type.STRING && value !is String) {
+            return PreferenceSchema.legacyStatusAntiRevokeString(value)
+        }
         if (key == "deleted_message_color" && type == PreferenceSchema.Type.INT && value is String) {
             val hex = value.trim()
             if (hex.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))) {

@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import com.waenhancer.config.HookingModePolicy;
+import com.waenhancer.config.PreferenceSchema;
 import com.waenhancer.hooking.HookingEngine;
 import com.waenhancer.hooking.HookingEngine.FeaturePolicy;
 import com.waenhancer.hooking.HookingEngine.Installation;
@@ -282,7 +283,7 @@ public final class FeatureRegistry {
         registerFeature(AntiRevokeHook.class, "Privacy",
                 () -> prefs.getBoolean("anti_revoke", false)
                         || prefs.getBoolean("preserve_own_revoke", false)
-                        || prefs.getBoolean("antirevokestatus", false),
+                        || PreferenceSchema.isStatusAntiRevokeEnabled(prefs.getAll().get("antirevokestatus")),
                 () -> new AntiRevokeHook(context, classLoader, prefs));
 
         registerFeature(HideForwardedTagHook.class, "Privacy",

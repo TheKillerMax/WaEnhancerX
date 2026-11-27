@@ -80,6 +80,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.mutableStateMapOf
 import com.waenhancer.config.FeatureCatalog
 import com.waenhancer.config.DndPreferencePolicy
+import com.waenhancer.config.PreferenceSchema
 import com.waenhancer.config.FeatureItem
 import com.waenhancer.ui.navigation.LocalWaexNavController
 import com.waenhancer.utils.LocalizationHelper
@@ -257,6 +258,8 @@ fun GlobalPrivacySettingsScreen(
             privacyKeys.forEach { key ->
                 var boolVal = if (key == "downloadviewonce" || key == "download_view_once") {
                     readViewOnceDownload()
+                } else if (key == "antirevokestatus") {
+                    PreferenceSchema.isStatusAntiRevokeEnabled(preferenceManager.getAll()[key])
                 } else preferenceManager.getBoolean(key, key in DEFAULT_ON_PRIVACY_KEYS)
                 if (!boolVal && key == "typearchive") {
                     val strVal = preferenceManager.getString("typearchive", "0")
@@ -324,14 +327,25 @@ fun GlobalPrivacySettingsScreen(
             saveSeenTickPlacement(nextPlacement)
             return@update
         }
+        if (key == "antirevokestatus") {
+            // Keep the schema's STRING representation and acknowledge persistence before
+            // changing the confirmed switch state, just as for the manual seen-tick setting.
+            if (preferenceManager.putPublicString("antirevokestatus", if (value) "1" else "0")) {
+                settingsState[key] = value
+            } else {
+                Toast.makeText(
+                    context,
+                    UiText.get(R.string.waex_ui_unable_to_save_setting, "Unable to save setting"),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            return@update
+        }
         settingsState[key] = value
         if (key == "typearchive") {
             // typearchive is STRING in PreferenceSchema. Never first write
             // a transient Boolean under the same key and notify observers.
             preferenceManager.putString("typearchive", if (value) "1" else "0")
-        } else if (key == "antirevokestatus") {
-            // The status Anti-Revoke setting is declared STRING and accepts 1/0.
-            preferenceManager.putString("antirevokestatus", if (value) "1" else "0")
         } else {
             preferenceManager.putBoolean(key, value)
         }
