@@ -1,2 +1,4 @@
 [Fixes]
 - Protect recorded runtime process identity from generic preference writes and report package registration success only when the preference commit succeeds.
+- Keep runtime observations on diagnostic notifications so they do not trigger
+  configuration broadcasts or preference reloads in the target apps.

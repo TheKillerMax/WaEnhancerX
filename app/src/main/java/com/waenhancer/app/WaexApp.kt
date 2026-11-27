@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.config.PreferenceRestartTracker
+import com.waenhancer.config.PreferenceSyncPolicy
 import com.waenhancer.config.FeatureCatalog
 import dagger.hilt.android.HiltAndroidApp
 import android.content.Context
@@ -21,9 +22,11 @@ import java.io.File
 class WaexApp : Application() {
     private val preferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { preferences, key ->
-            PreferenceRestartTracker.onPreferenceChanged(preferences, key)
-            contentResolver.notifyChange(PREFERENCES_URI, null)
-            notifyHookedPackages(key)
+            if (PreferenceSyncPolicy.shouldNotifyHooks(key)) {
+                PreferenceRestartTracker.onPreferenceChanged(preferences, key)
+                contentResolver.notifyChange(PREFERENCES_URI, null)
+                notifyHookedPackages(key)
+            }
         }
 
     override fun attachBaseContext(base: Context) {

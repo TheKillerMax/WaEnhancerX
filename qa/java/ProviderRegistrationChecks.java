@@ -59,7 +59,7 @@ public final class ProviderRegistrationChecks {
         Context getContentResolver() { return this; }
         void notifyChange(String uri, Object observer) {
             check(prefs.committed, "notification before acknowledged commit");
-            check(uri.equals("content://" + AUTHORITY + "/preferences"), "changed notification route");
+            check(uri.equals("content://" + AUTHORITY + "/runtime_health"), "changed notification route");
             prefs.notifications++;
         }
     }
