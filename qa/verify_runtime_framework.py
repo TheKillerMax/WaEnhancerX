@@ -121,8 +121,21 @@ class RuntimeResourcesTest {
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--root',type=Path,default=Path.cwd());ap.add_argument('--out',type=Path,required=True)
  ap.add_argument('--public-apk-cache',type=Path,help='Optional directory containing hash-verified 2.0.3 debug.apk and release.apk')
+ ap.add_argument('--gradle-offline',action='store_true',help='Use restored Gradle dependencies; public APK and wrapper acquisition remain separate')
+ ap.add_argument('--framework-bundle', type=Path, help='Closed 39-file framework bundle from this CI run, attempt and head')
+ ap.add_argument('--bundle-run-id'); ap.add_argument('--bundle-run-attempt'); ap.add_argument('--bundle-head-sha')
  a=ap.parse_args()
+ origin = (a.bundle_run_id, a.bundle_run_attempt, a.bundle_head_sha)
+ if (a.framework_bundle and not all(origin)) or (not a.framework_bundle and any(origin)):
+  ap.error('--framework-bundle requires explicit --bundle-run-id, --bundle-run-attempt and --bundle-head-sha')
+ if a.framework_bundle:
+  import runtime_framework_inputs
+  runtime_framework_inputs.identity(*origin)
  root=a.root.resolve();out=a.out.resolve();out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir();project=out/'fixture';project.mkdir();apks=out/'apks';apks.mkdir()
+ inputs = None
+ if a.framework_bundle:
+  inputs = runtime_framework_inputs.prepare(a.framework_bundle, out, *origin, runner=Path(__file__))
+  (e/'framework-inputs-before.json').write_text(json.dumps(inputs, indent=2)+'\n', encoding='utf-8')
  pins={'debug':'c4531d92851c5f251614e8af822f340737981adeb7128341463f8897e3d42114','release':'f19d64239b493785b48540dce068a32a295f33bd33b18e48b46d168896c4ac0f'}
  for variant,digest in pins.items():
   if a.public_apk_cache:
@@ -135,6 +148,8 @@ def main():
   (apks/(variant+'.apk')).write_bytes(data)
  v=tomllib.loads((root/'gradle/libs.versions.toml').read_text())['versions']
  (project/'settings.gradle.kts').write_text('pluginManagement{repositories{google();mavenCentral();gradlePluginPortal()}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\nrootProject.name="runtime-fixture"\ninclude(":probe")\n')
+ if inputs:
+  (project/'settings.gradle.kts').write_text(runtime_framework_inputs.settings(inputs), encoding='utf-8')
  (project/'gradle.properties').write_text('android.useAndroidX=true\nandroid.builtInKotlin=false\nandroid.newDsl=false\norg.gradle.jvmargs=-Xmx2g\n')
  probe=project/'probe';probe.mkdir()
  build='''plugins {
@@ -165,6 +180,8 @@ dependencies {
  # Windows backslashes are escape characters in generated Kotlin DSL strings.
  # Forward slashes remain valid filesystem paths for the Java test process.
  for key,val in {'AGP':v['androidGradlePlugin'],'KOTLIN':v['kotlin'],'BOM':v['androidxComposeBom'],'LIFE':v['androidxLifecycle'],'CORO':v['coroutines'],'APKS':apks.as_posix()}.items():build=build.replace(key,val)
+ if inputs:
+  build = 'import java.security.MessageDigest\nimport java.io.File\n' + build + runtime_framework_inputs.test_configuration(inputs, e)
  (probe/'build.gradle.kts').write_text(build)
  def write(path,text):
   p=probe/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
@@ -176,11 +193,13 @@ dependencies {
   if hashlib.sha256(path.read_bytes()).hexdigest()!=expected:
    raise ValueError('Staged source/evidence SHA-256 mismatch: '+label)
  identities={}
+ if inputs: identities.update(inputs['source_sha256'])
  # Compile all of these source files unchanged; unrelated private services are test doubles.
  # The real detector's signature and fail-closed scope path reference both
  # LsposedScopeReader and LsposedScopeSnapshot. Compile their production source
  # instead of substituting a scope-always-true test double.
  files=['utils/UniversalVersionValidator.kt','utils/WhatsAppPackageDetector.kt','utils/LsposedScopeReader.kt','utils/XposedRuntimeInspector.kt','utils/InjectionEvidence.kt','utils/TargetRuntimePresentation.kt','xposed/core/VersionGuard.kt']
+ files += ['xposed/bridge/client/HookProviderIpc.java']
  if (root/'app/src/main/java/com/waenhancer/utils/DeclaredWhatsAppTargets.java').exists():files+=['utils/DeclaredWhatsAppTargets.java']
  for name in files:
   p=root/'app/src/main/java/com/waenhancer'/name
@@ -235,6 +254,8 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  bash=shutil.which('bash')
  if not bash:raise RuntimeError('Compatible bash executable required for Gradle wrapper')
  cmd=[bash,(root/'gradlew').as_posix(),'-p',str(project),'--no-daemon',':probe:testDebugUnitTest']
+ if a.gradle_offline:cmd.append('--offline')
+ (e/'command.json').write_text(json.dumps(cmd,indent=2),encoding='utf-8')
  with (e/'framework-build.log').open('w') as log:
   result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=720)
  for p in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(p,e/p.name)
@@ -248,6 +269,7 @@ class WaexBottomSheet(a:Activity){fun setTitle(s:String)=this;fun setMessage(s:S
  if (tests,failures,errors,skipped)!=((12 if localized else 5),0,0,0):
   raise RuntimeError(f'Android resource JUnit acceptance failed: {(tests,failures,errors,skipped)}')
  (e/'result.json').write_text(json.dumps({'tests':tests,'contexts':22,'locale_resource_tests':7 if localized else 0,'failures':failures,'errors':errors,'skipped':skipped,'limits':'Compiled current public runtime utilities with test service doubles. No full WAEX APK, Compose screen rendering, HMA or LSPosed.'},indent=2))
+ if inputs: runtime_framework_inputs.finish(inputs, e)
  print(f'PASS: real Android/Compose API compilation; {tests} Android 14 JUnit methods, 22 compiled-resource contexts; localized tests={localized}; no full app/LSPosed')
 
 if __name__=='__main__':main()

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Isolated real Android/Compose compilation and regressions, not a full WAEX APK.
-Modes allow standalone updater/filter/clock branches without borrowing production
-code from another PR. Xposed, private Pro behavior and design theme are fixtures.
+Modes allow standalone updater/filter/PID-boot-evidence suites without borrowing
+production code from another PR. A clock suite requires its actual implementation;
+it is never an alias for the evidence classifier. Xposed, private Pro behavior and
+design theme are fixtures; the custom color model is real public source.
 """
 from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tomllib
@@ -10,12 +12,50 @@ from framework_localization import stage_localization
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def select_modes(mode, root):
+    """Keep PID/boot evidence and the optional Compose clock as distinct suites."""
+    root = Path(root)
+    clock = root / 'app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt'
+    if mode == 'all':
+        modes = ['update', 'filter', 'evidence']
+        if clock.is_file():
+            modes.append('clock')
+    elif mode in ('update', 'filter', 'evidence', 'clock'):
+        modes = [mode]
+    else:
+        raise ValueError('Unknown stability mode: ' + str(mode))
+    if 'clock' in modes and not clock.is_file():
+        raise ValueError('--mode clock requires RuntimeObservationClock.kt; no clock suite ran')
+    for selected in modes:
+        fixture = root / ('qa/fixtures/Stability' + selected.title() + 'Test.kt')
+        if not fixture.is_file():
+            raise ValueError('Missing selected stability fixture: ' + str(fixture))
+    return modes
+
+
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--root',type=Path,default=ROOT)
     ap.add_argument('--out',type=Path,required=True)
-    ap.add_argument('--mode',choices=['all','update','filter','clock'],default='all')
+    ap.add_argument('--mode',choices=['all','update','filter','evidence','clock'],default='all')
+    ap.add_argument('--gradle-offline',action='store_true',help='Use restored Gradle dependencies; public APK and wrapper acquisition remain separate')
+    ap.add_argument('--framework-bundle', type=Path, help='Closed 39-file framework bundle from this CI run, attempt and head')
+    ap.add_argument('--bundle-run-id'); ap.add_argument('--bundle-run-attempt'); ap.add_argument('--bundle-head-sha')
     a=ap.parse_args();root=a.root.resolve();out=a.out.resolve()
+    origin = (a.bundle_run_id, a.bundle_run_attempt, a.bundle_head_sha)
+    if (a.framework_bundle and not all(origin)) or (not a.framework_bundle and any(origin)):
+        ap.error('--framework-bundle requires explicit --bundle-run-id, --bundle-run-attempt and --bundle-head-sha')
+    if a.framework_bundle:
+        import runtime_framework_inputs
+        runtime_framework_inputs.identity(*origin)
+    try:
+        modes = select_modes(a.mode, root)
+    except ValueError as exc:
+        ap.error(str(exc))
     out.mkdir(parents=True,exist_ok=False);e=out/'evidence';e.mkdir()
+    inputs = None
+    if a.framework_bundle:
+        inputs = runtime_framework_inputs.prepare(a.framework_bundle, out, *origin, consumer='stability', project='stability-fixture', runner=Path(__file__))
+        (e/'framework-inputs-before.json').write_text(json.dumps(inputs, indent=2)+'\n', encoding='utf-8')
     p=out/'fixture';p.mkdir();v=tomllib.loads((root/'gradle/libs.versions.toml').read_text())['versions']
     # Compose's BOM does not select the experimental Material3 APIs used by
     # the actual wavy progress indicators. Resolve the *app's* explicit pin.
@@ -24,6 +64,8 @@ def main():
     if len(expressive_pins)!=1:
         raise ValueError('Expected exactly one explicit app Material3 dependency')
     (p/'settings.gradle.kts').write_text('pluginManagement{repositories{google();mavenCentral();gradlePluginPortal()}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\nrootProject.name="stability-fixture"\ninclude(":probe")\n')
+    if inputs:
+        (p/'settings.gradle.kts').write_text(runtime_framework_inputs.settings(inputs), encoding='utf-8')
     (p/'gradle.properties').write_text('android.useAndroidX=true\nandroid.builtInKotlin=false\nandroid.newDsl=false\norg.gradle.jvmargs=-Xmx2g\n')
     probe=p/'probe';probe.mkdir()
     def write(path,text):
@@ -58,16 +100,21 @@ dependencies {
 }
 '''
     for key,val in {'AGP':v['androidGradlePlugin'],'KOTLIN':v['kotlin'],'BOM':v['androidxComposeBom'],'MATERIAL3':expressive_pins[0],'LIFE':v['androidxLifecycle'],'CORO':v['coroutines'],'CORE':v['androidxCore'],'OKHTTP':v['okhttp']}.items():build=build.replace(key,val)
+    if inputs:
+        build = 'import java.security.MessageDigest\nimport java.io.File\n' + build + runtime_framework_inputs.test_configuration(inputs, e)
     write('build.gradle.kts',build)
     write('src/main/AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>')
     identity={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ('app/build.gradle.kts','gradle/libs.versions.toml')}
-    modes=['update','filter','clock'] if a.mode=='all' else [a.mode]
-    sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','utils/AndroidUserScope.java',
+    if inputs: identity.update(inputs['source_sha256'])
+    sources={'update':['update/UpdateDownloader.kt','update/UpdateTransferPolicy.kt','update/UpdateDownloadSession.kt','update/ReleaseRepository.kt','update/UpdateChannel.kt','update/ReleaseIndex.kt','ui/components/UpdateDownloadSheet.kt','xposed/utils/RootCommandRunner.java','xposed/utils/HookErrors.java','utils/AndroidUserScope.java',
                        'config/PreferenceStores.java','config/PreferenceSchema.java','ui/components/NetworkErrorSheet.kt','ui/components/WaexModalBottomSheet.kt','ui/components/WaexProgressIndicator.kt',
-                       'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt'],
-             'filter':['xposed/features/customization/FilterItemsHook.kt','model/FilterItem.kt','xposed/core/ViewHookDispatcher.java'],
+                       'ui/designsystem/WaexIcons.kt','ui/designsystem/WaexRadius.kt','ui/designsystem/WaexElevation.kt','ui/designsystem/WaexColors.kt'],
+             'filter':['xposed/features/customization/FilterItemsHook.kt','xposed/features/customization/LayoutPassThrottle.kt',
+                       'model/FilterItem.kt','xposed/core/ViewHookDispatcher.java',
+                       'xposed/utils/HostResourceIds.java','xposed/utils/HookErrors.java'],
+             'evidence':['utils/InjectionEvidence.kt'],
              'clock':['ui/components/RuntimeObservationClock.kt','utils/InjectionEvidence.kt']}
-    expected={'update':12,'filter':3,'clock':1}
+    expected={'update':12,'filter':3,'evidence':15,'clock':1}
     for mode in modes:
         for rel in sources[mode]:
             source=root/'app/src/main/java/com/waenhancer'/rel
@@ -93,14 +140,25 @@ dependencies {
     theme='''package com.waenhancer.ui.designsystem
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 object WaexTheme {
- val colors @Composable get()=MaterialTheme.colorScheme
+ val colors @Composable get()=COLOR_EXPRESSION
  val typography @Composable get()=FixtureTypography(MaterialTheme.typography)
 EXTRA_UPDATE_TOKENS
 }
 class FixtureTypography(val t:androidx.compose.material3.Typography){val headlineMd get()=t.headlineMedium;val bodyMd get()=t.bodyMedium}
 '''
-    write('src/main/java/com/waenhancer/ui/designsystem/WaexTheme.kt',theme.replace('EXTRA_UPDATE_TOKENS',update_theme))
+    colors_expr = ('if (isSystemInDarkTheme()) darkColors else lightColors'
+                   if 'update' in modes else 'MaterialTheme.colorScheme')
+    theme = theme.replace('COLOR_EXPRESSION', colors_expr)
+    write('src/main/java/com/waenhancer/ui/designsystem/WaexTheme.kt',
+          theme.replace('EXTRA_UPDATE_TOKENS', update_theme))
+    if 'update' in modes and 'filter' not in modes:
+        write('src/main/java/de/robv/android/xposed/XposedBridge.java','''package de.robv.android.xposed;
+public final class XposedBridge {
+    public static void log(String message) { System.err.println(message); }
+}
+''')
     if 'filter' in modes:
         write('src/main/res/values/ids.xml','<resources><item name="fixture_target" type="id"/><item name="fixture_other" type="id"/></resources>')
         write('src/main/java/com/waenhancer/xposed/core/BaseFeature.kt','''package com.waenhancer.xposed.core
@@ -119,7 +177,7 @@ public class XC_MethodHook {public static class MethodHookParam {public Object t
         write('src/main/java/de/robv/android/xposed/XposedBridge.java','''package de.robv.android.xposed;
 import java.util.Set;
 public class XposedBridge {
- public static void log(String s) {}
+ public static void log(String s) { System.err.println(s); }
  public static Set<Object> hookAllMethods(Class<?> cls,String method,XC_MethodHook hook) {
   throw new AssertionError("Unexpected actual Xposed method installation in test fixture");
  }
@@ -135,6 +193,8 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     bash=shutil.which('bash')
     if not bash:raise RuntimeError('Compatible bash required for Gradle wrapper')
     cmd=[bash,(root/'gradlew').as_posix(),'-p',str(p),'--no-daemon',':probe:testDebugUnitTest']
+    if a.gradle_offline:cmd.append('--offline')
+    (e/'command.json').write_text(json.dumps(cmd,indent=2),encoding='utf-8')
     with (e/'framework-build.log').open('w') as log:
         result=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,timeout=900)
     for f in (probe/'build/test-results/testDebugUnitTest').glob('*.xml'):shutil.copy2(f,e/f.name)
@@ -142,9 +202,10 @@ public class XposedHelpers {public static void findAndHookMethod(Object... args)
     for f in reports:
         t=ET.parse(f).getroot()
         for i,k in enumerate(['tests','failures','errors','skipped']):counts[i]+=int(t.get(k,0))
-    summary={'modes':modes,'tests':counts[0],'failures':counts[1],'errors':counts[2],'skipped':counts[3],'build_returncode':result.returncode,'limits':'Real Android Resources/Views/Handler and real Compose Composition/Recomposer; design theme, BaseFeature, Xposed and private Pro service are controlled fixtures, not full WAEX or LSPosed.'}
+    summary={'requested_mode':a.mode,'modes':modes,'tests':counts[0],'failures':counts[1],'errors':counts[2],'skipped':counts[3],'build_returncode':result.returncode,'limits':'Update/filter use real Android/Compose sources. Evidence uses the plain JVM/JUnit PID/boot classifier. Clock runs only with its own implementation and fixture, never as an evidence alias. Theme provider, BaseFeature, Xposed and private Pro service are controlled fixtures, not full WAEX or LSPosed.'}
     (e/'result.json').write_text(json.dumps(summary,indent=2))
     if result.returncode or counts != [sum(expected[m] for m in modes),0,0,0]:
         print((e/'framework-build.log').read_text()[-22000:]);raise RuntimeError('Stability framework failed: '+str(summary))
+    if inputs: runtime_framework_inputs.finish(inputs, e)
     print('PASS: '+json.dumps(summary))
 if __name__=='__main__':main()
