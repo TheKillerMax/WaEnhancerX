@@ -1,5 +1,4 @@
-Add exact call-selector profiles for the inspected Personal 2.26.46.82 and
-Business 2.26.46.83 APKs, preserving all three or four native boolean arguments.
-Unknown APK identities leave host behavior unchanged. Add offline fingerprint
-checks with optional local APK inputs; cold Android latency and live host
-acceptance remain pending.
+[Fixes]
+- Preserve the native call arguments for the inspected Personal and Business
+  APK profiles. Leave unknown APK identities and unsupported conversations
+  unchanged.
