@@ -111,22 +111,39 @@ def resolve_dependencies(command, log, timeout=600, max_attempts=3):
             attempt = {'number': number, 'log': attempt_log.name, 'timeout_seconds': remaining,
                        'exit_code': None, 'timed_out': False, 'retryable': False}
             process = None
+            windows_job = None
             with attempt_log.open('wb') as output:
                 try:
-                    process = subprocess.Popen(argv, stdout=output, stderr=subprocess.STDOUT,
-                                               start_new_session=(os.name == 'posix'))
+                    if os.name == 'nt':
+                        from windows_process_job import WindowsProcessJob
+                        windows_job = WindowsProcessJob()
+                        process = windows_job.start(argv, output)
+                    else:
+                        process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=output,
+                                                   stderr=subprocess.STDOUT, start_new_session=(os.name == 'posix'))
                     attempt['exit_code'] = process.wait(timeout=max(0.001, deadline - time.monotonic()))
+                    if windows_job is not None:
+                        launch_error = windows_job.start_error()
+                        if launch_error is not None:
+                            attempt['start_error'] = launch_error
+                            attempt['exit_code'] = None
                 except subprocess.TimeoutExpired:
                     attempt['timed_out'] = True
-                    _stop(process)
+                    if windows_job is not None:
+                        windows_job.close()
+                    else:
+                        _stop(process)
                     attempt['exit_code'] = process.returncode
                 except OSError as failure:
                     attempt['start_error'] = str(failure)
                     output.write((str(failure) + '\n').encode())
                 except BaseException:
-                    if process is not None:
+                    if process is not None and windows_job is None:
                         _stop(process)
                     raise
+                finally:
+                    if windows_job is not None:
+                        windows_job.close()
             attempt['elapsed_seconds'] = round(time.monotonic() - attempt_start, 6)
             if attempt['exit_code'] not in (None, 0) and not attempt['timed_out']:
                 attempt['retryable'] = _retryable(attempt_log)
@@ -138,19 +155,25 @@ def resolve_dependencies(command, log, timeout=600, max_attempts=3):
             aggregate.flush()
             print(attempt_log.name, 'exit=' + str(attempt['exit_code']),
                   'retryable=' + str(attempt['retryable']), flush=True)
-            if attempt['exit_code'] == 0:
-                save('success')
-                return 0
+            # A platform cleanup may leave a zero exit code even after timeout.
+            # The deadline violation must take precedence over the exit status.
             if attempt['timed_out']:
                 save('timeout')
                 break
+            if attempt['exit_code'] == 0:
+                save('success')
+                return 0
             if not attempt['retryable'] or number == max_attempts:
                 save('failed')
                 break
+            delay = float(number)
+            # Do not start a retry after a shortened backoff. Windows timers
+            # can wake slightly before the absolute deadline.
+            if deadline - time.monotonic() <= delay:
+                save('timeout')
+                break
             save('retrying')
-            delay = min(float(number), max(0.0, deadline - time.monotonic()))
-            if delay:
-                time.sleep(delay)
+            time.sleep(delay)
         else:
             save('failed')
     if summary['status'] == 'retrying':
