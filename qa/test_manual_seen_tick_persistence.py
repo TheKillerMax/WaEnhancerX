@@ -47,6 +47,7 @@ public final class FakeContext extends Context {
  public int notifications; public final Prefs prefs=new Prefs();
  public SharedPreferences getSharedPreferences(String n,int m){return prefs;}
  public ApplicationInfo getApplicationInfo(){return new ApplicationInfo();}
+ public java.io.File getFilesDir(){throw new AssertionError("Private files outside manual-setting fixture");}
  public ContentResolver getContentResolver(){return new ContentResolver(){
   public void notifyChange(android.net.Uri u,Object o){notifications++;}
  };}
@@ -60,11 +61,14 @@ public final class FakeContext extends Context {
   public float getFloat(String k,float d){return (Float)memory.getOrDefault(k,d);}
   @SuppressWarnings("unchecked") public Set<String> getStringSet(String k,Set<String>d){return (Set<String>)memory.getOrDefault(k,d);}
   public Map<String,?>getAll(){return new HashMap<>(memory);}
+  public boolean contains(String k){return memory.containsKey(k);}
   public Editor edit(){edits++;if(mode==3)throw new IllegalStateException("editor fixture");return new Editor(){
    final Map<String,Object> pending=new HashMap<>();
    public Editor putString(String k,String v){pending.put(k,v);return this;}
    public Editor putBoolean(String k,boolean v){pending.put(k,v);return this;}
    public Editor putInt(String k,int v){pending.put(k,v);return this;}
+   public Editor putLong(String k,long v){pending.put(k,v);return this;}
+   public void apply(){throw new AssertionError("Manual setting must commit synchronously");}
    public Editor putFloat(String k,float v){pending.put(k,v);return this;}
    public Editor putStringSet(String k,Set<String>v){pending.put(k,v);return this;}
    public Editor remove(String k){return this;}
@@ -138,7 +142,7 @@ public void show(){shown++;}}'''
         out=Path(td);sources=[]
         for name,content in stubs.items():
             p=out/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(content);sources.append(str(p))
-        for rel in ('config/PreferenceSchema.java','config/PreferenceStores.java',
+        for rel in ('config/PreferenceSchema.java','config/PreferenceStores.java','config/ExclusivePreferences.java',
                     'core/preferences/WaexPreferenceManager.java',
                     'ui/screens/settings/ManualSeenTickPreferencePolicy.java',
                     'ui/screens/settings/StyleBooleanAliasPolicy.java',
@@ -153,6 +157,6 @@ public void show(){shown++;}}'''
         ui_stub='object UiText {fun get(id:Int, fallback:String, vararg args:Any?):String = if(args.isEmpty()) fallback else String.format(java.util.Locale.US, fallback, *args)}\n'
         kt=out/'TestManual.kt';kt.write_text(TEST.replace('__PRODUCTION__',update).replace('class Ui(',r_stub+ui_stub+'class Ui('))
         jar=out/'test.jar'
-        subprocess.run(['kotlinc',str(kt),'-classpath',td,'-jvm-target','17','-include-runtime','-d',str(jar)],check=True,timeout=90)
+        subprocess.run([shutil.which('kotlinc') or 'kotlinc',str(kt),str(SRC/'ui/screens/settings/FloatingNavigationExclusivity.kt'),'-classpath',td,'-jvm-target','17','-include-runtime','-d',str(jar)],check=True,timeout=90)
         subprocess.run(['java','-cp',str(jar)+os.pathsep+td,'TestManualKt'],check=True,timeout=60)
 if __name__=='__main__':main()
