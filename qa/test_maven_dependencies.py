@@ -31,7 +31,7 @@ print(step.get('stderr', ''), file=sys.stderr, flush=True)
 if step.get('child'):
     marker = root / 'orphan-marker'
     child = subprocess.Popen([sys.executable, '-c',
-        'import pathlib,time;time.sleep(0.8);pathlib.Path(' + repr(str(marker)) + ').write_text("escaped")'])
+        'import pathlib,time;time.sleep(' + repr(step.get('child_delay', 0.8)) + ');pathlib.Path(' + repr(str(marker)) + ').write_text("escaped")'])
     (root / 'child-pid').write_text(str(child.pid))
 time.sleep(step.get('sleep', 0))
 raise SystemExit(step.get('exit', 0))
@@ -42,9 +42,17 @@ class MavenDependencyChecks(unittest.TestCase):
     def setUp(self):
         self.directory = EVIDENCE / self._testMethodName
         self.directory.mkdir()
-        self.executable = self.directory / 'mvn-fixture'
-        self.executable.write_text(FAKE_MAVEN)
-        self.executable.chmod(0o755)
+        if os.name == 'nt':
+            script = self.directory / 'mvn-fixture.py'
+            script.write_text(FAKE_MAVEN, encoding='utf-8')
+            self.executable = self.directory / 'mvn-fixture.cmd'
+            self.executable.write_text('@echo off\nsetlocal DisableDelayedExpansion\n"' +
+                                       sys.executable.replace('%', '%%') + '" "%~dp0mvn-fixture.py" %*\nexit /b %errorlevel%\n',
+                                       encoding='utf-8')
+        else:
+            self.executable = self.directory / 'mvn-fixture'
+            self.executable.write_text(FAKE_MAVEN)
+            self.executable.chmod(0o755)
         self.pom = self.directory / 'pom.xml'
         self.pom.write_text('<project/>')
         self.command = [str(self.executable), '-B', '-f', str(self.pom), HELPER.DEPENDENCY_GOAL,
@@ -171,26 +179,31 @@ class MavenDependencyChecks(unittest.TestCase):
         self.assertEqual('failed', self.metadata()['status'])
         self.assertTrue(self.log.read_text())
 
-    @unittest.skipUnless(os.name == 'posix', 'process-group cleanup is a POSIX CI contract')
     def test_total_timeout_kills_launcher_and_child_and_retains_partial_log(self):
-        self.configure([{'stdout': 'partial before blocked transport', 'sleep': 5, 'child': True}])
+        timeout = 1.0 if os.name == 'nt' else 0.35
+        child_delay = 2.0 if os.name == 'nt' else 0.8
+        self.configure([{'stdout': 'partial before blocked transport', 'sleep': 5,
+                         'child': True, 'child_delay': child_delay}])
         start = time.monotonic()
-        self.run_failure(timeout=0.35)
-        self.assertLess(time.monotonic() - start, 1.5)
+        self.run_failure(timeout=timeout)
+        self.assertLess(time.monotonic() - start, timeout + 1.15)
         self.assertEqual('timeout', self.metadata()['status'])
         self.assertTrue(self.metadata()['attempts'][0]['timed_out'])
         self.assertEqual(1, len(self.calls()))
         self.assertIn('partial before blocked transport', self.log.read_text())
-        time.sleep(0.8)
+        self.assertTrue((self.directory / 'child-pid').is_file(), 'Child must actually have started')
+        time.sleep(child_delay + 0.1)
         self.assertFalse((self.directory / 'orphan-marker').exists())
 
     def test_backoff_obeys_total_budget_and_does_not_start_late_attempt(self):
         self.configure([{'stdout': '[ERROR] Could not transfer artifact example:jar:1', 'exit': 1, 'sleep': 0.1}])
         start = time.monotonic()
-        self.run_failure(timeout=0.3)
-        self.assertLess(time.monotonic() - start, 1)
+        timeout = 0.7 if os.name == 'nt' else 0.3
+        self.run_failure(timeout=timeout)
+        self.assertLess(time.monotonic() - start, timeout + 0.7)
         self.assertEqual(1, len(self.calls()))
         self.assertEqual('timeout', self.metadata()['status'])
+        self.assertEqual(1, len(self.metadata()['attempts']))
 
     def test_full_large_stdout_and_stderr_survive_retries(self):
         payload = 'prefix-' + 'x' * 100000 + '-suffix'
