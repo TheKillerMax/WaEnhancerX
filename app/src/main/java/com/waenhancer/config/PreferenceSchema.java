@@ -519,6 +519,32 @@ public final class PreferenceSchema {
         entries.put(key, new Entry(key, type, sensitivity, store));
     }
 
+    /**
+     * The status Anti-Revoke switch is a STRING setting: the UI writes "1" or "0".
+     * Historical typed flags may still exist. Only explicit, valid ON values enable it;
+     * other values (including malformed strings and non-binary numbers) fail closed.
+     */
+    public static boolean isStatusAntiRevokeEnabled(Object value) {
+        if (value instanceof String) {
+            String text = (String) value;
+            return "1".equals(text) || "true".equalsIgnoreCase(text);
+        }
+        return "1".equals(legacyStatusAntiRevokeString(value));
+    }
+
+    /** Convert only legacy typed binary flags, without coercing unrelated STRING settings. */
+    public static String legacyStatusAntiRevokeString(Object value) {
+        if (value instanceof Boolean) return (Boolean) value ? "1" : "0";
+        // These are the numeric types produced by SharedPreferences and the JSON decoder.
+        if (value instanceof Integer || value instanceof Long
+                || value instanceof Float || value instanceof Double) {
+            double number = ((Number) value).doubleValue();
+            if (number == 0.0) return "0";
+            if (number == 1.0) return "1";
+        }
+        return null;
+    }
+
     public static Map<String, Entry> all() {
         return ENTRIES;
     }

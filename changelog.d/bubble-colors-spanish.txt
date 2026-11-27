@@ -1,0 +1,3 @@
+[Improvements]
+- Translate the complete Bubble Colors preview and controls for Spanish and
+  Latin American Spanish instead of falling back to English.

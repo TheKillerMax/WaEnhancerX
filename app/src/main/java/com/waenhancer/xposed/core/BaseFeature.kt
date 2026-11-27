@@ -53,7 +53,7 @@ abstract class BaseFeature(
         installedHooks.add(hook)
     }
 
-    fun unhookAll() {
+    open fun unhookAll() {
         installedHooks.forEach { hook ->
             try {
                 hook.unhook()

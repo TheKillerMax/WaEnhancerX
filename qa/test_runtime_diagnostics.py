@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -20,9 +21,12 @@ JAVA = ROOT / 'app/src/main/java/com/waenhancer'
 
 def main():
     global ROOT, JAVA
+    subprocess.run([sys.executable, str(ROOT / 'qa/test_diagnostics_refresh.py')], cwd=ROOT, check=True)
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, default=ROOT)
     args = parser.parse_args()
+    if args.root.resolve() != ROOT:
+        parser.error('--root must be the local checkout containing both diagnostics suites')
     ROOT = args.root.resolve(); JAVA = ROOT / 'app/src/main/java/com/waenhancer'
     for tool in ('kotlinc', 'javac', 'java', 'sh'):
         if not shutil.which(tool):

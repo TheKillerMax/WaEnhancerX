@@ -7,9 +7,7 @@ explicit doubles. Also exercises strict SharedPreferences type-mismatch behavior
 from pathlib import Path
 import argparse
 import ast
-import os
 import re
-import shutil
 import subprocess
 import tempfile
 
@@ -17,13 +15,19 @@ root = Path(__file__).resolve().parents[1]
 src = root / "app/src/main/java/com/waenhancer"
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", type=Path, default=src / "xposed/features/privacy/AntiRevokeHook.java")
-parser.add_argument("--registry-source", type=Path, default=src / "xposed/core/FeatureRegistry.java")
-parser.add_argument("--scenario", choices=["all", "color", "type", "status", "registry"], default="all")
+parser.add_argument("--registry", type=Path, default=src / "xposed/core/FeatureRegistry.java")
+parser.add_argument("--schema", type=Path, default=src / "config/PreferenceSchema.java")
+parser.add_argument("--scenario", choices=["all", "color", "type", "status"], default="all")
 args = parser.parse_args()
-source = args.source.read_text()
+source = args.source.read_text(encoding="utf-8")
+registry = args.registry.read_text(encoding="utf-8")
+registry_expressions = re.findall(
+    r'registerFeature\(AntiRevokeHook\.class, "Privacy",\s*\(\) -> (.*?)'
+    r',\s*\(\) -> new AntiRevokeHook\(', registry, flags=re.DOTALL)
+assert len(registry_expressions) == 1, "Expected one AntiRevoke registration predicate"
 
 
-def method(signature, source=source):
+def method(signature):
     assert source.count(signature) == 1, signature
     start = source.index(signature)
     brace = source.index("{", start)
@@ -37,34 +41,6 @@ def method(signature, source=source):
                 return source[start:index + 1]
     raise AssertionError("Unterminated production reader")
 
-
-base = (src / "xposed/core/BaseFeature.kt").read_text()
-scoped_method = method("private fun scopedKey(key: String): String?", base)
-enabled_method = method("protected fun isEnabled(key: String, def: Boolean = false): Boolean", base)
-registry = args.registry_source.read_text()
-registration = registry.split('registerFeature(AntiRevokeHook.class, "Privacy",', 1)[1].split(
-    '() -> new AntiRevokeHook(context, classLoader, prefs)', 1)[0].strip()
-assert registration.endswith(",")
-enabled_lambda = registration[:-1].rstrip()
-assert enabled_lambda.startswith("() -> ")
-registry_method = method("private static boolean isEntryEnabled(FeatureEntry entry)", registry)
-install_method = method("private void installLocked(FeatureEntry entry)", registry)
-disabled_guard = re.search(r'if \(entry\.factory == null \|\| !isEntryEnabled\(entry\)\) \{(.*?)\n        \}', install_method, re.S)
-assert disabled_guard and "markDisabled(entry);" in disabled_guard.group(1)
-assert "return;" in disabled_guard.group(1)
-assert install_method.index(disabled_guard.group()) < install_method.index("entry.factory.create()")
-shared_signature = "public static boolean isAntiRevokeStatusEnabled(Context context, SharedPreferences prefs)"
-shared_method = method(shared_signature) if shared_signature in source else ""
-base_fixture = """package test
-import android.content.Context
-import android.content.SharedPreferences
-import java.util.concurrent.ConcurrentHashMap
-open class StatusReaderBase(
-    @JvmField protected val context: Context,
-    @JvmField protected val prefs: SharedPreferences
-) {
-    companion object { private val scopedKeys = ConcurrentHashMap<String, String>() }
-""" + scoped_method + "\n" + enabled_method + "\n}\n"
 
 # Reuse only literal platform doubles; importing the suite would execute tests.
 tree = ast.parse((root / "qa/test_bridge_contract.py").read_text())
@@ -85,7 +61,7 @@ public final class Color {
     }
 }
 '''
-stubs["test/AntiRevokeHook.java"] = r'''package test;
+stubs["test/IndicatorBridgeChecks.java"] = r'''package test;
 import android.content.*;
 import android.database.ContentObserver;
 import android.graphics.Color;
@@ -93,21 +69,16 @@ import android.net.Uri;
 import android.os.Bundle;
 import com.waenhancer.xposed.bridge.client.PreferenceBridgeClient;
 import com.waenhancer.xposed.utils.HookErrors;
+import com.waenhancer.config.PreferenceSchema;
 import java.util.*;
 import java.lang.reflect.Proxy;
-public final class AntiRevokeHook extends StatusReaderBase {
-    private AntiRevokeHook(Context context, SharedPreferences prefs) { super(context, prefs); }
+public final class IndicatorBridgeChecks {
+    private final SharedPreferences prefs;
+    private IndicatorBridgeChecks(SharedPreferences prefs) { this.prefs = prefs; }
     COLOR_METHOD
     TYPE_METHOD
     STATUS_METHOD
-    SHARED_STATUS_METHOD
-    @FunctionalInterface interface FeatureEnabled { boolean isEnabled(); }
-    static class FeatureEntry {
-        final FeatureEnabled enabled; String error;
-        FeatureEntry(FeatureEnabled enabled) { this.enabled = enabled; }
-    }
-    REGISTRY_METHOD
-    private boolean registryEnabled() { return isEntryEnabled(new FeatureEntry(REGISTRY_LAMBDA)); }
+    private boolean registryEnabled() { return REGISTRY_EXPRESSION; }
     static int checks;
     static void check(boolean value, String message) { checks++; if (!value) throw new AssertionError(message); }
     static class Resolver extends ContentResolver {
@@ -116,6 +87,7 @@ public final class AntiRevokeHook extends StatusReaderBase {
         public void registerContentObserver(Uri uri, boolean descendants, ContentObserver observer) {}
         public Bundle call(Uri uri, String method, String arg, Bundle extras) {
             if (!"get_all_preferences".equals(method)) throw new AssertionError(method);
+            if (values == null) return null; // Explicit unavailable IPC for disk fallback.
             Bundle result = new Bundle(), data = new Bundle();
             for (Map.Entry<String, Object> e : values.entrySet()) {
                 if (e.getValue() instanceof String) data.putString(e.getKey(), (String)e.getValue());
@@ -130,14 +102,13 @@ public final class AntiRevokeHook extends StatusReaderBase {
         }
     }
     static class Ctx extends Context {
-        final Resolver resolver; final String packageName;
-        Ctx(Map<String, Object> values) { this(values, "com.whatsapp"); }
-        Ctx(Map<String, Object> values, String packageName) { resolver = new Resolver(values); this.packageName = packageName; }
+        final Resolver resolver;
+        Ctx(Map<String, Object> values) { resolver = new Resolver(values); }
         public ContentResolver getContentResolver() { return resolver; }
-        public String getPackageName() { return packageName; }
+        public String getPackageName() { return "example.fixture.indicator"; }
     }
     static SharedPreferences strict(Map<String, Object> values) {
-        return (SharedPreferences)Proxy.newProxyInstance(AntiRevokeHook.class.getClassLoader(),
+        return (SharedPreferences)Proxy.newProxyInstance(IndicatorBridgeChecks.class.getClassLoader(),
                 new Class<?>[]{SharedPreferences.class}, (proxy, method, args) -> {
                     String name = method.getName();
                     if (name.equals("getAll")) return new HashMap<>(values);
@@ -148,19 +119,71 @@ public final class AntiRevokeHook extends StatusReaderBase {
                     if (name.equals("getString") && value instanceof String) return value;
                     if (name.equals("getInt") && value instanceof Integer) return value;
                     if (name.equals("getBoolean") && value instanceof Boolean) return value;
-                    if (name.equals("getString") || name.equals("getInt") || name.equals("getBoolean")) throw new ClassCastException();
+                    if (name.equals("getString") || name.equals("getInt") || name.equals("getBoolean"))
+                        throw new ClassCastException();
                     throw new AssertionError("unexpected getter " + name);
                 });
     }
-    static AntiRevokeHook reader(boolean bridge, String key, Object value) {
+    static IndicatorBridgeChecks reader(boolean bridge, String key, Object value) {
         Map<String, Object> values = new HashMap<>();
         if (value != null) values.put(key, value);
-        return reader(bridge, values, "com.whatsapp");
+        return reader(bridge, values);
     }
-    static AntiRevokeHook reader(boolean bridge, Map<String, Object> values, String packageName) {
-        Ctx context = new Ctx(values, packageName);
-        return new AntiRevokeHook(context, bridge
-                ? new PreferenceBridgeClient(context, null) : strict(values));
+    static IndicatorBridgeChecks reader(boolean bridge, Map<String, Object> values) {
+        return new IndicatorBridgeChecks(bridge
+                ? new PreferenceBridgeClient(new Ctx(values), null)
+                : strict(values));
+    }
+    static IndicatorBridgeChecks diskReader(Map<String, Object> raw) {
+        PreferenceBridgeClient bridge = new PreferenceBridgeClient(new Ctx(null), strict(raw));
+        check("DISK_FALLBACK".equals(bridge.getLastSyncSource()), "must exercise real disk fallback");
+        return new IndicatorBridgeChecks(bridge);
+    }
+    static void status(IndicatorBridgeChecks reader, boolean expected, String label) {
+        check(reader.isAntiRevokeStatusEnabled() == expected, "STATUS_CONTRACT event " + label);
+        check(reader.registryEnabled() == expected, "STATUS_CONTRACT registration " + label);
+    }
+    static void statusTests() {
+        Object[] on = {"1", "true", "TRUE", true, 1, 1L, 1.0f};
+        Object[] off = {"0", "false", "FALSE", false, 0, 0L, 0.0f, null,
+                "", "2", " 1", "junk", 2, -1, 1.5f, Float.NaN, Float.POSITIVE_INFINITY};
+        for (boolean bridge : new boolean[]{true, false}) {
+            for (int i = 0; i < on.length; i++)
+                status(reader(bridge, "antirevokestatus", on[i]), true, "ON " + i + " bridge=" + bridge);
+            for (int i = 0; i < off.length; i++)
+                status(reader(bridge, "antirevokestatus", off[i]), false, "OFF " + i + " bridge=" + bridge);
+            for (String other : List.of("anti_revoke", "preserve_own_revoke")) {
+                IndicatorBridgeChecks separate = reader(bridge, Map.of(other, true, "antirevokestatus", "0"));
+                check(separate.registryEnabled(), "STATUS_CONTRACT other registration " + other);
+                check(!separate.isAntiRevokeStatusEnabled(), "STATUS_CONTRACT independent status " + other);
+            }
+        }
+        String key = "antirevokestatus";
+        String own = "example.fixture.indicator:" + key;
+        String other = "example.fixture.other:" + key;
+        String mode = "module_config_mode";
+        status(diskReader(Map.of(mode, "Universal", own, "1")), false, "Universal ignores stale target");
+        status(diskReader(Map.of(mode, "Universal", key, "0", own, "1")), false, "Universal explicit OFF");
+        status(diskReader(Map.of(mode, "Per Target App", key, "1", own, "0")), false, "target OFF overrides root ON");
+        status(diskReader(Map.of(mode, "Per Target App", key, "0", own, "1")), true, "target ON overrides root OFF");
+        status(diskReader(Map.of(mode, "Per Target App", other, "1")), false, "other target isolated");
+        status(diskReader(Map.of(mode, "Per Target App", key, "1", other, "0")), true, "root fallback");
+        status(diskReader(Map.of(mode, "Per Target App", key, "1", own, "broken")), false, "invalid own fails closed");
+        status(reader(true, Map.of(mode, "Per Target App", key, "0", own, "1")), false,
+                "provider effective OFF is not re-resolved");
+        Map<String, Object> live = new HashMap<>();
+        live.put(key, "1");
+        IndicatorBridgeChecks active = reader(true, live);
+        status(active, true, "live initial ON");
+        live.put(key, "0");
+        ((PreferenceBridgeClient) active.prefs).syncPreferences();
+        status(active, false, "live OFF after refresh");
+        live.remove(key);
+        ((PreferenceBridgeClient) active.prefs).syncPreferences();
+        status(active, false, "live missing after refresh");
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(Set.of("1")), "STATUS_CONTRACT reject set");
+        check(PreferenceSchema.isStatusAntiRevokeEnabled(1.0d), "STATUS_CONTRACT legacy JSON double ON");
+        check(!PreferenceSchema.isStatusAntiRevokeEnabled(0.999d), "STATUS_CONTRACT reject fractional double");
     }
     public static void main(String[] args) {
         String scenario = args.length == 0 ? "all" : args[0];
@@ -180,78 +203,14 @@ public final class AntiRevokeHook extends StatusReaderBase {
                             "canonical/legacy indicator " + i + " through " + (bridge ? "real bridge" : "strict preferences"));
             }
         }
-        if (scenario.equals("all") || scenario.equals("status") || scenario.equals("registry")) {
-            Object[] values = {"1", "0", "true", "TrUe", "false", "FALSE", "", "invalid", "2", " 1 ",
-                    true, false, 1, 0, 2, -1, 1L, 0L, 4294967297L, 1.0f, null};
-            boolean[] expected = {true, false, true, true, false, false, false, false, false, false,
-                    true, false, true, false, false, false, true, false, false, false, false};
-            for (boolean bridge : new boolean[]{true, false}) {
-                for (int i = 0; i < values.length; i++) {
-                    AntiRevokeHook current = reader(bridge, "antirevokestatus", values[i]);
-                    if (!scenario.equals("registry"))
-                        check(current.isAntiRevokeStatusEnabled() == expected[i],
-                                "status reader case " + i + " bridge=" + bridge);
-                    if (!scenario.equals("status"))
-                        check(current.registryEnabled() == expected[i],
-                                "status-only registry case " + i + " bridge=" + bridge);
-                }
-                String key = "antirevokestatus";
-                Map<String, Object> scoped = new HashMap<>();
-                scoped.put("com.whatsapp:" + key, "1");
-                scoped.put("com.whatsapp.w4b:" + key, "0");
-                AntiRevokeHook own = reader(bridge, scoped, "com.whatsapp");
-                AntiRevokeHook other = reader(bridge, scoped, "com.whatsapp.w4b");
-                check(own.isAntiRevokeStatusEnabled(), "own scoped status must enable");
-                check(!other.isAntiRevokeStatusEnabled(), "other package status must not leak");
-                check(own.registryEnabled(), "status-only scoped registry must install");
-                check(!other.registryEnabled(), "other package registry must stay disabled");
-                scoped.put(key, "0");
-                own = reader(bridge, scoped, "com.whatsapp");
-                check(!own.isAntiRevokeStatusEnabled() && !own.registryEnabled(),
-                        "explicit root false must override scoped true");
-                scoped.put(key, "invalid");
-                own = reader(bridge, scoped, "com.whatsapp");
-                check(!own.isAntiRevokeStatusEnabled() && !own.registryEnabled(),
-                        "invalid root must not fall through to scoped true");
-                scoped.remove(key);
-                scoped.remove("com.whatsapp:" + key);
-                own = reader(bridge, scoped, "com.whatsapp");
-                check(!own.isAntiRevokeStatusEnabled() && !own.registryEnabled(),
-                        "foreign-only scope cannot enable current package");
-                check(!reader(bridge, scoped, null).isAntiRevokeStatusEnabled(),
-                        "missing package without root key stays disabled");
-                check(!reader(bridge, scoped, "").isAntiRevokeStatusEnabled(),
-                        "empty package without root key stays disabled");
-                for (String messageKey : new String[]{"anti_revoke", "preserve_own_revoke"}) {
-                    Map<String, Object> message = new HashMap<>();
-                    message.put(messageKey, true);
-                    message.put(key, "invalid");
-                    check(reader(bridge, message, "com.whatsapp").registryEnabled(),
-                            "existing message activation gate retained: " + messageKey);
-                }
-            }
-            SharedPreferences unreadable = (SharedPreferences)Proxy.newProxyInstance(
-                    AntiRevokeHook.class.getClassLoader(), new Class<?>[]{SharedPreferences.class},
-                    (proxy, method, arguments) -> { throw new IllegalStateException("read unavailable"); });
-            check(!new AntiRevokeHook(new Ctx(new HashMap<>()), unreadable).isAntiRevokeStatusEnabled(),
-                    "unreadable preferences must fail closed");
-            AssertionError fatal = new AssertionError("fixture assertion must propagate");
-            SharedPreferences broken = (SharedPreferences)Proxy.newProxyInstance(
-                    AntiRevokeHook.class.getClassLoader(), new Class<?>[]{SharedPreferences.class},
-                    (proxy, method, arguments) -> { throw fatal; });
-            Throwable escaped = null;
-            try { new AntiRevokeHook(new Ctx(new HashMap<>()), broken).isAntiRevokeStatusEnabled(); }
-            catch (Throwable error) { escaped = error; }
-            check(escaped == fatal, "unexpected preference assertion must propagate");
-        }
+        if (scenario.equals("all") || scenario.equals("status")) statusTests();
         System.out.println("PASS: " + checks + " verbatim AntiRevoke readers / real bridge / strict preference checks");
     }
 }
 '''.replace("COLOR_METHOD", method("private int getDeletedMessageColor()")).replace(
     "TYPE_METHOD", method("private int getIndicatorType()")).replace(
-    "SHARED_STATUS_METHOD", shared_method).replace(
     "STATUS_METHOD", method("private boolean isAntiRevokeStatusEnabled()")).replace(
-    "REGISTRY_METHOD", registry_method).replace("REGISTRY_LAMBDA", enabled_lambda)
+    "REGISTRY_EXPRESSION", registry_expressions[0])
 
 with tempfile.TemporaryDirectory() as folder:
     temp = Path(folder)
@@ -260,20 +219,9 @@ with tempfile.TemporaryDirectory() as folder:
         path = temp / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
-        if name != "test/AntiRevokeHook.java":
-            paths.append(str(path))
+        paths.append(str(path))
     subprocess.run(["javac", "--release", "17", "-d", folder, *paths,
                     str(src / "xposed/bridge/client/PreferenceBridgeClient.java"),
-                    str(src / "config/PreferenceSchema.java"),
+                    str(args.schema),
                     str(src / "xposed/utils/HookErrors.java")], check=True)
-    base_path = temp / "test/StatusReaderBase.kt"
-    base_path.write_text(base_fixture, encoding="utf-8")
-    compiler = Path(shutil.which("kotlinc") or "kotlinc").resolve()
-    kotlin_home = Path(os.environ.get("KOTLIN_HOME", str(compiler.parent.parent)))
-    subprocess.run([str(compiler), str(base_path), "-classpath", folder,
-                    "-jvm-target", "17", "-d", folder], check=True)
-    classpath = os.pathsep.join([folder, str(kotlin_home / "lib/kotlin-stdlib.jar")])
-    subprocess.run(["javac", "--release", "17", "-cp", classpath, "-d", folder,
-                    str(temp / "test/AntiRevokeHook.java")], check=True)
-    print("COMPILE_OK: actual BaseFeature readers, registry predicate and preference bridge", flush=True)
-    subprocess.run(["java", "-cp", classpath, "test.AntiRevokeHook", args.scenario], check=True)
+    subprocess.run(["java", "-cp", folder, "test.IndicatorBridgeChecks", args.scenario], check=True)

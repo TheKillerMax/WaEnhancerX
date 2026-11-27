@@ -1,0 +1,2 @@
+[Fixes]
+- Use reflection available on Android 7.0 to select and tint chat bubbles.

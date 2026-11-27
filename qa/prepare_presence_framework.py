@@ -25,7 +25,7 @@ SELECTION = HERE / 'presence_framework_sdks.json'
 SOURCE_NAMES = ('prepare_presence_framework.py', 'presence_framework_sdks.json',
                 'framework_dependency_bundle.py', 'framework_dependency_lock.json',
                 'prepare_robolectric_sdks.py', 'maven_dependencies.py',
-                'android_presence_row_test.py', 'mutate_presence_rows.py')
+                'android_presence_row_test.py', 'mutate_presence_rows.py', 'framework_sdk_matrix.py')
 
 
 def selection(path, lock):

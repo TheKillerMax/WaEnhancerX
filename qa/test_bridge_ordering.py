@@ -29,8 +29,8 @@ with tempfile.TemporaryDirectory(prefix='waex_bridge_order_') as directory:
     classes.mkdir()
     source = ROOT/'app/src/main/java/com/waenhancer/xposed/bridge/client/PreferenceBridgeClient.java'
     schema = ROOT/'app/src/main/java/com/waenhancer/config/PreferenceSchema.java'
-    hook_errors = ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'
+    errors = ROOT/'app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java'
     subprocess.run(['javac', '-d', str(classes), *map(str, out.rglob('*.java')),
-                    str(source), str(schema), str(hook_errors)], check=True, timeout=45)
+                    str(source), str(schema), str(errors)], check=True, timeout=45)
     print('COMPILE_OK', flush=True)
     subprocess.run(['java', '-cp', str(classes), 'test.BridgeOrderingChecks', str(args.repeat)], check=True, timeout=45)

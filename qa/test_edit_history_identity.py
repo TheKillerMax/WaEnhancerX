@@ -178,7 +178,7 @@ with tempfile.TemporaryDirectory() as folder:
     classes = temp / "classes"
     classes.mkdir()
     subprocess.run(["javac", "--release", "17", "-d", str(classes), *java_sources], check=True)
-    subprocess.run([shutil.which("kotlinc.bat") or shutil.which("kotlinc") or "kotlinc", "-classpath", str(classes), *sources, str(args.source),
+    subprocess.run([shutil.which("kotlinc.bat" if os.name == "nt" else "kotlinc") or "kotlinc", "-classpath", str(classes), *sources, str(args.source),
                     str(root / "qa/fixtures/EditHistoryStoreChecks.kt"), "-jvm-target", "17",
                     "-include-runtime", "-d", str(temp / "checks.jar")], check=True)
     subprocess.run(["java", "-cp", str(temp / "checks.jar") + os.pathsep + str(classes),

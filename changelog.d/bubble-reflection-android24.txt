@@ -1,3 +1,0 @@
-[Fixes]
-- Keep custom chat-bubble color factory discovery compatible with Android 7.0
-  and 7.1 by using the reflection parameter-types API available since API 1.

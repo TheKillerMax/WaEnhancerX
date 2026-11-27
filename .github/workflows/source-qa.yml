@@ -59,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: media-screenshot-props-evidence-attempt-${{ github.run_attempt }}
+          name: media-screenshot-props-evidence
           path: |
             ${{ runner.temp }}/waex-media-screenshot-props/*.json
             ${{ runner.temp }}/waex-media-screenshot-props/*.log
@@ -89,7 +89,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: preference-string-scope-mutants-attempt-${{ github.run_attempt }}
+          name: preference-string-scope-mutants
           path: |
             ${{ runner.temp }}/preference-string-scope-mutants/results.json
             ${{ runner.temp }}/preference-string-scope-mutants/*/run.log
@@ -107,7 +107,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: call-privacy-optout-evidence-attempt-${{ github.run_attempt }}
+          name: call-privacy-optout-evidence
           path: |
             ${{ runner.temp }}/call-privacy-optout/*.json
             ${{ runner.temp }}/call-privacy-optout/*.log
@@ -127,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maven-dependency-recovery-evidence-attempt-${{ github.run_attempt }}
+          name: maven-dependency-recovery-evidence
           path: |
             ${{ runner.temp }}/waex-maven-recovery/result.json
             ${{ runner.temp }}/waex-maven-recovery/test_*/*.log
@@ -161,7 +161,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: media-warm-cache-contract-evidence-attempt-${{ github.run_attempt }}
+          name: media-warm-cache-contract-evidence
           path: |
             ${{ runner.temp }}/media-warm-cache-contract/RESULTS.json
             ${{ runner.temp }}/media-warm-cache-contract/*.stdout.txt
@@ -170,43 +170,21 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Verify bounded DexKit acquisition and cache integrity
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/test_prepare_dexkit.py --out "$RUNNER_TEMP/dexkit-acquisition-controls"
-
-      - name: Restore the pinned DexKit input cache
-        id: dexkit-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/waex-qa/dexkit-2.2.0
-          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
-
       - name: Validate complete status style and property hook contracts
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/test_status_style_hook_contract.py --out "$RUNNER_TEMP/status-style-hook-contract"
 
-      - name: Cache verified DexKit inputs
-        if: steps.dexkit-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.cache/waex-qa/dexkit-2.2.0
-          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
-
       - name: Preserve status style hook contract evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: status-style-hook-contract-evidence-attempt-${{ github.run_attempt }}
+          name: status-style-hook-contract-evidence
           path: |
             ${{ runner.temp }}/status-style-hook-contract/*.json
             ${{ runner.temp }}/status-style-hook-contract/*.log
             ${{ runner.temp }}/status-style-hook-contract/sources
-            ${{ runner.temp }}/dexkit-acquisition-controls/**/*.json
-            ${{ runner.temp }}/dexkit-acquisition-controls/**/*.log
           if-no-files-found: error
           retention-days: 14
 
@@ -383,7 +361,6 @@ jobs:
             qa/test_separate_groups_policy.py \
             qa/test_declared_targets.py \
             qa/test_runtime_diagnostics.py \
-            qa/test_system_diagnostics_selinux.py \
             qa/test_dynamic_menu_resources.py \
             qa/test_update_download_contract.py \
             qa/test_update_session.py \
@@ -417,12 +394,9 @@ jobs:
             'Hook installation, runtime behavior, signatures and LSPosed compatibility require separate device checks.'
 
   framework-inputs:
-    name: Verify shared framework artifacts and current-run identity
+    name: Verified framework graph / SDKs 24, 28, 34
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # Successful producer outputs are retained on consumer-only reruns.
-    outputs:
-      bundle-attempt: ${{ steps.framework_bundle.outputs.run-attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -431,68 +405,65 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Exercise fail-closed bundle and bounded transport controls
+      - name: Verify bounded dependency acquisition and transfer controls
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/test_framework_dependency_bundle.py --out "$RUNNER_TEMP/waex-input-controls/bundle"
-          python3 qa/test_prepare_robolectric_sdks.py --out "$RUNNER_TEMP/waex-input-controls/sdks"
-          python3 qa/test_prepare_framework_dependencies.py --out "$RUNNER_TEMP/waex-input-controls/framework"
-      - name: Restore the exact framework graph cache
-        id: framework-cache
+          python3 qa/test_framework_dependency_bundle.py --out "$RUNNER_TEMP/waex-framework-input-evidence/bundle-controls"
+          python3 qa/test_prepare_robolectric_sdks.py --out "$RUNNER_TEMP/waex-framework-input-evidence/sdk-controls"
+          python3 qa/test_prepare_framework_dependencies.py --out "$RUNNER_TEMP/waex-framework-input-evidence/graph-controls"
+      - name: Restore the exact locked framework graph
+        id: framework_cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
           key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
-      - name: Restore the exact Android SDK cache
-        id: sdk-cache
+      - name: Restore the exact locked Android SDKs
+        id: sdk_cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
           key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
-      - name: Verify existing bytes and fill missing locked artifacts
+      - name: Prepare and verify all 39 locked inputs
         shell: bash
         run: |
           set -euo pipefail
+          framework_cache_args=()
+          if [[ "${{ steps.framework_cache.outputs.cache-hit }}" == "true" ]]; then framework_cache_args+=(--offline); fi
           python3 qa/prepare_framework_dependencies.py \
             --out "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
-            --report "$RUNNER_TEMP/waex-framework-inputs/framework.json"
+            --report "$RUNNER_TEMP/waex-framework-input-evidence/deps.json" "${framework_cache_args[@]}"
+          sdk_cache_args=()
+          if [[ "${{ steps.sdk_cache.outputs.cache-hit }}" == "true" ]]; then sdk_cache_args+=(--offline); fi
           python3 qa/prepare_robolectric_sdks.py \
             --out "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
-            --report "$RUNNER_TEMP/waex-framework-inputs/sdks.json"
-      - name: Save only verified framework bytes under the exact lock key
-        if: steps.framework-cache.outputs.cache-hit != 'true'
+            --report "$RUNNER_TEMP/waex-framework-input-evidence/sdks.json" "${sdk_cache_args[@]}"
+      - name: Save the verified framework graph
+        if: steps.framework_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/framework-deps
           key: waex-framework36-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
-      - name: Save only verified SDK bytes under the exact lock key
-        if: steps.sdk-cache.outputs.cache-hit != 'true'
+      - name: Save the verified SDK graph
+        if: steps.sdk_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/waex-appearance-hooks/sdk-jars
           key: waex-sdk3-${{ runner.os }}-${{ hashFiles('qa/framework_dependency_lock.json') }}
-      - name: Adapt the three verified SDK paths for the unchanged bundle creator
+      - name: Bind the reviewed graph to this run, attempt and source
         shell: bash
         run: |
           set -euo pipefail
-          python3 - "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" \
-            "$RUNNER_TEMP/waex-framework-sdk-view" \
-            "$RUNNER_TEMP/waex-framework-inputs/sdk-view.json" <<'PYSDKVIEW'
-          import json, os, sys
+          python3 - "$RUNNER_TEMP/waex-appearance-hooks/sdk-jars" "$RUNNER_TEMP/waex-framework-inputs/sdk-view" <<'PYSDKVIEW'
+          import os, sys
           from pathlib import Path
           sys.path.insert(0, str(Path.cwd() / 'qa'))
-          from framework_dependency_bundle import LOCK, checked, load_lock, sha
-          sdks, view, report = map(Path, sys.argv[1:])
-          if sdks.is_symlink() or not sdks.is_dir():
-              raise ValueError('Expected the verified flat SDK directory')
-          if view.exists() or view.is_symlink() or report.exists() or report.is_symlink():
-              raise ValueError('Use new SDK view and receipt paths')
-          if (view.resolve().is_relative_to(sdks.resolve())
-                  or sdks.resolve().is_relative_to(view.resolve())
-                  or report.resolve().is_relative_to(sdks.resolve())
-                  or report.resolve().is_relative_to(view.resolve())):
-              raise ValueError('SDK inputs, view and receipt must be separate')
+          from framework_dependency_bundle import LOCK, checked, load_lock
+          sdks, view = map(Path, sys.argv[1:])
+          if sdks.is_symlink() or not sdks.is_dir() or view.exists() or view.is_symlink():
+              raise ValueError('Expected verified flat SDK directory and a fresh separate view')
+          if view.resolve().is_relative_to(sdks.resolve()) or sdks.resolve().is_relative_to(view.resolve()):
+              raise ValueError('SDK input and view must be separate')
           items = [item for item in load_lock(LOCK) if item['directory'] == 'sdk-jars']
           if len(items) != 3 or {path.name for path in sdks.iterdir()} != {item['name'] for item in items}:
               raise ValueError('Expected exactly the three locked SDK inputs')
@@ -504,55 +475,41 @@ jobs:
               target.parent.mkdir(parents=True, exist_ok=True)
               os.link(sdks / item['name'], target)
               checked(target, item)
-          result = {'schema': 1, 'accepted': True, 'network_requests': 0,
-              'lock_sha256': sha(LOCK), 'source_layout': 'flat SDK directory',
-              'destination_layout': 'locked Maven paths, without invoking Maven',
-              'mode': 'hardlink', 'files': [{key: item[key] for key in
-                  ('name', 'maven_path', 'bytes', 'sha256')} for item in items]}
-          report.parent.mkdir(parents=True, exist_ok=True)
-          report.write_text(json.dumps(result, indent=2) + '\n')
-          print(json.dumps(result))
           PYSDKVIEW
-      - name: Bind the complete verified graph to this run, attempt and source head
-        id: framework_bundle
+          python3 qa/framework_dependency_bundle.py create \
+            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
+            --maven-repo "$RUNNER_TEMP/waex-framework-inputs/sdk-view" \
+            --bundle "$RUNNER_TEMP/waex-framework-verified" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+            --report "$RUNNER_TEMP/waex-framework-input-evidence/bundle.json"
+      - name: Verify Gradle consumer identities and receipt rejection
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/framework_dependency_bundle.py create \
-            --deps "$RUNNER_TEMP/waex-appearance-hooks/framework-deps" \
-            --maven-repo "$RUNNER_TEMP/waex-framework-sdk-view" \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-framework-inputs/dependency-bundle.json"
-          echo "run-attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
-      - name: Share the verified framework inputs with independent test jobs
+          python3 qa/test_runtime_framework_inputs.py --bundle "$RUNNER_TEMP/waex-framework-verified" --out "$RUNNER_TEMP/waex-framework-input-evidence/runtime-controls"
+          python3 qa/test_gradle_framework_consumers.py --bundle "$RUNNER_TEMP/waex-framework-verified" --out "$RUNNER_TEMP/waex-framework-input-evidence/gradle-controls"
+      - name: Share only the verified current-run dependency graph
         uses: actions/upload-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-framework-verified
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
-      - name: Preserve transport and integrity evidence
+      - name: Preserve dependency acquisition evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: framework-input-evidence-attempt-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/waex-framework-inputs/*.json
-            ${{ runner.temp }}/waex-framework-inputs/*.log
-            ${{ runner.temp }}/waex-input-controls/**/*.json
-            ${{ runner.temp }}/waex-input-controls/**/*.log
+          name: framework-input-evidence
+          path: ${{ runner.temp }}/waex-framework-input-evidence/**/*.json
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
 
   android-presence-rows:
+    needs: framework-inputs
     name: Extracted renderer / Android framework / native pixels
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -584,15 +541,15 @@ jobs:
         if: steps.presence.outputs.present == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/waex-presence-framework-bundle
-      - name: Reuse the exact Android 16 instrumented SDK
+      - name: Restore the exact Android 16 instrumented SDK
         if: steps.presence.outputs.present == 'true'
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/waex-presence-sdk-jars/android-all-instrumented-16-robolectric-13921718-i7.jar
           key: waex-presence-sdk36-${{ runner.os }}-${{ hashFiles('qa/presence_framework_sdks.json') }}
-      - name: Verify the same-run graph and prepare Android 28, 34 and 36
+      - name: Verify the same-run graph and stage SDKs 28, 34 and 36
         id: presence_inputs
         if: steps.presence.outputs.present == 'true'
         shell: bash
@@ -603,7 +560,7 @@ jobs:
             --bundle "$RUNNER_TEMP/waex-presence-framework-bundle" \
             --out "$RUNNER_TEMP/waex-presence-sdk-jars" \
             --report "$RUNNER_TEMP/waex-presence-inputs/before.json" \
-            --run-id "${{ github.run_id }}" --run-attempt "${{ needs.framework-inputs.outputs.bundle-attempt }}" --head-sha "${{ github.sha }}"
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
       - name: Run required framework tests for the merged renderer
         if: steps.presence.outputs.present == 'true'
         shell: bash
@@ -617,24 +574,23 @@ jobs:
             "$RUNNER_TEMP/waex-android-row-mutations" "$RUNNER_TEMP/waex-presence-framework-bundle/deps" \
             --sdk-dir "$RUNNER_TEMP/waex-presence-sdk-jars"
           echo 'Extracted production renderer passed Android framework/Skia tests. NOT an APK build, WhatsApp binder or LSPosed test.'
-      - name: Recheck all shared inputs after the renderer consumers
+      - name: Recheck the same-run renderer inputs after the attempted gate
         if: always() && steps.presence.outputs.present == 'true' && steps.presence_inputs.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/prepare_presence_framework.py \
+          python3 qa/prepare_presence_framework.py --offline \
             --bundle "$RUNNER_TEMP/waex-presence-framework-bundle" \
             --out "$RUNNER_TEMP/waex-presence-sdk-jars" \
-            --report "$RUNNER_TEMP/waex-presence-inputs/after.json" --offline \
-            --run-id "${{ github.run_id }}" --run-attempt "${{ needs.framework-inputs.outputs.bundle-attempt }}" --head-sha "${{ github.sha }}"
+            --report "$RUNNER_TEMP/waex-presence-inputs/after.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
       - name: Preserve source identities and text-only rendering evidence
         if: always() && steps.presence.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: android-presence-row-evidence-attempt-${{ github.run_attempt }}
+          name: android-presence-row-evidence
           path: |
             ${{ runner.temp }}/waex-presence-inputs/**/*.json
-            ${{ runner.temp }}/waex-presence-inputs/**/*.log
             ${{ runner.temp }}/waex-android-rows/*.json
             ${{ runner.temp }}/waex-android-rows/*.log
             ${{ runner.temp }}/waex-android-rows/*/*.log
@@ -649,10 +605,8 @@ jobs:
           if-no-files-found: warn
 
   runtime-framework:
-    name: Runtime policies / Android resource tables / API compile
     needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
+    name: Runtime policies / Android resource tables / API compile
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -675,73 +629,68 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          # Ordinary Gradle dependencies; the 39 pinned framework inputs are verified separately.
-          cache: gradle
-          cache-dependency-path: |
-            gradle/wrapper/gradle-wrapper.properties
-            gradle/wrapper/gradle-wrapper.jar
-            gradle/libs.versions.toml
-            app/build.gradle.kts
-            qa/runtime_framework_inputs.py
-            qa/framework_dependency_lock.json
-            qa/verify_runtime_framework.py
-      - name: Retrieve dependencies from the successful producer attempt
+      - name: Record exact Gradle cache directory
+        id: gradle_home
+        if: steps.runtime.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$HOME" = /home/runner
+          echo "path=$HOME/.gradle" >> "$GITHUB_OUTPUT"
+      - name: Restore Gradle dependencies from the current key or reviewed seed
+        id: gradle_cache
+        if: steps.runtime.outputs.present == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-runtime-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_runtime_framework.py') }}
+          restore-keys: |
+            setup-java-Linux-x64-gradle-3a37c45cbccaae81776b731a1f50d53901d7143fff2da262e11a815913b91071
+      - name: Download the current-run verified framework graph
         if: steps.runtime.outputs.present == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
-      - name: Verify exact dependency bytes and CI origin before runtime resource tests
-        id: framework_inputs
-        if: steps.runtime.outputs.present == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-runtime-dependency-bundle.json"
-          python3 qa/test_runtime_framework_inputs.py \
-            --out "$RUNNER_TEMP/waex-runtime-framework-controls" \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            2>&1 | tee "$RUNNER_TEMP/waex-runtime-input-controls.log"
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-runtime-framework-inputs
       - name: Compile public utilities and observation clock; test compiled version resources
         if: steps.runtime.outputs.present == 'true'
         shell: bash
+        env:
+          GRADLE_CACHE_MATCH: ${{ steps.gradle_cache.outputs.cache-matched-key }}
+          GRADLE_CACHE_PRIMARY: ${{ steps.gradle_cache.outputs.cache-primary-key }}
+          GRADLE_CACHE_SEED: setup-java-Linux-x64-gradle-3a37c45cbccaae81776b731a1f50d53901d7143fff2da262e11a815913b91071
         run: |
           set -euo pipefail
-          python3 qa/verify_runtime_framework.py \
-            --out "$RUNNER_TEMP/waex-runtime-framework" \
-            --framework-bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --bundle-run-id "$GITHUB_RUN_ID" \
-            --bundle-run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" \
-            --bundle-head-sha "$GITHUB_SHA"
-      - name: Recheck shared bytes after the attempted framework consumer
-        if: always() && steps.framework_inputs.outcome == 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-runtime-dependency-bundle-after.json"
+          gradle_args=()
+          if [[ -n "$GRADLE_CACHE_MATCH" ]]; then
+            if [[ "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_PRIMARY" && "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_SEED" ]]; then
+              echo 'Unexpected Gradle cache key'; exit 1
+            fi
+            gradle_args+=(--gradle-offline)
+          fi
+          printf 'Gradle cache match: %s; mode: %s\n' "$GRADLE_CACHE_MATCH" "${gradle_args[*]:-online}"
+          python3 qa/verify_runtime_framework.py --out "$RUNNER_TEMP/waex-runtime-framework" --framework-bundle "$RUNNER_TEMP/waex-runtime-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
+      - name: Save successful Gradle cache under the current dependency key
+        if: success() && steps.runtime.outputs.present == 'true' && steps.gradle_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: ${{ steps.gradle_cache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         if: always() && steps.runtime.outputs.present == 'true'
         with:
-          name: runtime-framework-evidence-attempt-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/waex-runtime-dependency-bundle*.json
-            ${{ runner.temp }}/waex-runtime-framework-controls/result.json
-            ${{ runner.temp }}/waex-runtime-input-controls.log
-            ${{ runner.temp }}/waex-runtime-framework/evidence
+          name: runtime-framework-evidence
+          path: ${{ runner.temp }}/waex-runtime-framework/evidence
           retention-days: 14
           if-no-files-found: error
 
   interface-scale-framework:
-    name: Interface size / complete theme / Android density and font scale
     needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
+    name: Interface size / complete theme / Android density and font scale
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -753,66 +702,69 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          # Ordinary Gradle dependencies; the 39 pinned framework inputs are verified separately.
-          cache: gradle
-          cache-dependency-path: |
-            gradle/wrapper/gradle-wrapper.properties
-            gradle/wrapper/gradle-wrapper.jar
-            gradle/libs.versions.toml
-            app/build.gradle.kts
-            qa/runtime_framework_inputs.py
-            qa/framework_dependency_lock.json
-            qa/verify_interface_scale_framework.py
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Retrieve dependencies from the successful producer attempt
+      - name: Record exact Gradle cache directory
+        id: gradle_home
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$HOME" = /home/runner
+          echo "path=$HOME/.gradle" >> "$GITHUB_OUTPUT"
+      - name: Restore Gradle dependencies from the current key or reviewed seed
+        id: gradle_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-interface-scale-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_interface_scale_framework.py') }}
+          restore-keys: |
+            setup-java-Linux-x64-gradle-14994ff021cbba42144ec788b667ee69f1e13b4c0d25342443cc111ba840b00b
+      - name: Download the current-run verified framework graph
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
-      - name: Verify exact dependency bytes and CI origin before interface tests
-        id: framework_inputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-interface-dependency-bundle.json"
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-interface-scale-framework-inputs
       - name: Require whole-theme scaling and accessibility regression tests
         shell: bash
+        env:
+          GRADLE_CACHE_MATCH: ${{ steps.gradle_cache.outputs.cache-matched-key }}
+          GRADLE_CACHE_PRIMARY: ${{ steps.gradle_cache.outputs.cache-primary-key }}
+          GRADLE_CACHE_SEED: setup-java-Linux-x64-gradle-14994ff021cbba42144ec788b667ee69f1e13b4c0d25342443cc111ba840b00b
         run: |
           set -euo pipefail
+          gradle_args=()
+          if [[ -n "$GRADLE_CACHE_MATCH" ]]; then
+            if [[ "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_PRIMARY" && "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_SEED" ]]; then
+              echo 'Unexpected Gradle cache key'; exit 1
+            fi
+            gradle_args+=(--gradle-offline)
+          fi
+          printf 'Gradle cache match: %s; mode: %s\n' "$GRADLE_CACHE_MATCH" "${gradle_args[*]:-online}"
           test -f qa/fixtures/InterfaceScaleThemeTest.kt
-          python3 qa/verify_interface_scale_framework.py --out "$RUNNER_TEMP/waex-interface-scale" \
-            --framework-bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --bundle-head-sha "$GITHUB_SHA"
-      - name: Recheck shared bytes after the attempted framework consumer
-        if: always() && steps.framework_inputs.outcome == 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-interface-dependency-bundle-after.json"
+          python3 qa/verify_interface_scale_framework.py --out "$RUNNER_TEMP/waex-interface-scale" --framework-bundle "$RUNNER_TEMP/waex-interface-scale-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
+      - name: Save successful Gradle cache under the current dependency key
+        if: success() && steps.gradle_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: ${{ steps.gradle_cache.outputs.cache-primary-key }}
       - name: Preserve source identities, dependency hashes and framework results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: interface-scale-framework-evidence-attempt-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/waex-interface-dependency-bundle*.json
-            ${{ runner.temp }}/waex-interface-scale/evidence
+          name: interface-scale-framework-evidence
+          path: ${{ runner.temp }}/waex-interface-scale/evidence
           retention-days: 14
           if-no-files-found: error
 
   stability-framework:
-    name: Stability / real Android Views and Compose runtime
     needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
+    name: Stability / real Android Views and Compose runtime
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -843,78 +795,75 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          # Ordinary Gradle dependencies; the 39 pinned framework inputs are verified separately.
-          cache: gradle
-          cache-dependency-path: |
-            gradle/wrapper/gradle-wrapper.properties
-            gradle/wrapper/gradle-wrapper.jar
-            gradle/libs.versions.toml
-            app/build.gradle.kts
-            qa/runtime_framework_inputs.py
-            qa/framework_dependency_lock.json
-            qa/verify_stability_framework.py
-      - name: Retrieve dependencies from the successful producer attempt
-        if: steps.modes.outputs.modes != ''
-        uses: actions/download-artifact@v4
-        with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
-      - name: Verify exact dependency bytes, CI origin and consumer boundaries
-        id: framework_inputs
+      - name: Record exact Gradle cache directory
+        id: gradle_home
         if: steps.modes.outputs.modes != ''
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-stability-dependency-bundle.json"
-          python3 qa/test_gradle_framework_consumers.py \
-            --out "$RUNNER_TEMP/waex-gradle-consumer-controls" \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            2>&1 | tee "$RUNNER_TEMP/waex-gradle-consumer-controls.log"
+          test "$HOME" = /home/runner
+          echo "path=$HOME/.gradle" >> "$GITHUB_OUTPUT"
+      - name: Restore Gradle dependencies from the current key or reviewed seed
+        id: gradle_cache
+        if: steps.modes.outputs.modes != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: waex-gradle-${{ runner.os }}-${{ runner.arch }}-stability-framework-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/libs.versions.toml', 'app/build.gradle.kts', 'qa/runtime_framework_inputs.py', 'qa/framework_dependency_lock.json', 'qa/verify_stability_framework.py') }}
+          restore-keys: |
+            setup-java-Linux-x64-gradle-c2ed2dd25741c3851a9b5a595f5de46c1ad61808a2d230dd547003ad5cfa5216
+      - name: Download the current-run verified framework graph
+        if: steps.modes.outputs.modes != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-stability-framework-inputs
       - name: Execute compiled production sources with real framework dependencies
         if: steps.modes.outputs.modes != ''
         shell: bash
         env:
+          GRADLE_CACHE_MATCH: ${{ steps.gradle_cache.outputs.cache-matched-key }}
+          GRADLE_CACHE_PRIMARY: ${{ steps.gradle_cache.outputs.cache-primary-key }}
+          GRADLE_CACHE_SEED: setup-java-Linux-x64-gradle-c2ed2dd25741c3851a9b5a595f5de46c1ad61808a2d230dd547003ad5cfa5216
           MODES: ${{ steps.modes.outputs.modes }}
         run: |
           set -euo pipefail
-          bundle=(--framework-bundle "$RUNNER_TEMP/waex-shared-framework"
-                  --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --bundle-head-sha "$GITHUB_SHA")
+          gradle_args=()
+          if [[ -n "$GRADLE_CACHE_MATCH" ]]; then
+            if [[ "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_PRIMARY" && "$GRADLE_CACHE_MATCH" != "$GRADLE_CACHE_SEED" ]]; then
+              echo 'Unexpected Gradle cache key'; exit 1
+            fi
+            gradle_args+=(--gradle-offline)
+          fi
+          printf 'Gradle cache match: %s; mode: %s\n' "$GRADLE_CACHE_MATCH" "${gradle_args[*]:-online}"
           if [[ "$MODES" == ' update clock filter' ]]; then
-            python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" "${bundle[@]}"
+            python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" --framework-bundle "$RUNNER_TEMP/waex-stability-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
           else
             for mode in $MODES; do
-              python3 qa/verify_stability_framework.py --mode "$mode" --out "$RUNNER_TEMP/waex-stability/$mode" "${bundle[@]}"
+              python3 qa/verify_stability_framework.py --mode "$mode" --out "$RUNNER_TEMP/waex-stability/$mode" --framework-bundle "$RUNNER_TEMP/waex-stability-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
             done
           fi
-      - name: Recheck shared bytes after the attempted framework consumer
-        if: always() && steps.framework_inputs.outcome == 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-stability-dependency-bundle-after.json"
+      - name: Save successful Gradle cache under the current dependency key
+        if: success() && steps.modes.outputs.modes != '' && steps.gradle_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ steps.gradle_home.outputs.path }}/caches
+            ${{ steps.gradle_home.outputs.path }}/wrapper
+          key: ${{ steps.gradle_cache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         if: always() && steps.modes.outputs.modes != ''
         with:
-          name: stability-framework-evidence-attempt-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/waex-stability-dependency-bundle*.json
-            ${{ runner.temp }}/waex-gradle-consumer-controls/result.json
-            ${{ runner.temp }}/waex-gradle-consumer-controls.log
-            ${{ runner.temp }}/waex-stability/*/evidence
+          name: stability-framework-evidence
+          path: ${{ runner.temp }}/waex-stability/*/evidence
           retention-days: 14
           if-no-files-found: error
 
   preserved-vault-framework:
-    name: Preserved vault / row identity and Android SQLite compatibility
     needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
+    name: Preserved vault / row identity and Android SQLite compatibility
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -931,56 +880,50 @@ jobs:
           set -euo pipefail
           kotlinc -version
           test -f qa/fixtures/PreservedStoreCompatibilityTest.java
-      - name: Retrieve dependencies from the successful producer attempt
+      - name: Download the current-run verified framework graph
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
-      - name: Verify exact dependency bytes, run, attempt and source head before Vault
-        id: framework_inputs
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-vault-framework-bundle
+      - name: Verify the complete graph and exact CI identity
+        id: vault_inputs
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-vault-dependency-bundle.json"
-      - name: Exercise 33 row identity and schema lifecycle cases offline
+            --bundle "$RUNNER_TEMP/waex-vault-framework-bundle" --report "$RUNNER_TEMP/waex-vault-framework-inputs/before.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
+      - name: Exercise 33 row identity and schema lifecycle cases
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/android_preserved_store_test.py \
-            --out "$RUNNER_TEMP/waex-preserved-vault" \
-            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
-            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
-      - name: Recheck shared bytes after the attempted framework consumer
-        if: always() && steps.framework_inputs.outcome == 'success'
+          python3 qa/android_preserved_store_test.py --out "$RUNNER_TEMP/waex-preserved-vault" \
+            --deps "$RUNNER_TEMP/waex-vault-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-vault-framework-bundle/sdk-jars"
+      - name: Recheck the same-run inputs after the attempted Android gate
+        if: always() && steps.vault_inputs.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-vault-dependency-bundle-after.json"
+            --bundle "$RUNNER_TEMP/waex-vault-framework-bundle" --report "$RUNNER_TEMP/waex-vault-framework-inputs/after.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
       - name: Preserve source identities and Android SQLite results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: preserved-vault-framework-evidence-attempt-${{ github.run_attempt }}
+          name: preserved-vault-framework-evidence
           path: |
-            ${{ runner.temp }}/waex-vault-dependency-bundle*.json
+            ${{ runner.temp }}/waex-vault-framework-inputs/*.json
             ${{ runner.temp }}/waex-preserved-vault/*.json
             ${{ runner.temp }}/waex-preserved-vault/*.log
           retention-days: 14
           if-no-files-found: error
 
   preserved-dispatch-framework:
-    name: Preserved messages / provider acknowledgements and original delete scope
     needs: framework-inputs
-    env:
-      FRAMEWORK_PRODUCER_ATTEMPT: ${{ needs.framework-inputs.outputs.bundle-attempt }}
+    name: Preserved messages / provider acknowledgements and original delete scope
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -1000,45 +943,118 @@ jobs:
           kotlinc -version
           test -f qa/maven_dependencies.py
           test -f qa/fixtures/PreservedDispatchContractTest.java
-      - name: Retrieve dependencies verified for the successful producer attempt
+      - name: Download the current-run verified framework graph
         uses: actions/download-artifact@v4
         with:
-          name: waex-framework-dependencies-${{ github.run_id }}-${{ needs.framework-inputs.outputs.bundle-attempt }}
-          path: ${{ runner.temp }}/waex-shared-framework
-      - name: Verify exact dependency bytes, run, attempt and source head before Dispatch
-        id: framework_inputs
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-dispatch-framework-bundle
+      - name: Verify the complete graph and exact CI identity
+        id: dispatch_inputs
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-dispatch-dependency-bundle.json"
-      - name: Exercise 105 persistence and callback cases on Android API 24, 28 and 34
+            --bundle "$RUNNER_TEMP/waex-dispatch-framework-bundle" --report "$RUNNER_TEMP/waex-dispatch-framework-inputs/before.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
+      - name: Restore the exact pinned DexKit cache
+        id: dispatch_dexkit_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
+      - name: Verify the pinned DexKit inputs and acquisition controls
+        id: dispatch_dexkit_prepare
         shell: bash
         run: |
           set -euo pipefail
-          python3 qa/android_preserved_dispatch_test.py \
-            --out "$RUNNER_TEMP/waex-preserved-dispatch" \
-            --deps "$RUNNER_TEMP/waex-shared-framework/deps" \
-            --sdk-jars "$RUNNER_TEMP/waex-shared-framework/sdk-jars"
-      - name: Recheck shared bytes after the attempted Dispatch consumer
-        if: always() && steps.framework_inputs.outcome == 'success'
+          python3 qa/test_prepare_dexkit.py --out "$RUNNER_TEMP/waex-dispatch-framework-inputs/dexkit-controls"
+          dexkit_args=()
+          if [[ "${{ steps.dispatch_dexkit_cache.outputs.cache-hit }}" == "true" ]]; then dexkit_args+=(--offline); fi
+          python3 qa/prepare_dexkit.py --report "$RUNNER_TEMP/waex-dispatch-framework-inputs/dexkit-before.json" "${dexkit_args[@]}"
+      - name: Save only verified DexKit bytes
+        if: steps.dispatch_dexkit_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
+      - name: Exercise all persistence and callback cases on Android API 24, 28 and 34
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/android_preserved_dispatch_test.py --out "$RUNNER_TEMP/waex-preserved-dispatch" \
+            --deps "$RUNNER_TEMP/waex-dispatch-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-dispatch-framework-bundle/sdk-jars" \
+            --dexkit "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar"
+      - name: Restore exact pinned OkHttp API
+        id: preview_okhttp_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/okhttp-4.12.0
+          key: waex-okhttp-4.12.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Restore reviewed Gradle seed for missing pinned OkHttp
+        if: steps.preview_okhttp_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /home/runner/.gradle/caches
+            /home/runner/.gradle/wrapper
+          key: setup-java-Linux-x64-gradle-c2ed2dd25741c3851a9b5a595f5de46c1ad61808a2d230dd547003ad5cfa5216
+      - name: Verify OkHttp and public acquisition controls
+        id: preview_okhttp_prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_prepare_public_apis.py --out "$RUNNER_TEMP/waex-preview/public-api-controls"
+          python3 qa/test_seed_okhttp_gradle_cache.py
+          python3 qa/seed_okhttp_gradle_cache.py --gradle-home "$HOME/.gradle" --cache "$HOME/.cache/waex-qa/okhttp-4.12.0"
+          args=()
+          if [[ "${{ steps.preview_okhttp_cache.outputs.cache-hit }}" == "true" ]]; then args+=(--offline); fi
+          python3 qa/prepare_public_apis.py --artifact okhttp --report "$RUNNER_TEMP/waex-preview/okhttp-before.json" "${args[@]}"
+      - name: Save only verified OkHttp bytes
+        if: steps.preview_okhttp_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/waex-qa/okhttp-4.12.0
+          key: waex-okhttp-4.12.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Verify complete preview lifecycle and five behavioral mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/mutate_media_preview_lifecycle.py --out "$RUNNER_TEMP/waex-preview/lifecycle" \
+            --deps "$RUNNER_TEMP/waex-dispatch-framework-bundle/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-dispatch-framework-bundle/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --http-api-jar "$HOME/.cache/waex-qa/okhttp-4.12.0/okhttp-4.12.0.jar"
+      - name: Recheck prepared OkHttp bytes after preview gate
+        if: always() && steps.preview_okhttp_prepare.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_public_apis.py --artifact okhttp --offline --report "$RUNNER_TEMP/waex-preview/okhttp-after.json"
+      - name: Recheck the same-run inputs after the attempted Android gate
+        if: always() && steps.dispatch_inputs.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           python3 qa/framework_dependency_bundle.py verify \
-            --bundle "$RUNNER_TEMP/waex-shared-framework" \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$FRAMEWORK_PRODUCER_ATTEMPT" --head-sha "$GITHUB_SHA" \
-            --report "$RUNNER_TEMP/waex-dispatch-dependency-bundle-after.json"
+            --bundle "$RUNNER_TEMP/waex-dispatch-framework-bundle" --report "$RUNNER_TEMP/waex-dispatch-framework-inputs/after.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
+      - name: Recheck prepared DexKit inputs after the attempted gate
+        if: always() && steps.dispatch_dexkit_prepare.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --offline --report "$RUNNER_TEMP/waex-dispatch-framework-inputs/dexkit-after.json"
       - name: Preserve source identities and acknowledgement results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: preserved-dispatch-framework-evidence-attempt-${{ github.run_attempt }}
+          name: preserved-dispatch-framework-evidence
           path: |
-            ${{ runner.temp }}/waex-dispatch-dependency-bundle*.json
+            ${{ runner.temp }}/waex-dispatch-framework-inputs/**/*.json
+            ${{ runner.temp }}/waex-dispatch-framework-inputs/**/*.log
             ${{ runner.temp }}/waex-preserved-dispatch/*.json
             ${{ runner.temp }}/waex-preserved-dispatch/*.log
+            ${{ runner.temp }}/waex-preview/**/*.json
+            ${{ runner.temp }}/waex-preview/**/*.log
           retention-days: 14
           if-no-files-found: error

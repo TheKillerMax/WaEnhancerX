@@ -1,0 +1,3 @@
+[Fixes]
+- Keep the status Anti-Revoke preference consistent across settings, backups,
+  and feature registration without changing its stored STRING type.
