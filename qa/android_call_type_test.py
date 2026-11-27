@@ -51,7 +51,7 @@ def main():
     parser.add_argument("--deps", type=Path, required=True)
     parser.add_argument("--sdk-jars", type=Path, required=True)
     parser.add_argument("--dexkit", type=Path, required=True)
-    parser.add_argument("--suite", choices=tuple(EXPECTED), default="contract")
+    parser.add_argument("--suite", choices=tuple(EXPECTED), default="all")
     parser.add_argument("--allow-test-failure", action="store_true",
         help="Write failed JUnit evidence for a mutation driver; never mark a failed suite accepted")
     args = parser.parse_args()
