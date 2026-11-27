@@ -5,6 +5,8 @@ import re
 from collections import Counter
 from xml.etree import ElementTree as ET
 import tempfile
+import subprocess
+import sys
 from localization_support import entries, android_text, stage_string_resources
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,8 +69,36 @@ assert 'UiText' not in schema
 catalog=(ROOT/'app/src/main/assets/preference_catalog.json').read_text(encoding="utf-8")
 assert 'disable_sensor_proximity' in catalog
 dashboard=(SRC/'com/waenhancer/ui/screens/dashboard/MainDashboardScreen.kt').read_text(encoding="utf-8")
-assert 'status = InternalLabels.hmaReason(item.reason)' in dashboard
-assert 'text = item.reason,' not in dashboard and 'status = item.reason,' not in dashboard, 'HMA reason must be localized at its display boundary'
+def assert_hma_display_wiring(source):
+    # The diagnostics refactor routes the localized reason through a shared
+    # target card. Check both sides of that boundary, not an obsolete direct
+    # Text call or an unrelated occurrence elsewhere in the dashboard.
+    def function(name):
+        matches=re.findall(r'^private fun '+re.escape(name)+r'\(.*?^\}',source,re.M|re.S)
+        assert len(matches)==1, f'Expected one {name} definition'
+        return re.sub(r'//[^\n]*|/\*.*?\*/','',matches[0],flags=re.S)
+    sheet=function('HmaDetailsBottomSheet')
+    card=function('DiagnosticsTargetCard')
+    assert re.search(r'DiagnosticsTargetCard\(\s*'
+        r'appName\s*=\s*item\.appName,\s*'
+        r'packageName\s*=\s*item\.packageName,\s*'
+        r'status\s*=\s*InternalLabels\.hmaReason\(item\.reason\),',sheet), \
+        'HMA target card must receive the localized reason'
+    assert sheet.count('item.reason')==1, 'HMA reason must not also bypass localization'
+    assert re.search(r'\bstatus\s*:\s*String\s*,',card), 'Target card must accept the status text'
+    assert re.search(r'\bText\(\s*text\s*=\s*status\s*,',card), \
+        'Target card must display the supplied status text'
+assert_hma_display_wiring(dashboard)
+for before,after in [
+    ('status = InternalLabels.hmaReason(item.reason)', 'status = item.reason'),
+    ('text = status,', 'text = packageName,'),
+    ('status: String,', 'unrelated: String,'),
+]:
+    assert before in dashboard, 'Inert HMA display mutation'
+    try:assert_hma_display_wiring(dashboard.replace(before,after))
+    except AssertionError:pass
+    else:raise AssertionError('HMA display wiring mutation survived')
+print('PASS: HMA localized reason reaches the shared card Text; 3 source-wiring mutations rejected')
 # Negative controls: a missing slot, malformed token and bidi marker must be recognized.
 for wrong in ['Sin variable', '%2$s', '%1$d']:
     assert slots('Count: %1$s') != slots(wrong)
@@ -93,3 +123,8 @@ with tempfile.TemporaryDirectory() as folder:
         assert [item.tag for item in mixed]==['string','plurals']
         assert mixed.find('string').text=='A & B'
 print('PASS: dedicated/mixed resource files staged with original string/plural content and source hashes')
+
+# The independent checker covers all XML aliases and runtime-format templates.
+with tempfile.TemporaryDirectory(prefix="waex_locale_contract_") as out:
+    subprocess.run([sys.executable, str(ROOT / "qa/locale_resources/check_resources.py"),
+                    "--root", str(ROOT), "--out", str(Path(out) / "evidence")], check=True)

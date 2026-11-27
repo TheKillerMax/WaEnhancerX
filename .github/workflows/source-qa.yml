@@ -809,7 +809,7 @@ jobs:
     needs: framework-inputs
     name: Preserved messages / provider acknowledgements and original delete scope
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -870,6 +870,42 @@ jobs:
           python3 qa/android_preserved_dispatch_test.py --out "$RUNNER_TEMP/waex-preserved-dispatch" \
             --deps "$RUNNER_TEMP/waex-dispatch-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-dispatch-framework-bundle/sdk-jars" \
             --dexkit "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar"
+      - name: Restore exact pinned OkHttp API
+        id: preview_okhttp_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/okhttp-4.12.0
+          key: waex-okhttp-4.12.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Verify OkHttp and public acquisition controls
+        id: preview_okhttp_prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_prepare_public_apis.py --out "$RUNNER_TEMP/waex-preview/public-api-controls"
+          args=()
+          if [[ "${{ steps.preview_okhttp_cache.outputs.cache-hit }}" == "true" ]]; then args+=(--offline); fi
+          python3 qa/prepare_public_apis.py --artifact okhttp --report "$RUNNER_TEMP/waex-preview/okhttp-before.json" "${args[@]}"
+      - name: Save only verified OkHttp bytes
+        if: steps.preview_okhttp_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/waex-qa/okhttp-4.12.0
+          key: waex-okhttp-4.12.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Verify complete preview lifecycle and five behavioral mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/mutate_media_preview_lifecycle.py --out "$RUNNER_TEMP/waex-preview/lifecycle" \
+            --deps "$RUNNER_TEMP/waex-dispatch-framework-bundle/deps" \
+            --sdk-jars "$RUNNER_TEMP/waex-dispatch-framework-bundle/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --http-api-jar "$HOME/.cache/waex-qa/okhttp-4.12.0/okhttp-4.12.0.jar"
+      - name: Recheck prepared OkHttp bytes after preview gate
+        if: always() && steps.preview_okhttp_prepare.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_public_apis.py --artifact okhttp --offline --report "$RUNNER_TEMP/waex-preview/okhttp-after.json"
       - name: Recheck the same-run inputs after the attempted Android gate
         if: always() && steps.dispatch_inputs.outcome == 'success'
         shell: bash
@@ -894,5 +930,7 @@ jobs:
             ${{ runner.temp }}/waex-dispatch-framework-inputs/**/*.log
             ${{ runner.temp }}/waex-preserved-dispatch/*.json
             ${{ runner.temp }}/waex-preserved-dispatch/*.log
+            ${{ runner.temp }}/waex-preview/**/*.json
+            ${{ runner.temp }}/waex-preview/**/*.log
           retention-days: 14
           if-no-files-found: error
