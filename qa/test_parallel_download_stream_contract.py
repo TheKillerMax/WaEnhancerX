@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = [
     ROOT / "app/src/main/java/com/waenhancer/xposed/features/media/ParallelDownloadingInputStream.java",
+    ROOT / "app/src/main/java/com/waenhancer/xposed/utils/HookErrors.java",
     ROOT / "qa/java/ParallelDownloadingStreamContractChecks.java",
     ROOT / "qa/java/de/robv/android/xposed/XposedBridge.java",
 ]
@@ -30,22 +31,36 @@ def main() -> None:
         classes = Path(temporary) / "classes"
         classes.mkdir()
         compiler = ["javac"] if shutil.which("javac") else ["java", "com.sun.tools.javac.Main"]
-        compile_args = compiler + ["-encoding", "UTF-8", "-d", str(classes)] + [str(path) for path in SOURCES]
-        compiled = subprocess.run(compile_args, text=True, capture_output=True, timeout=45)
+        # Compile the real diagnostic dependency; only annotation types and the
+        # existing Xposed log sink are fixture boundaries.
+        annotations = Path(temporary) / "androidx/annotation"
+        annotations.mkdir(parents=True)
+        fixtures = []
+        for name in ("NonNull", "VisibleForTesting"):
+            fixture = annotations / (name + ".java")
+            fixture.write_text("package androidx.annotation; public @interface " + name + " {}\n",
+                               encoding="utf-8")
+            fixtures.append(fixture)
+        compile_args = compiler + ["-encoding", "UTF-8", "-d", str(classes)] + [
+            str(path) for path in (*SOURCES, *fixtures)]
+        compiled = subprocess.run(compile_args, text=True, capture_output=True, timeout=45,
+                                  stdin=subprocess.DEVNULL)
         executed = None
         if compiled.returncode == 0:
             executed = subprocess.run(
                 ["java", "-cp", str(classes), "com.waenhancer.xposed.features.media.ParallelDownloadingStreamContractChecks"],
-                text=True, capture_output=True, timeout=45,
+                text=True, capture_output=True, timeout=45, stdin=subprocess.DEVNULL,
             )
 
+        complete = (executed is not None and executed.returncode == 0 and
+                    executed.stdout.splitlines().count("PASS 12/12 parallel stream integrity cases") == 1)
         report = {
             "source": str(SOURCES[0].relative_to(ROOT)),
             "cases": 12,
             "compiler_command": compiler,
             "compile_returncode": compiled.returncode,
             "run_returncode": executed.returncode if executed else None,
-            "status": "PASS" if executed and executed.returncode == 0 else "FAIL",
+            "status": "PASS" if complete else "FAIL",
         }
         if args.out:
             args.out.mkdir(parents=True, exist_ok=True)
@@ -57,7 +72,7 @@ def main() -> None:
         print(json.dumps(report, sort_keys=True))
         if compiled.returncode:
             raise SystemExit("FAIL: standalone production Java compilation\n" + compiled.stderr)
-        if not executed or executed.returncode:
+        if not complete:
             raise SystemExit("FAIL: parallel stream contract\n" + (executed.stdout + executed.stderr if executed else "not run"))
 
 

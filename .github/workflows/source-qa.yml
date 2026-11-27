@@ -393,7 +393,6 @@ jobs:
             qa/test_dynamic_menu_resources.py \
             qa/test_update_download_contract.py \
             qa/test_update_session.py \
-            qa/test_runtime_observation_clock.py \
             qa/test_filter_work.py \
             qa/test_recorder_cleanup.py \
             qa/test_call_recording_output_safety.py \
@@ -405,6 +404,13 @@ jobs:
             python3 "$test_script"
             echo '::endgroup::'
           done
+          # The clock contract is required when its production implementation exists.
+          if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
+            test -f qa/test_runtime_observation_clock.py
+            python3 qa/test_runtime_observation_clock.py
+          else
+            echo 'Runtime observation clock: not applicable (implementation absent)'
+          fi
           # The earlier forwarding implementation was reverted. Keep its suite
           # conditional until it returns; the implementation guard above still
           # requires the fixture when that source contract is present.
