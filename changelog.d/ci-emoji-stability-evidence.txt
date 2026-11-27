@@ -1,0 +1,3 @@
+[Improvements]
+- Run the existing emoji font integrity checks and keep PID/boot evidence separate
+  from optional Compose clock coverage in public source QA.

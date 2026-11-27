@@ -1,0 +1,3 @@
+[Improvements]
+- Run call-ending, recorder, audio preference, recordings-list and call-selector
+  regression gates with verified framework inputs and separate pinned APIs.

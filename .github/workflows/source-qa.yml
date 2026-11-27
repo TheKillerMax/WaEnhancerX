@@ -298,6 +298,12 @@ jobs:
             test -f qa/test_revoke_sqlite_contract.py
             test -f qa/fixtures/RevokeSqliteBindingChecks.java
           fi
+          if [[ -f app/src/main/java/com/waenhancer/core/emojis/EmojiCloudStorage.java ]]; then
+            test -f qa/test_emoji_font_download_integrity.py
+            test -f qa/fixtures/EmojiCloudStorageChecks.java
+            test -f qa/fixtures/android/system/Os.java
+            test -f qa/fixtures/android/system/ErrnoException.java
+          fi
 
       - name: Require stability tests when their implementations are present
         shell: bash
@@ -309,6 +315,10 @@ jobs:
           fi
           if [[ -f app/src/main/java/com/waenhancer/ui/components/RuntimeObservationClock.kt ]]; then
             test -f qa/test_runtime_observation_clock.py
+          fi
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            test -f qa/fixtures/StabilityEvidenceTest.kt
+            test -f qa/test_stability_framework_selection.py
           fi
           if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
             test -f qa/test_filter_work.py
@@ -405,6 +415,12 @@ jobs:
             python3 "$test_script"
             echo '::endgroup::'
           done
+          # The implementation guard requires these fixtures whenever the source exists.
+          if [[ -f qa/test_emoji_font_download_integrity.py ]]; then
+            echo '::group::qa/test_emoji_font_download_integrity.py'
+            python3 qa/test_emoji_font_download_integrity.py
+            echo '::endgroup::'
+          fi
           # The earlier forwarding implementation was reverted. Keep its suite
           # conditional until it returns; the implementation guard above still
           # requires the fixture when that source contract is present.
@@ -863,7 +879,14 @@ jobs:
           if grep -q 'Collections.unmodifiableMap(next)' app/src/main/java/com/waenhancer/xposed/features/customization/FilterItemsHook.kt; then
             modes="$modes filter"; test -f qa/fixtures/StabilityFilterTest.kt
           fi
-          if [[ -n "$modes" ]]; then test -f qa/verify_stability_framework.py; fi
+          if [[ -f app/src/main/java/com/waenhancer/utils/InjectionEvidence.kt ]]; then
+            modes="$modes evidence"; test -f qa/fixtures/StabilityEvidenceTest.kt
+          fi
+          if [[ -n "$modes" ]]; then
+            test -f qa/verify_stability_framework.py
+            test -f qa/test_stability_framework_selection.py
+            python3 qa/test_stability_framework_selection.py
+          fi
           echo "modes=$modes" >> "$GITHUB_OUTPUT"
           if [[ -z "$modes" ]]; then echo '::notice::Stability production changes absent; no stability framework tests executed.'; fi
       - uses: actions/setup-java@v4
@@ -911,7 +934,7 @@ jobs:
             gradle_args+=(--gradle-offline)
           fi
           printf 'Gradle cache match: %s; mode: %s\n' "$GRADLE_CACHE_MATCH" "${gradle_args[*]:-online}"
-          if [[ "$MODES" == ' update clock filter' ]]; then
+          if [[ "$MODES" == ' update filter evidence' || "$MODES" == ' update clock filter evidence' ]]; then
             python3 qa/verify_stability_framework.py --out "$RUNNER_TEMP/waex-stability/all" --framework-bundle "$RUNNER_TEMP/waex-stability-framework-inputs" --bundle-run-id "$GITHUB_RUN_ID" --bundle-run-attempt "$GITHUB_RUN_ATTEMPT" --bundle-head-sha "$GITHUB_SHA" "${gradle_args[@]}"
           else
             for mode in $MODES; do
@@ -1050,7 +1073,7 @@ jobs:
         with:
           path: ~/.cache/waex-qa/dexkit-2.2.0
           key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
-      - name: Exercise 105 persistence and callback cases on Android API 24, 28 and 34
+      - name: Exercise complete persistence and callback matrix
         shell: bash
         run: |
           set -euo pipefail
@@ -1083,3 +1106,229 @@ jobs:
             ${{ runner.temp }}/waex-preserved-dispatch/*.log
           retention-days: 14
           if-no-files-found: error
+
+  call-features-framework:
+    needs: framework-inputs
+    name: Call contracts / recorder / audio preferences / recordings list / selector
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        submodules: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Install and verify the project Kotlin 2.0.20 compiler
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - "$RUNNER_TEMP/waex-call-features-toolchain" "$RUNNER_TEMP/waex-call-features-evidence/toolchain" <<'PYKOTLIN'
+        import hashlib, io, json, os, stat, subprocess, sys, urllib.request, zipfile
+        from pathlib import Path, PurePosixPath
+        destination, evidence = map(Path, sys.argv[1:])
+        evidence.mkdir(parents=True, exist_ok=True)
+        url = 'https://github.com/JetBrains/kotlin/releases/download/v2.0.20/kotlin-compiler-2.0.20.zip'
+        expected = '5f5d2a8ad6a718a002acd0775b67a9e27035872fdbd4b0791e3cb3ea00095931'
+        archive_limit, expanded_limit = 128 * 1024 * 1024, 384 * 1024 * 1024
+        with urllib.request.urlopen(url, timeout=45) as response:
+            archive = response.read(archive_limit + 1)
+        if len(archive) > archive_limit or hashlib.sha256(archive).hexdigest() != expected:
+            raise RuntimeError('Kotlin compiler archive size or SHA-256 mismatch')
+        destination.mkdir(parents=True, exist_ok=False)
+        with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+            members = bundle.infolist()
+            if len(members) > 4096 or sum(item.file_size for item in members) > expanded_limit:
+                raise RuntimeError('Kotlin compiler expansion exceeds the bounded distribution size')
+            seen = set()
+            for item in members:
+                relative = PurePosixPath(item.filename)
+                mode = item.external_attr >> 16
+                if (relative.is_absolute() or '..' in relative.parts or not relative.parts
+                        or relative.parts[0] != 'kotlinc' or '\\' in item.filename
+                        or item.file_size > archive_limit or item.flag_bits & 1
+                        or stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR)
+                        or relative in seen):
+                    raise RuntimeError('Unsafe or duplicate Kotlin archive member: ' + item.filename)
+                seen.add(relative)
+            for item in members:
+                relative = PurePosixPath(item.filename)
+                target = destination.joinpath(*relative.parts)
+                if item.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                else:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    data = bundle.read(item)
+                    if len(data) != item.file_size:
+                        raise RuntimeError('Kotlin archive entry size mismatch')
+                    with target.open('xb') as output:
+                        output.write(data)
+                    target.chmod(0o755 if relative.parts[:2] == ('kotlinc', 'bin') else 0o644)
+        kotlin_home = (destination / 'kotlinc').resolve()
+        compiler = kotlin_home / 'bin/kotlinc'
+        version = subprocess.run([str(compiler), '-version'], text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, timeout=30).stdout
+        if 'kotlinc-jvm 2.0.20 ' not in version:
+            raise RuntimeError('The compiler must be exactly Kotlin 2.0.20: ' + version)
+        (evidence / 'kotlin-version.log').write_text(version)
+        (evidence / 'toolchain.json').write_text(json.dumps({'url': url, 'sha256': expected,
+            'bytes': len(archive), 'kotlin_version': '2.0.20', 'compiler': str(compiler)}, indent=2) + '\n')
+        with Path(os.environ['GITHUB_ENV']).open('a') as environment:
+            environment.write('KOTLIN_HOME=' + str(kotlin_home) + '\n')
+        with Path(os.environ['GITHUB_PATH']).open('a') as path_file:
+            path_file.write(str(kotlin_home / 'bin') + '\n')
+        PYKOTLIN
+    - name: Download the current-run verified framework graph
+      uses: actions/download-artifact@v4
+      with:
+        name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/waex-call-features-inputs
+    - name: Verify source prerequisites and exact current-run inputs
+      id: call_inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        test "$(command -v kotlinc)" = "$KOTLIN_HOME/bin/kotlinc"
+        test -f app/src/main/java/com/waenhancer/xposed/features/privacy/CallTypeControllerHook.java
+        test -f qa/fixtures/call_type/CallTypeContractTest.java
+        test -f qa/fixtures/call_type/CallTypeAndroidTest.java
+        test -f qa/mutate_call_type_contracts.py
+        test -f qa/test_call_recording_event_contract.py
+        test -f qa/mutate_call_recording_event_contract.py
+        test -f qa/test_call_recording_lifecycle.py
+        test -f qa/fixtures/CallRecordingLifecycleChecks.java
+        test -f qa/test_call_recording_setting_wiring.py
+        test -f qa/android_call_recording_audio_test.py
+        test -f qa/fixtures/CallRecordingAudioAndroidTest.java
+        test -f qa/android_call_recordings_list_test.py
+        test -f qa/fixtures/CallRecordingsListProbe.kt
+        test -f qa/fixtures/CallRecordingsListAndroidTest.java
+        test -f qa/android_media_preview_test.py
+        python3 qa/framework_dependency_bundle.py verify \
+          --bundle "$RUNNER_TEMP/waex-call-features-inputs" \
+          --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+          --report "$RUNNER_TEMP/waex-call-features-evidence/bundle-before.json"
+    - name: Verify the separately pinned DexKit API input
+      id: call_dexkit_inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/prepare_dexkit.py --cache "$RUNNER_TEMP/waex-call-features-dexkit" \
+          --report "$RUNNER_TEMP/waex-call-features-evidence/dexkit-before.json"
+    - name: Verify the separately pinned Core API input
+      id: call_core_inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - "$RUNNER_TEMP/waex-call-features-core" "$RUNNER_TEMP/waex-call-features-evidence/core-before.json" <<'PYCORE'
+        import json, sys
+        from pathlib import Path
+        from types import SimpleNamespace
+        sys.path.insert(0, str(Path.cwd() / 'qa'))
+        from android_call_recordings_list_test import CORE_SHA256, CORE_AAR_SHA256, CORE_URL, digest, resolve_core
+        root, report = map(Path, sys.argv[1:])
+        core = root / 'public-apis/core-1.18.0.jar'
+        if root.is_symlink() or core.is_symlink():
+            raise ValueError('Core input must be a real file in a separate directory')
+        provided = core.exists()
+        verified = resolve_core(SimpleNamespace(core_jar=core if provided else None), root)
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(json.dumps({'classes_sha256': digest(verified), 'aar_sha256': CORE_AAR_SHA256,
+            'url': CORE_URL, 'classes_bytes': verified.stat().st_size,
+            'source': 'verified_file' if provided else 'pinned_public_aar',
+            'part_of_framework_bundle': False}, indent=2) + '\n')
+        PYCORE
+    - name: Exercise call-ending contracts and complete recorder lifecycle boundaries
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/mutate_call_recording_event_contract.py --out "$RUNNER_TEMP/waex-call-features-evidence/event-contract"
+        for variant in valid typed-ending; do
+          python3 qa/test_call_recording_lifecycle.py --host-variant "$variant" \
+            --out "$RUNNER_TEMP/waex-call-features-evidence/lifecycle-$variant"
+        done
+        for variant in mutable-info sound-return sound-static info-return missing-end; do
+          python3 qa/test_call_recording_lifecycle.py --host-variant "$variant" --scenario rejected-contract \
+            --out "$RUNNER_TEMP/waex-call-features-evidence/rejected-$variant"
+        done
+        python3 qa/test_call_recording_lifecycle.py \
+          --dexkit-jar "$RUNNER_TEMP/waex-call-features-dexkit/dexkit-2.2.0.jar" \
+          --kotlin-stdlib "$KOTLIN_HOME/lib/kotlin-stdlib.jar" \
+          --out "$RUNNER_TEMP/waex-call-features-evidence/recorder-api-compile"
+        python3 qa/test_call_recording_setting_wiring.py
+    - name: Exercise recorder audio and recordings-list framework contracts
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/android_call_recording_audio_test.py \
+          --out "$RUNNER_TEMP/waex-call-features-evidence/audio" \
+          --deps "$RUNNER_TEMP/waex-call-features-inputs/deps" \
+          --sdk-jars "$RUNNER_TEMP/waex-call-features-inputs/sdk-jars" \
+          --dexkit "$RUNNER_TEMP/waex-call-features-dexkit/dexkit-2.2.0.jar"
+        python3 qa/android_call_recordings_list_test.py \
+          --out "$RUNNER_TEMP/waex-call-features-evidence/recordings-list" \
+          --deps "$RUNNER_TEMP/waex-call-features-inputs/deps" \
+          --sdk-jars "$RUNNER_TEMP/waex-call-features-inputs/sdk-jars" \
+          --core-jar "$RUNNER_TEMP/waex-call-features-core/public-apis/core-1.18.0.jar"
+    - name: Exercise all positive cases and compile causal negative controls
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/android_call_type_test.py --suite all --out "$RUNNER_TEMP/waex-call-features-evidence/positive" \
+          --deps "$RUNNER_TEMP/waex-call-features-inputs/deps" \
+          --sdk-jars "$RUNNER_TEMP/waex-call-features-inputs/sdk-jars" \
+          --dexkit "$RUNNER_TEMP/waex-call-features-dexkit/dexkit-2.2.0.jar"
+        python3 qa/mutate_call_type_contracts.py --out "$RUNNER_TEMP/waex-call-features-evidence/mutations" \
+          --baseline "$RUNNER_TEMP/waex-call-features-evidence/positive/result.json" \
+          --deps "$RUNNER_TEMP/waex-call-features-inputs/deps" \
+          --sdk-jars "$RUNNER_TEMP/waex-call-features-inputs/sdk-jars" \
+          --dexkit "$RUNNER_TEMP/waex-call-features-dexkit/dexkit-2.2.0.jar"
+    - name: Verify that public dependencies remain unchanged
+      if: always() && steps.call_inputs.outcome == 'success'
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/framework_dependency_bundle.py verify \
+          --bundle "$RUNNER_TEMP/waex-call-features-inputs" \
+          --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA" \
+          --report "$RUNNER_TEMP/waex-call-features-evidence/bundle-after.json"
+    - name: Recheck the separate DexKit API after attempted gates
+      if: always() && steps.call_dexkit_inputs.outcome == 'success'
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 qa/prepare_dexkit.py --offline --cache "$RUNNER_TEMP/waex-call-features-dexkit" \
+          --report "$RUNNER_TEMP/waex-call-features-evidence/dexkit-after.json"
+    - name: Recheck the separate Core API after attempted gates
+      if: always() && steps.call_core_inputs.outcome == 'success'
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - "$RUNNER_TEMP/waex-call-features-core/public-apis/core-1.18.0.jar" "$RUNNER_TEMP/waex-call-features-evidence/core-after.json" <<'PYCORE'
+        import json, sys
+        from pathlib import Path
+        from types import SimpleNamespace
+        sys.path.insert(0, str(Path.cwd() / 'qa'))
+        from android_call_recordings_list_test import digest, resolve_core
+        core, report = map(Path, sys.argv[1:])
+        if core.is_symlink():
+            raise ValueError('Core API must remain a regular file')
+        verified = resolve_core(SimpleNamespace(core_jar=core), report.parent)
+        report.write_text(json.dumps({'classes_sha256': digest(verified),
+            'part_of_framework_bundle': False}, indent=2) + '\n')
+        PYCORE
+    - name: Preserve text-only source identities and compiled test evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: call-features-framework-evidence
+        path: |
+          ${{ runner.temp }}/waex-call-features-evidence/**/*.json
+          ${{ runner.temp }}/waex-call-features-evidence/**/*.log
+        retention-days: 14
+        if-no-files-found: error
