@@ -1,0 +1,2 @@
+[Improvements]
+- Bound floating navigation transition history and idle redraws; cancel deferred FAB layout work when its screen is disposed.
