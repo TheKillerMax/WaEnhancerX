@@ -7,30 +7,56 @@ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',required=T
 spec=importlib.util.spec_from_file_location('receipt_boundary',ROOT/'qa/test_receipt_stanza_runtime.py');h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
 module=ast.parse((ROOT/'qa/test_receipt_job_execution_contract.py').read_text(encoding='utf-8'));fn=next(n for n in module.body if isinstance(n,ast.FunctionDef) and n.name=='extract');space={};exec(compile(ast.Module(body=[fn],type_ignores=[]),'<source-extractor>','exec'),space);extract=space['extract']
 area=a.source_root/h.AREA;source=(area/'BlueOnReplyHook.java').read_text(encoding='utf-8')
-markers=['    private static int sendPendingReadJobs(', '    private static Object[] copyArguments(', '    private static final class ReadJobRecipe', '    private static String canonicalJid(', '    public static void prepareSuppressedReadJob(', '    public static void recordSuppressedReadJob(', '    private static final class PendingChatReceipt', '    public static Set<String> readReceiptMessageIds(', '    public static boolean isManualChatReceipt(']
+markers=['    private int sendPendingReadJobs(', '    private int sendOwedFromLedger(',
+ '    private static boolean enqueueExplicit(', '    private static List<String> idsOf(',
+ '    private static Object[] buildReadJobArgs(', '    public BlueOnReplyHook(',
+ '    private static Object[] copyArguments(', '    private static final class ReadJobRecipe',
+ '    private static String canonicalJid(', '    public static void prepareSuppressedReadJob(',
+ '    public static void recordSuppressedReadJob(', '    private static final class PendingChatReceipt',
+ '    public static Set<String> readReceiptMessageIds(', '    public static boolean isManualChatReceipt(']
 if '    private static final class ManualReadAttempt' in source:markers.append('    private static final class ManualReadAttempt')
 blocks=[extract(source,m) for m in markers]
+for name in ('SEND_BLOCKED','MAX_LEDGER_SEND','IDS_PER_JOB'):
+ matches=re.findall(r'private static final int '+name+r'\s*=[^;]+;',source)
+ if len(matches)!=1:raise RuntimeError('Current sender constant changed: '+name)
+ blocks.append(matches[0])
 blue='''package com.waenhancer.xposed.features.privacy;
 import java.util.*;import java.lang.reflect.*;
+import android.content.Context;import android.content.SharedPreferences;
+import androidx.annotation.NonNull;
+import com.waenhancer.xposed.core.BaseFeature;
+import com.waenhancer.xposed.core.db.HideSeenStore;
+import com.waenhancer.xposed.core.privacy.PrivacyToggle;
+import com.waenhancer.xposed.core.wa.WaJid;
 import com.waenhancer.xposed.utils.HookErrors;
 import com.waenhancer.xposed.utils.HostFields;
 import de.robv.android.xposed.XposedHelpers;import de.robv.android.xposed.XposedBridge;
-public final class BlueOnReplyHook {
+public final class BlueOnReplyHook extends BaseFeature {
  static final String TAG="fixture",PENDING_CHAT_RECEIPT="waex_pending_chat_receipt",MANUAL_CHAT_ATTEMPT="waex_manual_chat_attempt";
  static final PendingReadReceiptStore<ReadJobRecipe> PENDING_JOBS=new PendingReadReceiptStore<>(128,50);
  static Method enqueueJobMethod;static Object manager;
+ static Constructor<?> sendReadConstructor;static Context appContext;
+ private static BlueOnReplyHook fixtureHook;
+ public static void bind(Context context,SharedPreferences prefs){fixtureHook=new BlueOnReplyHook(context,BlueOnReplyHook.class.getClassLoader(),prefs);}
+ @Override public String getName(){return "manual receipt fixture";}
+ @Override public void hook(){throw new AssertionError("Full hook installation outside retry fixture");}
  static Object getOrFindJobManager(){return manager;}
  static void markEvictedHandled(String recipient,ReadJobRecipe evicted){if(evicted!=null)throw new AssertionError("Unexpected bounded-store eviction in small retry case");}
  public static boolean isManualStatusSeenEnabled(android.content.SharedPreferences p){return false;}
  public static boolean isManualStatusReceipt(Object job){return false;}
  public static void captureSuppressedStatusReadJob(Constructor<?> c,Object[] a){throw new AssertionError("Status outside chat retry fixture");}
  public static void recordObservedReceipt(String j,Object t,String i){throw new AssertionError("Observed inbox outside retry fixture");}
- public static int send(String recipient){return sendPendingReadJobs(recipient);}
+ public static int send(String recipient){return fixtureHook.sendPendingReadJobs(recipient);}
  public static int pending(String recipient){return PENDING_JOBS.pendingCount(recipient);}
  public static void reset(){for(String recipient:new String[]{"1001@s.whatsapp.net","2002@s.whatsapp.net"})for(ReadJobRecipe r:PENDING_JOBS.snapshot(recipient))PENDING_JOBS.remove(recipient,r);}
  __PRODUCTION__
 }'''.replace('__PRODUCTION__','\n'.join(blocks))
 stubs=dict(h.STUBS);stubs['com/waenhancer/xposed/features/privacy/BlueOnReplyHook.java']=blue
+# The actual constructor keeps the application Context. No Android Context or
+# persistent database is simulated beyond this explicit service boundary.
+context_key='android/content/Context.java';context_anchor='public class Context {'
+if stubs[context_key].count(context_anchor)!=1:raise RuntimeError('Context boundary changed')
+stubs[context_key]=stubs[context_key].replace(context_anchor,context_anchor+' public Context getApplicationContext(){return this;}')
 stubs['android/os/SystemClock.java']='package android.os;public final class SystemClock { public static long now=1_000_000L;public static long elapsedRealtime(){return now;} }'
 bridge='de/robv/android/xposed/XposedBridge.java'
 # Explicit constructor instrumentation: reflection itself does not execute Xposed in a JVM.
@@ -85,6 +111,7 @@ public final class ManualReceiptRetryChecks {
  static void execute(Job j)throws Throwable{XposedBridge.invoke(Job.class.getMethod("execute"),j);}
  static Manager setup()throws Throwable{
   android.os.SystemClock.now+=1_000_000L;BlueOnReplyHook.reset();prefs.values.clear();prefs.values.put("hide_read_receipts",true);prefs.values.put("hideread",true);prefs.values.put("blueonreply",true);
+  BlueOnReplyHook.bind(new Context(),prefs);
   veto("delivery",false);XposedBridge.hooks.clear();XposedBridge.logs.clear();DexSearchEngine.classes.clear();DexSearchEngine.methods.clear();
   HideReceiptsHook.revokeExplicitReceiptIds(PERSON,new Object[]{new String[]{"M1","DIAGNOSTIC","MUTATED"}});
   HideReceiptsHook.revokeExplicitReceiptIds(OTHER,new Object[]{new String[]{"M2"}});
@@ -121,6 +148,11 @@ public final class ManualReceiptRetryChecks {
  static void test(String name,Case action){scenarios++;try{action.run();}catch(Throwable e){failures.add(name+": "+e.getClass().getSimpleName()+": "+e.getMessage());}}
  public static void main(String[] args)throws Throwable{
   for(String policy:new String[]{"delivery","ghost","contact"}){
+   test("pre-enqueue-"+policy,()->{
+    Manager m=setup();veto(policy,true);check(BlueOnReplyHook.send(PERSON)==-1,"active privacy veto must block before enqueue");
+    check(m.accepted.isEmpty(),"blocked action reached enqueue");check(BlueOnReplyHook.pending(PERSON)==1,"blocked action lost recipe");
+    check(BlueOnReplyHook.pending(OTHER)==1,"blocked action crossed recipient");
+   });
    test("delayed-"+policy,()->retry(policy,false,false,false));test("synchronous-"+policy,()->retry(policy,true,false,false));
   }
   test("synchronous-veto-enqueue-exception",()->retry("delivery",true,true,false));
@@ -163,13 +195,15 @@ def command(args,name,negative=False):
  r=subprocess.run(list(map(str,args)),capture_output=True,timeout=90);(a.out/name).write_bytes(r.stdout+r.stderr)
  if r.returncode and not negative:raise RuntimeError('COMPILE_FAILED '+(r.stdout+r.stderr).decode('utf-8',errors='replace')[-9000:])
  return r
-command(['javac','--release','17','-encoding','UTF-8','-cp',cp,'-d',classes,*stub_paths],'compile-boundaries.log')
+early=[a.source_root/path for path in h.SHARED_EARLY]
+late=[a.source_root/path for path in h.SHARED_LATE]
+command(['javac','--release','17','-encoding','UTF-8','-cp',cp,'-d',classes,*stub_paths,*early],'compile-boundaries.log')
 base=a.source_root/'app/src/main/java/com/waenhancer/xposed/core/BaseFeature.kt';lifecycle=[base.parent/n for n in ('HookRegistrar.java','ViewHookDispatcher.java')]
 command(['java','-cp',kotlin/'lib/*','org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-kotlin-home',kotlin,'-jvm-target','17','-classpath',cp,'-d',classes,base,*lifecycle],'compile-base.log')
 production=[area/n for n in [*h.PRODUCTION,'PendingReadReceiptStore.java']]
-command(['javac','--release','17','-encoding','UTF-8','-cp',cp,'-d',classes,*lifecycle,*production,blue_path,fixture],'compile-production.log')
+command(['javac','--release','17','-encoding','UTF-8','-cp',cp,'-d',classes,*lifecycle,*late,*production,blue_path,fixture],'compile-production.log')
 r=command(['java','-ea','-cp',cp,'com.waenhancer.xposed.features.privacy.ManualReceiptRetryChecks'],'behavior.log',True);log=(r.stdout+r.stderr).decode('utf-8',errors='replace');print(log)
-m=re.search(r'MANUAL_RETRY_MATRIX=(\d+);CHECKS=(\d+);FAILURES=(\d+)',log);complete=bool(m) and int(m[1])==14
-result={'scenarios':int(m[1]) if m else 0,'checks':int(m[2]) if m else 0,'failures':int(m[3]) if m else None,'completed':complete,'exit':r.returncode,'source_sha256':{str(f.relative_to(a.source_root)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*production,area/'BlueOnReplyHook.java',base,*lifecycle]},'blue_extracted_blocks':len(blocks),'android_or_network':False,'constructor_callbacks_dispatched':True}
+m=re.search(r'MANUAL_RETRY_MATRIX=(\d+);CHECKS=(\d+);FAILURES=(\d+)',log);complete=bool(m) and int(m[1])==17
+result={'scenarios':int(m[1]) if m else 0,'checks':int(m[2]) if m else 0,'failures':int(m[3]) if m else None,'completed':complete,'exit':r.returncode,'source_sha256':{str(f.relative_to(a.source_root)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*production,*early,*late,area/'BlueOnReplyHook.java',base,*lifecycle]},'blue_extracted_blocks':len(blocks),'android_or_network':False,'constructor_callbacks_dispatched':True,'expected_scenarios':17,'service_boundaries':['Android/Xposed/DexKit positive lookups','HideSeenStore empty ledger; no database or persistent-ledger reconstruction proof','CustomPrivacyHook preferences'],'fixture_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scope':'Seventeen session-recipe retry scenarios with actual instance sender, constructor, BaseFeature privacy access, enqueue/acknowledgement, PrivacyPrefs and shared helpers; persistent ledger rows, host dispatcher discovery and Android remain controlled boundaries.'}
 (a.out/'result.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
 raise SystemExit(0 if complete and r.returncode==0 and int(m[3])==0 else 1)
