@@ -104,6 +104,7 @@ public final class ViewOnceContractTest {
     }
     private static DexKitBridge reset() {
         XposedBridge.hooks.clear(); XposedBridge.logs.clear(); XposedBridge.rejected.clear();
+        XposedBridge.afterRegistration = null;
         DexSearchEngine.initializes = 0; DexSearchEngine.failure = null;
         DexKitBridge b = new DexKitBridge(); DexSearchEngine.bridge = b; return b;
     }
@@ -309,8 +310,42 @@ public final class ViewOnceContractTest {
         check(XposedBridge.logs.stream().noneMatch(s->s.contains("fixture-private-")),"viewonce/failure payload is not logged");
         b=viewFixture(false,false);
         XposedBridge.rejected.add(method(Video.class,"setState",int.class));
-        expectUnavailable(new AntiViewOnceHook(CONTEXT,LOADER,prefs),"viewonce/partial registration is reported");
+        AntiViewOnceHook partial = new AntiViewOnceHook(CONTEXT,LOADER,prefs);
+        expectUnavailable(partial,"viewonce/partial registration is reported");
         check(XposedBridge.registrations()==1,"viewonce/partial registration requires caller lifecycle rollback");
+        // Model failed rollback by keeping the registered callback reachable.
+        XC_MethodHook retained = XposedBridge.hooks.get(method(Photo.class,"setState",int.class)).get(0);
+        Photo partialPhoto = new Photo(new Key(false)); setState(partialPhoto,1);
+        check(partialPhoto.state==1,"viewonce/retained callback after partial failure stays inert");
+        expectUnavailable(partial,"viewonce/same instance refuses partial retry");
+        check(XposedBridge.registrations()==1,"viewonce/partial retry adds no hooks");
+        XposedBridge.rejected.clear();
+        new AntiViewOnceHook(CONTEXT,LOADER,prefs).hook();
+        check(XposedBridge.registrations()==3,"viewonce/fresh instance installs both setters");
+        setState(partialPhoto,1);
+        check(partialPhoto.state==0,"viewonce/fresh instance activates incoming state handling");
+        XC_MethodHook.MethodHookParam old = new XC_MethodHook.MethodHookParam();
+        old.thisObject=partialPhoto; old.args=new Object[]{1}; old.method=method(Photo.class,"setState",int.class);
+        retained.before(old);
+        check(old.args[0].equals(1),"viewonce/old instance is not revived by fresh instance");
+
+        b=viewFixture(false,false);
+        Photo interleaved = new Photo(new Key(false));
+        List<Integer> registrationStates = new ArrayList<>();
+        XposedBridge.afterRegistration = () -> {
+            try { setState(interleaved,1); }
+            catch (Throwable failure) { throw new AssertionError(failure); }
+            registrationStates.add(interleaved.state);
+        };
+        new AntiViewOnceHook(CONTEXT,LOADER,prefs).hook();
+        XposedBridge.afterRegistration = null;
+        check(registrationStates.size()==2,"viewonce/interleaving exercised each registration boundary");
+        check(registrationStates.size()>0 && registrationStates.get(0)==1,
+                "viewonce/callback stays inert after first registration");
+        check(registrationStates.size()>1 && registrationStates.get(1)==1,
+                "viewonce/callback stays inert after final registration returns");
+        setState(interleaved,1);
+        check(interleaved.state==0,"viewonce/callback activates only after complete installation");
         for(String pkg:new String[]{"com.whatsapp","com.whatsapp.w4b"}){
             CONTEXT.packageName=pkg;
             Preferences scoped=new Preferences();scoped.put(pkg+":anti_view_once",true);

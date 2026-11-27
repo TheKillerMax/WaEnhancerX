@@ -24,6 +24,7 @@ import org.luckypray.dexkit.result.MethodData;
 public class AntiViewOnceHook extends BaseFeature {
     private static final String TAG = "[WAEX][AntiViewOnce]";
     private final Set<Method> installed = new LinkedHashSet<>();
+    private volatile boolean active;
 
     public AntiViewOnceHook(@NonNull Context context, @NonNull ClassLoader classLoader,
                            @NonNull SharedPreferences prefs) {
@@ -32,11 +33,13 @@ public class AntiViewOnceHook extends BaseFeature {
 
     @Override
     public synchronized void hook() throws Throwable {
-        if (!installed.isEmpty()) return;
+        if (active) return;
+        if (!installed.isEmpty()) throw new IllegalStateException("View-once contract unavailable");
         installStateHooks();
         if (installed.isEmpty()) {
             throw new IllegalStateException("View-once contract unavailable");
         }
+        active = true;
     }
 
     private void installStateHooks() {
@@ -59,7 +62,7 @@ public class AntiViewOnceHook extends BaseFeature {
                 XposedBridge.hookMethod(target, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        if (!getPrivacy().isOn(PrivacyToggle.ANTI_VIEW_ONCE)) return;
+                        if (!active || !getPrivacy().isOn(PrivacyToggle.ANTI_VIEW_ONCE)) return;
                         if (param.args == null || param.args.length != 1
                                 || !(param.args[0] instanceof Integer)
                                 || (Integer) param.args[0] != 1) return;
@@ -69,7 +72,7 @@ public class AntiViewOnceHook extends BaseFeature {
                 installed.add(target);
             } catch (RuntimeException | LinkageError failure) {
                 logFailure("Setter installation failed", failure);
-                // FeatureRegistry discards this instance and removes already retained hooks.
+                // This instance stays inactive even if lifecycle rollback retains a callback.
                 throw new IllegalStateException("View-once contract unavailable");
             }
         }

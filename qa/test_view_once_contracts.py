@@ -27,7 +27,7 @@ PRODUCTION = (
     "com/waenhancer/xposed/core/privacy/PrivacyToggle.java",
     "com/waenhancer/config/DndPreferencePolicy.java",
 )
-EXPECTED_CHECKS = 79
+EXPECTED_CHECKS = 90
 
 
 def digest(path: Path) -> str:

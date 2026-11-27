@@ -1,3 +1,5 @@
 Fix incoming view-once handling to validate the message's primary key and its
 SQL-linked state setter. Keep outgoing media and unknown message identities
 unchanged while honoring current, legacy and per-app privacy settings.
+Keep callbacks inactive until installation completes, including callbacks retained
+after a partial registration failure.

@@ -24,13 +24,16 @@ Only an incoming message with state 1 changes to state 0. Outgoing messages and
 other state values remain unchanged. An unresolved contract is reported even if
 the toggle is currently off but available for live enabling. A registration
 failure propagates a content-free error to FeatureRegistry, which discards that
-instance and removes already retained hooks.
+instance and removes already retained hooks. Callbacks stay inactive until every
+registration succeeds. A partially installed instance rejects reuse, and a
+callback retained after failed rollback remains inert even when a fresh instance
+is installed.
 
 ## Automated checks
 
 The focused fixture compiles the complete AntiViewOnceHook,
 ViewOnceMessageContract, PrivacyPrefs, PrivacyToggle and DndPreferencePolicy.
-It executes 79 checks for each independently generated modern/legacy JID
+It executes 90 checks for each independently generated modern/legacy JID
 namespace. Reflection and JVM execution are real; the Android service boundary,
 DexKit metadata, BaseFeature registration facade and Xposed dispatch are explicit
 doubles. The fixture does not run the complete FeatureRegistry or HookRegistrar.
@@ -38,12 +41,13 @@ doubles. The fixture does not run the complete FeatureRegistry or HookRegistrar.
 Covered cases include incoming/outgoing/null/incomplete keys, inherited concrete
 setters, unrelated receivers and integer methods, duplicate metadata, ambiguous
 sender and SQL contracts, mutable/foreign key layouts, live preferences,
-Personal/Business scope isolation, failed registrations and content-free errors.
+Personal/Business scope isolation, failed registrations, retained callbacks,
+same-instance retry, callbacks interleaved during installation and content-free errors.
 There is no DexKit query from the callback path.
 
-Five compiled mutations must complete all 79 assertions and fail behaviorally:
+Six compiled mutations must complete all 90 assertions and fail behaviorally:
 reversed ownership, ignored key ambiguity, unrelated setters, ignored preference
-scope and incomplete keys. A compiler failure or an incomplete fixture run is
+scope, removed activation gate and incomplete keys. A compiler failure or an incomplete fixture run is
 not an accepted mutation detection.
 
 Run with JDK 17 or newer and Python 3:
