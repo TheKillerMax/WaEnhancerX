@@ -1,0 +1,2 @@
+[Fixes]
+- Confirm runtime process observations against the initiating manager profile, exact package UID and current manager PID; incomplete observations remain unavailable.

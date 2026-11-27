@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Process
 import android.os.SystemClock
 import com.waenhancer.config.PreferenceStores
 import com.waenhancer.xposed.utils.AppRestartHelper
@@ -59,28 +60,39 @@ internal object RootProbe {
      * off and every target fell back to "root process check failed". The manager's own process is
      * always running, so an empty filtered list still means the probe itself failed.
      */
-    internal fun processListCommand(): String {
-        val names = (DeclaredWhatsAppTargets.packages() + MODULE_PACKAGE_NAME)
+    internal fun processListCommand(managerPackage: String = MODULE_PACKAGE_NAME): String {
+        require(managerPackage.matches(Regex("[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+")))
+        val names = (DeclaredWhatsAppTargets.packages() + managerPackage)
             .joinToString("|") { it.replace(".", "\\.") }
-        return "(ps -A -o PID,NAME 2>/dev/null || ps 2>/dev/null) | grep -E ' ($names)[[:space:]]*$'"
+        // Do not let grep turn partial output from two failed ps attempts into success.
+        return "waex_processes=\$(ps -A -o UID,PID,NAME 2>/dev/null) || " +
+            "waex_processes=\$(ps 2>/dev/null) || exit 1\n" +
+            "printf '%s\\n' \"\$waex_processes\" | grep -E ' ($names)[[:space:]]*$'"
     }
 
     fun run(context: Context): RootProbeResult {
+        val owners = processOwners(context) ?: return RootProbeResult(
+            LsposedScopeSnapshot(context.packageName, emptySet(), false, LsposedScopeSnapshot.Source.UNAVAILABLE,
+                error = "Process user identity unavailable"), null
+        )
         val script = LsposedScopeReader.stageCommand(context) +
-            "\necho $PS_BEGIN\n${processListCommand()}\necho $PS_END"
+            "\necho $PS_BEGIN\n${processListCommand(context.packageName)} && echo $PS_END"
         val startedAt = SystemClock.elapsedRealtime()
         val output = try { AppRestartHelper.runRootCommand(script).orEmpty() }
             catch (_: RuntimeException) { "" } catch (_: LinkageError) { "" }
         val scope = LsposedScopeReader.parseStaged(context, output.contains(LsposedScopeReader.STAGED_OK_MARKER))
-        return RootProbeResult(scope, parseRuntime(output, startedAt))
+        return RootProbeResult(scope, parseRuntime(output, startedAt, owners, context.packageName, Process.myPid()))
     }
 
-    internal fun parseRuntime(output: String, observedAt: Long): XposedRuntimeSnapshot? {
-        val begin = output.indexOf(PS_BEGIN)
-        val end = output.indexOf(PS_END)
-        if (begin < 0 || end < begin) return null // truncated: an incomplete list must not mean "not running"
-        val snapshot = parseProcessList(output.substring(begin + PS_BEGIN.length, end), observedAt)
-        return snapshot.takeIf { it.runningPids.isNotEmpty() }
+    internal fun parseRuntime(output: String, observedAt: Long, owners: Map<String, Int>,
+                              managerPackage: String, managerPid: Int): XposedRuntimeSnapshot? {
+        val lines = output.lines().map { it.trim() }
+        val begin = lines.indexOf(PS_BEGIN)
+        val end = lines.indexOf(PS_END)
+        if (begin < 0 || end < begin || lines.count { it == PS_BEGIN } != 1
+            || lines.count { it == PS_END } != 1) return null
+        val snapshot = parseProfileProcessList(lines.subList(begin + 1, end).joinToString("\n"), owners, observedAt)
+        return snapshot.takeIf { it.complete && managerPid > 0 && managerPid in it.pidsFor(managerPackage).orEmpty() }
     }
 }
 

@@ -1058,3 +1058,123 @@ jobs:
             ${{ runner.temp }}/waex-preview/**/*.log
           retention-days: 14
           if-no-files-found: error
+
+  reconciled-profile-and-floating-bar:
+    needs: framework-inputs
+    name: Profile identity / floating navigation lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Resolve the complete Kotlin CLI and require both focused suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          KOTLIN_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v kotlinc)")")")"
+          test -f "$KOTLIN_HOME/lib/kotlin-compiler.jar"
+          test -f "$KOTLIN_HOME/lib/kotlin-stdlib.jar"
+          printf 'KOTLIN_HOME=%s\n' "$KOTLIN_HOME" >> "$GITHUB_ENV"
+          kotlinc -version
+          test -f qa/test_profile_process_probe.py
+          test -f qa/test_floating_bar_current.py
+      - name: Download this run and attempt's framework graph
+        uses: actions/download-artifact@v4
+        with:
+          name: waex-framework-inputs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/waex-reconciled-framework-bundle
+      - name: Verify all 39 inputs and exact CI identity
+        id: reconciled_inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-reconciled-framework-bundle" --report "$RUNNER_TEMP/waex-reconciled-evidence/before.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
+      - name: Restore the pinned DexKit cache
+        id: reconciled_dexkit_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/dexkit-2.2.0
+          key: waex-dexkit-2.2.0-${{ hashFiles('qa/prepare_dexkit.py') }}
+      - name: Restore the pinned Core API cache
+        id: reconciled_core_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/waex-qa/core-1.18.0
+          key: waex-core-1.18.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Restore the reviewed interface Gradle seed when Core is absent
+        if: steps.reconciled_core_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /home/runner/.gradle/caches
+            /home/runner/.gradle/wrapper
+          key: setup-java-Linux-x64-gradle-14994ff021cbba42144ec788b667ee69f1e13b4c0d25342443cc111ba840b00b
+      - name: Prepare exact public API bytes and verify cache-seeding controls
+        id: reconciled_apis
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_seed_core_gradle_cache.py
+          python3 qa/seed_core_gradle_cache.py --gradle-home "$HOME/.gradle" --cache "$HOME/.cache/waex-qa/core-1.18.0"
+          dexkit_args=()
+          core_args=()
+          if [[ "${{ steps.reconciled_dexkit_cache.outputs.cache-hit }}" == "true" ]]; then dexkit_args+=(--offline); fi
+          if [[ "${{ steps.reconciled_core_cache.outputs.cache-hit }}" == "true" || -f "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.aar" ]]; then core_args+=(--offline); fi
+          python3 qa/prepare_dexkit.py --report "$RUNNER_TEMP/waex-reconciled-evidence/dexkit-before.json" "${dexkit_args[@]}"
+          python3 qa/prepare_public_apis.py --artifact core --report "$RUNNER_TEMP/waex-reconciled-evidence/core-before.json" "${core_args[@]}"
+      - name: Save only verified Core API bytes
+        if: steps.reconciled_core_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/waex-qa/core-1.18.0
+          key: waex-core-1.18.0-${{ hashFiles('qa/prepare_public_apis.py') }}
+      - name: Exercise exact profile evidence and four compiled mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_profile_process_probe.py --out "$RUNNER_TEMP/waex-reconciled-evidence/profile" \
+            --deps "$RUNNER_TEMP/waex-reconciled-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-reconciled-framework-bundle/sdk-jars" --mutations
+      - name: Exercise floating navigation lifecycle and four compiled mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/test_floating_bar_current.py --out "$RUNNER_TEMP/waex-reconciled-evidence/floating" \
+            --deps "$RUNNER_TEMP/waex-reconciled-framework-bundle/deps" --sdk-jars "$RUNNER_TEMP/waex-reconciled-framework-bundle/sdk-jars" \
+            --dexkit-jar "$HOME/.cache/waex-qa/dexkit-2.2.0/dexkit-2.2.0.jar" \
+            --core-api-jar "$HOME/.cache/waex-qa/core-1.18.0/core-1.18.0.jar" --kotlin-home "$KOTLIN_HOME" --mutations
+      - name: Recheck every framework input after both attempted suites
+        if: always() && steps.reconciled_inputs.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/framework_dependency_bundle.py verify \
+            --bundle "$RUNNER_TEMP/waex-reconciled-framework-bundle" --report "$RUNNER_TEMP/waex-reconciled-evidence/after.json" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --head-sha "$GITHUB_SHA"
+      - name: Recheck both prepared API caches
+        if: always() && steps.reconciled_apis.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 qa/prepare_dexkit.py --offline --report "$RUNNER_TEMP/waex-reconciled-evidence/dexkit-after.json"
+          python3 qa/prepare_public_apis.py --artifact core --offline --report "$RUNNER_TEMP/waex-reconciled-evidence/core-after.json"
+      - name: Preserve diagnostic and lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciled-profile-floating-evidence
+          path: |
+            ${{ runner.temp }}/waex-reconciled-evidence/**/*.json
+            ${{ runner.temp }}/waex-reconciled-evidence/**/*.log
+          retention-days: 14
+          if-no-files-found: error
