@@ -119,7 +119,7 @@ def main():
     parser.add_argument('--sdk-jars', type=Path)
     parser.add_argument('--maven', default='mvn')
     parser.add_argument('--maven-repo', type=Path)
-    parser.add_argument('--suite', choices=('all', 'flow', 'contracts'), default='contracts')
+    parser.add_argument('--suite', choices=('all', 'flow', 'contracts'), default='all')
     parser.add_argument('--expect-assertion-failures', type=int, default=0)
     args = parser.parse_args()
     root, out = args.source_root.resolve(), args.out.resolve()
